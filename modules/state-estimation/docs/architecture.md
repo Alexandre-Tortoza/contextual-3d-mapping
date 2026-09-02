@@ -1,6 +1,6 @@
 # State Estimation Architecture
 
-`state-estimation` is the geometric motion boundary between raw LiDAR/IMU observations and downstream 3D semantic processing.
+`state-estimation` is the geometric motion boundary between raw LiDAR/IMU observations and downstream persistent 3D mapping and semantic processing.
 
 ## Internal flow
 
@@ -46,9 +46,23 @@ MotionCorrectedLiDARFrame
 
 Exact schemas are defined by implementation issues rather than this document.
 
+## Boundary with geometric-map
+
+`geometric-map` owns persistent world geometry. It consumes contract-compatible pose/trajectory information and motion-corrected LiDAR observations from `state-estimation`.
+
+```mermaid
+flowchart LR
+    SE[state-estimation] -->|pose / trajectory| GM[geometric-map]
+    SE -->|motion-corrected LiDAR| GM
+    GM -->|persistent geometry refs| SA[sensor-association]
+    GM -->|persistent geometry| APP[applications]
+```
+
+`state-estimation` therefore does not own persistent reconstruction, map chunking, map storage, spatial indexing, or visualization.
+
 ## Boundary with point-representation
 
-`point-representation` consumes point geometry and produces learned point embeddings. It must not own odometry, pose estimation, IMU fusion, scan deskewing, or trajectory estimation.
+`point-representation` consumes point geometry and produces learned point embeddings. It must not own odometry, pose estimation, IMU fusion, scan deskewing, trajectory estimation, or persistent geometric-map ownership.
 
 ```mermaid
 flowchart LR
@@ -64,14 +78,11 @@ flowchart LR
 ```mermaid
 flowchart LR
     SE[state-estimation] -->|trajectory / LiDAR pose| SA[sensor-association]
+    GM[geometric-map] -->|persistent geometry refs| SA
     VP[visual-perception] -->|visual observations| SA
     PR[point-representation] -->|point representations| SA
     CAL[camera-LiDAR calibration] --> SA
 ```
-
-## Boundary with geometric mapping
-
-The module may emit motion-corrected or pose-associated LiDAR frames, but it does not own a persistent global geometric map. If persistent geometric reconstruction becomes a first-class capability, it should be introduced as a separate module and consume state-estimation outputs through contracts.
 
 ## External backend isolation
 
