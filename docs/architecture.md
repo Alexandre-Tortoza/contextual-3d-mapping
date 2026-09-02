@@ -34,6 +34,7 @@ contextual-3d-mapping/
 ├── evaluation/
 ├── experiments/
 ├── modules/
+│   ├── state-estimation/
 │   ├── visual-perception/
 │   ├── point-representation/
 │   ├── sensor-association/
@@ -44,6 +45,25 @@ contextual-3d-mapping/
 │   ├── context-reasoning/
 │   └── query-engine/
 └── tests/
+```
+
+## Geometric front-end boundary
+
+`state-estimation` is responsible for estimating motion from LiDAR/IMU observations and exposing pose, trajectory, and motion-corrected LiDAR data through contracts. It is upstream of learned point representation and multimodal sensor association.
+
+The module does not own persistent geometric-map construction. If persistent geometric reconstruction becomes a first-class capability, it should be introduced behind its own module boundary rather than folded into state estimation or semantic mapping.
+
+```mermaid
+flowchart LR
+    L[LiDAR] --> SE[state-estimation]
+    I[IMU] --> SE
+
+    SE -->|motion-corrected LiDAR| PR[point-representation]
+    SE -->|pose / trajectory| SA[sensor-association]
+
+    RGB[RGB] --> VP[visual-perception]
+    VP --> SA
+    PR --> SA
 ```
 
 ## Dependency rule
