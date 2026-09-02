@@ -2,274 +2,297 @@
 
 This document records repository-wide implementation decisions that should remain stable as individual research modules evolve.
 
-The objective is not to maximize architectural ceremony. The objective is to make the project easy to understand, modify, test, compare, and maintain while preserving strong boundaries between research capabilities.
+The project optimizes for readability, maintainability, explicit data flow, replaceability, and scientific reproducibility while preserving strong boundaries between research capabilities.
 
 ## Architectural style
 
 The repository uses a **capability-oriented modular architecture**.
 
-It intentionally does **not** adopt Clean Architecture as a repository-wide pattern.
+The main unit of organization is a capability with a clear responsibility, public boundary, tests, configuration, and local documentation.
 
-Clean Architecture concepts may be useful locally when a concrete module genuinely needs them, but contributors must not introduce its conventional layers mechanically across the project.
+A reader should be able to understand a capability primarily by opening its module.
 
-The repository should not evolve into repeated structures such as:
+The preferred structural pattern is:
 
 ```text
-domain/
-application/
-infrastructure/
-ports/
-adapters/
-repositories/
-use_cases/
+repository
+    -> runnable applications
+    -> capability modules
+    -> small shared primitives
 ```
 
-unless a specific local problem clearly justifies them.
+Within a capability, use the smallest internal structure that communicates the behavior clearly.
 
-## Why this decision exists
+## Why this architecture fits the project
 
-This is a research-oriented system whose main sources of change are algorithms, learned models, sensor integrations, representations, datasets, and experiments.
+The main sources of change are:
 
-The architecture therefore optimizes for:
+- algorithms;
+- learned models;
+- sensor integrations;
+- geometric and semantic representations;
+- datasets;
+- experiments;
+- persistence strategies;
+- runtime composition.
 
-1. understanding a capability by opening one module;
-2. replacing one implementation without rewriting unrelated modules;
-3. making data flow explicit;
-4. keeping experiments close to the capability being evaluated;
-5. avoiding framework-style abstraction that obscures research code;
-6. preserving clean integration boundaries as implementations change.
+The architecture therefore favors:
 
-The project should remain understandable to a reader who is unfamiliar with the implementation history.
+1. understanding one capability locally;
+2. replacing implementations behind stable behavior;
+3. explicit transformations between multimodal observations;
+4. experiments that can select and compare implementations;
+5. module-level ownership of research code;
+6. small, stable integration boundaries.
 
 ## Capability ownership
 
-Every significant behavior should have one obvious owner.
+Every significant behavior has one obvious owner.
+
+Current ownership is:
+
+- `state-estimation`: pose, trajectory, and motion-corrected LiDAR observations;
+- `geometric-map`: persistent world geometry;
+- `visual-perception`: structured visual and semantic observations from RGB;
+- `point-representation`: learned representations for LiDAR points;
+- `sensor-association`: temporal and geometric RGB/LiDAR association;
+- `semantic-fusion`: consolidation of semantic evidence across sources, views, and time;
+- `semantic-map`: persistent semantic state linked to world geometry;
+- `semantic-memory`: semantic and spatial retrieval structures;
+- `scene-graph`: entities, hierarchy, and relationships;
+- `context-reasoning`: contextual inference with provenance;
+- `query-engine`: semantic, spatial, and contextual query composition.
+
+Resolve ownership before implementation whenever a new feature appears to span several capabilities.
+
+## Locality of implementation
+
+Place capability-specific code with the module that owns it.
+
+This includes:
+
+- third-party runtimes;
+- conversion code;
+- model loading;
+- backend-specific implementations;
+- persistence helpers;
+- module configuration;
+- training and inference support.
 
 Examples:
 
-- pose and trajectory estimation belong to `state-estimation`;
-- persistent geometry belongs to `geometric-map`;
-- visual semantic observations belong to `visual-perception`;
-- learned LiDAR point features belong to `point-representation`;
-- RGB/LiDAR geometric association belongs to `sensor-association`;
-- temporal and multi-view semantic evidence consolidation belongs to `semantic-fusion`;
-- persistent semantic state belongs to `semantic-map`;
-- semantic/spatial retrieval structures belong to `semantic-memory`;
-- entities and relationships belong to `scene-graph`;
-- contextual inference belongs to `context-reasoning`;
-- user-facing semantic/spatial query composition belongs to `query-engine`.
+```text
+modules/state-estimation/
+    FAST_LIO-backed runtime
 
-If a new feature does not have an obvious owner, resolve ownership before implementing it.
+modules/geometric-map/
+    Open3D-specific implementation
 
-Do not split one responsibility between several modules merely to preserve an architectural pattern.
+modules/visual-perception/
+    model runtime and preprocessing
+```
 
-## Locality over horizontal layers
-
-Code that is specific to one capability should live with that capability.
-
-For example, a third-party odometry runtime used exclusively by `state-estimation` should be implemented under `state-estimation`, not under a repository-wide infrastructure layer.
-
-The same rule applies to model runtimes, conversion code, persistence helpers, backend-specific implementations, and configuration that are owned by one module.
-
-This reduces the number of directories a reader must inspect to understand one feature.
+This keeps the code required to understand one capability physically close together.
 
 ## Public module boundary
 
-Each module should expose the smallest useful public surface.
+Each module exposes the smallest useful public surface.
 
-Consumers may depend on:
+Consumers depend on:
 
-- documented public types;
-- documented public functions or classes;
-- explicit protocols/interfaces that define a real variation point;
+- documented public data types;
+- documented functions or classes;
+- explicit protocols for real variation points;
 - stable module entry points.
 
-Consumers must not depend on:
+Internal model objects, caches, training-only structures, storage details, and backend-specific objects remain implementation details of the owning module.
 
-- private submodules;
-- internal model objects;
-- cache implementation;
-- storage layout;
-- training-only structures;
-- undocumented configuration internals;
-- third-party library objects that are not part of the public contract.
-
-The public API is the compatibility boundary. Internal organization may change freely as long as the public behavior remains valid.
+The compatibility boundary is the public API.
 
 ## Shared code policy
 
-Shared code is intentionally small.
-
-A type belongs in repository-wide shared code only when it is both:
-
-1. conceptually owned by the whole system rather than one capability;
-2. stable enough that several modules should agree on exactly the same meaning.
+Repository-wide shared code is reserved for concepts that are both globally owned and semantically stable.
 
 Good candidates include:
 
 - timestamps;
 - coordinate frame identifiers;
 - poses and rigid transforms;
-- map or artifact identifiers;
-- simple repository-wide provenance primitives.
+- map and artifact identifiers;
+- simple provenance primitives.
 
-Bad candidates include:
+Capability-specific types stay with their module. A learned embedding format, model tensor structure, or backend schema remains owned by the capability that defines it.
 
-- one module's embedding format;
-- one model's tensor structure;
-- one persistence backend's schema;
-- convenience utilities that happen to be imported twice.
+When a shared package is introduced, prefer a small structure such as:
 
-Do not create a generic `utils` dumping ground.
+```text
+shared/
+├── geometry/
+├── time/
+└── types/
+```
 
-## Historical root directories
+Promote a concept to shared code only after its meaning is stable across consumers.
 
-The repository may still contain root-level `adapters/` and `contracts/` directories created during earlier architectural iterations.
+## SOLID as design guidance
 
-They must not be interpreted as mandatory Clean Architecture layers.
-
-New capability-specific integrations and contracts should be kept with their owning modules. Only genuinely repository-wide primitives should be promoted to shared code.
-
-When touching legacy placeholders, prefer simplifying or migrating them rather than expanding them into horizontal architecture layers.
-
-## SOLID as code-design guidance
-
-SOLID is a design constraint, not a folder template.
+SOLID guides code and dependency design.
 
 ### Single Responsibility
 
-A component should represent one coherent responsibility and one primary reason to change.
+A component represents one coherent responsibility and one primary reason to change.
 
-Split behavior when responsibilities change for different reasons, not merely to reduce file size.
+Split behavior when responsibilities evolve independently.
 
 ### Open/Closed
 
-Enable extension where a real family of implementations exists.
+Expose stable variation points where multiple implementations exist or are intentionally compared.
 
-A strategy or protocol is valuable for cases such as multiple fusion methods, multiple pose estimators, or interchangeable persistence backends. It is unnecessary when no meaningful variation exists.
+Typical project examples include multiple fusion methods, pose estimators, point encoders, storage backends, or research variants.
 
 ### Liskov Substitution
 
-Two implementations of the same public contract must behave consistently from the consumer's perspective.
+Implementations of the same public contract preserve the same consumer-visible behavior.
 
-Document invariants, units, coordinate frames, ordering guarantees, error behavior, and lifecycle assumptions when they are part of substitution correctness.
+Substitution-relevant invariants should be documented and tested, including units, frames, ordering, error semantics, and lifecycle assumptions.
 
 ### Interface Segregation
 
-Expose narrow interfaces around consumer needs.
+Interfaces are shaped around one consumer need.
 
-For example, reading a semantic map and writing a semantic map may be separate contracts if consumers need only one side.
+For example, map reading and map writing may be separate contracts when the consumers differ.
 
 ### Dependency Inversion
 
-Application orchestration and high-level modules should depend on stable capability behavior rather than on concrete external libraries.
+High-level orchestration depends on stable capabilities while concrete implementations satisfy those capabilities.
 
-Dependency inversion should isolate meaningful volatility. It should not produce one interface for every class.
+Example:
+
+```text
+mapping runtime -> PoseEstimator <- FAST_LIO-backed estimator
+```
+
+This keeps volatile external technology behind a stable project responsibility.
 
 ## Abstraction threshold
 
-An abstraction should normally be introduced only when one of these is true:
+Introduce an abstraction when it makes a concrete boundary or variation point clearer.
 
-- there are already multiple implementations;
-- a planned experiment explicitly compares interchangeable implementations;
-- an expensive or external dependency needs isolation;
-- a module boundary needs a stable contract;
-- testing requires a substitute that should satisfy the same behavior.
+Common triggers are:
 
-A speculative "we may need this later" is not sufficient by itself.
+- multiple implementations;
+- a planned comparison experiment;
+- isolation of an expensive or external dependency;
+- a module boundary that requires a stable contract;
+- contract-level testing with substitutes.
 
-Prefer duplication of a few obvious lines over a premature generic abstraction that hides intent. Remove duplication when the common concept is proven.
+For local behavior with one straightforward implementation, prefer direct code and direct construction.
 
 ## Explicit data flow
 
-The system should favor visible transformations:
+Important transformations should be visible:
 
 ```text
 input observation
-    -> validation
+    -> boundary validation
     -> capability-specific transformation
     -> explicit output type
     -> next capability
 ```
 
-Avoid hidden global registries, implicit singleton state, mutable cross-module caches, or ambient dependencies.
-
-For multimodal robotics data, important metadata must remain explicit when relevant:
+For multimodal robotics data, preserve relevant metadata such as:
 
 - timestamp;
-- sensor/frame identity;
+- sensor identity;
 - coordinate frame;
 - units;
-- calibration or transform provenance;
+- calibration identity;
+- transform provenance;
 - source observation identity;
 - confidence or uncertainty;
-- model/checkpoint provenance where necessary for reproducibility.
+- model/checkpoint provenance when needed for reproducibility.
 
-Do not silently discard metadata required to reconstruct how a result was produced.
+A downstream consumer should be able to determine how an observation was produced and how it is spatially and temporally interpreted.
 
 ## Boundary validation
 
-Validate assumptions where data crosses a module boundary.
+Validate assumptions when data crosses a module boundary.
 
-Examples include:
+Important examples are:
 
-- incompatible coordinate frames;
-- unsynchronized timestamps;
-- invalid transforms;
-- unexpected tensor or embedding dimensions;
-- unsupported point attributes;
-- incompatible map versions;
-- missing provenance required by fusion or evaluation.
+- coordinate-frame compatibility;
+- timestamp synchronization;
+- transform validity;
+- tensor and embedding dimensions;
+- supported point attributes;
+- map version compatibility;
+- provenance required by fusion or evaluation.
 
-Prefer an early explicit failure over downstream corruption.
+Fail early with actionable diagnostics when an invariant is violated.
 
-## Configuration decisions
+## Configuration ownership
 
-Configuration should be close to its owner.
+A module owns parameters that control its internal algorithm.
 
-A module owns parameters that control its internal algorithm. An application owns parameters that select implementations or compose several modules.
+An application or experiment owns parameters that select implementations and compose modules.
 
-Avoid one global configuration object containing every setting in the repository.
+This creates a simple distinction:
 
-Default values should be safe, reproducible, and documented when they materially affect experiments.
+```text
+algorithm parameter -> module config
+composition choice   -> app or experiment config
+```
 
-## Research-code rule
+Use typed and explicit configuration where practical. Document defaults that materially affect experiments.
 
-Research provenance is important, but architectural naming should remain capability-based.
+## Research implementation rule
 
-Do not name the public architecture after a paper, repository, model family, or dataset when that name would couple the system to one implementation.
+Public architecture is named after project capabilities.
 
-For example, prefer a public `PoseEstimator` capability with a concrete implementation backed by a specific odometry system over making that odometry system the architectural boundary itself.
+Scientific provenance belongs in implementation and module documentation.
 
-Similarly, issues should define the required capability, behavior, tests, and acceptance criteria without making an external paper the specification. Module documentation may record which ideas, algorithms, or comparisons influenced the implementation.
+Example:
+
+```text
+capability: PoseEstimator
+implementation: FAST_LIO-backed estimator
+research notes: modules/state-estimation/docs/
+```
+
+The same rule applies to VLMs, point encoders, fusion methods, scene-graph techniques, datasets, and storage technologies.
+
+Issues should define observable capability behavior, inputs, outputs, constraints, tests, and acceptance criteria. Module documentation can then record which research work informed the implementation.
 
 ## Readability rules
 
-Prefer code that communicates intent without requiring architectural archaeology.
+Prefer code that communicates intent locally.
 
 Use:
 
-- descriptive domain/capability names;
+- descriptive capability names;
 - short call paths;
-- explicit types at module boundaries;
-- small files when responsibilities are distinct;
-- comments for non-obvious reasoning, not for restating code;
+- explicit boundary types;
+- focused files when responsibilities are distinct;
+- comments for non-obvious reasoning;
 - module documentation for design rationale.
 
-Avoid:
+Prefer precise names such as:
 
-- generic `manager`, `handler`, `helper`, or `utils` classes when a precise name exists;
-- pass-through layers with no behavior;
-- wrappers whose only purpose is satisfying an architectural pattern;
-- factories when direct construction is clearer;
-- service locators or global registries without a concrete need;
-- circular module dependencies.
+```text
+PointEncoder
+PoseEstimator
+ObservationMatcher
+TemporalFusion
+SemanticMapReader
+```
+
+over generic names when a more specific responsibility is known.
 
 ## Dependency direction
 
-There is no universal layer stack. Dependency direction follows capability ownership and public APIs.
+Dependency direction follows capability ownership and public APIs.
 
-At a high level:
+At repository level:
 
 ```mermaid
 flowchart TD
@@ -280,13 +303,19 @@ flowchart TD
     Modules --> Shared[small shared primitives]
 ```
 
-Cross-module dependencies should be explicit and acyclic whenever practical.
+For cross-module use:
 
-If two modules repeatedly need each other's private concepts, the boundary is probably wrong and should be reconsidered rather than patched with more abstraction.
+```text
+consumer -> producer public API
+```
+
+Keep these dependencies explicit and acyclic whenever practical.
+
+When two modules need substantial access to each other's internal concepts, reconsider the ownership boundary.
 
 ## Testing strategy
 
-Tests should protect public behavior and scientific reproducibility.
+Tests protect public behavior and scientific reproducibility.
 
 Use:
 
@@ -294,34 +323,34 @@ Use:
 - contract tests for interchangeable implementations;
 - integration tests for module boundaries;
 - representative application tests for end-to-end composition;
-- benchmarks for runtime, memory, or accuracy-sensitive components;
-- regression fixtures for previously observed failure modes.
+- benchmarks for runtime, memory, and accuracy-sensitive components;
+- regression fixtures for known failure modes.
 
-Avoid tests that freeze incidental internal structure and make refactoring unnecessarily expensive.
+Tests should make internal refactoring safe by focusing on observable behavior and stable invariants.
 
 ## Documentation as part of architecture
 
-A non-obvious design decision is incomplete until its rationale is recoverable.
+A design decision is complete when its rationale is recoverable.
 
 Repository-wide decisions belong in root `docs/`.
 
 Module-specific decisions belong in `modules/<module>/docs/`.
 
-If a contributor changes an established boundary, ownership rule, public contract, or dependency direction, the relevant documentation should change in the same work.
+Changes to ownership, public contracts, dependency direction, or repository structure should update the relevant documentation in the same work.
 
-## Review checklist
+## Structural decision checklist
 
 Before accepting a structural change, verify:
 
-1. Is there one obvious owner for the new behavior?
-2. Can a reader understand the change without opening unrelated directories?
-3. Is a new abstraction solving a concrete problem?
+1. Is there one obvious owner for the behavior?
+2. Can a reader understand the change mostly within that owner module?
+3. Are inputs, outputs, and invariants explicit?
 4. Does the public boundary expose only what consumers need?
-5. Are external implementation details contained?
+5. Are external implementation details contained locally?
 6. Are units, frames, timestamps, and provenance explicit where required?
-7. Can the important behavior be tested without depending on private internals?
-8. Does the change preserve or improve replaceability?
-9. Does it introduce a circular or hidden dependency?
-10. Is the resulting design simpler than the reasonable alternatives?
+7. Can the behavior be tested through its public boundary?
+8. Can intended implementations be replaced without changing unrelated consumers?
+9. Is dependency direction clear and preferably acyclic?
+10. Is this the smallest structure that communicates the design clearly?
 
-If the answer to the last question is no, prefer the simpler design.
+A design that satisfies these points matches the engineering direction of the repository.
