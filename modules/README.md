@@ -2,9 +2,7 @@
 
 Each module represents one independently understandable, developable, testable, benchmarkable, and replaceable capability.
 
-The repository is capability-oriented. Modules do not need to reproduce Clean Architecture layers such as `domain/`, `application/`, `infrastructure/`, `ports/`, or `adapters/`.
-
-Prefer the smallest internal structure that makes the capability clear.
+The repository is capability-oriented. Prefer the smallest internal structure that makes the capability, its inputs, outputs, and variation points clear.
 
 ## Capability ownership
 
@@ -20,50 +18,75 @@ Prefer the smallest internal structure that makes the capability clear.
 - `context-reasoning`: contextual inference with explicit provenance.
 - `query-engine`: unified semantic, spatial, and contextual query interface.
 
-Persistent geometric reconstruction belongs to `geometric-map`, not to `state-estimation` or `semantic-map`.
+Persistent geometric reconstruction is owned by `geometric-map`.
 
-Concrete odometry implementations remain internal to `state-estimation`. Semantic modules reference geometry through documented public types instead of owning duplicate authoritative geometry.
+Concrete odometry implementations are owned by `state-estimation`. Semantic modules reference geometry through documented public types so the system keeps one authoritative geometric representation.
 
 ## Public boundary
 
-Each module should expose a small documented public API.
+Each module exposes a small documented public API.
 
-Other modules may depend on that public API but must not depend on private implementation details, internal model objects, storage layout, caches, training-only structures, or backend-specific representations.
+Consumers depend on:
+
+- public data types;
+- public functions or classes;
+- stable entry points;
+- protocols that represent real variation points.
+
+Implementation-specific model objects, caches, storage layout, training structures, and backend representations remain local to the owning module.
 
 Capability-specific contracts belong to the capability that defines them.
 
-For example, a learned point representation contract belongs to `point-representation`, even if `sensor-association` or another module consumes it.
+For example, a learned point representation contract belongs to `point-representation`, even when `sensor-association` consumes it.
 
 ## Internal structure
 
-A module may evolve toward a structure such as:
+A module may evolve toward:
 
 ```text
 modules/<module>/
 ├── README.md
 ├── src/
 │   └── <package>/
+│       ├── __init__.py
+│       ├── models.py
+│       ├── config.py
+│       └── <capability files>.py
 ├── tests/
 ├── configs/
 ├── benchmarks/
 └── docs/
 ```
 
-None of these directories is mandatory before it has a concrete purpose.
+Create each directory when it has a concrete responsibility and content.
 
-Keep capability-specific external integrations close to the module that owns them. Do not move them into a repository-wide infrastructure layer merely because they wrap a third-party library.
+Keep capability-specific external integrations close to the module that owns them. For example, a LiDAR-inertial odometry backend belongs under `state-estimation`, and a point-cloud backend used only for reconstruction belongs under `geometric-map`.
+
+## Implementation sequence
+
+When developing a module:
+
+1. state the capability responsibility in `README.md`;
+2. define public inputs and outputs;
+3. document units, frames, timestamps, shapes, provenance, and other boundary invariants;
+4. implement the simplest working behavior locally;
+5. introduce protocols only for actual replacement or comparison points;
+6. test local behavior and public contracts;
+7. add benchmarks for performance-sensitive behavior;
+8. document non-obvious algorithmic and research decisions under `docs/`.
 
 ## Abstractions
 
-Protocols, interfaces, strategies, factories, or registries should exist only for concrete boundaries or variation points, for example:
+Use protocols, interfaces, strategies, factories, or registries when they represent a concrete variation point, such as:
 
 - multiple implementations;
 - intentional replaceability;
+- research comparisons;
 - third-party dependency isolation;
 - module boundary stability;
 - contract-level testing with substitutes.
 
-Do not create an interface for every class or add layers speculatively.
+For straightforward local behavior with one implementation, direct construction and direct calls are preferred because they make the code path easier to read.
 
 ## Documentation
 
