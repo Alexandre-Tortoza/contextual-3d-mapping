@@ -4,9 +4,17 @@ Research framework for building open-vocabulary 3D semantic and contextual maps 
 
 ## Architecture
 
-The repository uses a **simple capability-oriented modular architecture**. It intentionally does not adopt Clean Architecture as a repository-wide pattern.
+The repository uses a **simple capability-oriented modular architecture**.
 
-The main goals are readability, explicit responsibility, low coupling, testability, replaceability, and maintainability. SOLID principles guide code and dependency design without imposing unnecessary folder layers or abstractions.
+The main goals are readability, explicit responsibility, low coupling, testability, replaceability, maintainability, and scientific reproducibility. SOLID principles guide code and dependency design at meaningful boundaries.
+
+The central rule is simple:
+
+```text
+one capability -> one clear owner module -> small public API -> explicit composition
+```
+
+Capability-specific integrations and implementation details stay with the module that owns them. Applications compose modules into runnable workflows. Shared primitives remain small and stable.
 
 Coding agents and contributors should read [`AGENTS.md`](./AGENTS.md) before creating or changing code, folders, interfaces, or repository-wide architecture.
 
