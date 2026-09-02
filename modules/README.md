@@ -2,6 +2,7 @@
 
 Each module represents an independently developable capability and communicates through shared contracts rather than depending on another module's implementation.
 
+- `state-estimation`: LiDAR/IMU observations to pose, trajectory, and motion-corrected LiDAR frames.
 - `visual-perception`: image observations to structured visual features.
 - `point-representation`: LiDAR points to learned 3D representations.
 - `sensor-association`: geometric and temporal association between sensor observations.
