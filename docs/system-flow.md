@@ -9,10 +9,13 @@ flowchart LR
     D[Datasets] --> A[adapters]
     S[Live or recorded sensors] --> A
 
+    A --> SE[state-estimation]
     A --> VP[visual-perception]
-    A --> PR[point-representation]
 
-    VP --> SA[sensor-association]
+    SE -->|motion-corrected LiDAR| PR[point-representation]
+    SE -->|pose / trajectory| SA[sensor-association]
+
+    VP --> SA
     PR --> SA
 
     SA --> SF[semantic-fusion]
@@ -31,6 +34,7 @@ flowchart LR
     QE --> APP[apps]
 
     C[contracts] -. shared interfaces .-> A
+    C -. shared interfaces .-> SE
     C -. shared interfaces .-> VP
     C -. shared interfaces .-> PR
     C -. shared interfaces .-> SA
@@ -46,6 +50,8 @@ flowchart LR
 
 The diagram is a topology of the intended integration path, not a specification of internal algorithms and not a requirement that every runnable experiment use every module.
 
-A workflow may replace, isolate, or omit stages when its contracts permit that composition. The important invariant is that module boundaries remain explicit and that interoperability is expressed through repository contracts.
+`state-estimation` establishes the motion and pose context required by LiDAR-based processing. It may provide motion-corrected LiDAR frames to `point-representation` and pose or trajectory information to `sensor-association`. Camera-LiDAR calibration and visual-to-point correspondence remain outside state estimation.
+
+A workflow may replace, isolate, or omit stages when its contracts permit that composition. For example, an experiment may inject simulator or dataset ground-truth poses instead of running a live state estimator. The important invariant is that module boundaries remain explicit and that interoperability is expressed through repository contracts.
 
 `evaluation/`, `experiments/`, and `tests/` are intentionally not represented as sequential stages. They are cross-cutting consumers that may exercise individual modules or complete compositions independently.
