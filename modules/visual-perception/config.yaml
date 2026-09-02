@@ -1,0 +1,8 @@
+dataset:
+  bag_path: ../vlm-cotext-map/dataset/Corridor02/corridor02.bag
+  image_topic: /camera_1/image_raw
+  sample_size: 10
+  seed: 42
+
+output_directory: runs
+run_id: corridor02-sample
