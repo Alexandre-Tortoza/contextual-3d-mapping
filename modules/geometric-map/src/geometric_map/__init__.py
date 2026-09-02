@@ -1,0 +1,1 @@
+"""Persistent geometric mapping capability."""
