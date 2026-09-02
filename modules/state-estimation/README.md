@@ -1,6 +1,6 @@
 # State Estimation
 
-`state-estimation` provides motion and pose estimates required to place LiDAR observations in a consistent spatial reference before semantic processing.
+`state-estimation` provides motion and pose estimates required to place LiDAR observations in a consistent spatial reference before persistent mapping and semantic processing.
 
 The module is independently executable, testable, benchmarkable, and replaceable. Downstream modules depend on its public contracts rather than on a specific odometry implementation.
 
@@ -20,7 +20,7 @@ The module is independently executable, testable, benchmarkable, and replaceable
 - persistent geometric or semantic map construction;
 - scene graphs, semantic memory, or contextual reasoning.
 
-Camera-LiDAR association remains owned by `sensor-association`. Learned LiDAR features remain owned by `point-representation`.
+Camera-LiDAR association remains owned by `sensor-association`. Learned LiDAR features remain owned by `point-representation`. Persistent geometric reconstruction is owned by `geometric-map`.
 
 ## External implementations
 
