@@ -3,16 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "image-context"
+name = "visual-perception"
 version = "0.1.0"
-description = "Sample images from ROS bags for the image-context module."
+description = "Structured visual and semantic observations from RGB images."
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.26",
-    "opencv-python>=4.9",
-    "pyyaml>=6.0",
-    "rosbags>=0.9",
 ]
 
 [project.optional-dependencies]
@@ -20,33 +17,37 @@ dev = [
     "mypy>=1.10",
     "pytest>=8.0",
     "ruff>=0.6",
-    "types-pyyaml>=6.0",
 ]
-
-[project.scripts]
-image-context = "image_context.cli:main"
+# Reserved for the real backend adapters selected by issue #174 (#186-#189).
+# No heavyweight ML dependency is declared yet: this environment has no GPU,
+# and every canonical stage defaults to its GPU-free fake (see config.py).
+ml = []
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/image_context"]
+packages = ["src/visual_perception"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+# `contextual_mapping_contracts` (#99/#100/#101) and, for the integration
+# tests only, `contextual_mapping_adapters`/`contextual_mapping_datasets`
+# (#103/#104) do not have their own installable package yet. Until they do,
+# tests resolve them from their source trees directly.
+pythonpath = ["../../contracts", "../../adapters/datasets", "../../datasets"]
 
 [tool.ruff]
-line-length = 100
-src = ["src", "tests"]
+line-length = 110
+src = ["src", "tests", "benchmarks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 python_version = "3.12"
-packages = ["image_context"]
+packages = ["visual_perception"]
 mypy_path = "src"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["cv2.*"]
+module = ["contextual_mapping_contracts.*", "contextual_mapping_adapters.*", "contextual_mapping_datasets.*"]
 ignore_missing_imports = true
-follow_imports = "skip"
