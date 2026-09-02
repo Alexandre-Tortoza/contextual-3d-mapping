@@ -1,29 +1,25 @@
 # Repository Architecture
 
-`contextual-3d-mapping` is organized as a capability-oriented modular research framework for open-vocabulary 3D semantic and contextual mapping.
+`contextual-3d-mapping` is organized as a **capability-oriented modular research framework** for open-vocabulary 3D semantic and contextual mapping.
 
-The architecture is intentionally simple. It does **not** adopt Clean Architecture as a repository-wide pattern.
-
-The objective is to make each capability easy to locate, understand, modify, test, benchmark, and replace while following SOLID principles at meaningful code and module boundaries.
+The architecture is designed so each capability is easy to locate, understand, modify, test, benchmark, and replace. SOLID principles guide code and dependency design at meaningful boundaries.
 
 For implementation-level guidance, also read [`engineering-principles.md`](./engineering-principles.md) and the root [`AGENTS.md`](../AGENTS.md).
 
 ## Architectural priorities
 
-When two designs are both technically valid, prefer the one that improves these properties in this order:
+When two designs are technically valid, prefer the one that improves these properties in this order:
 
 1. readability and local understandability;
 2. explicit responsibility and ownership;
 3. low coupling;
 4. testability and replaceability;
 5. extensibility around proven variation points;
-6. abstraction only when justified.
-
-The project should not gain architectural layers merely because they are common in application frameworks.
+6. abstraction when it makes the design clearer or safer.
 
 ## Repository topology
 
-The repository is organized around runnable applications, research capabilities, datasets, experiments, evaluation, and documentation.
+The repository is organized around runnable applications, capability modules, datasets, experiments, evaluation, and documentation.
 
 ```text
 contextual-3d-mapping/
@@ -50,9 +46,7 @@ contextual-3d-mapping/
 └── tests/
 ```
 
-Repository-wide shared primitives may exist when they are genuinely common and stable, but the architecture does not require a large global contracts or infrastructure layer.
-
-The repository may still contain root-level directories created during earlier architecture iterations, such as `adapters/` and `contracts/`. They are not mandatory architectural layers and should not be expanded mechanically. New capability-specific code should remain with the capability that owns it.
+When repository-wide primitives become necessary, keep them small and stable in a shared package. Capability-specific integrations, contracts, configuration, and persistence helpers stay with the owning module.
 
 ## Capability ownership
 
@@ -70,13 +64,13 @@ Each module owns one coherent system capability.
 - `context-reasoning`: contextual inference with explicit provenance.
 - `query-engine`: unified semantic, spatial, and contextual query interface.
 
-A capability should have one obvious owner. If a feature appears to belong equally to several modules, resolve the ownership boundary before implementation instead of duplicating the responsibility.
+A capability should have one obvious owner. Resolve that ownership before implementation when a feature appears to span several modules.
 
 ## Module boundary
 
 A module is an independently understandable and testable development unit.
 
-A module may contain its own:
+A typical module may evolve toward:
 
 ```text
 modules/<module>/
@@ -88,24 +82,16 @@ modules/<module>/
 └── docs/
 ```
 
-These directories are optional and should only be created when useful.
+Create these directories only when they serve a real responsibility.
 
-A module does not need to reproduce a fixed internal architecture such as `domain/`, `application/`, `infrastructure/`, `ports/`, or `adapters/`.
-
-The module should expose a small public API. Other modules may use that public API but must not import or depend on private implementation details.
+The module exposes a small public API. Consumers use that public API while implementation details remain local to the producer module.
 
 ## Dependency rule
 
-The primary dependency rule is:
+The primary dependency shape is:
 
 ```text
-consumer -> producer public API
-```
-
-not:
-
-```text
-consumer -> producer private implementation
+consumer -> producer public API -> producer implementation
 ```
 
 High-level composition is performed by `apps/`, experiments, or explicit orchestration code.
@@ -119,18 +105,18 @@ flowchart TD
     Evaluation[evaluation] --> PublicAPIs
     Datasets[datasets] --> PublicAPIs
 
-    PublicAPIs --> Shared[small shared primitives when justified]
+    PublicAPIs --> Shared[small shared primitives]
 ```
 
-If two modules need extensive access to each other's private structures, the boundary should be reconsidered rather than hidden behind additional wrappers.
+If two modules repeatedly need substantial access to each other's internal concepts, reconsider the ownership boundary.
 
 ## Geometry boundary
 
-`state-estimation` estimates motion. It owns pose estimation, trajectory state, and motion-corrected LiDAR observations.
+`state-estimation` owns motion estimation, pose, trajectory state, and motion-corrected LiDAR observations.
 
-A concrete LiDAR-inertial odometry implementation remains an implementation detail of `state-estimation` behind the module's public capability boundary.
+Concrete LiDAR-inertial odometry implementations satisfy the public state-estimation capability while remaining local to that module.
 
-`geometric-map` owns persistent reconstruction of world geometry. Persistent geometry therefore does not belong to `state-estimation` and should not be duplicated inside `semantic-map`.
+`geometric-map` owns persistent reconstruction of world geometry.
 
 ```mermaid
 flowchart LR
@@ -149,13 +135,15 @@ flowchart LR
     PR --> SA
 ```
 
+Persistent geometry has one authoritative owner, `geometric-map`. Semantic capabilities reference that geometry through stable public types.
+
 ## Semantic boundary
 
-`semantic-map` enriches persistent geometry with semantic information. It should reference geometric entities instead of silently creating a second authoritative copy of world geometry.
+`semantic-map` enriches persistent geometry with semantic information.
 
 `semantic-memory`, `scene-graph`, and `context-reasoning` derive retrieval structures and higher-level contextual structures from mapped information.
 
-`query-engine` is the user-facing query capability used by applications to combine semantic, spatial, and contextual retrieval.
+`query-engine` is the query boundary used by applications to combine semantic, spatial, and contextual retrieval.
 
 ## Application boundary
 
@@ -167,62 +155,71 @@ The initial application roles are:
 - `map-explorer`: opens persisted maps, renders geometry and semantic information, and interacts with `query-engine`;
 - `cli`: provides non-graphical automation, inspection, debugging, evaluation, and export workflows.
 
-Applications may select concrete implementations and compose modules. They must not become the owner of algorithms that clearly belong to a module.
+Applications select concrete implementations, connect module inputs and outputs, manage runtime lifecycle, and expose user-facing entry points.
+
+Research algorithms remain owned by their capability modules.
 
 ## Integration ownership
 
-External integrations should stay close to the capability that owns them.
+Place external integrations with the capability that owns their behavior.
 
 Examples:
 
 ```text
-state-estimation/
+modules/state-estimation/
     concrete LiDAR-inertial odometry integration
 
-geometric-map/
-    geometry backend used only by that module
+modules/geometric-map/
+    geometry backend used by geometric mapping
 
-visual-perception/
-    model runtime used only by visual perception
+modules/visual-perception/
+    visual model runtime
 ```
 
-A repository-wide integration layer should only exist when an integration is genuinely shared by unrelated capabilities.
+Create repository-wide integration infrastructure when unrelated capabilities truly share the same integration semantics.
 
-This locality is intentional: opening one module should reveal most of the code required to understand that capability.
+This locality keeps most of the code needed to understand one capability inside one module.
 
 ## Contracts and shared primitives
 
-SOLID and dependency inversion do not require a global interface for every class.
-
-Create a protocol or interface when there is a real boundary or variation point, such as:
+Create a protocol or interface for a real behavior boundary or variation point, such as:
 
 - multiple implementations;
 - intentional replaceability;
+- research comparisons;
 - isolation of an expensive or external dependency;
 - a public module boundary;
-- a test substitute that must satisfy the same behavior.
+- contract-level testing with substitutes.
 
 Capability-specific contracts belong to the capability that defines them.
 
 For example, a point embedding contract belongs to `point-representation`, even when another module consumes it.
 
-Only genuinely repository-wide and stable concepts should be promoted to shared code, for example spatial frames, poses, transforms, timestamps, identifiers, or simple provenance primitives.
+Repository-wide shared types are reserved for stable concepts that several modules must interpret identically, for example:
+
+```text
+Timestamp
+FrameId
+Pose
+RigidTransform
+MapId
+ArtifactId
+Provenance
+```
 
 ## SOLID interpretation
 
-SOLID is applied as a code and boundary design rule, not as a directory template.
+SOLID is applied as a code and boundary design rule.
 
 - **Single Responsibility**: modules and components have one coherent reason to change.
-- **Open/Closed**: proven variation points can gain new implementations without modifying consumers.
-- **Liskov Substitution**: implementations of the same public contract preserve the contract's invariants.
-- **Interface Segregation**: interfaces remain narrow and consumer-oriented.
-- **Dependency Inversion**: high-level orchestration depends on stable capabilities, not volatile concrete implementations.
-
-Do not introduce abstractions solely to claim compliance with SOLID.
+- **Open/Closed**: proven variation points gain new implementations without requiring changes to consumers.
+- **Liskov Substitution**: implementations of the same public contract preserve consumer-visible invariants.
+- **Interface Segregation**: interfaces are narrow and consumer-oriented.
+- **Dependency Inversion**: high-level orchestration depends on stable capabilities while concrete implementations satisfy those capabilities.
 
 ## Explicit multimodal data flow
 
-Important information required to interpret or reproduce a result should remain explicit at module boundaries where applicable:
+Important information required to interpret or reproduce a result remains explicit at module boundaries where applicable:
 
 - timestamp;
 - coordinate frame;
@@ -234,48 +231,61 @@ Important information required to interpret or reproduce a result should remain 
 - confidence or uncertainty;
 - model/checkpoint provenance when needed for reproducibility.
 
-Modules should fail clearly when boundary invariants are violated rather than silently converting incompatible frames, timestamps, dimensions, or units.
+A typical transformation should be readable as:
+
+```text
+observation
+    -> boundary validation
+    -> capability transformation
+    -> explicit output
+    -> next capability
+```
+
+Validate boundary invariants before downstream processing.
 
 ## Persistence boundary
 
-Persistence is a capability concern, not a reason to impose a global architecture layer.
+Persistence follows capability ownership.
 
 Persistent state may include geometry, semantics, observations, evidence, provenance, indexes, and scene-level structures.
 
-A storage implementation used by one module can remain local to that module. A storage abstraction shared by multiple capabilities should exist only if the shared requirement is real and its semantics are stable.
+A storage implementation used by one capability remains local to that capability. Shared storage abstractions are introduced when several capabilities genuinely require the same stable behavior.
 
-Applications may coordinate loading and saving, but they should not own the semantics of persisted module state.
+Applications may coordinate loading and saving while each module remains responsible for the semantics of its persisted state.
 
 ## Research implementation rule
 
-The architecture remains implementation-agnostic.
+Public architecture is named after project responsibilities.
 
-Algorithms, external repositories, models, datasets, and research papers may inform concrete implementations, but public capability boundaries are named after project responsibilities rather than source implementations.
+Algorithms, external repositories, models, datasets, and papers inform concrete implementations and are documented as scientific provenance beside the relevant module.
 
-For example, a concrete odometry framework may implement the `state-estimation` capability, but the repository architecture should not become coupled to that one framework.
+For example:
 
-Likewise, an issue should describe the required capability, behavior, tests, and acceptance criteria. Research references and implementation parallels belong in module documentation when useful for scientific traceability.
+```text
+public capability: PoseEstimator
+concrete implementation: FAST_LIO-backed estimator
+```
+
+Issues should describe capability behavior, inputs, outputs, tests, constraints, and acceptance criteria. Module documentation records implementation parallels and research references when scientifically useful.
 
 ## Abstraction rule
 
-Do not create abstractions in anticipation of hypothetical needs.
+Use an abstraction when it makes a concrete boundary, replacement scenario, or variation point clearer.
 
-Before adding a layer, global package, registry, factory, base class, or protocol, identify the concrete problem it solves.
-
-Prefer a direct local implementation when it is clearer.
-
-A useful rule is:
+A practical rule is:
 
 ```text
 make the common case obvious;
-make variation explicit only where variation exists.
+make variation explicit where variation exists.
 ```
+
+Local behavior with one straightforward implementation should remain direct. Shared abstractions emerge from proven common concepts.
 
 ## Replaceability
 
-Modules may have multiple implementations, model variants, checkpoints, storage strategies, or algorithms as long as they satisfy the public behavior expected by their consumers.
+Modules may have multiple implementations, model variants, checkpoints, storage strategies, or algorithms as long as they preserve the public behavior expected by consumers.
 
-Replaceability should be protected by tests around public contracts where practical, not by exposing implementation internals.
+Protect replaceability with tests around public contracts and boundary invariants.
 
 ## Documentation boundary
 
@@ -283,4 +293,4 @@ Root `docs/` documents repository-level architecture, integration, policies, and
 
 Detailed algorithmic and implementation decisions belong to `modules/<module>/docs/`.
 
-A repository-wide architectural decision is incomplete if future contributors cannot recover its rationale. Structural changes should therefore update the relevant documentation in the same work.
+A structural change should update the relevant documentation in the same work so future contributors can recover both the chosen design and its rationale.
