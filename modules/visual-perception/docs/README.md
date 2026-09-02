@@ -1,19 +1,29 @@
-# Image Context Documentation
+# Visual Perception Documentation
 
-Esta pasta documenta a arquitetura, os fluxos de execução e os artefatos do projeto `image-context`.
+This folder documents `visual-perception`'s architecture, execution flow, artifacts, model
+backends, and research traceability.
 
-As pipelines de produção `baseline` e `region-first` foram removidas (issue
-[#4](https://github.com/Alexandre-Tortoza/image-context/issues/4)). O projeto está em
-transição para um único módulo canônico, desenhado pelo epic
-[#3](https://github.com/Alexandre-Tortoza/image-context/issues/3) e suas issues filhas
-(#5 a #14) — veja o diagrama de arquitetura-alvo e o contrato `ImageContext` diretamente
-nessas issues.
+## Contents
 
-## Conteúdo
+- [architecture.md](architecture.md) — module responsibility, layers, the canonical
+  pipeline diagram, and the image-coordinate invariants.
+- [pipelines.md](pipelines.md) — what each canonical stage does, and where the removed
+  legacy baselines are preserved for comparison.
+- [execution.md](execution.md) — model lifecycle, memory diagnostics, and the stage
+  cache.
+- [artifacts.md](artifacts.md) — the canonical serialization format and what a persisted
+  run looks like.
+- [model-backends.md](model-backends.md) — current backend status (all GPU-free fakes),
+  what is blocked on real hardware, and how selection will work once benchmarked.
+- [research-traceability.md](research-traceability.md) — which mechanisms are adopted
+  from prior work, which are project-specific engineering, and what remains a future
+  idea.
 
-- [architecture.md](architecture.md), arquitetura mínima hoje (amostragem) e link para a
-  arquitetura-alvo.
-- [pipelines.md](pipelines.md), nota sobre a remoção das pipelines legadas e onde a
-  arquitetura nova está sendo desenhada.
-- [execution.md](execution.md), comando `sample` disponível hoje.
-- [artifacts.md](artifacts.md), estrutura de saída atual.
+## Status
+
+Every canonical stage (region discovery, tiling/merge, dense features, mask-aware
+pooling, language-aligned embedding, scene/region semantic interpretation, relation
+generation, quality audit) is implemented and covered by unit and end-to-end tests using
+GPU-free fakes. Real model backends (#186-#189) and hardware validation (#174, #190) are
+not implemented yet: this development environment has no GPU. See
+[model-backends.md](model-backends.md).

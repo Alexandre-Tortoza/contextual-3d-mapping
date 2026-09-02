@@ -1,68 +1,68 @@
-# Image Context
+# Visual Perception
 
-Laboratorio independente para experimentar enriquecimento contextual de imagens antes de
-portar os resultados para o `vlm-context-map`.
+`visual-perception` turns one canonical RGB image observation into a structured,
+auditable visual observation: discovered regions with masks and boxes, dense and
+language-aligned region embeddings, scene- and region-level semantic claims, candidate
+image-level relations, and a quality audit — with model and configuration provenance
+attached throughout.
 
-> Documentacao detalhada: [`docs/`](docs/README.md).
+> Detailed documentation: [`docs/`](docs/README.md).
 
-## Estado atual
+The module is independently testable and every canonical stage is replaceable behind a
+port. It ships with complete, deterministic GPU-free fakes for every backend so its
+contracts, pipeline, cache, and integration boundaries can be fully exercised without a
+GPU or a model download; real backends are tracked separately (see
+[docs/model-backends.md](docs/model-backends.md)).
 
-As pipelines de producao `baseline` (VLM tres passagens -> Grounding DINO -> SAM2) e
-`region-first` (SAM2 automatico -> DINOv2 -> Qwen global/local) foram removidas. Elas
-existiam como experimentos paralelos e serao substituidas por um unico modulo canonico,
-open-vocabulary e uncertainty-aware, desenhado no epic
-[#3](https://github.com/Alexandre-Tortoza/image-context/issues/3) e suas issues filhas
-(#5 a #14). O codigo removido permanece recuperavel no historico do git caso seja
-necessario para comparacao cientifica futura (issue #12).
+## Responsibilities
 
-Hoje a CLI expoe apenas amostragem reproduzivel de imagens de um ROS bag, sem carregar
-nenhum modelo pesado.
+- consume canonical RGB observations emitted by `[adapters]` (not read datasets/ROS bags
+  directly);
+- discover, tile, and merge image regions into stable canonical regions;
+- pool dense visual features and produce language-aligned embeddings per region;
+- interpret scene- and region-level semantics as auditable claims, not single labels;
+- generate candidate 2D relations between regions;
+- audit the resulting observation for structural consistency and contradictions;
+- cache expensive stages and serialize the canonical observation for persistence.
 
-## Preparacao
+## Non-responsibilities
 
-O projeto requer Python 3.12.
+- dataset/ROS bag sampling and transport (`[adapters]`);
+- calibration, cross-sensor projection, LiDAR association (`sensor-association`);
+- persistent geometric/semantic map construction, scene graphs.
+
+## Structure
+
+```text
+visual-perception/
+├── README.md
+├── docs/
+├── benchmarks/
+├── src/
+│   └── visual_perception/
+│       ├── domain/
+│       ├── ports/
+│       ├── application/
+│       ├── infrastructure/
+│       │   ├── fakes/
+│       │   ├── adapters/
+│       │   └── integration/
+│       └── config.py
+└── tests/
+```
+
+## Development
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-```
-
-Se o `python3.12` estiver sendo gerenciado pelo mise:
-
-```bash
-mise use python@3.12.14
-python -m venv .venv
-```
-
-## Amostragem
-
-```bash
-image-context sample --config config.yaml --overwrite
-```
-
-Para conferir reproducibilidade ou testar um caso pequeno:
-
-```bash
-image-context sample --config config.yaml \
-  --sample-size 1 --seed 42 --run-id smoke-sample --overwrite
-```
-
-## Saida
-
-```text
-runs/<run-id>/
-├── manifest.json
-├── selected_frames.json
-└── frames/
-    └── frame-XXXXXX/
-        └── image.png
-```
-
-## Qualidade
-
-```bash
 pytest
 ruff check .
 mypy
 ```
+
+`contextual_mapping_contracts` (and, for integration tests only,
+`contextual_mapping_adapters`/`contextual_mapping_datasets`) resolve from their source
+trees via `pyproject.toml`'s pytest `pythonpath` until those packages have their own
+installable build.
