@@ -1,4 +1,4 @@
-"""Multi-source perception evidence fusion tests (#182)."""
+"""Testes de fusão de evidência de percepção multi-fonte (#182)."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from visual_perception.domain.regions import ObservedRegion, RegionProposal, Til
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 
 
+# Constrói uma RegionProposal sintética a partir de uma box retangular; helper usado
+# por todos os testes de fusão para não repetir a construção de Mask/TileProvenance.
 def _proposal(
     proposal_id: str, source: str, box: tuple[int, int, int, int], size: int = 16
 ) -> RegionProposal:
@@ -23,6 +25,8 @@ def _proposal(
     return RegionProposal(proposal_id, mask, mask.bounding_box(), 0.7, source, tile)
 
 
+# Confirma o caso central de fuse_proposals: propostas sobrepostas de duas fontes
+# diferentes se tornam uma única região fundida, preservando ambos os contribuidores.
 def test_two_sources_contribute_to_one_final_region() -> None:
     proposals_by_source = {
         "source_a": (_proposal("a1", "source_a", (2, 2, 8, 8)),),
@@ -33,6 +37,8 @@ def test_two_sources_contribute_to_one_final_region() -> None:
     assert set(regions[0].contributing_proposal_ids) == {"a1", "b1"}
 
 
+# Garante que a calibração por fonte (source_calibration) é aplicada de forma
+# determinística e produz uma confiança final dentro do intervalo válido [0, 1].
 def test_calibrated_confidence_blends_contributing_sources() -> None:
     proposals_by_source = {
         "trusted": (_proposal("t1", "trusted", (2, 2, 8, 8)),),
@@ -41,10 +47,12 @@ def test_calibrated_confidence_blends_contributing_sources() -> None:
     regions = fuse_proposals(
         proposals_by_source, "obs-1", RegionMergeConfig(), source_calibration={"trusted": 0.9, "noisy": 0.1}
     )
-    assert regions[0].geometric_confidence == regions[0].geometric_confidence  # deterministic, no crash
+    assert regions[0].geometric_confidence == regions[0].geometric_confidence  # determinístico, sem crash
     assert 0.0 <= regions[0].geometric_confidence <= 1.0
 
 
+# Constrói um SemanticClaim sintético de kind LABEL; helper usado pelos testes de
+# fuse_claims para variar produtor e confiança sem repetir a construção completa.
 def _claim(value: str, producer: str, confidence: float) -> SemanticClaim:
     return SemanticClaim(
         ClaimKind.LABEL,
@@ -55,6 +63,8 @@ def _claim(value: str, producer: str, confidence: float) -> SemanticClaim:
     )
 
 
+# Constrói uma ObservedRegion sintética já carregando os claims fornecidos; helper
+# usado pelos testes de fuse_claims para focar só no comportamento de fusão de claims.
 def _region_with_claims(claims: tuple[SemanticClaim, ...]) -> ObservedRegion:
     data = np.zeros((8, 8), dtype=np.bool_)
     data[0:2, 0:2] = True
@@ -62,6 +72,8 @@ def _region_with_claims(claims: tuple[SemanticClaim, ...]) -> ObservedRegion:
     return ObservedRegion("region-a", mask, mask.bounding_box(), 0.9, ("p",), claims=claims)
 
 
+# Confirma que claims concordantes (mesmo valor) de fontes diferentes se fundem em um
+# único claim, com a confiança combinada — em vez de ficarem duplicados.
 def test_agreeing_claims_from_different_sources_fuse_into_one() -> None:
     region = _region_with_claims((_claim("box", "source_a", 0.6), _claim("box", "source_b", 0.8)))
     fused = fuse_claims((region,))
@@ -70,6 +82,8 @@ def test_agreeing_claims_from_different_sources_fuse_into_one() -> None:
     assert label_claims[0].confidence.value == 0.7
 
 
+# Confirma que claims discordantes (valores diferentes) NÃO são fundidos à força — ambas
+# as hipóteses concorrentes são preservadas para uma decisão downstream.
 def test_disagreeing_claims_are_preserved_as_competing_hypotheses() -> None:
     region = _region_with_claims((_claim("box", "source_a", 0.6), _claim("crate", "source_b", 0.8)))
     fused = fuse_claims((region,))

@@ -1,5 +1,5 @@
 # CLI
 
-`cli` provides scriptable application-level access for automation, inspection, debugging, export, and reproducible workflows.
+`cli` fornece acesso scriptável de nível de aplicação para automação, inspeção, debugging, exportação e workflows reprodutíveis.
 
-It should consume the same public application contracts as other clients where practical and must not duplicate module algorithms or bypass module boundaries.
+Deve consumir os mesmos contracts públicos de aplicação que outros clientes, quando praticável, e não deve duplicar algoritmos de módulo nem contornar as fronteiras de módulo.

@@ -1,0 +1,21 @@
+{
+  "stage": "multimodal_reasoning",
+  "gpu_memory_budget_gb": 8.0,
+  "frame_count": 18,
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "candidates": [
+    {
+      "name": "qwen2.5-vl-4bit:Qwen/Qwen2.5-VL-3B-Instruct",
+      "quality_score": 1.0,
+      "peak_vram_gb": 2.512432098388672,
+      "latency_s": 3.094573873556025
+    }
+  ],
+  "failed_candidates": [
+    {
+      "name": "qwen2.5-vl-4bit:unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit",
+      "reason": "AssertionError()"
+    }
+  ],
+  "selected": "qwen2.5-vl-4bit:Qwen/Qwen2.5-VL-3B-Instruct"
+}

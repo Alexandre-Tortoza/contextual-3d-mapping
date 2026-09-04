@@ -1,37 +1,39 @@
 # Visual Perception
 
-`visual-perception` turns one canonical RGB image observation into a structured,
-auditable visual observation: discovered regions with masks and boxes, dense and
-language-aligned region embeddings, scene- and region-level semantic claims, candidate
-image-level relations, and a quality audit — with model and configuration provenance
-attached throughout.
+`visual-perception` transforma uma observação de imagem RGB canônica em uma observação
+visual estruturada e auditável: regiões descobertas com masks e boxes, embeddings de
+região densos e alinhados à linguagem, claims semânticos em nível de cena e de região,
+relações candidatas em nível de imagem, e um audit de qualidade — com proveniência de
+modelo e configuração anexada em todo o processo.
 
-> Detailed documentation: [`docs/`](docs/README.md).
+> Documentação detalhada: [`docs/`](docs/README.md).
 
-The module is independently testable and every canonical stage is replaceable behind a
-port. It ships with complete, deterministic GPU-free fakes for every backend so its
-contracts, pipeline, cache, and integration boundaries can be fully exercised without a
-GPU or a model download; real backends are tracked separately (see
-[docs/model-backends.md](docs/model-backends.md)).
+O módulo é testável de forma independente e cada estágio canônico é substituível por
+trás de um port. Ele vem com fakes completos, determinísticos e GPU-free para cada
+backend, para que seus contracts, pipeline, cache e fronteiras de integração possam ser
+totalmente exercitados sem uma GPU ou download de modelo; backends reais são rastreados
+separadamente (veja [docs/model-backends.md](docs/model-backends.md)).
 
-## Responsibilities
+## Responsabilidades
 
-- consume canonical RGB observations emitted by `[adapters]` (not read datasets/ROS bags
-  directly);
-- discover, tile, and merge image regions into stable canonical regions;
-- pool dense visual features and produce language-aligned embeddings per region;
-- interpret scene- and region-level semantics as auditable claims, not single labels;
-- generate candidate 2D relations between regions;
-- audit the resulting observation for structural consistency and contradictions;
-- cache expensive stages and serialize the canonical observation for persistence.
+- consumir observações RGB canônicas emitidas por `[adapters]` (não ler datasets/ROS
+  bags diretamente);
+- descobrir, dividir em tiles e mesclar regiões de imagem em regiões canônicas estáveis;
+- fazer pooling de features visuais densas e produzir embeddings alinhados à linguagem
+  por região;
+- interpretar semântica em nível de cena e de região como claims auditáveis, não labels
+  únicos;
+- gerar relações 2D candidatas entre regiões;
+- auditar a observação resultante quanto à consistência estrutural e contradições;
+- fazer cache de estágios caros e serializar a observação canônica para persistência.
 
-## Non-responsibilities
+## Não-responsabilidades
 
-- dataset/ROS bag sampling and transport (`[adapters]`);
-- calibration, cross-sensor projection, LiDAR association (`sensor-association`);
-- persistent geometric/semantic map construction, scene graphs.
+- sampling e transporte de dataset/ROS bag (`[adapters]`);
+- calibração, projeção cross-sensor, associação com LiDAR (`sensor-association`);
+- construção de mapa geométrico/semântico persistente, scene graphs.
 
-## Structure
+## Estrutura
 
 ```text
 visual-perception/
@@ -51,7 +53,7 @@ visual-perception/
 └── tests/
 ```
 
-## Development
+## Desenvolvimento
 
 ```bash
 python3.12 -m venv .venv
@@ -62,7 +64,7 @@ ruff check .
 mypy
 ```
 
-`contextual_mapping_contracts` (and, for integration tests only,
-`contextual_mapping_adapters`/`contextual_mapping_datasets`) resolve from their source
-trees via `pyproject.toml`'s pytest `pythonpath` until those packages have their own
-installable build.
+`contextual_mapping_contracts` (e, apenas para os testes de integração,
+`contextual_mapping_adapters`/`contextual_mapping_datasets`) são resolvidos a partir de
+suas source trees via `pythonpath` do pytest no `pyproject.toml`, até que esses pacotes
+tenham seu próprio build instalável.

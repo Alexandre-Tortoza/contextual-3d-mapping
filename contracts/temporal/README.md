@@ -1,6 +1,5 @@
 # Temporal Contracts
 
-Repository-wide temporal primitives such as timestamps, time ranges, synchronization metadata, and clock/source identity belong here when shared across multiple capabilities.
+Primitivas temporais de nível de repositório, como timestamps, intervalos de tempo, metadados de sincronização e identidade de clock/origem, pertencem aqui quando compartilhadas por múltiplas capacidades.
 
-`contextual_mapping_contracts.Timestamp` stores non-negative integer nanoseconds with an
-explicit clock identifier; cross-clock conversion is never implicit.
+`contextual_mapping_contracts.Timestamp` armazena nanossegundos inteiros não negativos com um identificador de clock explícito; conversão entre clocks nunca é implícita.

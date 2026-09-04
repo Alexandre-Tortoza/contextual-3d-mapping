@@ -1,4 +1,4 @@
-"""Deterministic nearest-timestamp synchronization of canonical observations."""
+"""Sincronização determinística por timestamp mais próximo entre observações canônicas."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ from contextual_mapping_datasets.manifest import SensorKind
 from .dataset import CanonicalObservation
 
 
+# Configuração de uma rodada de sincronização: qual tipo de sensor serve de
+# âncora, quais tipos são esperados em cada grupo e a tolerância de tempo
+# aceita. Existe para que `synchronize` seja parametrizável sem argumentos
+# soltos e para validar a configuração uma única vez, antes de agrupar.
 @dataclass(frozen=True)
 class SynchronizationConfig:
     anchor_kind: SensorKind
@@ -34,18 +38,29 @@ class SynchronizationConfig:
             raise ValueError(f"unsupported expected kinds: {sorted(unknown)!r}.")
 
 
+# Um grupo de observações sincronizadas em torno de uma âncora, com os
+# tipos que não puderam ser casados dentro da tolerância marcados como
+# ausentes. Existe para que consumidores downstream (fusão) recebam grupos
+# explícitos em vez de terem que casar timestamps eles mesmos.
 @dataclass(frozen=True)
 class SynchronizedObservationGroup:
     anchor: CanonicalObservation
     observations: tuple[CanonicalObservation, ...]
     missing_kinds: tuple[SensorKind, ...]
 
+    # Busca a observação de um tipo específico dentro do grupo, ou None se
+    # esse tipo ficou ausente (fora da tolerância).
     def observation(self, kind: SensorKind) -> CanonicalObservation | None:
         return next((item for item in self.observations if item.kind == kind), None)
 
 
+# Agrupa observações canônicas de uma única sequência/clock em torno de cada
+# observação âncora, casando o candidato não utilizado mais próximo de cada
+# tipo esperado dentro da tolerância configurada. Usada pelos adapters de
+# dataset para produzir grupos multimodais sincronizados sem reamostrar ou
+# interpolar as observações originais.
 def synchronize(observations: Iterable[CanonicalObservation], config: SynchronizationConfig) -> tuple[SynchronizedObservationGroup, ...]:
-    """Group one sequence/clock without changing or reusing source observations."""
+    """Agrupa uma sequência/clock sem alterar ou reutilizar observações de origem."""
     items = tuple(observations)
     if not items:
         return ()
@@ -78,6 +93,10 @@ def synchronize(observations: Iterable[CanonicalObservation], config: Synchroniz
     return tuple(groups)
 
 
+# Encontra, entre os candidatos ainda não usados, o mais próximo em tempo
+# da âncora dentro da tolerância; desempate por _candidate_order. Existe
+# para isolar a lógica de casamento por proximidade usada em cada tipo
+# esperado dentro de `synchronize`.
 def _nearest_unused(anchor: CanonicalObservation, candidates: list[CanonicalObservation], used: set[str], tolerance_ns: int) -> CanonicalObservation | None:
     anchor_ns = anchor.reference.timestamp.nanoseconds
     eligible = [item for item in candidates if item.reference.observation_id not in used and abs(item.reference.timestamp.nanoseconds - anchor_ns) <= tolerance_ns]
@@ -86,6 +105,8 @@ def _nearest_unused(anchor: CanonicalObservation, candidates: list[CanonicalObse
     return min(eligible, key=lambda item: (abs(item.reference.timestamp.nanoseconds - anchor_ns), *_candidate_order(item)))
 
 
+# Chave de ordenação/desempate determinística de candidatos: por timestamp,
+# depois índice de sequência e id de observação.
 def _candidate_order(observation: CanonicalObservation) -> tuple[int, int, str]:
     reference = observation.reference
     return (reference.timestamp.nanoseconds, reference.sequence_index, reference.observation_id)

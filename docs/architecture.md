@@ -1,25 +1,25 @@
-# Repository Architecture
+# Arquitetura do Repositório
 
-`contextual-3d-mapping` is organized as a **capability-oriented modular research framework** for open-vocabulary 3D semantic and contextual mapping.
+`contextual-3d-mapping` é organizado como um **framework de pesquisa modular orientado a capacidades** para mapeamento 3D semântico e contextual de vocabulário aberto.
 
-The architecture is designed so each capability is easy to locate, understand, modify, test, benchmark, and replace. SOLID principles guide code and dependency design at meaningful boundaries.
+A arquitetura é projetada para que cada capacidade seja fácil de localizar, entender, modificar, testar, avaliar (benchmark) e substituir. Os princípios SOLID guiam o design de código e dependências nas fronteiras relevantes.
 
-For implementation-level guidance, also read [`engineering-principles.md`](./engineering-principles.md) and the root [`AGENTS.md`](../AGENTS.md).
+Para orientação em nível de implementação, leia também [`engineering-principles.md`](./engineering-principles.md) e o [`AGENTS.md`](../AGENTS.md) raiz.
 
-## Architectural priorities
+## Prioridades arquiteturais
 
-When two designs are technically valid, prefer the one that improves these properties in this order:
+Quando dois designs são tecnicamente válidos, prefira o que melhora estas propriedades, nesta ordem:
 
-1. readability and local understandability;
-2. explicit responsibility and ownership;
-3. low coupling;
-4. testability and replaceability;
-5. extensibility around proven variation points;
-6. abstraction when it makes the design clearer or safer.
+1. legibilidade e compreensibilidade local;
+2. responsabilidade e ownership explícitos;
+3. baixo acoplamento;
+4. testabilidade e substituibilidade;
+5. extensibilidade em torno de pontos de variação comprovados;
+6. abstração quando torna o design mais claro ou mais seguro.
 
-## Repository topology
+## Topologia do repositório
 
-The repository is organized around runnable applications, capability modules, datasets, experiments, evaluation, and documentation.
+O repositório é organizado em torno de aplicações executáveis, módulos de capacidade, datasets, experimentos, avaliação e documentação.
 
 ```text
 contextual-3d-mapping/
@@ -46,31 +46,31 @@ contextual-3d-mapping/
 └── tests/
 ```
 
-When repository-wide primitives become necessary, keep them small and stable in a shared package. Capability-specific integrations, contracts, configuration, and persistence helpers stay with the owning module.
+Quando primitivas de nível de repositório se tornarem necessárias, mantenha-as pequenas e estáveis em um pacote compartilhado. Integrações, contracts, configuração e helpers de persistência específicos de capacidade ficam com o módulo dono.
 
-## Capability ownership
+## Ownership de capacidades
 
-Each module owns one coherent system capability.
+Cada módulo possui uma capacidade coerente do sistema.
 
-- `state-estimation`: LiDAR/IMU observations to pose, trajectory, and motion-corrected LiDAR frames.
-- `geometric-map`: persistent world geometry built from poses and geometric observations.
-- `visual-perception`: RGB observations to structured visual and semantic features.
-- `point-representation`: LiDAR points to learned 3D representations.
-- `sensor-association`: temporal and geometric association between multimodal observations.
-- `semantic-fusion`: multi-source, temporal, and multi-view semantic evidence fusion.
-- `semantic-map`: persistent open-vocabulary semantic information linked to world geometry.
-- `semantic-memory`: semantic and spatial retrieval over mapped information.
-- `scene-graph`: entities, hierarchy, and relationships extracted from mapped state.
-- `context-reasoning`: contextual inference with explicit provenance.
-- `query-engine`: unified semantic, spatial, and contextual query interface.
+- `state-estimation`: observações LiDAR/IMU convertidas em pose, trajetória e frames LiDAR corrigidos por movimento.
+- `geometric-map`: geometria persistente do mundo construída a partir de poses e observações geométricas.
+- `visual-perception`: observações RGB convertidas em features visuais e semânticas estruturadas.
+- `point-representation`: pontos LiDAR convertidos em representações 3D aprendidas.
+- `sensor-association`: associação temporal e geométrica entre observações multimodais.
+- `semantic-fusion`: fusão de evidência semântica multi-fonte, temporal e multi-view.
+- `semantic-map`: informação semântica persistente de vocabulário aberto vinculada à geometria do mundo.
+- `semantic-memory`: recuperação semântica e espacial sobre a informação mapeada.
+- `scene-graph`: entidades, hierarquia e relações extraídas do estado mapeado.
+- `context-reasoning`: inferência contextual com proveniência explícita.
+- `query-engine`: interface unificada de consulta semântica, espacial e contextual.
 
-A capability should have one obvious owner. Resolve that ownership before implementation when a feature appears to span several modules.
+Uma capacidade deve ter um dono óbvio. Resolva esse ownership antes da implementação quando uma feature parecer atravessar vários módulos.
 
-## Module boundary
+## Fronteira do módulo
 
-A module is an independently understandable and testable development unit.
+Um módulo é uma unidade de desenvolvimento independentemente compreensível e testável.
 
-A typical module may evolve toward:
+Um módulo típico pode evoluir para:
 
 ```text
 modules/<module>/
@@ -82,41 +82,41 @@ modules/<module>/
 └── docs/
 ```
 
-Create these directories only when they serve a real responsibility.
+Crie esses diretórios apenas quando servirem a uma responsabilidade real.
 
-The module exposes a small public API. Consumers use that public API while implementation details remain local to the producer module.
+O módulo expõe uma API pública pequena. Consumidores usam essa API pública enquanto os detalhes de implementação permanecem locais ao módulo produtor.
 
-## Dependency rule
+## Regra de dependência
 
-The primary dependency shape is:
+O formato principal de dependência é:
 
 ```text
-consumer -> producer public API -> producer implementation
+consumidor -> API pública do produtor -> implementação do produtor
 ```
 
-High-level composition is performed by `apps/`, experiments, or explicit orchestration code.
+A composição de alto nível é feita por `apps/`, experimentos, ou código de orquestração explícito.
 
-Cross-module dependencies should remain explicit and preferably acyclic.
+Dependências entre módulos devem permanecer explícitas e preferencialmente acíclicas.
 
 ```mermaid
 flowchart TD
-    Apps[apps] --> PublicAPIs[public module APIs]
+    Apps[apps] --> PublicAPIs[APIs públicas dos módulos]
     Experiments[experiments] --> PublicAPIs
     Evaluation[evaluation] --> PublicAPIs
     Datasets[datasets] --> PublicAPIs
 
-    PublicAPIs --> Shared[small shared primitives]
+    PublicAPIs --> Shared[pequenas primitivas compartilhadas]
 ```
 
-If two modules repeatedly need substantial access to each other's internal concepts, reconsider the ownership boundary.
+Se dois módulos precisarem repetidamente de acesso substancial aos conceitos internos um do outro, reconsidere a fronteira de ownership.
 
-## Geometry boundary
+## Fronteira de geometria
 
-`state-estimation` owns motion estimation, pose, trajectory state, and motion-corrected LiDAR observations.
+`state-estimation` possui a estimação de movimento, pose, estado de trajetória e observações LiDAR corrigidas por movimento.
 
-Concrete LiDAR-inertial odometry implementations satisfy the public state-estimation capability while remaining local to that module.
+Implementações concretas de odometria LiDAR-inercial satisfazem a capacidade pública de state-estimation permanecendo locais a esse módulo.
 
-`geometric-map` owns persistent reconstruction of world geometry.
+`geometric-map` possui a reconstrução persistente da geometria do mundo.
 
 ```mermaid
 flowchart LR
@@ -124,78 +124,78 @@ flowchart LR
     I[IMU] --> SE
 
     SE -->|pose / trajectory| GM[geometric-map]
-    SE -->|motion-corrected LiDAR| GM
+    SE -->|LiDAR corrigido por movimento| GM
 
-    SE -->|motion-corrected LiDAR| PR[point-representation]
+    SE -->|LiDAR corrigido por movimento| PR[point-representation]
     SE -->|pose / trajectory| SA[sensor-association]
-    GM -->|persistent geometry references| SA
+    GM -->|referências de geometria persistente| SA
 
     RGB[RGB] --> VP[visual-perception]
     VP --> SA
     PR --> SA
 ```
 
-Persistent geometry has one authoritative owner, `geometric-map`. Semantic capabilities reference that geometry through stable public types.
+A geometria persistente tem um único dono autoritativo, `geometric-map`. Capacidades semânticas referenciam essa geometria através de tipos públicos estáveis.
 
-## Semantic boundary
+## Fronteira semântica
 
-`semantic-map` enriches persistent geometry with semantic information.
+`semantic-map` enriquece a geometria persistente com informação semântica.
 
-`semantic-memory`, `scene-graph`, and `context-reasoning` derive retrieval structures and higher-level contextual structures from mapped information.
+`semantic-memory`, `scene-graph` e `context-reasoning` derivam estruturas de recuperação e estruturas contextuais de nível mais alto a partir da informação mapeada.
 
-`query-engine` is the query boundary used by applications to combine semantic, spatial, and contextual retrieval.
+`query-engine` é a fronteira de consulta usada pelas aplicações para combinar recuperação semântica, espacial e contextual.
 
-## Application boundary
+## Fronteira de aplicação
 
-`apps/` contains runnable compositions of capabilities.
+`apps/` contém composições executáveis de capacidades.
 
-The initial application roles are:
+Os papéis iniciais de aplicação são:
 
-- `mapping-runtime`: builds and updates maps from live, recorded, or dataset observations;
-- `map-explorer`: opens persisted maps, renders geometry and semantic information, and interacts with `query-engine`;
-- `cli`: provides non-graphical automation, inspection, debugging, evaluation, and export workflows.
+- `mapping-runtime`: constrói e atualiza mapas a partir de observações ao vivo, gravadas ou de dataset;
+- `map-explorer`: abre mapas persistidos, renderiza geometria e informação semântica, e interage com `query-engine`;
+- `cli`: fornece automação não gráfica, inspeção, debugging, avaliação e workflows de exportação.
 
-Applications select concrete implementations, connect module inputs and outputs, manage runtime lifecycle, and expose user-facing entry points.
+Aplicações selecionam implementações concretas, conectam entradas e saídas de módulos, gerenciam o ciclo de vida do runtime e expõem pontos de entrada voltados ao usuário.
 
-Research algorithms remain owned by their capability modules.
+Algoritmos de pesquisa permanecem de posse de seus módulos de capacidade.
 
-## Integration ownership
+## Ownership de integração
 
-Place external integrations with the capability that owns their behavior.
+Coloque integrações externas junto à capacidade que possui seu comportamento.
 
-Examples:
+Exemplos:
 
 ```text
 modules/state-estimation/
-    concrete LiDAR-inertial odometry integration
+    integração concreta de odometria LiDAR-inercial
 
 modules/geometric-map/
-    geometry backend used by geometric mapping
+    backend de geometria usado pelo mapeamento geométrico
 
 modules/visual-perception/
-    visual model runtime
+    model runtime visual
 ```
 
-Create repository-wide integration infrastructure when unrelated capabilities truly share the same integration semantics.
+Crie infraestrutura de integração de nível de repositório quando capacidades não relacionadas genuinamente compartilharem a mesma semântica de integração.
 
-This locality keeps most of the code needed to understand one capability inside one module.
+Essa localidade mantém a maior parte do código necessário para entender uma capacidade dentro de um único módulo.
 
-## Contracts and shared primitives
+## Contracts e primitivas compartilhadas
 
-Create a protocol or interface for a real behavior boundary or variation point, such as:
+Crie um protocolo ou interface para uma fronteira de comportamento real ou ponto de variação, como:
 
-- multiple implementations;
-- intentional replaceability;
-- research comparisons;
-- isolation of an expensive or external dependency;
-- a public module boundary;
-- contract-level testing with substitutes.
+- múltiplas implementações;
+- substituibilidade intencional;
+- comparações de pesquisa;
+- isolamento de uma dependência cara ou externa;
+- uma fronteira pública de módulo;
+- testes em nível de contract com substitutos.
 
-Capability-specific contracts belong to the capability that defines them.
+Contracts específicos de capacidade pertencem à capacidade que os define.
 
-For example, a point embedding contract belongs to `point-representation`, even when another module consumes it.
+Por exemplo, um contract de point embedding pertence a `point-representation`, mesmo quando outro módulo o consome.
 
-Repository-wide shared types are reserved for stable concepts that several modules must interpret identically, for example:
+Tipos compartilhados de nível de repositório são reservados para conceitos estáveis que vários módulos precisam interpretar de forma idêntica, por exemplo:
 
 ```text
 Timestamp
@@ -207,90 +207,90 @@ ArtifactId
 Provenance
 ```
 
-## SOLID interpretation
+## Interpretação de SOLID
 
-SOLID is applied as a code and boundary design rule.
+SOLID é aplicado como regra de design de código e fronteira.
 
-- **Single Responsibility**: modules and components have one coherent reason to change.
-- **Open/Closed**: proven variation points gain new implementations without requiring changes to consumers.
-- **Liskov Substitution**: implementations of the same public contract preserve consumer-visible invariants.
-- **Interface Segregation**: interfaces are narrow and consumer-oriented.
-- **Dependency Inversion**: high-level orchestration depends on stable capabilities while concrete implementations satisfy those capabilities.
+- **Single Responsibility**: módulos e componentes têm um motivo coerente para mudar.
+- **Open/Closed**: pontos de variação comprovados ganham novas implementações sem exigir mudanças nos consumidores.
+- **Liskov Substitution**: implementações do mesmo contract público preservam os invariantes visíveis ao consumidor.
+- **Interface Segregation**: interfaces são estreitas e orientadas ao consumidor.
+- **Dependency Inversion**: orquestração de alto nível depende de capacidades estáveis, enquanto implementações concretas satisfazem essas capacidades.
 
-## Explicit multimodal data flow
+## Fluxo de dados multimodal explícito
 
-Important information required to interpret or reproduce a result remains explicit at module boundaries where applicable:
+Informação importante necessária para interpretar ou reproduzir um resultado permanece explícita nas fronteiras de módulo, quando aplicável:
 
 - timestamp;
-- coordinate frame;
-- sensor identity;
-- units;
-- pose or transform provenance;
-- calibration identity;
-- source observation identity;
-- confidence or uncertainty;
-- model/checkpoint provenance when needed for reproducibility.
+- frame de coordenadas;
+- identidade do sensor;
+- unidades;
+- proveniência de pose ou transform;
+- identidade de calibração;
+- identidade da observação de origem;
+- confiança ou incerteza;
+- proveniência de modelo/checkpoint quando necessária para reprodutibilidade.
 
-A typical transformation should be readable as:
-
-```text
-observation
-    -> boundary validation
-    -> capability transformation
-    -> explicit output
-    -> next capability
-```
-
-Validate boundary invariants before downstream processing.
-
-## Persistence boundary
-
-Persistence follows capability ownership.
-
-Persistent state may include geometry, semantics, observations, evidence, provenance, indexes, and scene-level structures.
-
-A storage implementation used by one capability remains local to that capability. Shared storage abstractions are introduced when several capabilities genuinely require the same stable behavior.
-
-Applications may coordinate loading and saving while each module remains responsible for the semantics of its persisted state.
-
-## Research implementation rule
-
-Public architecture is named after project responsibilities.
-
-Algorithms, external repositories, models, datasets, and papers inform concrete implementations and are documented as scientific provenance beside the relevant module.
-
-For example:
+Uma transformação típica deve ser legível como:
 
 ```text
-public capability: PoseEstimator
-concrete implementation: FAST_LIO-backed estimator
+observação
+    -> validação de fronteira
+    -> transformação da capacidade
+    -> saída explícita
+    -> próxima capacidade
 ```
 
-Issues should describe capability behavior, inputs, outputs, tests, constraints, and acceptance criteria. Module documentation records implementation parallels and research references when scientifically useful.
+Valide invariantes de fronteira antes do processamento downstream.
 
-## Abstraction rule
+## Fronteira de persistência
 
-Use an abstraction when it makes a concrete boundary, replacement scenario, or variation point clearer.
+A persistência segue o ownership de capacidade.
 
-A practical rule is:
+O estado persistente pode incluir geometria, semântica, observações, evidência, proveniência, índices e estruturas de nível de cena.
+
+Uma implementação de armazenamento usada por uma capacidade permanece local a essa capacidade. Abstrações de armazenamento compartilhadas são introduzidas quando várias capacidades genuinamente exigem o mesmo comportamento estável.
+
+Aplicações podem coordenar o carregamento e salvamento enquanto cada módulo permanece responsável pela semântica de seu estado persistido.
+
+## Regra de implementação de pesquisa
+
+A arquitetura pública é nomeada segundo as responsabilidades do projeto.
+
+Algoritmos, repositórios externos, modelos, datasets e papers informam implementações concretas e são documentados como proveniência científica ao lado do módulo relevante.
+
+Por exemplo:
 
 ```text
-make the common case obvious;
-make variation explicit where variation exists.
+capacidade pública: PoseEstimator
+implementação concreta: estimator baseado em FAST_LIO
 ```
 
-Local behavior with one straightforward implementation should remain direct. Shared abstractions emerge from proven common concepts.
+Issues devem descrever o comportamento da capacidade, entradas, saídas, testes, restrições e critérios de aceitação. A documentação do módulo registra paralelos de implementação e referências de pesquisa quando cientificamente útil.
 
-## Replaceability
+## Regra de abstração
 
-Modules may have multiple implementations, model variants, checkpoints, storage strategies, or algorithms as long as they preserve the public behavior expected by consumers.
+Use uma abstração quando ela torna uma fronteira concreta, um cenário de substituição ou um ponto de variação mais claro.
 
-Protect replaceability with tests around public contracts and boundary invariants.
+Uma regra prática é:
 
-## Documentation boundary
+```text
+torne o caso comum óbvio;
+torne a variação explícita onde a variação existe.
+```
 
-Root `docs/` documents repository-level architecture, integration, policies, and decisions.
+Comportamento local com uma única implementação direta deve permanecer direto. Abstrações compartilhadas emergem de conceitos comuns comprovados.
 
-Detailed algorithmic and implementation decisions belong to `modules/<module>/docs/`.
+## Substituibilidade
 
-A structural change should update the relevant documentation in the same work so future contributors can recover both the chosen design and its rationale.
+Módulos podem ter múltiplas implementações, variantes de modelo, checkpoints, estratégias de armazenamento ou algoritmos, desde que preservem o comportamento público esperado pelos consumidores.
+
+Proteja a substituibilidade com testes em torno dos contracts públicos e invariantes de fronteira.
+
+## Fronteira de documentação
+
+O `docs/` raiz documenta arquitetura, integração, políticas e decisões de nível de repositório.
+
+Decisões algorítmicas e de implementação detalhadas pertencem a `modules/<module>/docs/`.
+
+Uma mudança estrutural deve atualizar a documentação relevante na mesma alteração, para que futuros contribuidores possam recuperar tanto o design escolhido quanto sua justificativa.

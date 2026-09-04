@@ -1,11 +1,11 @@
-"""Region-level semantic interpretation stage.
+"""Etapa de interpretação semântica em nível de region.
 
 Issue: #165.
 
-Interprets each region independently. A region's geometry (id, mask, box,
-geometric confidence, contributing proposals) is never modified here: only
-``claims`` is populated. A failure interpreting one region is isolated and
-reported, and never invalidates the other regions.
+Interpreta cada region de forma independente. A geometria de uma region
+(id, mask, box, geometric confidence, proposals contribuintes) nunca é
+modificada aqui: apenas ``claims`` é populado. Uma falha ao interpretar
+uma region é isolada e reportada, e nunca invalida as demais regions.
 """
 
 from __future__ import annotations
@@ -24,6 +24,10 @@ from visual_perception.domain.visual_observation import SceneContext
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 
 
+# Interpreta todas as regions de uma observation, isolando falhas por
+# region (uma region que falha não derruba as demais). Existe como o ponto
+# de entrada público desta etapa; usada pelo pipeline principal e por
+# refine_observation (refinement.py) para reprocessar regions específicas.
 def interpret_regions(
     regions: tuple[ObservedRegion, ...],
     image: ImagePayload,
@@ -31,7 +35,7 @@ def interpret_regions(
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
 ) -> tuple[tuple[ObservedRegion, ...], tuple[RegionInterpretationFailure, ...]]:
-    """Interpret every region, isolating per-region failures."""
+    """Interpreta todas as regions, isolando falhas por region."""
     scene_summary = _summarize_scene(scene_context)
     updated: list[ObservedRegion] = []
     failures: list[RegionInterpretationFailure] = []
@@ -48,6 +52,11 @@ def interpret_regions(
     return tuple(updated), tuple(failures)
 
 
+# Interpreta uma única region: recorta a imagem pelo box, consulta o
+# multimodal reasoner, valida a resposta e converte os campos retornados
+# (labels, description, attributes, condition, material) em SemanticClaim
+# com proveniência (ModelProvenance). Chamada por interpret_regions para
+# cada region, dentro do try/except que isola falhas.
 def _interpret_one_region(
     region: ObservedRegion,
     image: ImagePayload,
@@ -107,6 +116,10 @@ def _interpret_one_region(
     return tuple(claims)
 
 
+# Normaliza uma hipótese de label bruta (dict com 'value'/'confidence' ou
+# string simples) no par (valor, confiança) usado para construir um
+# SemanticClaim. Existe para tolerar as duas formas que o backend de
+# multimodal reasoning pode retornar. Chamada por _interpret_one_region.
 def _label_value_and_confidence(label: Any) -> tuple[str, float]:
     if isinstance(label, dict):
         if "value" not in label:
@@ -117,6 +130,10 @@ def _label_value_and_confidence(label: Any) -> tuple[str, float]:
     raise ValueError(f"Malformed label hypothesis: {label!r}.")
 
 
+# Valida a forma mínima esperada da resposta bruta do reasoner (é um dict e
+# tem uma lista 'labels' não vazia) antes de convertê-la em claims. Existe
+# para falhar cedo com um erro acionável quando o backend retorna algo
+# malformado. Chamada por _interpret_one_region.
 def _validate_region_response(response: dict[str, Any]) -> None:
     if not isinstance(response, dict):
         raise ValueError(f"Malformed region response: expected an object, got {type(response)!r}.")
@@ -125,6 +142,11 @@ def _validate_region_response(response: dict[str, Any]) -> None:
         raise ValueError("Malformed region response: 'labels' must be a non-empty list.")
 
 
+# Extrai a primeira claim de descrição de cena ('scene_description') do
+# SceneContext, se existir, para usar como resumo textual passado ao
+# reasoner. Existe porque o reasoner de region se beneficia de contexto de
+# cena, mas só precisa de um resumo curto, não do SceneContext inteiro.
+# Chamada por interpret_regions.
 def _summarize_scene(scene_context: SceneContext | None) -> str | None:
     if scene_context is None:
         return None

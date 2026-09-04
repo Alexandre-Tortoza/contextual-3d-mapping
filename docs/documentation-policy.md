@@ -1,60 +1,73 @@
-# Documentation Policy
+# Política de Documentação
 
-The repository uses two documentation levels to keep architectural context separate from module implementation details.
+O repositório usa dois níveis de documentação para manter o contexto arquitetural separado dos detalhes de implementação de módulo.
 
-## Repository-level documentation
+## Idioma
 
-Location:
+Toda documentação em prosa — `README.md`, arquivos em `docs/`, docstrings e comentários no código — é escrita em **português do Brasil**.
+
+Permanecem em inglês:
+
+- identificadores de código (nomes de classes, funções, variáveis, módulos, arquivos e diretórios);
+- mensagens de commit e títulos/descrições de PR;
+- jargão técnico e arquitetural já consagrado (`pipeline`, `backend`, `adapter`, `port`, `framework`, `dataset`, `benchmark`, `checkpoint`, etc.) — usado dentro da prosa em português para não divergir dos nomes usados no código;
+- marcadores convencionais como `NOTE:`, `TODO:`, `FIXME:`, `WARNING:` (o texto que os segue vai em português).
+
+Toda função, método e classe é documentada em duas partes: um comentário `#` acima da assinatura explicando o que ela faz, por que existe e, quando relevante, onde é usada; seguido da docstring `"""..."""` traduzida. Ver `AGENTS.md` para o formato completo e exemplo.
+
+## Documentação de nível de repositório
+
+Localização:
 
 ```text
 docs/
 ```
 
-This level owns documentation that applies to the project as a whole:
+Este nível é dono da documentação que se aplica ao projeto como um todo:
 
-- repository architecture and directory conventions;
-- module topology and high-level flow;
-- cross-module dependency rules;
-- integration and contract conventions;
-- application composition rules;
-- repository-wide testing, evaluation, and experimentation conventions;
-- project-level decisions that affect more than one module.
+- arquitetura do repositório e convenções de diretório;
+- topologia de módulos e fluxo de alto nível;
+- regras de dependência entre módulos;
+- convenções de integração e contract;
+- regras de composição de aplicação;
+- convenções de teste, avaliação e experimentação de nível de repositório;
+- decisões de nível de projeto que afetam mais de um módulo.
 
-Repository-level documentation may name modules and show how they connect, but should not explain their internal algorithms or implementation choices.
+A documentação de nível de repositório pode nomear módulos e mostrar como eles se conectam, mas não deve explicar seus algoritmos internos ou escolhas de implementação.
 
-## Module-level documentation
+## Documentação de nível de módulo
 
-Location:
+Localização:
 
 ```text
 modules/<module>/docs/
 ```
 
-Each module will own its detailed technical documentation when development begins. This may include:
+Cada módulo será dono da sua documentação técnica detalhada quando o desenvolvimento começar. Isso pode incluir:
 
-- module goals and responsibilities;
-- public input and output contracts;
-- internal architecture;
-- algorithms and models;
-- preprocessing and postprocessing;
-- training and inference workflows;
-- configuration;
-- datasets used specifically by the module;
-- benchmarks and evaluation methodology;
-- implementation rationale;
-- limitations and known failure modes;
-- research references relevant to that implementation.
+- objetivos e responsabilidades do módulo;
+- contracts públicos de entrada e saída;
+- arquitetura interna;
+- algoritmos e modelos;
+- pré-processamento e pós-processamento;
+- workflows de treino e inferência;
+- configuração;
+- datasets usados especificamente pelo módulo;
+- benchmarks e metodologia de avaliação;
+- justificativa de implementação;
+- limitações e modos de falha conhecidos;
+- referências de pesquisa relevantes para essa implementação.
 
-Each module should eventually expose an entry point such as:
+Cada módulo deve eventualmente expor um ponto de entrada como:
 
 ```text
 modules/<module>/docs/index.md
 ```
 
-## Separation rule
+## Regra de separação
 
-If a document answers **how the system is composed**, it belongs in root `docs/`.
+Se um documento responde **como o sistema é composto**, ele pertence à raiz `docs/`.
 
-If a document answers **how one module works**, it belongs in that module's `docs/`.
+Se um documento responde **como um módulo funciona**, ele pertence ao `docs/` daquele módulo.
 
-The root documentation should link to module documentation when needed instead of duplicating it. This keeps independently evolving research implementations from making the global architecture documentation unstable.
+A documentação raiz deve linkar para a documentação de módulo quando necessário, em vez de duplicá-la. Isso evita que implementações de pesquisa em evolução independente tornem a documentação de arquitetura global instável.

@@ -1,1 +1,1 @@
-"""Reproducible perception quality benchmark and ablation harness (#175)."""
+"""Harness reproduzível de benchmark de qualidade de percepção e ablation (#175)."""

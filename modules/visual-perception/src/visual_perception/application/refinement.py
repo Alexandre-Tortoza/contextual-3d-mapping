@@ -1,13 +1,14 @@
-"""Uncertainty-driven selective refinement.
+"""Refinamento seletivo guiado por incerteza.
 
 Issue: #183.
 
-Only regions flagged by structured uncertainty signals are reprocessed.
-Previous evidence is never overwritten: refinement appends new claims
-(the same append-only behavior region interpretation already has, see
-#165) and each iteration is recorded in the returned history. The loop
-always terminates: it stops as soon as no region still needs refinement,
-and never runs more than ``RefinementConfig.max_iterations`` passes.
+Apenas regions sinalizadas por sinais de incerteza estruturados são
+reprocessadas. Evidência anterior nunca é sobrescrita: o refinamento
+adiciona (append) novas claims (o mesmo comportamento append-only que a
+interpretação de region já tem, ver #165) e cada iteração é registrada
+no histórico retornado. O loop sempre termina: para assim que nenhuma
+region ainda precisa de refinamento, e nunca executa mais que
+``RefinementConfig.max_iterations`` passes.
 """
 
 from __future__ import annotations
@@ -24,12 +25,19 @@ from visual_perception.domain.visual_observation import VisualObservation
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 
 
+# Configuração dos thresholds que decidem quais regions são reprocessadas
+# pelo loop de refinamento (confiança baixa, region pequena demais, número
+# máximo de iterações). Existe para deixar esses limiares explícitos e
+# validados em vez de constantes espalhadas pelo código de refine_observation.
 @dataclass(frozen=True)
 class RefinementConfig:
     low_confidence_threshold: float = 0.5
     small_region_area_px: int = 16
     max_iterations: int = 2
 
+    # Valida os invariantes da configuração logo após a construção da
+    # dataclass congelada (frozen), para falhar cedo com um erro acionável
+    # em vez de propagar thresholds inválidos para o loop de refinamento.
     def __post_init__(self) -> None:
         if not 0.0 <= self.low_confidence_threshold <= 1.0:
             raise ValueError("low_confidence_threshold must be in [0, 1].")
@@ -39,17 +47,24 @@ class RefinementConfig:
             raise ValueError("max_iterations must be non-negative.")
 
 
+# Registro de uma iteração de refinamento: quais regions foram reprocessadas
+# e por quê. Existe para compor o histórico retornado por refine_observation,
+# permitindo auditar depois o que mudou e o que falhou em cada passe.
 @dataclass(frozen=True)
 class RefinementStep:
-    """One refinement iteration's record: which regions were retried and why."""
+    """Registro de uma iteração de refinamento: quais regions foram reprocessadas e por quê."""
 
     iteration: int
     target_region_ids: tuple[str, ...]
     failures: tuple[RegionInterpretationFailure, ...]
 
 
+# Decide quais regions ainda precisam de um novo passe de interpretação,
+# combinando o resultado do audit de qualidade (claims contraditórias) com
+# heurísticas locais (region pequena, confiança baixa, relations incertas).
+# Chamada por refine_observation a cada iteração do loop de refinamento.
 def select_refinement_targets(observation: VisualObservation, config: RefinementConfig) -> tuple[str, ...]:
-    """Select region ids that need another interpretation pass."""
+    """Seleciona os ids de region que precisam de outro passe de interpretação."""
     audit = audit_observation(observation)
     targets = {
         issue.region_id
@@ -70,6 +85,12 @@ def select_refinement_targets(observation: VisualObservation, config: Refinement
     return tuple(sorted(targets))
 
 
+# Ponto de entrada do refinamento: reprocessa seletivamente as regions
+# incertas de uma VisualObservation até o loop convergir (nenhum target
+# restante) ou atingir max_iterations. Existe para melhorar a qualidade da
+# observation sem reprocessar tudo, custeando reasoning só onde há incerteza
+# real (issue #183); usada pelo pipeline de percepção como passo opcional
+# pós-interpretação.
 def refine_observation(
     observation: VisualObservation,
     image: ImagePayload,
@@ -77,7 +98,7 @@ def refine_observation(
     multimodal_config: MultimodalReasoningConfig,
     refinement_config: RefinementConfig,
 ) -> tuple[VisualObservation, tuple[RefinementStep, ...]]:
-    """Selectively reprocess uncertain regions until the loop converges or stops."""
+    """Reprocessa seletivamente as regions incertas até o loop convergir ou parar."""
     current = observation
     history: list[RefinementStep] = []
 

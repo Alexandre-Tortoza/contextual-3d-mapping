@@ -1,29 +1,29 @@
-# System Flow
+# Fluxo do Sistema
 
-This document shows the repository-level flow between modules and applications. It intentionally represents composition and data movement between boundaries, not internal algorithms.
+Este documento mostra o fluxo de nível de repositório entre módulos e aplicações. Ele representa intencionalmente composição e movimento de dados entre fronteiras, não algoritmos internos.
 
-Arrows between modules represent exchange through compatible contracts, not direct implementation dependencies.
+Setas entre módulos representam troca através de contracts compatíveis, não dependências diretas de implementação.
 
 ```mermaid
 flowchart LR
     D[Datasets] --> A[adapters]
-    S[Live or recorded sensors] --> A
+    S[Sensores ao vivo ou gravados] --> A
 
     A --> SE[state-estimation]
     A --> VP[visual-perception]
 
     SE -->|pose / trajectory| GM[geometric-map]
-    SE -->|motion-corrected LiDAR| GM
-    SE -->|motion-corrected LiDAR| PR[point-representation]
+    SE -->|LiDAR corrigido por movimento| GM
+    SE -->|LiDAR corrigido por movimento| PR[point-representation]
     SE -->|pose / trajectory| SA[sensor-association]
 
-    GM -->|persistent geometry refs| SA
+    GM -->|refs de geometria persistente| SA
     VP --> SA
     PR --> SA
 
     SA --> SF[semantic-fusion]
     SF --> SMAP[semantic-map]
-    GM -->|geometry refs| SMAP
+    GM -->|refs de geometria| SMAP
 
     SMAP --> SMEM[semantic-memory]
     SMAP --> SG[scene-graph]
@@ -46,66 +46,66 @@ flowchart LR
 
     QE --> CLI[apps/cli]
 
-    C[contracts] -. shared interfaces .-> A
-    C -. shared interfaces .-> SE
-    C -. shared interfaces .-> GM
-    C -. shared interfaces .-> VP
-    C -. shared interfaces .-> PR
-    C -. shared interfaces .-> SA
-    C -. shared interfaces .-> SF
-    C -. shared interfaces .-> SMAP
-    C -. shared interfaces .-> SMEM
-    C -. shared interfaces .-> SG
-    C -. shared interfaces .-> CR
-    C -. shared interfaces .-> QE
+    C[contracts] -. interfaces compartilhadas .-> A
+    C -. interfaces compartilhadas .-> SE
+    C -. interfaces compartilhadas .-> GM
+    C -. interfaces compartilhadas .-> VP
+    C -. interfaces compartilhadas .-> PR
+    C -. interfaces compartilhadas .-> SA
+    C -. interfaces compartilhadas .-> SF
+    C -. interfaces compartilhadas .-> SMAP
+    C -. interfaces compartilhadas .-> SMEM
+    C -. interfaces compartilhadas .-> SG
+    C -. interfaces compartilhadas .-> CR
+    C -. interfaces compartilhadas .-> QE
 ```
 
-## Mapping flow
+## Fluxo de mapeamento
 
-The mapping flow converts sensor or dataset observations into persistent geometric, semantic, and contextual state.
+O fluxo de mapeamento converte observações de sensor ou dataset em estado geométrico, semântico e contextual persistente.
 
 ```text
-input observations
+observações de entrada
     -> state estimation
-    -> persistent geometry
-    -> learned and visual representations
+    -> geometria persistente
+    -> representações aprendidas e visuais
     -> sensor association
     -> semantic fusion
     -> semantic map
     -> semantic memory / scene graph
-    -> contextual reasoning and indexes
+    -> raciocínio contextual e índices
 ```
 
-`mapping-runtime` is the composition entry point for this flow. It does not replace any module and does not own their algorithms.
+`mapping-runtime` é o ponto de entrada de composição para esse fluxo. Ele não substitui nenhum módulo e não possui seus algoritmos.
 
-## Query and exploration flow
+## Fluxo de consulta e exploração
 
-After a map exists, query-time interaction does not require rerunning state estimation. Applications consume persistent map state and public query interfaces.
+Depois que um mapa existe, a interação em tempo de consulta não exige reexecutar a state estimation. Aplicações consomem o estado de mapa persistente e as interfaces públicas de consulta.
 
 ```mermaid
 flowchart LR
-    U[User query] --> EX[map-explorer]
+    U[Consulta do usuário] --> EX[map-explorer]
     EX --> QE[query-engine]
     QE --> SMEM[semantic-memory]
     QE --> SG[scene-graph]
     QE --> CR[context-reasoning]
-    QE --> R[query results]
+    QE --> R[resultados da consulta]
     R --> EX
     GM[geometric-map] --> EX
     SMAP[semantic-map] --> EX
-    OBS[observations / evidence] --> EX
+    OBS[observações / evidência] --> EX
 ```
 
-A result may identify an entity, region, position, geometry reference, relation, observation, evidence item, or provenance record. The application can then focus the corresponding 3D region and expose the observations that support the result.
+Um resultado pode identificar uma entidade, região, posição, referência de geometria, relação, observação, item de evidência ou registro de proveniência. A aplicação pode então focar a região 3D correspondente e expor as observações que sustentam o resultado.
 
-## Persistence flow
+## Fluxo de persistência
 
-Persistence is a cross-cutting boundary rather than a sequential research stage. Public storage contracts allow map state, observations, evidence, and indexes to survive process termination and be reopened by another application.
+A persistência é uma fronteira transversal (cross-cutting), não um estágio de pesquisa sequencial. Contracts públicos de armazenamento permitem que estado de mapa, observações, evidência e índices sobrevivam ao término do processo e sejam reabertos por outra aplicação.
 
-Concrete storage formats and database technologies remain adapters.
+Formatos concretos de armazenamento e tecnologias de banco de dados permanecem adapters.
 
-## Interpretation
+## Interpretação
 
-`evaluation/`, `experiments/`, and `tests/` are intentionally not represented as sequential stages. They are cross-cutting consumers that may exercise individual modules or complete compositions independently.
+`evaluation/`, `experiments/` e `tests/` são intencionalmente não representados como estágios sequenciais. Eles são consumidores transversais que podem exercitar módulos individuais ou composições completas independentemente.
 
-A workflow may replace, isolate, or omit stages when its contracts permit that composition. Dataset-provided ground-truth poses, for example, may substitute a live state estimator in an experiment without changing downstream public contracts.
+Um workflow pode substituir, isolar ou omitir estágios quando seus contracts permitirem essa composição. Poses de ground-truth fornecidas por dataset, por exemplo, podem substituir um state estimator ao vivo em um experimento sem alterar os contracts públicos downstream.

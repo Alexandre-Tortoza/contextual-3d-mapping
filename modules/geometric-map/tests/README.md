@@ -1,3 +1,3 @@
 # Tests
 
-Module-local tests for geometric mapping contracts and implementations.
+Testes locais do módulo para os contracts e implementações de mapeamento geométrico.

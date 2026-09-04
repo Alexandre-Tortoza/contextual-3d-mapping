@@ -1,28 +1,28 @@
 # Geometric Map
 
-`geometric-map` owns persistent world geometry assembled from contract-compatible motion estimates and LiDAR observations.
+`geometric-map` possui a geometria persistente do mundo, montada a partir de estimativas de movimento e observações LiDAR compatíveis com o contract.
 
-## Responsibilities
+## Responsabilidades
 
-- consume pose, trajectory, and LiDAR observations through public contracts;
-- place observations in a consistent world frame;
-- maintain persistent geometric map state;
-- expose stable geometry identifiers and spatial bounds;
-- preserve geometry provenance and source-observation references;
-- provide geometry suitable for downstream semantic association, mapping, evaluation, and visualization.
+- consumir pose, trajectory e observações LiDAR através de contracts públicos;
+- posicionar observações em um frame de mundo consistente;
+- manter o estado persistente do mapa geométrico;
+- expor identificadores de geometria estáveis e bounds espaciais;
+- preservar a proveniência da geometria e referências à observação de origem;
+- fornecer geometria adequada para associação semântica, mapeamento, avaliação e visualização downstream.
 
-## Non-responsibilities
+## Não-responsabilidades
 
-- estimating motion from raw LiDAR/IMU inputs;
-- learned point representation;
-- visual perception;
-- semantic classification or fusion;
-- semantic memory, scene graphs, or contextual reasoning;
-- user-facing rendering.
+- estimar movimento a partir de entradas brutas de LiDAR/IMU;
+- representação de pontos aprendida;
+- percepção visual;
+- classificação ou fusão semântica;
+- memória semântica, scene graphs ou raciocínio contextual;
+- renderização voltada ao usuário.
 
-`state-estimation` supplies motion context. `semantic-map` enriches geometry through stable references rather than duplicating geometric ownership.
+`state-estimation` fornece o contexto de movimento. `semantic-map` enriquece a geometria através de referências estáveis, em vez de duplicar o ownership geométrico.
 
-## Initial structure
+## Estrutura inicial
 
 ```text
 geometric-map/
@@ -39,4 +39,4 @@ geometric-map/
 └── benchmarks/
 ```
 
-Concrete data structures, indexes, reconstruction strategies, persistence formats, and implementations should be introduced by implementation issues while keeping public contracts implementation-agnostic.
+Estruturas de dados concretas, índices, estratégias de reconstrução, formatos de persistência e implementações devem ser introduzidos por issues de implementação, mantendo os contracts públicos independentes de implementação.

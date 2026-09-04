@@ -1,13 +1,14 @@
-"""Canonical visual observation serialization boundary.
+"""Fronteira de serialização da observação visual canônica.
 
 Issue: #172.
 
-Masks are embedded as compact run-length-encoded booleans (small, exact, and
-self-contained) rather than through an external artifact store, since a
-region's own geometry is required to interpret the observation at all.
-Visual/language embeddings and raw model evidence are referenced by id only
-(``visual_embedding_ref`` / ``language_embedding_ref`` / ``Evidence.artifact``),
-consistent with #154's "reference large payloads" rule.
+Masks são embutidas como booleanos compactados via run-length encoding
+(pequeno, exato e autocontido) em vez de irem para um artifact store externo,
+já que a própria geometria de uma região é necessária para sequer interpretar
+a observação. Embeddings visuais/de linguagem e evidência bruta de modelo são
+referenciados só por id (``visual_embedding_ref`` / ``language_embedding_ref``
+/ ``Evidence.artifact``), conforme a regra "referencie payloads grandes" de
+#154.
 """
 
 from __future__ import annotations
@@ -26,17 +27,23 @@ from visual_perception.domain.relations import CandidateRelation, RelationSource
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
-#: The only schema version this module can read. Bump together with a
-#: migration or an explicit incompatibility error, never silently.
+#: A única versão de schema que este módulo consegue ler. Incremente junto
+#: com uma migração ou um erro explícito de incompatibilidade, nunca em silêncio.
 SUPPORTED_SCHEMA_VERSION = 1
 
 
+# Sinaliza que um payload foi serializado com uma versão de schema que este
+# módulo não sabe interpretar, em vez de deixar a desserialização falhar de
+# forma obscura mais adiante.
 class UnsupportedSchemaVersionError(ValueError):
-    """Raised when deserializing a payload from an incompatible schema version."""
+    """Levantada ao desserializar um payload de uma versão de schema incompatível."""
 
 
+# Converte uma VisualObservation canônica em um dict simples, pronto para
+# JSON — o ponto de entrada da serialização, usado por persist_observation em
+# persistence_integration.py para gravar a observação no evidence store.
 def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
-    """Serialize a canonical VisualObservation to a plain JSON-able dict."""
+    """Serializa uma VisualObservation canônica em um dict simples, pronto para JSON."""
     if observation.schema_version != SUPPORTED_SCHEMA_VERSION:
         raise UnsupportedSchemaVersionError(
             f"Cannot serialize schema_version={observation.schema_version}; "
@@ -54,8 +61,11 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
     }
 
 
+# Reconstrói uma VisualObservation a partir do dict produzido por
+# serialize_observation — o lado inverso da serialização, usado por
+# reload_observation em persistence_integration.py.
 def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
-    """Reconstruct a canonical VisualObservation, round-tripping without information loss."""
+    """Reconstrói uma VisualObservation canônica, fazendo o round-trip sem perda de informação."""
     schema_version = payload.get("schema_version")
     if schema_version != SUPPORTED_SCHEMA_VERSION:
         raise UnsupportedSchemaVersionError(
@@ -76,6 +86,9 @@ def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
     )
 
 
+# Converte a ObservationReference (identidade de origem, timestamp, frame,
+# calibração) em um dict serializável — helper interno usado por
+# serialize_observation.
 def _source_to_dict(source: ObservationReference) -> dict[str, Any]:
     return {
         "observation_id": source.observation_id,
@@ -89,6 +102,9 @@ def _source_to_dict(source: ObservationReference) -> dict[str, Any]:
     }
 
 
+# Reconstrói a ObservationReference a partir do dict, incluindo os tipos
+# fortes Timestamp/FrameId — lado inverso de _source_to_dict, usado por
+# deserialize_observation.
 def _source_from_dict(payload: dict[str, Any]) -> ObservationReference:
     payload = dict(payload)
     payload["timestamp"] = Timestamp(**payload["timestamp"])
@@ -96,14 +112,19 @@ def _source_from_dict(payload: dict[str, Any]) -> ObservationReference:
     return ObservationReference(**payload)
 
 
+# Compacta a mask booleana via run-length encoding para manter o payload
+# serializado pequeno e exato, sem depender de um artifact store externo —
+# ver a justificativa de design na docstring do módulo.
 def _mask_to_dict(mask: Mask) -> dict[str, Any]:
     flat = mask.data.reshape(-1)
     runs = [len(list(group)) for _, group in groupby(flat.tolist())]
     if flat.size > 0 and bool(flat[0]):
-        runs = [0, *runs]  # RLE always starts with a False run count, even if zero.
+        runs = [0, *runs]  # O RLE sempre começa com uma contagem de run False, mesmo que zero.
     return {"width": mask.image_width, "height": mask.image_height, "rle": runs}
 
 
+# Reconstrói a mask booleana a partir da codificação RLE — lado inverso de
+# _mask_to_dict.
 def _mask_from_dict(payload: dict[str, Any]) -> Mask:
     width, height, runs = payload["width"], payload["height"], payload["rle"]
     flat = np.zeros(width * height, dtype=np.bool_)
@@ -117,14 +138,19 @@ def _mask_from_dict(payload: dict[str, Any]) -> Mask:
     return Mask(flat.reshape(height, width), width, height)
 
 
+# Converte a BoundingBox em um dict simples de coordenadas — helper interno
+# usado por _region_to_dict.
 def _box_to_dict(box: BoundingBox) -> dict[str, float]:
     return {"x_min": box.x_min, "y_min": box.y_min, "x_max": box.x_max, "y_max": box.y_max}
 
 
+# Reconstrói a BoundingBox a partir do dict — lado inverso de _box_to_dict.
 def _box_from_dict(payload: dict[str, float]) -> BoundingBox:
     return BoundingBox(**payload)
 
 
+# Converte a proveniência do modelo (stage, producer, checkpoint, etc.) em um
+# dict serializável — helper interno reutilizado por claims e relations.
 def _provenance_to_dict(provenance: ModelProvenance) -> dict[str, Any]:
     return {
         "stage": provenance.stage,
@@ -136,20 +162,28 @@ def _provenance_to_dict(provenance: ModelProvenance) -> dict[str, Any]:
     }
 
 
+# Reconstrói a ModelProvenance a partir do dict — lado inverso de
+# _provenance_to_dict.
 def _provenance_from_dict(payload: dict[str, Any]) -> ModelProvenance:
     return ModelProvenance(**payload)
 
 
+# Converte a Evidence (descrição + referência opcional de artifact) em um
+# dict serializável, achatando o SourceArtifactReference quando presente.
 def _evidence_to_dict(evidence: Evidence) -> dict[str, Any]:
     artifact = None if evidence.artifact is None else vars(evidence.artifact)
     return {"description": evidence.description, "artifact": artifact}
 
 
+# Reconstrói a Evidence a partir do dict — lado inverso de _evidence_to_dict.
 def _evidence_from_dict(payload: dict[str, Any]) -> Evidence:
     artifact = None if payload.get("artifact") is None else SourceArtifactReference(**payload["artifact"])
     return Evidence(description=payload["description"], artifact=artifact)
 
 
+# Converte uma SemanticClaim completa (kind, value, confidence, evidence,
+# provenance) em um dict serializável, delegando os sub-tipos aos helpers
+# correspondentes.
 def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
     return {
         "kind": claim.kind.value,
@@ -160,6 +194,8 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
     }
 
 
+# Reconstrói a SemanticClaim a partir do dict — lado inverso de
+# _claim_to_dict.
 def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
     return SemanticClaim(
         kind=ClaimKind(payload["kind"]),
@@ -170,6 +206,9 @@ def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
     )
 
 
+# Converte uma ObservedRegion completa (mask, box, claims, embedding refs
+# etc.) em um dict serializável, delegando geometria e claims aos helpers
+# correspondentes.
 def _region_to_dict(region: ObservedRegion) -> dict[str, Any]:
     return {
         "region_id": region.region_id,
@@ -183,6 +222,8 @@ def _region_to_dict(region: ObservedRegion) -> dict[str, Any]:
     }
 
 
+# Reconstrói a ObservedRegion a partir do dict, validando o region_id antes
+# de montar o objeto — lado inverso de _region_to_dict.
 def _region_from_dict(payload: dict[str, Any]) -> ObservedRegion:
     validate_identifier(payload["region_id"], field="region_id")
     return ObservedRegion(
@@ -197,6 +238,8 @@ def _region_from_dict(payload: dict[str, Any]) -> ObservedRegion:
     )
 
 
+# Converte uma CandidateRelation (par sujeito/objeto, predicado, confiança,
+# proveniência) em um dict serializável.
 def _relation_to_dict(relation: CandidateRelation) -> dict[str, Any]:
     return {
         "relation_id": relation.relation_id,
@@ -210,6 +253,8 @@ def _relation_to_dict(relation: CandidateRelation) -> dict[str, Any]:
     }
 
 
+# Reconstrói a CandidateRelation a partir do dict — lado inverso de
+# _relation_to_dict.
 def _relation_from_dict(payload: dict[str, Any]) -> CandidateRelation:
     return CandidateRelation(
         relation_id=payload["relation_id"],

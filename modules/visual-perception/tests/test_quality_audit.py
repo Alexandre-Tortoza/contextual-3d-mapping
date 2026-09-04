@@ -1,4 +1,4 @@
-"""Visual observation quality auditor tests (#168)."""
+"""Testes do auditor de qualidade da observação visual (#168)."""
 
 from __future__ import annotations
 
@@ -15,12 +15,15 @@ from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evide
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
 
+# Helper que monta uma Mask pequena e fixa, reutilizada por todos os testes deste arquivo.
 def _mask(width: int = 8, height: int = 8) -> Mask:
     data = np.zeros((height, width), dtype=np.bool_)
     data[0:2, 0:2] = True
     return Mask(data, width, height)
 
 
+# Helper que monta um SemanticClaim mínimo com o value dado, para testar cenários de
+# claims conflitantes/consistentes sem repetir a construção completa.
 def _claim(value: str) -> SemanticClaim:
     return SemanticClaim(
         ClaimKind.LABEL,
@@ -31,11 +34,13 @@ def _claim(value: str) -> SemanticClaim:
     )
 
 
+# Helper que monta uma ObservedRegion com os claims dados.
 def _region(region_id: str, claims: tuple[SemanticClaim, ...] = ()) -> ObservedRegion:
     mask = _mask()
     return ObservedRegion(region_id, mask, mask.bounding_box(), 0.9, (f"{region_id}-p",), claims=claims)
 
 
+# Helper que monta uma ObservationReference mínima válida.
 def _source() -> ObservationReference:
     return ObservationReference(
         observation_id="obs-1",
@@ -48,10 +53,12 @@ def _source() -> ObservationReference:
     )
 
 
+# Helper que monta uma VisualObservation completa a partir das regiões dadas.
 def _observation(regions: tuple[ObservedRegion, ...]) -> VisualObservation:
     return VisualObservation(_source(), 8, 8, SceneContext(), regions, ())
 
 
+# Verifica o caso feliz: uma observação bem formada passa no audit sem nenhum issue.
 def test_valid_observation_passes_without_modification() -> None:
     observation = _observation((_region("a", (_claim("box"),)),))
     result = audit_observation(observation)
@@ -59,6 +66,9 @@ def test_valid_observation_passes_without_modification() -> None:
     assert result.issues == ()
 
 
+# Confirma o comportamento intencional de "claims, não labels" (ver
+# docs/research-traceability.md): claims contraditórios na mesma região são sinalizados
+# como warning, mas não fazem a observação inteira falhar no audit.
 def test_contradictory_claims_are_flagged_but_observation_still_passes() -> None:
     observation = _observation((_region("a", (_claim("box"), _claim("crate"))),))
     result = audit_observation(observation)
@@ -66,6 +76,8 @@ def test_contradictory_claims_are_flagged_but_observation_still_passes() -> None
     assert any(issue.code == "contradictory_claims" for issue in result.warnings)
 
 
+# Garante que uma inconsistência estrutural real (a bounding box não bate com a mask) é
+# tratada como erro — não como warning — e falha o audit.
 def test_box_mask_mismatch_is_an_error() -> None:
     region = _region("a")
     tampered = dataclasses.replace(region, box=type(region.box)(0, 0, 100, 100))
@@ -74,6 +86,8 @@ def test_box_mask_mismatch_is_an_error() -> None:
     assert any(issue.code == "box_mask_mismatch" for issue in result.errors)
 
 
+# Confirma que o audit é uma função pura/determinística: rodá-lo duas vezes sobre a
+# mesma observação produz exatamente o mesmo resultado.
 def test_audit_is_deterministic() -> None:
     observation = _observation((_region("a", (_claim("box"), _claim("crate"))),))
     first = audit_observation(observation)

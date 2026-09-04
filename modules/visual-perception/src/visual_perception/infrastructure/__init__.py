@@ -1,1 +1,1 @@
-"""Adapters, fakes, serialization, and integration code for external boundaries."""
+"""Adapters, fakes, serialização e código de integração para fronteiras externas."""

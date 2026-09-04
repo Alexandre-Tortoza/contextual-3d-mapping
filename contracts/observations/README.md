@@ -1,9 +1,7 @@
 # Observation Contracts
 
-Shared observation identity, source references, provenance, evidence references, and cross-sensor metadata belong here when they are used across multiple modules or applications.
+Identidade de observação compartilhada, referências de origem, proveniência, referências de evidência e metadados cross-sensor pertencem aqui quando usados por múltiplos módulos ou aplicações.
 
-Sensor- or capability-specific payloads should remain owned by their defining module or adapter.
+Payloads específicos de sensor ou capacidade devem permanecer de posse de seu módulo ou adapter definidor.
 
-`contextual_mapping_contracts` defines stable observation, source artifact and provenance
-references. Provenance retains every contributing observation, supporting one-to-many and
-many-to-one evidence without overwriting contributors.
+`contextual_mapping_contracts` define referências estáveis de observação, source artifact e proveniência. A proveniência retém toda observação contribuinte, suportando evidência um-para-muitos e muitos-para-um sem sobrescrever contribuidores.

@@ -1,20 +1,22 @@
-"""High-resolution mask-aware region pooling.
+"""Pooling de região em alta resolução, consciente de máscara.
 
 Issue: #162.
 
-Two pooling methods are supported behind one function:
+Dois métodos de pooling são suportados atrás de uma única função:
 
-- ``patch_grid_baseline``: includes a feature-grid cell only when its pixel
-  *center* falls inside the region mask, then averages unweighted. Simple,
-  but a mask smaller than one grid cell has no cell center inside it and is
-  rejected.
-- ``pixel_nearest_highres``: gathers, for every mask pixel, the feature
-  vector of its nearest grid cell, then averages. This keeps small regions
-  representable whenever at least one mask pixel has feature support.
+- ``patch_grid_baseline``: inclui uma célula do grid de features apenas
+  quando o *centro* do seu pixel cai dentro da máscara da região, depois
+  faz a média sem peso. Simples, mas uma máscara menor que uma célula do
+  grid não tem centro de célula dentro dela e é rejeitada.
+- ``pixel_nearest_highres``: reúne, para cada pixel da máscara, o vetor de
+  feature da célula do grid mais próxima, depois faz a média. Isso mantém
+  regiões pequenas representáveis sempre que pelo menos um pixel da
+  máscara tiver suporte de feature.
 
-Both paths L2-normalize the resulting vector (documented normalization
-behavior); a normalization is skipped only when unreachable (finite, nonzero
-input), which cannot happen once a method has accepted a mask.
+Os dois caminhos normalizam L2 o vetor resultante (comportamento de
+normalização documentado); uma normalização só é pulada quando
+inalcançável (entrada finita e não-zero), o que não pode acontecer depois
+que um método já aceitou uma máscara.
 """
 
 from __future__ import annotations
@@ -31,8 +33,11 @@ HIGH_RESOLUTION = "pixel_nearest_highres"
 _METHODS = frozenset({BASELINE, HIGH_RESOLUTION})
 
 
+# Agrega as dense features de uma única região em um vetor final, finito e
+# normalizado L2, escolhendo entre os métodos BASELINE e HIGH_RESOLUTION;
+# usada por pool_regions para cada região do batch.
 def pool_region_vector(mask: Mask, feature_map: FeatureMap, method: str) -> tuple[float, ...]:
-    """Pool one region's dense features into a single finite, L2-normalized vector."""
+    """Agrega as dense features de uma região em um único vetor finito e normalizado L2."""
     if method not in _METHODS:
         raise ValueError(f"Unknown pooling method {method!r}, expected one of {sorted(_METHODS)}.")
     stride_x = mask.image_width / feature_map.grid_width
@@ -47,6 +52,10 @@ def pool_region_vector(mask: Mask, feature_map: FeatureMap, method: str) -> tupl
     return tuple((vector / norm).tolist())
 
 
+# Implementa o método BASELINE: inclui uma célula do grid só quando o
+# centro do seu pixel cai dentro da máscara, depois faz a média simples;
+# helper interno de pool_region_vector, mais barato porém mais grosseiro
+# para regiões pequenas.
 def _pool_patch_grid_baseline(
     mask: Mask, feature_map: FeatureMap, stride_x: float, stride_y: float
 ) -> np.ndarray:
@@ -67,6 +76,10 @@ def _pool_patch_grid_baseline(
     return np.mean(np.stack(included), axis=0)
 
 
+# Implementa o método HIGH_RESOLUTION: para cada pixel da máscara, busca a
+# feature da célula do grid mais próxima e faz a média; helper interno de
+# pool_region_vector, preferido para regiões pequenas que o BASELINE
+# rejeitaria.
 def _pool_pixel_nearest(
     mask: Mask, feature_map: FeatureMap, stride_x: float, stride_y: float
 ) -> np.ndarray:
@@ -79,12 +92,15 @@ def _pool_pixel_nearest(
     return np.mean(gathered, axis=0)
 
 
+# Agrupa pool_region_vector sobre todas as regiões de uma observação
+# contra um único feature map denso, produzindo os VisualEmbedding
+# consumidos pelo pipeline canônico logo após o merge de regiões.
 def pool_regions(
     regions: tuple[ObservedRegion, ...],
     feature_map: FeatureMap,
     method: str = HIGH_RESOLUTION,
 ) -> tuple[VisualEmbedding, ...]:
-    """Pool every region against one dense feature map into a :class:`VisualEmbedding`."""
+    """Faz pooling de cada região contra um feature map denso em um :class:`VisualEmbedding`."""
     embeddings = []
     for region in regions:
         vector = pool_region_vector(region.mask, feature_map, method)

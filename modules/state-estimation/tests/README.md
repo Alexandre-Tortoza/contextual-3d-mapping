@@ -1,3 +1,3 @@
 # Tests
 
-Unit, contract, and integration tests for the state-estimation module belong here. Backend-specific integration tests must remain isolated from domain tests.
+Testes unitários, de contract e de integração para o módulo state-estimation pertencem aqui. Testes de integração específicos de backend devem permanecer isolados dos testes de domain.

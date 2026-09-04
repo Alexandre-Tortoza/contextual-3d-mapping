@@ -1,1 +1,1 @@
-"""Use cases and orchestration that compose ports and domain contracts."""
+"""Casos de uso e orquestração que compõem ports e contracts de domínio."""

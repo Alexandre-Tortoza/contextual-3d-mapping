@@ -1,8 +1,8 @@
 # Contracts
 
-`contracts/` contains shared implementation-agnostic primitives used across multiple capabilities and applications.
+`contracts/` contém primitivas compartilhadas, independentes de implementação, usadas por múltiplas capacidades e aplicações.
 
-Initial groups:
+Grupos iniciais:
 
 ```text
 contracts/
@@ -12,8 +12,8 @@ contracts/
 └── maps/
 ```
 
-Repository-wide contracts may define data shape, invariants, provenance, confidence, coordinate frames, timestamps, identifiers, artifact references, and serialization boundaries.
+Contracts de nível de repositório podem definir shape de dados, invariantes, proveniência, confiança, frames de coordenadas, timestamps, identificadores, referências de artifact e fronteiras de serialização.
 
-Capability-specific contracts remain owned by the module that defines the capability. For example, learned point embedding contracts belong to `point-representation`; they should not be moved here merely because another module consumes them.
+Contracts específicos de capacidade permanecem de posse do módulo que define a capacidade. Por exemplo, contracts de point embedding aprendido pertencem a `point-representation`; eles não devem ser movidos para cá apenas porque outro módulo os consome.
 
-The root contract package should stay small and stable enough to support independently evolving modules and applications.
+O pacote de contracts raiz deve permanecer pequeno e estável o suficiente para dar suporte a módulos e aplicações que evoluem de forma independente.

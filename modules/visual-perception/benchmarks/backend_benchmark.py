@@ -1,11 +1,11 @@
-"""Benchmark perception backends under the reference GPU budget.
+"""Faz benchmark dos backends de percepção sob o orçamento de GPU de referência.
 
-Issue: #174. **Not yet run**: this environment has no GPU (see
-``docs/architecture.md`` "Real backends"), so no candidate has been
-benchmarked and no default backend has been selected yet. The harness below
-is ready to run once real adapters (#186-#189) exist on GPU hardware; until
-then every stage's ``config.py`` default stays ``backend="fake"`` and this
-issue remains open.
+Issue: #174, executado na RTX 3060 8GB de referência (veja
+``docs/model-backends.md``). ``benchmark_candidate`` mede o pico real de VRAM
+CUDA quando torch com uma GPU visível está disponível, e cai para CPU-RSS
+caso contrário (ex: ao fazer benchmark de um candidato CPU-only, ou em um
+ambiente de dev GPU-free), para que este módulo continue importável sem os
+extras ``ml``.
 """
 
 from __future__ import annotations
@@ -16,7 +16,30 @@ from collections.abc import Callable
 
 from visual_perception.application.execution_profile import BackendCandidate
 
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore[assignment]
 
+
+# Mede o pico de uso de memória do processo atual: usa o pico real de VRAM CUDA
+# quando torch com GPU está disponível, senão cai para o pico de RSS da CPU (via
+# resource.getrusage) como proxy. Usada por benchmark_candidate para reportar
+# peak_vram_gb de cada candidato.
+def _peak_memory_gb() -> float:
+    if torch is not None and torch.cuda.is_available():
+        return torch.cuda.max_memory_allocated() / (1024**3)
+    peak_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+    return peak_bytes / (1024**3)
+
+
+# Executa uma rodada de warmup e medição para um candidato de backend (definido
+# pela tripla factory/run_once), medindo latência média e pico de memória.
+# Existe para dar ao harness de seleção de backend (#174,
+# application/execution_profile.py) um jeito uniforme de comparar candidatos
+# heterogêneos (SAM, DINOv2, CLIP, Qwen-VL, ...) sob o mesmo protocolo de
+# medição. Chamada pelos módulos em benchmarks/candidates/ e por
+# run_backend_benchmark.py.
 def benchmark_candidate[T](
     name: str,
     factory: Callable[[], T],
@@ -25,15 +48,21 @@ def benchmark_candidate[T](
     warmup_runs: int = 1,
     measured_runs: int = 3,
 ) -> BackendCandidate:
-    """Measure one candidate's load time, latency, peak RSS, and quality.
+    """Mede o tempo de load, a latência, o pico de VRAM e a qualidade de um candidato.
 
-    ``run_once`` executes the candidate on one representative input and
-    returns a task-relevant quality score in ``[0, 1]``; the caller supplies
-    it because quality scoring is dataset-specific (see ``harness.py``).
+    ``run_once`` executa o candidato em uma entrada representativa e retorna um
+    score de qualidade relevante para a tarefa em ``[0, 1]``; quem chama fornece
+    esse score porque a avaliação de qualidade é específica do dataset (veja
+    ``harness.py``).
 
-    Peak memory here is CPU-RSS, a placeholder for peak VRAM: real GPU
-    measurement requires the hardware this environment does not have (#190).
+    O pico de VRAM cobre o load do modelo mais toda execução de warmup/medição,
+    combinando com a forma como um chamador real experimentaria o pior caso de
+    uso de memória.
     """
+    if torch is not None and torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+
     model = factory()
     for _ in range(warmup_runs):
         run_once(model)
@@ -44,10 +73,9 @@ def benchmark_candidate[T](
         quality_scores.append(run_once(model))
     latency_s = (time.monotonic() - start) / max(measured_runs, 1)
 
-    peak_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
     return BackendCandidate(
         name=name,
         quality_score=sum(quality_scores) / len(quality_scores),
-        peak_vram_gb=peak_bytes / (1024**3),
+        peak_vram_gb=_peak_memory_gb(),
         latency_s=latency_s,
     )

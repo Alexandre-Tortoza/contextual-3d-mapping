@@ -1,17 +1,17 @@
-# Applications
+# Aplicações
 
-Applications are composition roots. They assemble module capabilities into runnable workflows without absorbing the responsibilities of those modules.
+Aplicações são composition roots. Elas montam capacidades de módulo em workflows executáveis sem absorver as responsabilidades desses módulos.
 
 ## `mapping-runtime`
 
-`apps/mapping-runtime/` executes end-to-end map construction or update workflows from live sensors, recorded sessions, or dataset adapters.
+`apps/mapping-runtime/` executa workflows de construção ou atualização de mapa de ponta a ponta a partir de sensores ao vivo, sessões gravadas, ou adapters de dataset.
 
-It is responsible for composition, configuration, lifecycle, dependency wiring, and execution order. It does not implement state estimation, visual perception, point representation, association, fusion, mapping, memory, graph construction, reasoning, or querying algorithms.
+É responsável por composição, configuração, ciclo de vida, wiring de dependências e ordem de execução. Não implementa algoritmos de state estimation, percepção visual, representação de pontos, associação, fusão, mapeamento, memória, construção de grafo, raciocínio ou consulta.
 
-Conceptually:
+Conceitualmente:
 
 ```text
-input adapter
+adapter de entrada
     -> state-estimation
     -> geometric-map
     -> visual-perception / point-representation
@@ -19,36 +19,36 @@ input adapter
     -> semantic-fusion
     -> semantic-map
     -> semantic-memory / scene-graph
-    -> persistence
+    -> persistência
 ```
 
 ## `map-explorer`
 
-`apps/map-explorer/` is the primary human-facing application for opening and inspecting completed or incrementally updated maps.
+`apps/map-explorer/` é a principal aplicação voltada a humanos para abrir e inspecionar mapas concluídos ou atualizados incrementalmente.
 
-Its public responsibilities include:
+Suas responsabilidades públicas incluem:
 
-- opening a map by stable identity;
-- rendering persistent 3D geometry;
-- rendering semantic overlays and entities;
-- submitting semantic, spatial, and contextual queries through `query-engine`;
-- focusing the viewer on returned regions or entities;
-- showing source observations, evidence, and provenance;
-- exposing scene-graph relations without becoming the owner of graph construction.
+- abrir um mapa por identidade estável;
+- renderizar geometria 3D persistente;
+- renderizar overlays e entidades semânticas;
+- submeter consultas semânticas, espaciais e contextuais através do `query-engine`;
+- focar o viewer nas regiões ou entidades retornadas;
+- mostrar observações de origem, evidência e proveniência;
+- expor relações de scene-graph sem se tornar dono da construção do grafo.
 
-The explorer may contain a backend/API boundary and a web frontend, but those layers consume application contracts rather than private module internals.
+O explorer pode conter uma fronteira backend/API e um frontend web, mas essas camadas consomem contracts de aplicação em vez de internos privados de módulo.
 
 ## `cli`
 
-`apps/cli/` provides scriptable access to application operations for development, automation, inspection, export, and reproducible experiments.
+`apps/cli/` fornece acesso scriptável a operações de aplicação para desenvolvimento, automação, inspeção, exportação e experimentos reprodutíveis.
 
-The CLI should expose the same application-level capabilities as other clients where practical instead of introducing alternative business logic.
+O CLI deve expor as mesmas capacidades de nível de aplicação que outros clientes, quando praticável, em vez de introduzir lógica de negócio alternativa.
 
-## Dependency direction
+## Direção de dependência
 
 ```mermaid
 flowchart LR
-    M[modules] --> C[public contracts]
+    M[modules] --> C[contracts públicos]
     A[adapters] --> C
     APP[apps] --> C
 
@@ -56,4 +56,4 @@ flowchart LR
     APP --> A
 ```
 
-Applications may select and wire implementations. Modules must not depend on applications.
+Aplicações podem selecionar e conectar (wire) implementações. Módulos não devem depender de aplicações.

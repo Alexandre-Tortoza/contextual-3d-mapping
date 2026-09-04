@@ -1,7 +1,7 @@
-# State Estimation Documentation
+# Documentação do State Estimation
 
-This directory documents the internal architecture, contracts, adapters, runtime behavior, configuration, testing, and benchmarks of `state-estimation`.
+Este diretório documenta a arquitetura interna, os contracts, os adapters, o comportamento de runtime, a configuração, os testes e os benchmarks de `state-estimation`.
 
-Repository-level documentation should describe only how this module composes with the rest of `contextual-3d-mapping`.
+A documentação de nível de repositório deve descrever apenas como este módulo se compõe com o resto do `contextual-3d-mapping`.
 
-- [Architecture](./architecture.md)
+- [Arquitetura](./architecture.md)

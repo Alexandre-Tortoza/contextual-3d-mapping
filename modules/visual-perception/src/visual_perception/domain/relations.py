@@ -1,10 +1,11 @@
-"""Structured candidate relation contract.
+"""Contract de relação candidata estruturada.
 
 Issue: #166.
 
-Relations are 2D image-level candidates only. They are never treated as
-verified 3D relations: that validation is owned downstream (scene-graph /
-context-reasoning), once geometry has been associated across sensors.
+Relações são candidatas apenas em nível de imagem 2D. Elas nunca são
+tratadas como relações 3D verificadas: essa validação é de posse de módulos
+downstream (scene-graph / context-reasoning), depois que a geometria foi
+associada entre sensores.
 """
 
 from __future__ import annotations
@@ -20,19 +21,26 @@ from visual_perception.domain.semantics import ConfidenceScore, Evidence
 _PREDICATE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
+# Distingue se uma relação foi derivada de geometria 2D ou inferida por um
+# modelo. Existe para manter essas duas origens distinguíveis (#167) em vez
+# de fundir a proveniência.
 class RelationSource(StrEnum):
-    """Whether a relation was derived from 2D geometry or inferred by a model.
+    """Se uma relação foi derivada de geometria 2D ou inferida por um modelo.
 
-    Issue: #167 keeps these distinguishable rather than merging provenance.
+    Issue: #167 mantém essas origens distinguíveis em vez de fundir a
+    proveniência.
     """
 
     GEOMETRIC_2D = "geometric_2d"
     MODEL_INFERRED = "model_inferred"
 
 
+# Representa uma relação não verificada, em nível de imagem, entre duas
+# regiões canônicas. Existe como a unidade de relação candidata que
+# scene-graph/context-reasoning eventualmente verificam em 3D.
 @dataclass(frozen=True)
 class CandidateRelation:
-    """One unverified, image-level relation between two canonical regions."""
+    """Uma relação não verificada, em nível de imagem, entre duas regiões canônicas."""
 
     relation_id: str
     subject_region_id: str
@@ -43,6 +51,8 @@ class CandidateRelation:
     evidence: tuple[Evidence, ...]
     provenance: ModelProvenance
 
+    # Valida os ids envolvidos, rejeita auto-relações, exige um predicate em
+    # snake_case normalizado, e exige ao menos uma Evidence.
     def __post_init__(self) -> None:
         validate_identifier(self.relation_id, field="relation_id")
         validate_identifier(self.subject_region_id, field="subject_region_id")
@@ -63,13 +73,18 @@ class CandidateRelation:
             )
 
 
+# Rejeita relações que referenciam regiões fora do conjunto conhecido.
+# Existe para detectar referências penduradas (ex: a uma região descartada
+# durante merge/refinamento) explicitamente, em vez de deixá-las passar
+# silenciosamente; usada por VisualObservation.__post_init__.
 def validate_relation_references(
     relations: tuple[CandidateRelation, ...], known_region_ids: frozenset[str]
 ) -> None:
-    """Reject relations that reference regions outside ``known_region_ids``.
+    """Rejeita relações que referenciam regiões fora de ``known_region_ids``.
 
-    A dangling reference (e.g. to a region discarded during merge/refinement)
-    fails explicitly rather than being silently dropped.
+    Uma referência pendurada (ex: para uma região descartada durante
+    merge/refinamento) falha explicitamente em vez de ser descartada
+    silenciosamente.
     """
     for relation in relations:
         for region_id, role in (

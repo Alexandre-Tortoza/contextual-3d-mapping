@@ -1,6 +1,6 @@
 # Datasets
 
-This directory owns the repository conventions for local dataset files and the metadata required for reproducible experiments.
+Este diretório é dono das convenções do repositório para arquivos de dataset locais e dos metadados necessários para experimentos reprodutíveis.
 
 ```text
 datasets/
@@ -13,17 +13,22 @@ datasets/
 └── contextual_mapping_datasets/
 ```
 
-## Raw dataset layout
+## Layout de dataset bruto
 
-Downloaded or extracted dataset files must live under:
+Arquivos de dataset baixados ou extraídos devem viver em:
 
 ```text
 datasets/raw/<dataset-name>/*
 ```
 
-Each dataset gets its own directory and should preserve the upstream dataset layout whenever practical. Dataset adapters should read from this dataset root instead of scattering source files across the repository.
+Cada dataset recebe seu próprio diretório e deve preservar o layout upstream do dataset sempre que praticável. Adapters de dataset devem ler a partir dessa raiz de dataset em vez de espalhar arquivos de origem pelo repositório.
 
-Examples:
+O identificador `DatasetManifest.dataset_id` também é o nome desse diretório. A API
+`contextual_mapping_datasets.raw_dataset_root(repository_root, dataset_id)` é a forma
+canônica de resolver a raiz; ela aceita apenas um segmento de caminho para impedir que
+um manifest faça um adapter ler fora de `datasets/raw/`.
+
+Exemplos:
 
 ```text
 datasets/raw/cerberus-subt/...
@@ -31,17 +36,24 @@ datasets/raw/grandtour/...
 datasets/raw/tartanground/...
 ```
 
-`datasets/raw/` is local working data. Its contents are intentionally excluded from Git because RGB images, LiDAR point clouds, ROS bags, archives, and similar source artifacts can be very large.
+`datasets/raw/` é dado de trabalho local. Seu conteúdo é intencionalmente excluído do Git porque imagens RGB, point clouds LiDAR, ROS bags, arquivos compactados e artifacts de origem similares podem ser muito grandes.
 
-## Versioned dataset support
+## Suporte a dataset versionado
 
-Use the remaining directories for repository-tracked information:
+Use os diretórios restantes para informação rastreada pelo Git:
 
-- `manifests/` describes dataset identity, sequences, sensor sources, clocks, frames, calibration references, provenance, and local source locations.
-- `schemas/` contains dataset-related schemas and validation definitions.
-- `splits/` contains reproducible train, validation, test, and evaluation splits.
-- `contextual_mapping_datasets/` provides the versioned manifest model used by dataset adapters and experiments.
+- `manifests/` descreve identidade do dataset, sequências, fontes de sensor, clocks, frames, referências de calibração, proveniência e localizações de origem locais.
+- `schemas/` contém schemas e definições de validação relacionados a dataset.
+- `splits/` contém splits reproduzíveis de treino, validação, teste e avaliação.
+- `contextual_mapping_datasets/` fornece o modelo de manifest versionado usado por adapters de dataset e experimentos.
 
-The current manifest schema version `1.0` describes dataset and sequence identity, external sensor sources, clocks, frames, calibration references, and optional evaluation split membership.
+A versão atual do schema de manifest, `1.0`, descreve identidade de dataset e sequência, fontes de sensor externas, clocks, frames, referências de calibração, e membership opcional em split de avaliação.
 
-Generated maps, model checkpoints, caches, and experiment outputs are not raw dataset files and should remain in their owning runtime, experiment, or configured artifact storage location.
+## Manifests JSON
+
+Manifests rastreados usam JSON e ficam em `datasets/manifests/<dataset-id>.json`.
+Seus `artifact_uri` são caminhos relativos à raiz canônica do dataset, nunca caminhos
+absolutos ou URLs. Use `load_dataset_manifest(path)` para ler e validar o documento;
+o adapter resolve cada artifact a partir de `datasets/raw/<dataset-id>/`.
+
+Mapas gerados, checkpoints de modelo, caches e saídas de experimento não são arquivos de dataset brutos e devem permanecer em seu runtime, experimento, ou local configurado de armazenamento de artifact.

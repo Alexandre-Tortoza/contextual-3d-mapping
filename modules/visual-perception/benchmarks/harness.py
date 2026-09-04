@@ -1,11 +1,12 @@
-"""Reproducible perception quality benchmark and ablation harness.
+"""Harness reproduzível de benchmark de qualidade de percepção e ablation.
 
 Issue: #175.
 
-Metrics separate segmentation/localization quality (region coverage, mask
-IoU) from semantics (label match rate), relations, and hallucination, and
-every run is defined by a versioned :class:`DatasetReference` plus an
-:class:`AblationConfig` so a report is reproducible from its own fields.
+As métricas separam qualidade de segmentação/localização (region coverage,
+mask IoU) de semântica (label match rate), relações, e hallucination, e toda
+execução é definida por um :class:`DatasetReference` versionado mais um
+:class:`AblationConfig`, para que um report seja reproduzível a partir de
+seus próprios campos.
 """
 
 from __future__ import annotations
@@ -21,36 +22,47 @@ from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.visual_observation import VisualObservation
 
 
+# Identifica de forma versionada qual dataset e anotações geraram um
+# BenchmarkReport, para que o report seja rastreável e reproduzível.
 @dataclass(frozen=True)
 class DatasetReference:
-    """A versioned pointer to the dataset/annotations a report was computed against."""
+    """Um ponteiro versionado para o dataset/anotações contra o qual um report foi calculado."""
 
     name: str
     version: str
     annotation_uri: str
 
 
+# Agrupa um nome de ablation com o ModuleConfig completo que a implementa,
+# para que run_ablation saiba exatamente qual configuração produziu um
+# BenchmarkReport.
 @dataclass(frozen=True)
 class AblationConfig:
-    """Which capabilities are enabled for one benchmark run.
+    """Quais capacidades estão habilitadas para uma execução de benchmark.
 
-    Disabling one capability must not change the behavior of unrelated
-    stages: this is enforced by callers composing ``ModuleConfig`` directly
-    rather than by a hidden global switch.
+    Desabilitar uma capacidade não deve mudar o comportamento de estágios não
+    relacionados: isso é garantido por quem chama compor o ``ModuleConfig``
+    diretamente, em vez de um switch global oculto.
     """
 
     name: str
     module_config: ModuleConfig
 
 
+# Representa uma região de ground-truth (mask + label opcional) usada por
+# score_observation para avaliar as predições do pipeline canônico.
 @dataclass(frozen=True)
 class GroundTruthRegion:
-    """One annotated region against which predictions are scored."""
+    """Uma região anotada contra a qual as predições são pontuadas."""
 
     mask: Mask
     label: str | None = None
 
 
+# Agrega as métricas de qualidade de uma execução (cobertura de região, IoU
+# médio das masks casadas, taxa de acerto de label, e taxa de hallucination),
+# todas normalizadas em [0, 1]. Produzida por score_observation e agregada
+# por run_ablation.
 @dataclass(frozen=True)
 class QualityMetrics:
     region_coverage: float
@@ -58,6 +70,9 @@ class QualityMetrics:
     label_match_rate: float
     hallucination_rate: float
 
+    # Valida que cada métrica está no intervalo [0, 1] esperado, falhando
+    # cedo se score_observation ou run_ablation produzirem um valor fora da
+    # faixa.
     def __post_init__(self) -> None:
         for name in ("region_coverage", "mean_matched_mask_iou", "label_match_rate", "hallucination_rate"):
             value = getattr(self, name)
@@ -65,6 +80,9 @@ class QualityMetrics:
                 raise ValueError(f"{name} must be in [0, 1], got {value}.")
 
 
+# Resultado completo de uma execução de ablation: qual dataset, qual
+# configuração de ablation, as métricas agregadas, o tempo de execução, e
+# quantas chamadas de modelo foram feitas. Retornado por run_ablation.
 @dataclass(frozen=True)
 class BenchmarkReport:
     dataset: DatasetReference
@@ -77,10 +95,15 @@ class BenchmarkReport:
 _MATCH_IOU_THRESHOLD = 0.5
 
 
+# Compara as regiões previstas pelo pipeline canônico com as regiões de
+# ground-truth anotadas, casando cada predição com o melhor ground-truth
+# ainda não casado (por IoU) para calcular cobertura, IoU médio, taxa de
+# acerto de label e taxa de hallucination. Chamada por run_ablation para
+# cada amostra do benchmark.
 def score_observation(
     observation: VisualObservation, ground_truth: tuple[GroundTruthRegion, ...]
 ) -> QualityMetrics:
-    """Score one canonical observation against its ground-truth regions."""
+    """Pontua uma observação canônica contra suas regiões de ground-truth."""
     if not ground_truth:
         hallucinated = 1.0 if observation.regions else 0.0
         return QualityMetrics(0.0 if observation.regions else 1.0, 0.0, 0.0, hallucinated)
@@ -112,13 +135,18 @@ def score_observation(
     return QualityMetrics(region_coverage, mean_iou, label_match_rate, hallucination_rate)
 
 
+# Roda o pipeline canônico (run_canonical_pipeline) para cada amostra do
+# conjunto fixo sob a configuração de uma ablation, pontua cada resultado via
+# score_observation, agrega as métricas e mede o tempo total de execução. É
+# o ponto de entrada do harness de benchmark/ablation (#175) usado por
+# benchmarks/test_harness.py e por scripts de benchmark externos.
 def run_ablation(
     dataset: DatasetReference,
     ablation: AblationConfig,
     samples: tuple[tuple[ImageObservation, ImagePayload, tuple[GroundTruthRegion, ...]], ...],
     ports: PerceptionPorts,
 ) -> BenchmarkReport:
-    """Run the canonical pipeline under one ablation over a fixed sample set."""
+    """Executa o pipeline canônico sob uma ablation sobre um conjunto fixo de amostras."""
     start = time.monotonic()
     per_sample_metrics = []
     for image, payload, ground_truth in samples:

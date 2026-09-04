@@ -1,29 +1,40 @@
-# Visual Perception Documentation
+# Documentação de Visual Perception
 
-This folder documents `visual-perception`'s architecture, execution flow, artifacts, model
-backends, and research traceability.
+`visual-perception` transforma uma observação RGB canônica em uma `VisualObservation`
+estruturada, auditável e pronta para consumidores downstream. Estas páginas explicam
+como consumir e operar o módulo; as regras locais de cada tipo, função e classe ficam
+documentadas ao lado do código.
 
-## Contents
+## Por onde começar
 
-- [architecture.md](architecture.md) — module responsibility, layers, the canonical
-  pipeline diagram, and the image-coordinate invariants.
-- [pipelines.md](pipelines.md) — what each canonical stage does, and where the removed
-  legacy baselines are preserved for comparison.
-- [execution.md](execution.md) — model lifecycle, memory diagnostics, and the stage
-  cache.
-- [artifacts.md](artifacts.md) — the canonical serialization format and what a persisted
-  run looks like.
-- [model-backends.md](model-backends.md) — current backend status (all GPU-free fakes),
-  what is blocked on real hardware, and how selection will work once benchmarked.
-- [research-traceability.md](research-traceability.md) — which mechanisms are adopted
-  from prior work, which are project-specific engineering, and what remains a future
-  idea.
+- Para integrar o módulo a uma aplicação ou adapter, comece por
+  [integration.md](integration.md).
+- Para entender os tipos que atravessam a API pública, consulte
+  [api-contracts.md](api-contracts.md).
+- Para compreender responsabilidades e fluxo interno, leia
+  [architecture.md](architecture.md) e [pipelines.md](pipelines.md).
 
-## Status
+## Referência por necessidade
 
-Every canonical stage (region discovery, tiling/merge, dense features, mask-aware
-pooling, language-aligned embedding, scene/region semantic interpretation, relation
-generation, quality audit) is implemented and covered by unit and end-to-end tests using
-GPU-free fakes. Real model backends (#186-#189) and hardware validation (#174, #190) are
-not implemented yet: this development environment has no GPU. See
-[model-backends.md](model-backends.md).
+| Necessidade | Página |
+| --- | --- |
+| Chamar `run_canonical_pipeline` e tratar sua saída | [api-contracts.md](api-contracts.md) |
+| Adaptar uma observação RGB ou compor o runtime | [integration.md](integration.md) |
+| Entender estágios e extensões opcionais | [pipelines.md](pipelines.md) |
+| Escolher, instalar ou diagnosticar um backend | [model-backends.md](model-backends.md) |
+| Entender cache, auditoria e verificações locais | [execution.md](execution.md) |
+| Persistir ou recarregar uma observação | [artifacts.md](artifacts.md) |
+| Distinguir engenharia de hipóteses de pesquisa | [research-traceability.md](research-traceability.md) |
+| Consultar vocabulário do módulo | [glossary.md](glossary.md) |
+
+## Estado do módulo
+
+O pipeline canônico, os fakes determinísticos e os adapters reais estão implementados.
+O uso padrão continua sendo `backend="fake"`, portanto desenvolvimento, testes e
+integração inicial não exigem GPU nem download de modelo. A seleção de checkpoints de
+referência e a validação quantitativa em hardware real continuam pendentes; consulte
+[model-backends.md](model-backends.md) antes de tratar um backend real como uma
+configuração de produção validada.
+
+Os benchmarks locais existem em `../benchmarks/`, mas seus resultados não fazem parte
+desta documentação até que sejam versionados com o ambiente e dataset de referência.

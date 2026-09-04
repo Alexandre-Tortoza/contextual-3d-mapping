@@ -1,1 +1,1 @@
-"""Persistent geometric mapping capability."""
+"""Capacidade de mapeamento geométrico persistente."""

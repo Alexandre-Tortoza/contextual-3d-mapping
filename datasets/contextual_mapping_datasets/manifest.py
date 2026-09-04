@@ -1,19 +1,27 @@
-"""Versioned manifests that describe external multimodal sequences."""
+"""Manifests versionados que descrevem sequências multimodais externas."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
 
+from .paths import validate_dataset_name
+
 SensorKind = Literal["rgb", "lidar", "imu", "pose"]
 SUPPORTED_SCHEMA_VERSION = "1.0"
 
 
+# Helper de validação compartilhado por todos os dataclasses deste módulo,
+# para não repetir a checagem de "campo string não vazio" em cada
+# __post_init__.
 def _require(value: str, field: str) -> None:
     if not value.strip():
         raise ValueError(f"{field} must not be empty.")
 
 
+# Descreve como converter entre dois frames de coordenadas (calibração
+# extrínseca/intrínseca). Existe para que sensores referenciem sua
+# calibração por id em vez de embutir o transform diretamente no manifest.
 @dataclass(frozen=True)
 class CalibrationManifest:
     calibration_id: str
@@ -26,6 +34,10 @@ class CalibrationManifest:
             _require(getattr(self, field), field)
 
 
+# Descreve uma fonte de sensor dentro de uma sequência: onde encontrar seus
+# dados, em que frame/clock ela vive e qual calibração usar. Existe como a
+# unidade que os adapters de dataset leem para saber quais sensores
+# processar e como interpretá-los.
 @dataclass(frozen=True)
 class SensorSourceManifest:
     sensor_id: str
@@ -44,6 +56,10 @@ class SensorSourceManifest:
             raise ValueError(f"unsupported sensor kind: {self.kind!r}.")
 
 
+# Uma sequência gravada dentro de um dataset (ex: uma corrida/percurso),
+# com seus sensores e calibrações. Valida no __post_init__ que cada sensor
+# referencia uma calibração conhecida da própria sequência, para detectar
+# manifests inconsistentes cedo, antes de qualquer adapter tentar usá-los.
 @dataclass(frozen=True)
 class SequenceManifest:
     sequence_id: str
@@ -72,6 +88,10 @@ class SequenceManifest:
                 )
 
 
+# Raiz do manifest de um dataset: sua identidade, versão de schema e as
+# sequências que ele contém. É o ponto de entrada que `SyntheticDatasetAdapter`
+# e outros adapters concretos recebem para saber o que está disponível e
+# validar observações contra ele.
 @dataclass(frozen=True)
 class DatasetManifest:
     dataset_id: str
@@ -81,6 +101,7 @@ class DatasetManifest:
 
     def __post_init__(self) -> None:
         _require(self.dataset_id, "dataset_id")
+        validate_dataset_name(self.dataset_id)
         if self.schema_version != SUPPORTED_SCHEMA_VERSION:
             raise ValueError(
                 f"unsupported schema_version {self.schema_version!r}; "
@@ -92,6 +113,9 @@ class DatasetManifest:
         if len(ids) != len(set(ids)):
             raise ValueError("sequence ids must be unique within a dataset.")
 
+    # Busca uma sequência pelo id; usada por adapters e por
+    # `SyntheticDatasetAdapter.observations` para validar que a sequência
+    # pedida existe antes de iterar suas observações.
     def sequence(self, sequence_id: str) -> SequenceManifest:
         for sequence in self.sequences:
             if sequence.sequence_id == sequence_id:

@@ -1,4 +1,4 @@
-"""Multi-scale image tiling and global remapping.
+"""Tiling multi-escala de imagem e remapeamento global.
 
 Issue: #159.
 """
@@ -13,9 +13,13 @@ from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.regions import LocalRegionProposal, RegionProposal, TileProvenance
 
 
+# Representa uma view tile-local da imagem completa, junto com o transform
+# que leva de volta às coordenadas globais. Existe para que cada tile
+# carregue consigo a informação necessária para remap_to_global reconverter
+# suas proposals locais em coordenadas da imagem original.
 @dataclass(frozen=True)
 class Tile:
-    """One tile-local view of the full image, with its transform back to global coordinates."""
+    """Uma view tile-local da imagem completa, com seu transform de volta às coordenadas globais."""
 
     scale_id: str
     tile_id: str
@@ -23,11 +27,17 @@ class Tile:
     transform: CoordinateTransform
 
 
+# Constrói a lista de tiles a processar: sempre a imagem completa, e,
+# quando multi-escala está habilitado, também um grid de tiles sobrepostos.
+# Existe para permitir region discovery em múltiplas escalas sem duplicar a
+# lógica de particionamento em cada chamador. Usada pelo pipeline principal
+# antes da etapa de region discovery.
 def build_tiles(image: ImagePayload, config: TilingConfig) -> tuple[Tile, ...]:
-    """Produce the full-image tile plus, when enabled, an overlapping tile grid.
+    """Produz o tile da imagem completa mais, quando habilitado, um grid de tiles sobrepostos.
 
-    The full image is always included as scale ``full``/tile ``whole`` so a
-    caller can always run non-tiled discovery even when multi-scale is on.
+    A imagem completa é sempre incluída como scale ``full``/tile ``whole``,
+    para que um chamador sempre possa rodar discovery não-tiled mesmo com
+    multi-escala ativado.
     """
     tiles = [Tile("full", "whole", image, CoordinateTransform.identity())]
     if not config.multi_scale_enabled:
@@ -54,6 +64,10 @@ def build_tiles(image: ImagePayload, config: TilingConfig) -> tuple[Tile, ...]:
     return tuple(tiles)
 
 
+# Remapeia uma proposal tile-local exatamente de volta às coordenadas da
+# imagem original, usando o transform do tile, e anexa a proveniência do
+# tile (scale_id/tile_id) à RegionProposal resultante. Chamada pelo
+# pipeline principal para cada proposal produzida dentro de um tile.
 def remap_to_global(
     local_proposal: LocalRegionProposal,
     tile: Tile,
@@ -61,7 +75,7 @@ def remap_to_global(
     image_width: int,
     image_height: int,
 ) -> RegionProposal:
-    """Remap one tile-local proposal exactly back to original image coordinates."""
+    """Remapeia uma proposal tile-local exatamente de volta às coordenadas da imagem original."""
     global_box = tile.transform.box_to_global(local_proposal.box)
     global_mask = tile.transform.mask_to_global(
         local_proposal.mask, global_width=image_width, global_height=image_height

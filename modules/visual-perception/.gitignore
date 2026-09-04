@@ -6,3 +6,6 @@
 __pycache__/
 *.egg-info/
 runs/
+# Local benchmark input frames extracted from datasets/raw/ (large, not source).
+benchmarks/.local/
+*.pt

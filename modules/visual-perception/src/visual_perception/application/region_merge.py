@@ -1,12 +1,13 @@
-"""Deterministic cross-scale region merge.
+"""Merge determinístico de regions entre escalas (cross-scale).
 
 Issue: #160.
 
-Two proposals are treated as duplicates of the same region (and merged) only
-when they are near-identical in extent: either their IoU or their *mutual*
-containment is high. A small region that sits mostly inside a much larger one
-without the reverse being true is a meaningful nested part, and is
-deliberately kept as its own region.
+Duas proposals só são tratadas como duplicatas da mesma region (e
+mescladas) quando têm extensão quase idêntica: ou o IoU é alto, ou a
+containment é alta em *ambos* os sentidos (mútua). Uma region pequena que
+fica majoritariamente dentro de uma muito maior, sem o inverso ser
+verdadeiro, é uma parte aninhada significativa, e é deliberadamente mantida
+como sua própria region.
 """
 
 from __future__ import annotations
@@ -19,21 +20,32 @@ from visual_perception.domain.identifiers import derive_region_id
 from visual_perception.domain.regions import ObservedRegion, RegionProposal
 
 
+# Ponto de entrada do merge: agrupa proposals duplicadas vindas de tiles/
+# escalas diferentes (via union-find sobre IoU/containment) em regions
+# canônicas estáveis. Existe para que o pipeline de tiling produza uma única
+# region por objeto real, mesmo quando ele aparece em múltiplos tiles/escalas
+# (issue #160); chamada depois da etapa de tiling no pipeline principal.
 def merge_regions(
     observation_id: str,
     proposals: tuple[RegionProposal, ...],
     config: RegionMergeConfig,
 ) -> tuple[ObservedRegion, ...]:
-    """Merge duplicate proposals across tiles/scales into stable canonical regions."""
+    """Mescla proposals duplicadas entre tiles/escalas em regions canônicas estáveis."""
     ordered = sorted(proposals, key=lambda proposal: proposal.proposal_id)
     parent = {proposal.proposal_id: proposal.proposal_id for proposal in ordered}
 
+    # Busca (find) da raiz do grupo union-find de uma proposal, com path
+    # compression. Existe como parte interna do algoritmo union-find usado
+    # para agrupar proposals duplicadas.
     def find(proposal_id: str) -> str:
         while parent[proposal_id] != proposal_id:
             parent[proposal_id] = parent[parent[proposal_id]]
             proposal_id = parent[proposal_id]
         return proposal_id
 
+    # União (union) de dois grupos union-find, elegendo deterministicamente
+    # a raiz de menor id. Existe como parte interna do algoritmo union-find;
+    # chamada por merge_regions ao detectar que duas proposals são a mesma region.
     def union(a: str, b: str) -> None:
         root_a, root_b = find(a), find(b)
         if root_a != root_b:
@@ -57,6 +69,10 @@ def merge_regions(
     return tuple(sorted(regions, key=lambda region: region.region_id))
 
 
+# Constrói a ObservedRegion final de um grupo de proposals já mescladas: une
+# as masks (OR bit a bit), recalcula o box a partir da mask unida, e deriva
+# um region_id estável a partir das proposals contribuintes. Chamada por
+# merge_regions para cada grupo do union-find.
 def _build_region(observation_id: str, group: list[RegionProposal]) -> ObservedRegion:
     group = sorted(group, key=lambda proposal: proposal.proposal_id)
     reference = group[0].mask

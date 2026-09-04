@@ -1,5 +1,5 @@
 # Infrastructure
 
-Infrastructure code adapts external runtimes and middleware to the module's public ports and domain contracts.
+Código de infrastructure adapta runtimes e middleware externos aos ports públicos e contracts de domain do módulo.
 
-The `fast_lio/` directory is reserved for the initial LiDAR-inertial odometry integration. External message types, ROS/runtime concerns, configuration files, and process lifecycle details must remain inside infrastructure code.
+O diretório `fast_lio/` é reservado para a integração inicial de odometria LiDAR-inercial. Tipos de mensagem externos, preocupações de ROS/runtime, arquivos de configuração e detalhes de ciclo de vida de processo devem permanecer dentro do código de infrastructure.

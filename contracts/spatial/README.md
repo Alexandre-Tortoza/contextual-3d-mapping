@@ -1,6 +1,5 @@
 # Spatial Contracts
 
-Repository-wide spatial primitives such as coordinate-frame identifiers, poses, transforms, bounds, and geometry references belong here when shared by multiple capabilities.
+Primitivas espaciais de nível de repositório, como identificadores de frame de coordenadas, poses, transforms, bounds e referências de geometria, pertencem aqui quando compartilhadas por múltiplas capacidades.
 
-`contextual_mapping_contracts.FrameId` provides stable frame identity. Transform and pose values
-remain deferred until a concrete cross-capability boundary requires them.
+`contextual_mapping_contracts.FrameId` fornece identidade de frame estável. Valores de transform e pose permanecem adiados até que uma fronteira concreta entre capacidades os exija.

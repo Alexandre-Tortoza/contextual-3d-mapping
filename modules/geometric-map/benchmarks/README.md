@@ -1,3 +1,3 @@
 # Benchmarks
 
-Module-local benchmarks for geometric map quality, consistency, scalability, and performance.
+Benchmarks locais do módulo para qualidade, consistência, escalabilidade e performance do mapa geométrico.

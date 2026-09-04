@@ -1,1 +1,1 @@
-"""Replaceable boundaries for heavyweight, backend-specific capabilities."""
+"""Fronteiras substituíveis para capacidades pesadas e específicas de backend."""

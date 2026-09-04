@@ -1,17 +1,14 @@
 # Dataset Adapters
 
-Shared adapters that translate supported dataset layouts into repository input contracts.
+Adapters compartilhados que traduzem layouts de dataset suportados para os contracts de entrada do repositório.
 
-Dataset-specific parsing, timestamp normalization, calibration loading, frame naming, and artifact resolution belong here when reused across applications or modules.
+Parsing específico de dataset, normalização de timestamp, carregamento de calibração, nomenclatura de frame e resolução de artifact pertencem aqui quando reutilizados entre aplicações ou módulos.
 
-The public `contextual_mapping_adapters` package exposes a narrow
-`MultimodalDatasetAdapter` protocol and payload-independent `CanonicalObservation` values.
-Every observation preserves source identity, integer nanosecond timestamp, clock, frame,
-sensor, calibration and external artifact reference. Invalid manifest metadata fails before
-iteration.
+`DatasetFilesystem` é a base de filesystem para um adapter concreto: recebe a raiz do
+repositório e um `DatasetManifest`, exige que `datasets/raw/<dataset-id>/` exista e
+resolve somente artifacts relativos que permaneçam dentro dessa raiz. Ele não faz
+parsing de formato, leitura de ROS bag ou decodificação de payload.
 
-`synchronize` creates one group per configured anchor observation. Input order is ignored; the
-closest unused observation of each expected kind is selected within an inclusive tolerance.
-Ties resolve by timestamp, sequence index and observation id. Original timestamps are preserved
-and missing kinds are explicit. A call accepts exactly one sequence and clock; interpretation,
-interpolation and fusion remain downstream responsibilities.
+O pacote público `contextual_mapping_adapters` expõe um protocolo `MultimodalDatasetAdapter` estreito e valores `CanonicalObservation` independentes de payload. Toda observação preserva identidade de origem, timestamp em nanossegundos inteiro, clock, frame, sensor, calibração e referência de artifact externo. Metadados de manifest inválidos falham antes da iteração.
+
+`synchronize` cria um grupo por observação âncora configurada. A ordem de entrada é ignorada; a observação não utilizada mais próxima de cada tipo esperado é selecionada dentro de uma tolerância inclusiva. Empates são resolvidos por timestamp, índice de sequência e id de observação. Os timestamps originais são preservados e tipos ausentes são explícitos. Uma chamada aceita exatamente uma sequência e um clock; interpretação, interpolação e fusão permanecem responsabilidades downstream.

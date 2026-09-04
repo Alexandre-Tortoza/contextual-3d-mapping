@@ -1,1 +1,1 @@
-"""Integration boundaries with sibling modules and applications (#177-#180)."""
+"""Fronteiras de integração com módulos e aplicações vizinhas (#177-#180)."""

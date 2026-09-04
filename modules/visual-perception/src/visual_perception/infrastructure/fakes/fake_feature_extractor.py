@@ -1,4 +1,4 @@
-"""Deterministic, GPU-free fake for the dense feature extraction boundary (#161)."""
+"""Fake determinístico e livre de GPU para a fronteira de extração de features densas (#161)."""
 
 from __future__ import annotations
 
@@ -8,12 +8,18 @@ from visual_perception.config import FeatureExtractionConfig
 from visual_perception.domain.feature_map import FeatureMap
 from visual_perception.domain.image_payload import ImagePayload
 
-_DIMENSION = 4  # mean R, mean G, mean B, constant bias term.
+_DIMENSION = 4  # média de R, média de G, média de B, termo de bias constante.
 
 
+# Implementação fake do port DenseFeatureExtractor. Existe para permitir
+# testar e desenvolver o pipeline sem GPU nem modelo real: produz sinal
+# real (não aleatório) a partir dos pixels, mas sem qualquer dependência
+# de ML, servindo de substituto até o adapter real (#187) estar pronto.
 class FakeDenseFeatureExtractor:
-    """Average-pools raw pixels into a small grid: real signal, zero ML dependencies."""
+    """Faz average-pooling dos pixels brutos em um grid pequeno: sinal real, zero dependências de ML."""
 
+    # Extrai o FeatureMap fake a partir da imagem, com resolução de grid
+    # limitada pelas dimensões da imagem e por config.feature_resolution.
     def extract(self, image: ImagePayload, config: FeatureExtractionConfig) -> FeatureMap:
         grid_h = max(1, min(config.feature_resolution, image.height))
         grid_w = max(1, min(config.feature_resolution, image.width))

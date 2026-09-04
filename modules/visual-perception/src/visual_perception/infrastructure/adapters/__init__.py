@@ -1,10 +1,26 @@
-"""Real backend adapters selected by the module benchmark (#174).
+"""Adapters de backend real selecionados pelo benchmark do módulo (#174).
 
-Issues #186-#189: these adapters require GPU hardware and downloaded model
-checkpoints that are not available in every development environment. Until
-implemented for real, each module here exposes a class that satisfies its
-port's shape but raises
-:class:`~visual_perception.domain.errors.BackendUnavailableError` when used,
-so the canonical pipeline fails explicitly instead of silently falling back
-to a fake. See #190 for real-hardware validation.
+Cada adapter implementa um port canônico e usa imports lazy para que o módulo
+continue utilizável com os fakes quando os extras de ML, checkpoints ou GPU
+não estiverem disponíveis.
 """
+
+from visual_perception.infrastructure.adapters.factory import create_perception_ports
+from visual_perception.infrastructure.adapters.feature_extraction_backend import (
+    RealDenseFeatureExtractionAdapter,
+)
+from visual_perception.infrastructure.adapters.language_embedding_backend import (
+    RealLanguageAlignedEncoderAdapter,
+)
+from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
+    RealMultimodalReasoningAdapter,
+)
+from visual_perception.infrastructure.adapters.region_discovery_backend import RealRegionDiscoveryAdapter
+
+__all__ = [
+    "RealDenseFeatureExtractionAdapter",
+    "RealLanguageAlignedEncoderAdapter",
+    "RealMultimodalReasoningAdapter",
+    "RealRegionDiscoveryAdapter",
+    "create_perception_ports",
+]

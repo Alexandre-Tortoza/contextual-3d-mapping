@@ -1,0 +1,668 @@
+{
+  "run_id": "20260904T112627Z",
+  "git_revision": "36ef954",
+  "gpu_memory_budget_gb": 8.0,
+  "config": {
+    "quality_profile": "research_quality",
+    "gpu_memory_budget_gb": 8.0,
+    "region_discovery": {
+      "backend": "sam",
+      "checkpoint": "facebook/sam-vit-huge",
+      "score_threshold": 0.5,
+      "device": "auto",
+      "model_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+      "max_regions": 100,
+      "min_mask_area": 64
+    },
+    "tiling": {
+      "multi_scale_enabled": false,
+      "tile_grid": "2x2",
+      "overlap_ratio": 0.2
+    },
+    "merge": {
+      "iou_merge_threshold": 0.85,
+      "containment_merge_threshold": 0.9
+    },
+    "feature_extraction": {
+      "backend": "dinov2",
+      "checkpoint": "facebook/dinov2-base",
+      "feature_resolution": 16,
+      "device": "auto"
+    },
+    "language_embedding": {
+      "backend": "clip",
+      "checkpoint": "openai/clip-vit-large-patch14",
+      "dimension": 768,
+      "device": "auto",
+      "model_name": "ViT-B-32",
+      "normalize": true
+    },
+    "multimodal_reasoning": {
+      "backend": "qwen_vl",
+      "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_version": "v1",
+      "device": "auto",
+      "max_new_tokens": 256,
+      "temperature": 0.0,
+      "load_in_4bit": true
+    }
+  },
+  "frame_count": 18,
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "lifecycle_metrics": [
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 5.544153594993986,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 1.914459963038098,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 5.134506363014225,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 10.825686809024774,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 2.047308585024439,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8874497429933399,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.6688583100331016,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 6.086048178956844,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.857302896969486,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.952726805000566,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.5671898360014893,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.859505697968416,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.9192092419834808,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8836143590160646,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.7348230610368773,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.912986910028849,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2708326912
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8753515160060488,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9062397530069575,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.393189335009083,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.7803540989989415,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2700152832
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.88929746998474,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8767235570121557,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.7242770129814744,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 6.054161653970368,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2706310144
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.9099368439638056,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8748003030195832,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.871450340957381,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.877653615025338,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2699669504
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8813257369911298,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9286930349771865,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.640364229970146,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 6.053046767017804,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2699823616
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.832414839998819,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8892082929960452,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.452305221988354,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.817489530018065,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2704859648
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8628600740339607,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8992488580406643,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.502160155971069,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.945687516999897,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2704381952
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.9178122919984162,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.91524872998707,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.4546894160448574,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.823072074970696,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2703055872
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8461212739930488,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9143945499672554,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.511422835988924,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.677512581984047,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.9125240059802309,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 1.22518891596701,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.4456193979713134,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.9562710839672945,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.879652815987356,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8703739699558355,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.487580857006833,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.757824669010006,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.9366026450297795,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9788654969888739,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.510051699995529,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.981414040958043,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2706945024
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.996408156992402,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.910034263972193,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 4.763790738012176,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.868787424988113,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8846523860120215,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8860651610302739,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.5950064579956234,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.846935547015164,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.968700843048282,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9119626680039801,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 366996480
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.475398676993791,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.986394327017479,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2698452480
+    }
+  ],
+  "frames": [
+    {
+      "frame": "corridor-02-000",
+      "failed": false,
+      "region_count": 91,
+      "relation_count": 453,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 14
+    },
+    {
+      "frame": "corridor-02-001",
+      "failed": false,
+      "region_count": 89,
+      "relation_count": 444,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 27
+    },
+    {
+      "frame": "corridor-02-002",
+      "failed": false,
+      "region_count": 72,
+      "relation_count": 368,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 63
+    },
+    {
+      "frame": "corridor-02-003",
+      "failed": false,
+      "region_count": 86,
+      "relation_count": 505,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 20
+    },
+    {
+      "frame": "corridor-02-004",
+      "failed": false,
+      "region_count": 62,
+      "relation_count": 365,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 50
+    },
+    {
+      "frame": "corridor-02-005",
+      "failed": false,
+      "region_count": 73,
+      "relation_count": 338,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 27
+    },
+    {
+      "frame": "corridor-02-006",
+      "failed": false,
+      "region_count": 53,
+      "relation_count": 212,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 22
+    },
+    {
+      "frame": "corridor-02-007",
+      "failed": false,
+      "region_count": 69,
+      "relation_count": 335,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 23
+    },
+    {
+      "frame": "corridor-02-008",
+      "failed": false,
+      "region_count": 60,
+      "relation_count": 307,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 19
+    },
+    {
+      "frame": "corridor-02-009",
+      "failed": false,
+      "region_count": 74,
+      "relation_count": 385,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 37
+    },
+    {
+      "frame": "corridor-02-010",
+      "failed": false,
+      "region_count": 79,
+      "relation_count": 424,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 27
+    },
+    {
+      "frame": "corridor-02-011",
+      "failed": false,
+      "region_count": 66,
+      "relation_count": 313,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 57
+    },
+    {
+      "frame": "corridor-02-012",
+      "failed": false,
+      "region_count": 78,
+      "relation_count": 378,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 68
+    },
+    {
+      "frame": "corridor-02-013",
+      "failed": false,
+      "region_count": 67,
+      "relation_count": 206,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 50
+    },
+    {
+      "frame": "corridor-02-014",
+      "failed": false,
+      "region_count": 77,
+      "relation_count": 446,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 86
+    },
+    {
+      "frame": "corridor-02-015",
+      "failed": false,
+      "region_count": 78,
+      "relation_count": 377,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 20
+    },
+    {
+      "frame": "corridor-02-016",
+      "failed": false,
+      "region_count": 89,
+      "relation_count": 464,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 44
+    },
+    {
+      "frame": "corridor-02-017",
+      "failed": false,
+      "region_count": 87,
+      "relation_count": 476,
+      "interpretation_failure_count": 0,
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 92
+    }
+  ]
+}

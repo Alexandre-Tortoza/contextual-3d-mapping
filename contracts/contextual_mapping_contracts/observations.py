@@ -1,4 +1,4 @@
-"""Implementation-agnostic source observation and provenance references."""
+"""Referências de observação de origem e proveniência, independentes de implementação."""
 
 from __future__ import annotations
 
@@ -8,14 +8,20 @@ from .spatial import FrameId
 from .temporal import Timestamp
 
 
+# Helper de validação compartilhado por todos os dataclasses deste módulo.
+# Existe para não repetir a mesma checagem de "campo string não vazio" em
+# cada __post_init__ abaixo.
 def _require(value: str, field: str) -> None:
     if not value.strip():
         raise ValueError(f"{field} must not be empty.")
 
 
+# Referência lógica a um dado de origem mantido fora do repositório (ex: um
+# arquivo de imagem, nuvem de pontos ou bag). Existe porque contracts não
+# devem carregar o payload bruto, só uma referência estável a ele.
 @dataclass(frozen=True)
 class SourceArtifactReference:
-    """Logical reference to source data kept outside the repository."""
+    """Referência lógica a um dado de origem mantido fora do repositório."""
 
     uri: str
     media_type: str
@@ -28,9 +34,13 @@ class SourceArtifactReference:
             _require(self.digest, "digest")
 
 
+# Identidade estável de uma observação de origem (uma leitura de sensor
+# específica), com os metadados necessários para interpretá-la. Existe para
+# que módulos consumidores (fusão, adapters de dataset, proveniência) se
+# refiram sempre à mesma observação sem duplicar sua interpretação.
 @dataclass(frozen=True)
 class ObservationReference:
-    """Stable identity and interpretation metadata for a source observation."""
+    """Identidade estável e metadados de interpretação de uma observação de origem."""
 
     observation_id: str
     dataset_id: str
@@ -50,9 +60,13 @@ class ObservationReference:
             _require(self.calibration_id, "calibration_id")
 
 
+# Conjunto completo dos contribuidores de origem de um item derivado (ex:
+# uma detecção semântica fundida a partir de várias observações). Existe
+# para preservar proveniência um-para-muitos e muitos-para-um sem nunca
+# sobrescrever contribuidores anteriores.
 @dataclass(frozen=True)
 class Provenance:
-    """A derived item's complete, non-overwriting set of source contributors."""
+    """Conjunto completo e não-destrutivo dos contribuidores de origem de um item derivado."""
 
     producer: str
     observations: tuple[ObservationReference, ...]

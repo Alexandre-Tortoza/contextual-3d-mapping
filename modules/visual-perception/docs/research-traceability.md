@@ -1,64 +1,49 @@
-# Research Traceability
+# Rastreabilidade de pesquisa
 
-This page distinguishes what this module adopts from established techniques, what is
-project-specific engineering, and what is still a future idea — so a reader can tell
-which design decisions are backed by prior work versus this repository's own choices.
+Esta página separa famílias de técnicas que orientam os ports do módulo de escolhas de
+engenharia próprias. Ela não afirma que um checkpoint seja recomendado: essa decisão
+depende de benchmark reproduzível e permanece pendente.
 
-## Adopted mechanisms (implementation-agnostic boundary, real backend pending)
+## Fronteiras inspiradas por técnicas estabelecidas
 
-The module's *boundaries* are shaped around well-established technique families, even
-though no real backend is wired in yet (see [model-backends.md](model-backends.md)):
+| Capacidade | Família de técnicas | Fronteira no código |
+| --- | --- | --- |
+| Region discovery | Segmentação class-agnostic e promptable, como SAM. | [`ports/region_discovery.py`](../src/visual_perception/ports/region_discovery.py) |
+| Dense features | Backbones self-supervised com grid espacial, como DINOv2. | [`ports/feature_extraction.py`](../src/visual_perception/ports/feature_extraction.py) |
+| Language embedding | Encoders contrastivos imagem-texto, como CLIP. | [`ports/language_embedding.py`](../src/visual_perception/ports/language_embedding.py) |
+| Multimodal reasoning | VLMs para respostas estruturadas de cena e região. | [`ports/multimodal_reasoning.py`](../src/visual_perception/ports/multimodal_reasoning.py) |
 
-- **Region discovery** (`ports/region_discovery.py`, #158): the boundary is shaped to fit
-  class-agnostic/promptable segmentation models in the SAM family, which is why a
-  proposal carries a mask, a box, and a *geometric* confidence only — no semantic label.
-- **Dense visual features + mask-aware pooling** (`ports/feature_extraction.py`,
-  `application/pooling.py`, #161-#162): shaped for spatial feature grids from
-  self-supervised vision backbones such as DINOv2, where a region's embedding is pooled
-  from the grid rather than re-encoded from a crop.
-- **Language-aligned embedding** (`ports/language_embedding.py`, #163): shaped for
-  CLIP-style contrastive image/text encoders, kept as a *second*, independent
-  representation from the dense visual embedding above (different space, different
-  lifecycle).
-- **Multimodal reasoning** (`ports/multimodal_reasoning.py`, #164-#165, #189): shaped for
-  a vision-language model prompted separately for scene-level and region-level
-  structured output, mirroring how such models are typically used for grounded
-  captioning/VQA-style tasks.
+As fronteiras são independentes de implementação para permitir fakes, adapters concretos
+e candidatos futuros sob o mesmo contract. O status de cada adapter disponível está em
+[model-backends.md](model-backends.md).
 
-None of these are cited as "the" chosen model: which concrete checkpoint satisfies each
-boundary is an open, benchmark-driven decision (#174), not an architectural one.
+## Decisões de engenharia do projeto
 
-## Project-specific engineering contributions
+- O cache usa fingerprints encadeados em
+  [`application/cache.py`](../src/visual_perception/application/cache.py): mudar um
+  estágio invalida seus dependentes, não toda a execução.
+- A semântica é um conjunto de claims auditáveis, não um label vencedor; veja
+  [`domain/semantics.py`](../src/visual_perception/domain/semantics.py).
+- Relações geométricas são derivadas deterministicamente de masks e boxes e preservam
+  uma fonte distinta de relações inferidas; veja
+  [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py).
+- O pooling mask-aware possui um caminho de alta resolução para representar regiões
+  menores que uma célula de feature map; veja
+  [`application/pooling.py`](../src/visual_perception/application/pooling.py).
+- Fusão multi-fonte reaproveita o merge de regiões e mantém claims discordantes; veja
+  [`application/fusion.py`](../src/visual_perception/application/fusion.py).
 
-These are this repository's own design choices, not taken from a specific paper:
+## Questões em aberto
 
-- **Chained stage fingerprints for caching** (`application/cache.py`, #170): fingerprints
-  compose upstream fingerprints so changing one stage's configuration invalidates exactly
-  that stage and its dependents, not the whole run.
-- **Claims-not-labels semantic representation** (`domain/semantics.py`, #156):
-  representing interpretation as a set of auditable, possibly-contradictory claims with
-  per-claim confidence and evidence, rather than collapsing each region to one label and
-  one score.
-- **Deterministic geometric relation derivation** (`application/relation_generation.py`,
-  #167): overlap/containment/adjacency relations derived purely from mask geometry
-  (mutual containment ratio, IoU, bounding-box gap), kept explicitly distinguishable from
-  model-inferred relations.
-- **Two-tier mask-aware pooling** (`application/pooling.py`, #162): a coarse
-  cell-center-inclusion baseline plus a per-pixel nearest-cell "high-resolution" path
-  specifically to keep sub-grid-cell regions representable — an engineering response to
-  the small-region alignment problem, not a published pooling method.
-- **Calibrated multi-source fusion via reused merge logic**
-  (`application/fusion.py`, #182): treating a second perception source as just another
-  contributor to the existing cross-scale merge, rather than a separate fusion algorithm.
+- Qual checkpoint por estágio maximiza qualidade dentro do orçamento de memória de
+  referência ainda precisa ser decidido por benchmark.
+- Os thresholds do refinamento seletivo não foram calibrados contra a distribuição de
+  incerteza de um backend real; consulte
+  [`application/refinement.py`](../src/visual_perception/application/refinement.py).
+- As baselines do laboratório histórico `image-context` são recuperáveis no histórico,
+  mas não são executáveis neste repositório; veja
+  [`../benchmarks/legacy/README.md`](../benchmarks/legacy/README.md).
 
-## Future ideas (not implemented)
-
-- Real quantitative backend selection and quality/ablation benchmarking (#174, #175) —
-  requires GPU hardware this environment does not have.
-- Uncertainty-driven selective refinement (`application/refinement.py`, #183) is
-  implemented and unit-tested against fakes, but has never been evaluated against a real
-  backend's actual uncertainty distribution — whether its trigger thresholds are
-  well-calibrated is an open question for #175's ablation harness.
-- Preserving the former standalone repository's two legacy pipelines as *runnable*
-  comparison baselines (#176) — currently only documented as recoverable from that
-  repository's git history; see `benchmarks/legacy/README.md`.
+Os scripts de benchmark locais não são evidência suficiente por si só: um resultado que
+oriente configuração de referência precisa registrar dataset, versão, checkpoint,
+configuração, hardware e métrica.

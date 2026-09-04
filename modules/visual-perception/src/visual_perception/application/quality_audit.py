@@ -1,14 +1,14 @@
-"""Visual observation quality auditor.
+"""Auditor de qualidade de visual observation.
 
 Issue: #168.
 
-Most invariants are already enforced by the frozen domain dataclasses at
-construction time. The auditor re-checks them anyway (defense in depth for
-observations reconstructed from storage, see #172) and additionally detects
-what construction *cannot* enforce: contradictory semantic claims, and
-geometry that has drifted out of sync (a region's declared box no longer
-matching its mask). Contradictions are reported as warnings, never silently
-dropped.
+A maioria dos invariantes já é imposta pelas dataclasses de domínio congeladas
+(frozen) no momento da construção. O auditor os reconfere mesmo assim (defesa
+em profundidade para observations reconstruídas a partir de armazenamento, ver
+#172) e detecta adicionalmente o que a construção *não pode* impor: claims
+semânticas contraditórias, e geometria que saiu de sincronia (o box declarado
+de uma region não corresponde mais à sua mask). Contradições são reportadas
+como warnings, nunca descartadas silenciosamente.
 """
 
 from __future__ import annotations
@@ -18,8 +18,13 @@ from visual_perception.domain.semantics import ClaimKind, contradicting_claims
 from visual_perception.domain.visual_observation import VisualObservation
 
 
+# Audita uma VisualObservation de forma determinística, sem modificá-la.
+# Existe como camada de defesa em profundidade: verifica invariantes de
+# geometria (mask/box) e detecta claims semânticas contraditórias que as
+# dataclasses de domínio congeladas não conseguem impor sozinhas na
+# construção. Chamada pelo pipeline de pós-processamento (ver #168/#172).
 def audit_observation(observation: VisualObservation) -> AuditResult:
-    """Deterministically audit one VisualObservation, without modifying it."""
+    """Audita uma VisualObservation de forma determinística, sem modificá-la."""
     issues: list[AuditIssue] = []
 
     region_ids = [region.region_id for region in observation.regions]

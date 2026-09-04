@@ -1,7 +1,8 @@
-"""Shared temporal values.
+"""Valores temporais compartilhados.
 
-Timestamps use integer nanoseconds on a named clock. Integer storage avoids
-platform-dependent floating-point rounding during synchronization and replay.
+Timestamps usam nanossegundos inteiros em um clock nomeado. O armazenamento
+como inteiro evita arredondamento de ponto flutuante dependente de
+plataforma durante sincronização e replay.
 """
 
 from __future__ import annotations
@@ -9,9 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+# Um instante não-negativo em um clock nomeado. Existe para que timestamps
+# de sensores/fontes diferentes só sejam comparados quando estiverem no
+# mesmo clock_id, evitando comparação implícita entre clocks distintos.
 @dataclass(frozen=True, order=True)
 class Timestamp:
-    """A non-negative instant expressed as nanoseconds on ``clock_id``."""
+    """Um instante não-negativo expresso em nanossegundos em ``clock_id``."""
 
     nanoseconds: int
     clock_id: str

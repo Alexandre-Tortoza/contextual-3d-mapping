@@ -1,67 +1,101 @@
-# Agent Guidance
+# Guia para Agentes
 
-This file defines repository-wide implementation rules for coding agents and contributors.
+Este arquivo define as regras de implementação válidas para todo o repositório, voltadas a agentes de código e contribuidores.
 
-Read this file before creating or changing code, folders, interfaces, issues, or documentation.
+Leia este arquivo antes de criar ou alterar código, pastas, interfaces, issues ou documentação.
 
-## Architectural direction
+## Idioma da documentação
 
-Use a **capability-oriented modular architecture**.
+Toda documentação em prosa — `README.md`, arquivos em `docs/`, docstrings e comentários no código — é escrita em **português do Brasil**.
 
-Organize the system around clear capabilities such as state estimation, geometric mapping, visual perception, point representation, sensor association, semantic fusion, semantic memory, scene graphs, contextual reasoning, and querying.
+Permanecem em inglês:
 
-The implementation goal is simple: a reader should be able to open one module and understand most of that capability without exploring unrelated directories.
+- identificadores de código (nomes de classes, funções, variáveis, módulos, arquivos e diretórios);
+- mensagens de commit e títulos/descrições de PR;
+- jargão técnico e arquitetural já consagrado (`pipeline`, `backend`, `adapter`, `port`, `framework`, `dataset`, `benchmark`, `checkpoint`, etc.) — usado dentro da prosa em português para não divergir dos nomes usados no código;
+- marcadores convencionais como `NOTE:`, `TODO:`, `FIXME:`, `WARNING:` (o texto que os segue vai em português).
 
-Apply SOLID principles at meaningful code and module boundaries while keeping the structure direct and easy to navigate.
+### Formato de docstring de função e método
 
-## Design priorities
+Toda função, método e classe é documentada em duas partes:
 
-When making architectural decisions, use this order of priority:
+1. um bloco de comentário `#` logo acima da assinatura, em português, explicando **o que ela faz, por que existe** e, quando for relevante, **onde é usada**;
+2. a docstring `"""..."""` logo abaixo, em português (`Argumentos`, `Retorna`, `Levanta`, etc.), mantendo o jargão técnico em inglês.
 
-1. readability and local understandability;
-2. explicit responsibility and ownership;
-3. low coupling between capabilities;
-4. testability and replaceability;
-5. extensibility around real variation points;
-6. abstraction when it makes one of the previous properties clearer or safer.
+```python
+# Converte a nuvem de pontos bruta no embedding denso usado pelo pipeline
+# de fusão. Existe porque o backend de fusão espera vetores densos, não
+# pontos esparsos; chamada por FusionPipeline.run() a cada frame.
+def encode_points(points: PointCloud) -> Embedding:
+    """Encode a point cloud into a dense embedding.
 
-Prefer designs whose intent is visible from file names, types, function signatures, and data flow.
-
-## Implementation workflow
-
-For every new capability or change:
-
-1. identify the module that owns the behavior;
-2. define the inputs, outputs, invariants, units, frames, and provenance that cross the boundary;
-3. implement the behavior inside the owning module;
-4. expose only the public types and operations consumers need;
-5. compose modules from `apps/`, experiments, or explicit orchestration code;
-6. add tests at the narrowest useful level;
-7. document non-obvious decisions beside the code that owns them.
-
-If ownership is unclear, resolve that first. Ownership is an architectural decision.
-
-## Repository roles
-
-Use the repository directories as follows:
-
-```text
-apps/         runnable compositions and user-facing entry points
-modules/      research and system capabilities
-datasets/     dataset manifests, schemas, splits, and dataset-level support
-evaluation/   reusable metrics and evaluation logic
-experiments/  comparisons, ablations, and experiment orchestration
-docs/         repository-wide architecture and decisions
-tests/        repository-level integration or end-to-end tests
+    Argumentos:
+        points: nuvem de pontos bruta capturada pelo sensor.
+    Retorna:
+        embedding denso pronto para o backend de fusão.
+    """
 ```
 
-When repository-wide primitives become necessary, keep them small and stable in a shared location. Good examples are timestamps, spatial frames, poses, transforms, map identifiers, and provenance primitives.
+Docstrings de módulo (topo do arquivo) só são traduzidas — já cumprem o papel de contexto para o arquivo inteiro.
 
-Capability-specific integrations, contracts, configuration, persistence helpers, and model runtimes stay with the module that owns them.
+## Direção arquitetural
 
-## Module shape
+Use uma **arquitetura modular orientada a capacidades**.
 
-Start each module with the smallest useful structure. A module may evolve toward:
+Organize o sistema em torno de capacidades claras, como estimação de estado, mapeamento geométrico, percepção visual, representação de pontos, associação de sensores, fusão semântica, memória semântica, grafos de cena, raciocínio contextual e consulta.
+
+O objetivo de implementação é simples: um leitor deve conseguir abrir um único módulo e entender a maior parte daquela capacidade sem explorar diretórios não relacionados.
+
+Aplique os princípios SOLID nas fronteiras relevantes de código e módulo, mantendo a estrutura direta e fácil de navegar.
+
+## Prioridades de design
+
+Ao tomar decisões arquiteturais, use esta ordem de prioridade:
+
+1. legibilidade e compreensibilidade local;
+2. responsabilidade e posse (ownership) explícitas;
+3. baixo acoplamento entre capacidades;
+4. testabilidade e substituibilidade;
+5. extensibilidade em torno de pontos de variação reais;
+6. abstração quando torna uma das propriedades anteriores mais clara ou segura.
+
+Prefira designs cuja intenção seja visível a partir de nomes de arquivos, tipos, assinaturas de função e fluxo de dados.
+
+## Fluxo de trabalho de implementação
+
+Para toda nova capacidade ou mudança:
+
+1. identifique o módulo dono do comportamento;
+2. defina as entradas, saídas, invariantes, unidades, frames e proveniência que cruzam a fronteira;
+3. implemente o comportamento dentro do módulo dono;
+4. exponha apenas os tipos e operações públicas que os consumidores precisam;
+5. componha módulos a partir de `apps/`, experimentos, ou código de orquestração explícito;
+6. adicione testes no nível mais estreito que seja útil;
+7. documente decisões não óbvias ao lado do código que as possui.
+
+Se a posse (ownership) não estiver clara, resolva isso primeiro. Ownership é uma decisão arquitetural.
+
+## Papéis do repositório
+
+Use os diretórios do repositório da seguinte forma:
+
+```text
+apps/         composições executáveis e pontos de entrada voltados ao usuário
+modules/      capacidades de pesquisa e do sistema
+datasets/     manifests, schemas, splits e suporte a nível de dataset
+evaluation/   métricas e lógica de avaliação reutilizáveis
+experiments/  comparações, ablations e orquestração de experimentos
+docs/         arquitetura e decisões de nível de repositório
+tests/        testes de integração ou end-to-end de nível de repositório
+```
+
+Quando primitivas de nível de repositório se tornarem necessárias, mantenha-as pequenas e estáveis em um local compartilhado. Bons exemplos são timestamps, frames espaciais, poses, transforms, identificadores de mapa e primitivas de proveniência.
+
+Integrações, contracts, configuração e helpers de persistência específicos de capacidade, e model runtimes, ficam com o módulo dono.
+
+## Formato de módulo
+
+Comece cada módulo com a estrutura mínima útil. Um módulo pode evoluir para:
 
 ```text
 modules/<module>/
@@ -71,43 +105,43 @@ modules/<module>/
 │       ├── __init__.py
 │       ├── models.py
 │       ├── config.py
-│       └── <capability files>.py
+│       └── <arquivos de capacidade>.py
 ├── tests/
 ├── configs/
 ├── benchmarks/
 └── docs/
 ```
 
-Create directories when they have a concrete responsibility and content.
+Crie diretórios quando eles tiverem uma responsabilidade e conteúdo concretos.
 
-A module should remain understandable through its capability vocabulary rather than through generic architectural layer names.
+Um módulo deve permanecer compreensível pelo vocabulário da sua capacidade, e não por nomes genéricos de camada arquitetural.
 
-## Public module boundary
+## Fronteira pública do módulo
 
-Each module exposes a small documented public API.
+Cada módulo expõe uma pequena API pública documentada.
 
-Consumers should depend on:
+Consumidores devem depender de:
 
-- public data types;
-- public functions or classes;
-- explicit protocols for real variation points;
-- stable module entry points.
+- tipos de dados públicos;
+- funções ou classes públicas;
+- protocolos explícitos para pontos de variação reais;
+- pontos de entrada estáveis do módulo.
 
-Keep implementation details local to the producer module, including internal model objects, caches, training structures, backend-specific types, storage layout, and third-party runtime objects.
+Mantenha detalhes de implementação locais ao módulo produtor, incluindo objetos de modelo internos, caches, estruturas de treino, tipos específicos de backend, layout de armazenamento e objetos de runtime de terceiros.
 
-A useful dependency shape is:
+Um formato de dependência útil é:
 
 ```text
-consumer -> producer public API -> producer implementation
+consumidor -> API pública do produtor -> implementação do produtor
 ```
 
-## SOLID rules
+## Regras SOLID
 
-### Single Responsibility Principle
+### Princípio da Responsabilidade Única
 
-Give every module, class, function, and service one coherent reason to change.
+Dê a cada módulo, classe, função e serviço um motivo coerente para mudar.
 
-Prefer focused components such as:
+Prefira componentes focados como:
 
 ```text
 TemporalFusion
@@ -118,79 +152,79 @@ SemanticMapReader
 SemanticMapWriter
 ```
 
-Split behavior when responsibilities evolve independently.
+Divida comportamento quando as responsabilidades evoluem independentemente.
 
-### Open/Closed Principle
+### Princípio Aberto/Fechado
 
-Represent genuine variation points with stable contracts.
+Represente pontos de variação genuínos com contracts estáveis.
 
-Typical examples in this project include:
+Exemplos típicos neste projeto incluem:
 
-- multiple pose estimators;
-- multiple fusion strategies;
-- multiple point encoders;
-- multiple persistence backends;
-- research variants compared by experiments.
+- múltiplos pose estimators;
+- múltiplas estratégias de fusão;
+- múltiplos point encoders;
+- múltiplos backends de persistência;
+- variantes de pesquisa comparadas por experimentos.
 
-Consumers should remain stable while implementations vary behind the same public behavior.
+Consumidores devem permanecer estáveis enquanto implementações variam por trás do mesmo comportamento público.
 
-### Liskov Substitution Principle
+### Princípio da Substituição de Liskov
 
-Implementations of the same public contract must be safely interchangeable.
+Implementações do mesmo contract público devem ser seguramente intercambiáveis.
 
-Document and test substitution-relevant invariants such as:
+Documente e teste invariantes relevantes para substituição, como:
 
-- units;
-- coordinate frames;
-- timestamp semantics;
-- ordering guarantees;
-- tensor or embedding dimensions;
-- lifecycle behavior;
-- error behavior.
+- unidades;
+- frames de coordenadas;
+- semântica de timestamp;
+- garantias de ordenação;
+- dimensões de tensor ou embedding;
+- comportamento de ciclo de vida;
+- comportamento de erro.
 
-### Interface Segregation Principle
+### Princípio da Segregação de Interface
 
-Shape interfaces around one consumer need.
+Modele interfaces em torno da necessidade de um único consumidor.
 
-For example, map reading and map writing can be separate contracts when consumers require only one side.
+Por exemplo, leitura e escrita de mapa podem ser contracts separados quando os consumidores precisam apenas de um dos lados.
 
-Keep interfaces narrow enough that an implementation can satisfy them without unrelated responsibilities.
+Mantenha as interfaces estreitas o suficiente para que uma implementação as satisfaça sem responsabilidades não relacionadas.
 
-### Dependency Inversion Principle
+### Princípio da Inversão de Dependência
 
-High-level orchestration depends on stable capability behavior.
+Orquestração de alto nível depende de comportamento de capacidade estável.
 
-For example:
+Por exemplo:
 
 ```text
 mapping runtime -> PoseEstimator <- concrete LiDAR-inertial estimator
 ```
 
-The runtime depends on the capability it needs. The concrete estimator supplies that capability.
+O runtime depende da capacidade de que precisa. O estimator concreto fornece essa capacidade.
 
-Use this pattern at boundaries that are replaceable, expensive, external, or intentionally varied by research experiments.
+Use esse padrão em fronteiras que sejam substituíveis, caras, externas, ou intencionalmente variadas por experimentos de pesquisa.
 
-## When to create an interface or protocol
+## Quando criar uma interface ou protocolo
 
-Create one when a stable behavior boundary is useful because:
+Crie uma quando uma fronteira de comportamento estável for útil porque:
 
-- multiple implementations exist;
-- an implementation is intentionally replaceable;
-- a research experiment compares implementations;
-- a third-party dependency should stay contained;
-- a module boundary needs a stable contract;
-- tests need a lightweight substitute for an expensive or external component.
+- múltiplas implementações existem;
+- uma implementação é intencionalmente substituível;
+- um experimento de pesquisa compara implementações;
+- uma dependência de terceiros deve ficar contida;
+- uma fronteira de módulo precisa de um contract estável;
+- testes precisam de um substituto leve para um componente caro ou externo.
 
-Keep direct construction and concrete local code for behavior with no meaningful variation point.
+Mantenha construção direta e código concreto local para comportamento sem ponto de variação relevante.
 
-## Shared types and contracts
+## Tipos e contracts compartilhados
 
-Place a type in repository-wide shared code when both conditions are true:
+Coloque um tipo em código compartilhado de nível de repositório quando ambas as condições forem verdadeiras:
 
-1. the concept is owned by the system as a whole;
-2. multiple modules must agree on exactly the same stable meaning.
+1. o conceito é de posse do sistema como um todo;
+2. múltiplos módulos precisam concordar com exatamente o mesmo significado estável.
 
-Good candidates:
+Bons candidatos:
 
 ```text
 Timestamp
@@ -202,122 +236,122 @@ ArtifactId
 Provenance
 ```
 
-Capability-specific types remain with their capability. A learned point representation, for example, is owned by `point-representation` even when another module consumes it.
+Tipos específicos de capacidade ficam com sua capacidade. Uma representação de ponto aprendida, por exemplo, é de posse de `point-representation` mesmo quando outro módulo a consome.
 
-## External integrations
+## Integrações externas
 
-Keep each external integration close to its owning capability.
+Mantenha cada integração externa próxima da capacidade que a possui.
 
-Examples:
+Exemplos:
 
 ```text
 modules/state-estimation/
-    concrete LiDAR-inertial odometry integration
+    integração concreta de odometria LiDAR-inercial
 
 modules/geometric-map/
-    point-cloud or reconstruction backend used by geometric mapping
+    backend de point-cloud ou reconstrução usado pelo mapeamento geométrico
 
 modules/visual-perception/
-    model runtime used by visual perception
+    model runtime usado pela percepção visual
 ```
 
-Create repository-wide integration infrastructure only for behavior genuinely shared by unrelated capabilities with the same semantics.
+Crie infraestrutura de integração de nível de repositório apenas para comportamento genuinamente compartilhado por capacidades não relacionadas com a mesma semântica.
 
-## Applications
+## Aplicações
 
-`apps/` owns runnable composition.
+`apps/` é dono da composição executável.
 
-Applications may:
+Aplicações podem:
 
-- select concrete implementations;
-- connect module inputs and outputs;
-- configure workflows;
-- expose CLI, GUI, TUI, or service entry points;
-- load and persist composed map state;
-- coordinate runtime lifecycle.
+- selecionar implementações concretas;
+- conectar entradas e saídas de módulos;
+- configurar workflows;
+- expor pontos de entrada de CLI, GUI, TUI ou serviço;
+- carregar e persistir estado de mapa composto;
+- coordenar o ciclo de vida do runtime.
 
-Research algorithms remain owned by the module that implements the capability.
+Algoritmos de pesquisa permanecem de posse do módulo que implementa a capacidade.
 
-## Research implementations
+## Implementações de pesquisa
 
-Design public architecture around project responsibilities.
+Projete a arquitetura pública em torno das responsabilidades do projeto.
 
-A paper, model, framework, dataset, or external repository may inform a concrete implementation. Record that scientific provenance in the relevant module documentation while keeping public names capability-based.
+Um paper, modelo, framework, dataset ou repositório externo pode informar uma implementação concreta. Registre essa proveniência científica na documentação do módulo relevante, mantendo os nomes públicos baseados em capacidade.
 
-For example:
+Por exemplo:
 
 ```text
-public capability: PoseEstimator
-concrete implementation: FAST_LIO-backed estimator
+capacidade pública: PoseEstimator
+implementação concreta: estimator baseado em FAST_LIO
 ```
 
-Issues should describe the capability, observable behavior, tests, acceptance criteria, and relevant constraints. Research references belong in module documentation when they help explain the implementation or comparison.
+Issues devem descrever a capacidade, o comportamento observável, testes, critérios de aceitação e restrições relevantes. Referências de pesquisa pertencem à documentação do módulo quando ajudam a explicar a implementação ou comparação.
 
-## Explicit multimodal data flow
+## Fluxo de dados multimodal explícito
 
-Prefer visible transformations with explicit project types:
+Prefira transformações visíveis com tipos explícitos do projeto:
 
 ```text
-observation
-    -> boundary validation
-    -> capability transformation
-    -> explicit output
-    -> next capability
+observação
+    -> validação de fronteira
+    -> transformação da capacidade
+    -> saída explícita
+    -> próxima capacidade
 ```
 
-Preserve metadata required to interpret or reproduce results. Depending on the boundary, this includes:
+Preserve os metadados necessários para interpretar ou reproduzir resultados. Dependendo da fronteira, isso inclui:
 
 - timestamp;
-- sensor identity;
-- coordinate frame;
-- units;
-- calibration or transform provenance;
-- source observation identity;
-- confidence or uncertainty;
-- model/checkpoint provenance.
+- identidade do sensor;
+- frame de coordenadas;
+- unidades;
+- proveniência de calibração ou transform;
+- identidade da observação de origem;
+- confiança ou incerteza;
+- proveniência de modelo/checkpoint.
 
-Validate these properties when data crosses a module boundary.
+Valide essas propriedades quando os dados cruzam uma fronteira de módulo.
 
-## Configuration
+## Configuração
 
-Keep algorithm configuration with the module that owns the algorithm.
+Mantenha a configuração de algoritmo com o módulo dono do algoritmo.
 
-Keep composition configuration with the application or experiment that selects and connects implementations.
+Mantenha a configuração de composição com a aplicação ou experimento que seleciona e conecta implementações.
 
-Prefer typed, explicit configuration with reproducible defaults for parameters that affect experiments.
+Prefira configuração tipada e explícita, com defaults reprodutíveis para parâmetros que afetam experimentos.
 
-## Error handling
+## Tratamento de erros
 
-Validate boundary invariants early and return actionable errors.
+Valide invariantes de fronteira cedo e retorne erros acionáveis.
 
-Important validation targets include:
+Alvos importantes de validação incluem:
 
-- coordinate-frame compatibility;
-- timestamp synchronization;
-- transform validity;
-- tensor and embedding dimensions;
-- point attributes;
-- map/version compatibility;
-- required provenance.
+- compatibilidade de frame de coordenadas;
+- sincronização de timestamp;
+- validade de transform;
+- dimensões de tensor e embedding;
+- atributos de ponto;
+- compatibilidade de mapa/versão;
+- proveniência obrigatória.
 
-## Testing expectations
+## Expectativas de teste
 
-Use the narrowest test that protects the required behavior:
+Use o teste mais estreito que proteja o comportamento necessário:
 
-- unit tests for deterministic local behavior;
-- contract tests for interchangeable implementations;
-- integration tests for module boundaries;
-- representative end-to-end tests for application composition;
-- benchmarks for runtime, memory, and accuracy-sensitive research components;
-- regression tests for previously observed failure modes.
+- testes unitários para comportamento local determinístico;
+- testes de contract para implementações intercambiáveis;
+- testes de integração para fronteiras de módulo;
+- testes end-to-end representativos para composição de aplicação;
+- benchmarks para componentes de pesquisa sensíveis a runtime, memória e acurácia;
+- testes de regressão para modos de falha observados anteriormente.
 
-Test observable behavior and boundary guarantees so internal implementations can evolve safely.
+Teste comportamento observável e garantias de fronteira, para que implementações internas possam evoluir com segurança.
 
-## Naming
+## Nomenclatura
 
-Name components by their capability and responsibility.
+Nomeie componentes pela sua capacidade e responsabilidade.
 
-Prefer:
+Prefira:
 
 ```text
 PointEncoder
@@ -328,35 +362,35 @@ SemanticMapReader
 SemanticMapWriter
 ```
 
-Use generic names such as `Manager`, `Helper`, `Utils`, `Processor`, or `Service` only when they are genuinely the clearest domain term.
+Use nomes genéricos como `Manager`, `Helper`, `Utils`, `Processor` ou `Service` apenas quando forem genuinamente o termo de domínio mais claro.
 
-## Documentation
+## Documentação
 
-Repository-wide architecture and engineering decisions belong in `docs/`.
+Arquitetura e decisões de engenharia de nível de repositório pertencem a `docs/`.
 
-Module behavior, algorithms, model choices, implementation rationale, benchmarks, limitations, and research references belong in `modules/<module>/docs/`.
+Comportamento de módulo, algoritmos, escolhas de modelo, justificativa de implementação, benchmarks, limitações e referências de pesquisa pertencem a `modules/<module>/docs/`.
 
-Update documentation in the same change when a boundary, ownership rule, public contract, or dependency direction changes.
+Atualize a documentação na mesma mudança quando uma fronteira, regra de ownership, contract público ou direção de dependência mudar.
 
-## Decision test before adding complexity
+## Teste de decisão antes de adicionar complexidade
 
-Before adding a layer, global package, registry, factory, base class, or interface, answer:
+Antes de adicionar uma camada, pacote global, registry, factory, classe base ou interface, responda:
 
-1. What concrete responsibility does it represent?
-2. Which dependency or variation point does it make explicit?
-3. Which consumer becomes simpler or safer because of it?
-4. Which test or replacement scenario benefits from it?
-5. Is this the smallest structure that communicates the intent clearly?
+1. Que responsabilidade concreta ela representa?
+2. Que dependência ou ponto de variação ela torna explícito?
+3. Que consumidor fica mais simples ou mais seguro por causa dela?
+4. Que cenário de teste ou substituição se beneficia dela?
+5. É a menor estrutura que comunica a intenção com clareza?
 
-Use the abstraction when these answers are concrete. Otherwise keep the implementation local and direct.
+Use a abstração quando essas respostas forem concretas. Caso contrário, mantenha a implementação local e direta.
 
-## Source of truth
+## Fonte da verdade
 
-For repository architecture and engineering principles, also read:
+Para arquitetura e princípios de engenharia do repositório, leia também:
 
 - `docs/architecture.md`
 - `docs/engineering-principles.md`
 - `docs/documentation-policy.md`
 - `modules/README.md`
 
-When code and documentation diverge, treat the inconsistency as part of the change and restore one clear architectural source of truth.
+Quando código e documentação divergirem, trate a inconsistência como parte da mudança e restaure uma única fonte da verdade arquitetural clara.

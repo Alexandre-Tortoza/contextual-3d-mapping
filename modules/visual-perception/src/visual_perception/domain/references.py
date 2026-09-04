@@ -1,16 +1,16 @@
-"""Repository-wide references this module depends on, plus its own model provenance.
+"""Referências de nível de repositório de que este módulo depende, mais a proveniência de modelo própria.
 
-``ObservationReference`` and ``SourceArtifactReference`` come from
-`contextual_mapping_contracts` (#99/#100): stable identity, timing, frame,
-and source-artifact references are a repository-wide concept, not owned by
-visual-perception.
+``ObservationReference`` e ``SourceArtifactReference`` vêm de
+`contextual_mapping_contracts` (#99/#100): identidade, timing, frame e
+referências de source-artifact estáveis são um conceito de nível de
+repositório, não de posse de visual-perception.
 
-``ModelProvenance`` is deliberately kept local and distinct from
-``contextual_mapping_contracts.Provenance``: the shared type links a derived
-item back to the *source observations* it came from, while this type
-records *which model/stage/configuration* produced one semantic claim or
-relation (checkpoint, prompt version, config fingerprint). They answer
-different questions and must not be confused.
+``ModelProvenance`` é deliberadamente mantido local e distinto de
+``contextual_mapping_contracts.Provenance``: o tipo compartilhado liga um
+item derivado de volta às *observações de origem* de onde ele veio, enquanto
+este tipo registra *qual modelo/estágio/configuração* produziu um claim ou
+uma relação semântica (checkpoint, versão de prompt, fingerprint de config).
+Eles respondem perguntas diferentes e não devem ser confundidos.
 """
 
 from __future__ import annotations
@@ -22,9 +22,13 @@ from contextual_mapping_contracts import ObservationReference, SourceArtifactRef
 __all__ = ["ModelProvenance", "ObservationReference", "SourceArtifactReference"]
 
 
+# Registra qual modelo/estágio/configuração produziu um claim, embedding ou
+# relação derivados. Existe separado do Provenance compartilhado do
+# repositório porque responde "quem processou" em vez de "de onde veio o
+# dado bruto".
 @dataclass(frozen=True)
 class ModelProvenance:
-    """Which model/stage/configuration produced one derived claim, embedding, or relation."""
+    """Qual modelo/estágio/configuração produziu um claim, embedding ou relação derivados."""
 
     stage: str
     producer: str
@@ -33,6 +37,8 @@ class ModelProvenance:
     checkpoint: str | None = None
     prompt_version: str | None = None
 
+    # Exige que stage, producer e config_fingerprint estejam presentes,
+    # já que proveniência incompleta tornaria um claim não auditável.
     def __post_init__(self) -> None:
         if not self.stage:
             raise ValueError("stage must not be empty.")

@@ -3,6 +3,9 @@ from contextual_mapping_contracts import FrameId, ObservationReference, SourceAr
 from contextual_mapping_datasets import CalibrationManifest, DatasetManifest, SensorSourceManifest, SequenceManifest
 
 
+# Constrói um DatasetManifest mínimo válido (uma sequência com lidar + imu,
+# e rgb opcional) para os testes deste pacote reutilizarem sem repetir o
+# boilerplate de construção.
 def manifest(include_rgb: bool = True) -> DatasetManifest:
     calibration = CalibrationManifest("cal", "file:///cal.json", "sensor", "base")
     sensors = [
@@ -14,6 +17,9 @@ def manifest(include_rgb: bool = True) -> DatasetManifest:
     return DatasetManifest("dataset", (SequenceManifest("sequence", tuple(sensors), (calibration,)),))
 
 
+# Constrói uma CanonicalObservation de teste com referência e artifact
+# preenchidos de forma consistente, para os testes montarem cenários de
+# sincronização sem repetir os dataclasses de contract por extenso.
 def observation(kind: str, sensor: str, index: int, timestamp_ns: int) -> CanonicalObservation:
     return CanonicalObservation(
         kind=kind,

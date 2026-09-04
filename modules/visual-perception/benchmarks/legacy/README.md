@@ -1,38 +1,34 @@
-# Legacy baselines
+# Baselines legadas
 
 Issue: #176.
 
-The two historical production pipelines from the standalone `image-context`
-laboratory —
+Os dois pipelines de produção históricos do laboratório standalone `image-context` —
 
-- **baseline**: three-pass VLM -> Grounding DINO -> SAM2;
-- **region-first**: SAM2 automatic -> DINOv2 -> Qwen global/local;
+- **baseline**: VLM de três passes -> Grounding DINO -> SAM2;
+- **region-first**: SAM2 automático -> DINOv2 -> Qwen global/local;
 
-were removed from the codebase before the migration into this module (see
-`docs/architecture.md`, which documents their removal and links back to the
-original `image-context` issue history). They are not present here as
-executable code.
+foram removidos do codebase antes da migração para este módulo (veja
+`docs/architecture.md`, que documenta sua remoção e linka de volta para o histórico de
+issues original do `image-context`). Eles não estão presentes aqui como código
+executável.
 
-## Why they are not reproduced as running code
+## Por que não são reproduzidos como código em execução
 
-Reintroducing them would require the original heavyweight model stack
-(Grounding DINO, SAM2, DINOv2, Qwen) and their original prompts/configs,
-none of which are available in this environment. Recreating them from
-scratch without the original artifacts would not be a faithful scientific
-baseline, so this module does not fabricate a substitute.
+Reintroduzi-los exigiria a stack de modelos pesados original (Grounding DINO, SAM2,
+DINOv2, Qwen) e seus prompts/configs originais, nenhum dos quais está disponível neste
+ambiente. Recriá-los do zero sem os artifacts originais não seria uma baseline
+científica fiel, então este módulo não fabrica um substituto.
 
-## What is preserved instead
+## O que é preservado em vez disso
 
-- Both pipelines remain fully recoverable from git history in the original
-  `image-context` repository (see the commit referenced by
+- Ambos os pipelines permanecem totalmente recuperáveis a partir do histórico git no
+  repositório `image-context` original (veja o commit referenciado por
   `docs/architecture.md`).
-- The canonical pipeline (`application/pipeline.py`, #169) does not expose
-  any legacy strategy selector: there is exactly one production entry point,
-  satisfying #176's requirement that canonical use never require choosing a
-  legacy variant.
-- If a future scientific comparison needs to re-run a legacy baseline, its
-  harness would live under this directory, isolated from
-  `application/pipeline.py` and using its own run-artifact namespace so it
-  cannot collide with canonical run artifacts (`benchmarks/harness.py`'s
-  `DatasetReference`/`BenchmarkReport` types are reusable for that
-  comparison once the legacy code is reintroduced).
+- O pipeline canônico (`application/pipeline.py`, #169) não expõe nenhum seletor de
+  estratégia legada: existe exatamente um ponto de entrada de produção, satisfazendo o
+  requisito da #176 de que o uso canônico nunca exija escolher uma variante legada.
+- Se uma futura comparação científica precisar reexecutar uma baseline legada, seu
+  harness viveria sob este diretório, isolado de `application/pipeline.py` e usando seu
+  próprio namespace de run-artifact, para que não colida com run artifacts canônicos
+  (os tipos `DatasetReference`/`BenchmarkReport` de `benchmarks/harness.py` são
+  reutilizáveis para essa comparação assim que o código legado for reintroduzido).

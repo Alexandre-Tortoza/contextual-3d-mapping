@@ -1,129 +1,129 @@
-# Engineering Principles
+# Princípios de Engenharia
 
-This document records repository-wide implementation decisions that should remain stable as individual research modules evolve.
+Este documento registra decisões de implementação de nível de repositório que devem permanecer estáveis conforme os módulos de pesquisa individuais evoluem.
 
-The project optimizes for readability, maintainability, explicit data flow, replaceability, and scientific reproducibility while preserving strong boundaries between research capabilities.
+O projeto otimiza para legibilidade, manutenibilidade, fluxo de dados explícito, substituibilidade e reprodutibilidade científica, preservando fronteiras fortes entre capacidades de pesquisa.
 
-## Architectural style
+## Estilo arquitetural
 
-The repository uses a **capability-oriented modular architecture**.
+O repositório usa uma **arquitetura modular orientada a capacidades**.
 
-The main unit of organization is a capability with a clear responsibility, public boundary, tests, configuration, and local documentation.
+A principal unidade de organização é uma capacidade com responsabilidade clara, fronteira pública, testes, configuração e documentação local.
 
-A reader should be able to understand a capability primarily by opening its module.
+Um leitor deve conseguir entender uma capacidade principalmente abrindo seu módulo.
 
-The preferred structural pattern is:
+O padrão estrutural preferido é:
 
 ```text
-repository
-    -> runnable applications
-    -> capability modules
-    -> small shared primitives
+repositório
+    -> aplicações executáveis
+    -> módulos de capacidade
+    -> pequenas primitivas compartilhadas
 ```
 
-Within a capability, use the smallest internal structure that communicates the behavior clearly.
+Dentro de uma capacidade, use a menor estrutura interna que comunique o comportamento com clareza.
 
-## Why this architecture fits the project
+## Por que esta arquitetura serve ao projeto
 
-The main sources of change are:
+As principais fontes de mudança são:
 
-- algorithms;
-- learned models;
-- sensor integrations;
-- geometric and semantic representations;
+- algoritmos;
+- modelos aprendidos;
+- integrações de sensor;
+- representações geométricas e semânticas;
 - datasets;
-- experiments;
-- persistence strategies;
-- runtime composition.
+- experimentos;
+- estratégias de persistência;
+- composição de runtime.
 
-The architecture therefore favors:
+A arquitetura, portanto, favorece:
 
-1. understanding one capability locally;
-2. replacing implementations behind stable behavior;
-3. explicit transformations between multimodal observations;
-4. experiments that can select and compare implementations;
-5. module-level ownership of research code;
-6. small, stable integration boundaries.
+1. entender uma capacidade localmente;
+2. substituir implementações por trás de comportamento estável;
+3. transformações explícitas entre observações multimodais;
+4. experimentos que podem selecionar e comparar implementações;
+5. ownership de código de pesquisa em nível de módulo;
+6. fronteiras de integração pequenas e estáveis.
 
-## Capability ownership
+## Ownership de capacidades
 
-Every significant behavior has one obvious owner.
+Todo comportamento significativo tem um dono óbvio.
 
-Current ownership is:
+O ownership atual é:
 
-- `state-estimation`: pose, trajectory, and motion-corrected LiDAR observations;
-- `geometric-map`: persistent world geometry;
-- `visual-perception`: structured visual and semantic observations from RGB;
-- `point-representation`: learned representations for LiDAR points;
-- `sensor-association`: temporal and geometric RGB/LiDAR association;
-- `semantic-fusion`: consolidation of semantic evidence across sources, views, and time;
-- `semantic-map`: persistent semantic state linked to world geometry;
-- `semantic-memory`: semantic and spatial retrieval structures;
-- `scene-graph`: entities, hierarchy, and relationships;
-- `context-reasoning`: contextual inference with provenance;
-- `query-engine`: semantic, spatial, and contextual query composition.
+- `state-estimation`: pose, trajetória e observações LiDAR corrigidas por movimento;
+- `geometric-map`: geometria persistente do mundo;
+- `visual-perception`: observações visuais e semânticas estruturadas a partir de RGB;
+- `point-representation`: representações aprendidas para pontos LiDAR;
+- `sensor-association`: associação temporal e geométrica RGB/LiDAR;
+- `semantic-fusion`: consolidação de evidência semântica entre fontes, views e tempo;
+- `semantic-map`: estado semântico persistente vinculado à geometria do mundo;
+- `semantic-memory`: estruturas de recuperação semântica e espacial;
+- `scene-graph`: entidades, hierarquia e relações;
+- `context-reasoning`: inferência contextual com proveniência;
+- `query-engine`: composição de consulta semântica, espacial e contextual.
 
-Resolve ownership before implementation whenever a new feature appears to span several capabilities.
+Resolva o ownership antes da implementação sempre que uma nova feature parecer atravessar várias capacidades.
 
-## Locality of implementation
+## Localidade de implementação
 
-Place capability-specific code with the module that owns it.
+Coloque código específico de capacidade junto ao módulo que o possui.
 
-This includes:
+Isso inclui:
 
-- third-party runtimes;
-- conversion code;
-- model loading;
-- backend-specific implementations;
-- persistence helpers;
-- module configuration;
-- training and inference support.
+- runtimes de terceiros;
+- código de conversão;
+- carregamento de modelo;
+- implementações específicas de backend;
+- helpers de persistência;
+- configuração de módulo;
+- suporte a treino e inferência.
 
-Examples:
+Exemplos:
 
 ```text
 modules/state-estimation/
-    FAST_LIO-backed runtime
+    runtime baseado em FAST_LIO
 
 modules/geometric-map/
-    Open3D-specific implementation
+    implementação específica de Open3D
 
 modules/visual-perception/
-    model runtime and preprocessing
+    model runtime e pré-processamento
 ```
 
-This keeps the code required to understand one capability physically close together.
+Isso mantém o código necessário para entender uma capacidade fisicamente próximo.
 
-## Public module boundary
+## Fronteira pública do módulo
 
-Each module exposes the smallest useful public surface.
+Cada módulo expõe a menor superfície pública útil.
 
-Consumers depend on:
+Consumidores dependem de:
 
-- documented public data types;
-- documented functions or classes;
-- explicit protocols for real variation points;
-- stable module entry points.
+- tipos de dados públicos documentados;
+- funções ou classes públicas documentadas;
+- protocolos explícitos para pontos de variação reais;
+- pontos de entrada estáveis do módulo.
 
-Internal model objects, caches, training-only structures, storage details, and backend-specific objects remain implementation details of the owning module.
+Objetos de modelo internos, caches, estruturas exclusivas de treino, detalhes de armazenamento e objetos específicos de backend permanecem detalhes de implementação do módulo dono.
 
-The compatibility boundary is the public API.
+A fronteira de compatibilidade é a API pública.
 
-## Shared code policy
+## Política de código compartilhado
 
-Repository-wide shared code is reserved for concepts that are both globally owned and semantically stable.
+Código compartilhado de nível de repositório é reservado para conceitos que são ao mesmo tempo de posse global e semanticamente estáveis.
 
-Good candidates include:
+Bons candidatos incluem:
 
 - timestamps;
-- coordinate frame identifiers;
-- poses and rigid transforms;
-- map and artifact identifiers;
-- simple provenance primitives.
+- identificadores de frame de coordenadas;
+- poses e rigid transforms;
+- identificadores de mapa e artifact;
+- primitivas simples de proveniência.
 
-Capability-specific types stay with their module. A learned embedding format, model tensor structure, or backend schema remains owned by the capability that defines it.
+Tipos específicos de capacidade ficam com seu módulo. Um formato de embedding aprendido, estrutura de tensor de modelo, ou schema de backend permanece de posse da capacidade que o define.
 
-When a shared package is introduced, prefer a small structure such as:
+Quando um pacote compartilhado é introduzido, prefira uma estrutura pequena como:
 
 ```text
 shared/
@@ -132,151 +132,151 @@ shared/
 └── types/
 ```
 
-Promote a concept to shared code only after its meaning is stable across consumers.
+Promova um conceito para código compartilhado somente depois que seu significado for estável entre os consumidores.
 
-## SOLID as design guidance
+## SOLID como orientação de design
 
-SOLID guides code and dependency design.
+SOLID guia o design de código e dependências.
 
 ### Single Responsibility
 
-A component represents one coherent responsibility and one primary reason to change.
+Um componente representa uma responsabilidade coerente e um motivo principal para mudar.
 
-Split behavior when responsibilities evolve independently.
+Divida comportamento quando as responsabilidades evoluem independentemente.
 
 ### Open/Closed
 
-Expose stable variation points where multiple implementations exist or are intentionally compared.
+Exponha pontos de variação estáveis onde múltiplas implementações existem ou são intencionalmente comparadas.
 
-Typical project examples include multiple fusion methods, pose estimators, point encoders, storage backends, or research variants.
+Exemplos típicos do projeto incluem múltiplos métodos de fusão, pose estimators, point encoders, storage backends, ou variantes de pesquisa.
 
 ### Liskov Substitution
 
-Implementations of the same public contract preserve the same consumer-visible behavior.
+Implementações do mesmo contract público preservam o mesmo comportamento visível ao consumidor.
 
-Substitution-relevant invariants should be documented and tested, including units, frames, ordering, error semantics, and lifecycle assumptions.
+Invariantes relevantes para substituição devem ser documentados e testados, incluindo unidades, frames, ordenação, semântica de erro e suposições de ciclo de vida.
 
 ### Interface Segregation
 
-Interfaces are shaped around one consumer need.
+Interfaces são modeladas em torno da necessidade de um único consumidor.
 
-For example, map reading and map writing may be separate contracts when the consumers differ.
+Por exemplo, leitura e escrita de mapa podem ser contracts separados quando os consumidores diferem.
 
 ### Dependency Inversion
 
-High-level orchestration depends on stable capabilities while concrete implementations satisfy those capabilities.
+Orquestração de alto nível depende de capacidades estáveis, enquanto implementações concretas satisfazem essas capacidades.
 
-Example:
-
-```text
-mapping runtime -> PoseEstimator <- FAST_LIO-backed estimator
-```
-
-This keeps volatile external technology behind a stable project responsibility.
-
-## Abstraction threshold
-
-Introduce an abstraction when it makes a concrete boundary or variation point clearer.
-
-Common triggers are:
-
-- multiple implementations;
-- a planned comparison experiment;
-- isolation of an expensive or external dependency;
-- a module boundary that requires a stable contract;
-- contract-level testing with substitutes.
-
-For local behavior with one straightforward implementation, prefer direct code and direct construction.
-
-## Explicit data flow
-
-Important transformations should be visible:
+Exemplo:
 
 ```text
-input observation
-    -> boundary validation
-    -> capability-specific transformation
-    -> explicit output type
-    -> next capability
+mapping runtime -> PoseEstimator <- estimator baseado em FAST_LIO
 ```
 
-For multimodal robotics data, preserve relevant metadata such as:
+Isso mantém tecnologia externa volátil por trás de uma responsabilidade estável do projeto.
+
+## Limiar de abstração
+
+Introduza uma abstração quando ela torna uma fronteira concreta ou ponto de variação mais claro.
+
+Gatilhos comuns são:
+
+- múltiplas implementações;
+- um experimento de comparação planejado;
+- isolamento de uma dependência cara ou externa;
+- uma fronteira de módulo que exige um contract estável;
+- testes em nível de contract com substitutos.
+
+Para comportamento local com uma única implementação direta, prefira código direto e construção direta.
+
+## Fluxo de dados explícito
+
+Transformações importantes devem ser visíveis:
+
+```text
+observação de entrada
+    -> validação de fronteira
+    -> transformação específica da capacidade
+    -> tipo de saída explícito
+    -> próxima capacidade
+```
+
+Para dados multimodais de robótica, preserve metadados relevantes como:
 
 - timestamp;
-- sensor identity;
-- coordinate frame;
-- units;
-- calibration identity;
-- transform provenance;
-- source observation identity;
-- confidence or uncertainty;
-- model/checkpoint provenance when needed for reproducibility.
+- identidade do sensor;
+- frame de coordenadas;
+- unidades;
+- identidade de calibração;
+- proveniência de transform;
+- identidade da observação de origem;
+- confiança ou incerteza;
+- proveniência de modelo/checkpoint quando necessária para reprodutibilidade.
 
-A downstream consumer should be able to determine how an observation was produced and how it is spatially and temporally interpreted.
+Um consumidor downstream deve conseguir determinar como uma observação foi produzida e como ela é interpretada espacial e temporalmente.
 
-## Boundary validation
+## Validação de fronteira
 
-Validate assumptions when data crosses a module boundary.
+Valide suposições quando os dados cruzam uma fronteira de módulo.
 
-Important examples are:
+Exemplos importantes são:
 
-- coordinate-frame compatibility;
-- timestamp synchronization;
-- transform validity;
-- tensor and embedding dimensions;
-- supported point attributes;
-- map version compatibility;
-- provenance required by fusion or evaluation.
+- compatibilidade de frame de coordenadas;
+- sincronização de timestamp;
+- validade de transform;
+- dimensões de tensor e embedding;
+- atributos de ponto suportados;
+- compatibilidade de versão de mapa;
+- proveniência exigida por fusão ou avaliação.
 
-Fail early with actionable diagnostics when an invariant is violated.
+Falhe cedo com diagnósticos acionáveis quando um invariante for violado.
 
-## Configuration ownership
+## Ownership de configuração
 
-A module owns parameters that control its internal algorithm.
+Um módulo possui os parâmetros que controlam seu algoritmo interno.
 
-An application or experiment owns parameters that select implementations and compose modules.
+Uma aplicação ou experimento possui os parâmetros que selecionam implementações e compõem módulos.
 
-This creates a simple distinction:
-
-```text
-algorithm parameter -> module config
-composition choice   -> app or experiment config
-```
-
-Use typed and explicit configuration where practical. Document defaults that materially affect experiments.
-
-## Research implementation rule
-
-Public architecture is named after project capabilities.
-
-Scientific provenance belongs in implementation and module documentation.
-
-Example:
+Isso cria uma distinção simples:
 
 ```text
-capability: PoseEstimator
-implementation: FAST_LIO-backed estimator
-research notes: modules/state-estimation/docs/
+parâmetro de algoritmo -> config do módulo
+escolha de composição  -> config de app ou experimento
 ```
 
-The same rule applies to VLMs, point encoders, fusion methods, scene-graph techniques, datasets, and storage technologies.
+Prefira configuração tipada e explícita quando praticável. Documente defaults que afetam materialmente os experimentos.
 
-Issues should define observable capability behavior, inputs, outputs, constraints, tests, and acceptance criteria. Module documentation can then record which research work informed the implementation.
+## Regra de implementação de pesquisa
 
-## Readability rules
+A arquitetura pública é nomeada segundo as capacidades do projeto.
 
-Prefer code that communicates intent locally.
+A proveniência científica pertence à documentação de implementação e de módulo.
+
+Exemplo:
+
+```text
+capacidade: PoseEstimator
+implementação: estimator baseado em FAST_LIO
+notas de pesquisa: modules/state-estimation/docs/
+```
+
+A mesma regra se aplica a VLMs, point encoders, métodos de fusão, técnicas de scene-graph, datasets e tecnologias de armazenamento.
+
+Issues devem definir o comportamento observável da capacidade, entradas, saídas, restrições, testes e critérios de aceitação. A documentação do módulo pode então registrar qual trabalho de pesquisa informou a implementação.
+
+## Regras de legibilidade
+
+Prefira código que comunique intenção localmente.
 
 Use:
 
-- descriptive capability names;
-- short call paths;
-- explicit boundary types;
-- focused files when responsibilities are distinct;
-- comments for non-obvious reasoning;
-- module documentation for design rationale.
+- nomes de capacidade descritivos;
+- call paths curtos;
+- tipos de fronteira explícitos;
+- arquivos focados quando as responsabilidades são distintas;
+- comentários para raciocínio não óbvio;
+- documentação de módulo para justificativa de design.
 
-Prefer precise names such as:
+Prefira nomes precisos como:
 
 ```text
 PointEncoder
@@ -286,71 +286,71 @@ TemporalFusion
 SemanticMapReader
 ```
 
-over generic names when a more specific responsibility is known.
+em vez de nomes genéricos quando uma responsabilidade mais específica é conhecida.
 
-## Dependency direction
+## Direção de dependência
 
-Dependency direction follows capability ownership and public APIs.
+A direção de dependência segue o ownership de capacidade e as APIs públicas.
 
-At repository level:
+Em nível de repositório:
 
 ```mermaid
 flowchart TD
-    Apps[apps] --> Modules[public module APIs]
+    Apps[apps] --> Modules[APIs públicas dos módulos]
     Experiments[experiments] --> Modules
     Evaluation[evaluation] --> Modules
     Datasets[datasets] --> Modules
-    Modules --> Shared[small shared primitives]
+    Modules --> Shared[pequenas primitivas compartilhadas]
 ```
 
-For cross-module use:
+Para uso entre módulos:
 
 ```text
-consumer -> producer public API
+consumidor -> API pública do produtor
 ```
 
-Keep these dependencies explicit and acyclic whenever practical.
+Mantenha essas dependências explícitas e acíclicas sempre que praticável.
 
-When two modules need substantial access to each other's internal concepts, reconsider the ownership boundary.
+Quando dois módulos precisam de acesso substancial aos conceitos internos um do outro, reconsidere a fronteira de ownership.
 
-## Testing strategy
+## Estratégia de testes
 
-Tests protect public behavior and scientific reproducibility.
+Testes protegem o comportamento público e a reprodutibilidade científica.
 
 Use:
 
-- unit tests for deterministic transformations;
-- contract tests for interchangeable implementations;
-- integration tests for module boundaries;
-- representative application tests for end-to-end composition;
-- benchmarks for runtime, memory, and accuracy-sensitive components;
-- regression fixtures for known failure modes.
+- testes unitários para transformações determinísticas;
+- testes de contract para implementações intercambiáveis;
+- testes de integração para fronteiras de módulo;
+- testes de aplicação representativos para composição end-to-end;
+- benchmarks para componentes sensíveis a runtime, memória e acurácia;
+- fixtures de regressão para modos de falha conhecidos.
 
-Tests should make internal refactoring safe by focusing on observable behavior and stable invariants.
+Testes devem tornar o refactoring interno seguro, focando em comportamento observável e invariantes estáveis.
 
-## Documentation as part of architecture
+## Documentação como parte da arquitetura
 
-A design decision is complete when its rationale is recoverable.
+Uma decisão de design está completa quando sua justificativa é recuperável.
 
-Repository-wide decisions belong in root `docs/`.
+Decisões de nível de repositório pertencem ao `docs/` raiz.
 
-Module-specific decisions belong in `modules/<module>/docs/`.
+Decisões específicas de módulo pertencem a `modules/<module>/docs/`.
 
-Changes to ownership, public contracts, dependency direction, or repository structure should update the relevant documentation in the same work.
+Mudanças em ownership, contracts públicos, direção de dependência ou estrutura do repositório devem atualizar a documentação relevante na mesma alteração.
 
-## Structural decision checklist
+## Checklist de decisão estrutural
 
-Before accepting a structural change, verify:
+Antes de aceitar uma mudança estrutural, verifique:
 
-1. Is there one obvious owner for the behavior?
-2. Can a reader understand the change mostly within that owner module?
-3. Are inputs, outputs, and invariants explicit?
-4. Does the public boundary expose only what consumers need?
-5. Are external implementation details contained locally?
-6. Are units, frames, timestamps, and provenance explicit where required?
-7. Can the behavior be tested through its public boundary?
-8. Can intended implementations be replaced without changing unrelated consumers?
-9. Is dependency direction clear and preferably acyclic?
-10. Is this the smallest structure that communicates the design clearly?
+1. Existe um dono óbvio para o comportamento?
+2. Um leitor consegue entender a mudança majoritariamente dentro daquele módulo dono?
+3. Entradas, saídas e invariantes são explícitos?
+4. A fronteira pública expõe apenas o que os consumidores precisam?
+5. Detalhes de implementação externos estão contidos localmente?
+6. Unidades, frames, timestamps e proveniência estão explícitos onde necessário?
+7. O comportamento pode ser testado através de sua fronteira pública?
+8. As implementações pretendidas podem ser substituídas sem alterar consumidores não relacionados?
+9. A direção de dependência é clara e preferencialmente acíclica?
+10. Esta é a menor estrutura que comunica o design com clareza?
 
-A design that satisfies these points matches the engineering direction of the repository.
+Um design que satisfaz esses pontos está alinhado com a direção de engenharia do repositório.

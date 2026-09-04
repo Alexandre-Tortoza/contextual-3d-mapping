@@ -1,113 +1,82 @@
-# Architecture
+# Arquitetura
 
-## Responsibility
+## Responsabilidade e fronteira
 
-`visual-perception` turns one canonical RGB image observation into a structured, auditable
-visual observation: discovered regions with masks and boxes, dense and language-aligned
-region embeddings, scene- and region-level semantic claims, candidate image-level
-relations, and a quality audit — all with model/configuration provenance attached.
+`visual-perception` recebe uma imagem RGB já identificada, datada e associada ao frame
+do sensor. Ele produz uma `VisualObservation` com regiões 2D, embeddings referenciados,
+claims semânticos de cena e região, relações candidatas e o resultado de uma auditoria.
+O ponto de entrada de produção é
+[`run_canonical_pipeline`](../src/visual_perception/application/pipeline.py).
 
-## Non-responsibilities
+O módulo não lê datasets, ROS bags ou URIs de artifact; essa é a responsabilidade de
+[`adapters`](../../../adapters/README.md). Também não calibra sensores, associa pixels a
+geometria 3D, persiste o mapa, verifica relações em 3D ou constrói scene graphs. Essas
+capacidades pertencem, respectivamente, a `sensor-association`, módulos de mapa e
+`scene-graph`/`context-reasoning`.
 
-- reading datasets, ROS bags, or any transport/file layout directly (owned by
-  `[adapters]`, see [pipelines.md](pipelines.md) and issue #151);
-- calibration, cross-sensor projection, or LiDAR matching (owned by
-  `sensor-association`, issue #137);
-- persistent geometric or semantic map construction (`geometric-map`, `semantic-map`);
-- verifying candidate relations in 3D or building a scene graph
-  (`context-reasoning`, `scene-graph`).
+```text
+CanonicalObservation RGB + pixels resolvidos
+    -> ImageObservation + ImagePayload
+    -> visual-perception
+    -> VisualObservation + AuditResult
+    -> sensor-association / persistência / mapping-runtime
+```
 
-## Layers
+Veja [integration.md](integration.md) para as fronteiras de entrada e saída e
+[api-contracts.md](api-contracts.md) para os tipos do fluxo.
+
+## Organização interna
 
 ```text
 src/visual_perception/
-├── domain/           # implementation-agnostic contracts and invariants
-├── ports/            # replaceable boundaries (Protocols) for heavyweight backends
-├── application/       # stage orchestration, pure of any concrete backend
+├── domain/           # contracts, tipos e invariantes do domínio visual
+├── ports/            # Protocols para backends substituíveis
+├── application/      # estágios e orquestração do pipeline
 ├── infrastructure/
-│   ├── fakes/         # GPU-free adapters used by every test
-│   ├── adapters/      # real backend adapters (#186-#189) — stubs until GPU hardware
-│   ├── integration/   # boundaries to sibling modules/applications (#177-#180)
+│   ├── fakes/        # implementações determinísticas, sem GPU
+│   ├── adapters/     # runtimes reais isolados de bibliotecas externas
+│   ├── integration/  # fronteiras com adapters, runtime e persistência
 │   └── serialization.py
-└── config.py          # validated, fingerprintable module configuration (#157)
+└── config.py          # configuração validada e reproduzível do módulo
 ```
 
-This mirrors the repository's capability-oriented, ports-and-adapters style (see
-`/docs/engineering-principles.md`).
+`domain/` é dono de geometria de imagem, regiões, embeddings, claims, relações e
+proveniência de modelo. `ports/` define os quatro pontos de variação reais: descoberta
+de regiões, feature extraction densa, encoding alinhado à linguagem e raciocínio
+multimodal. `application/` depende desses contracts, não dos runtimes de terceiros. A
+factory [`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py)
+é o local de composição entre configuração e implementações concretas.
 
-## Shared vs. module-owned contracts
+Os identificadores, timestamp, frame e referências de artifacts são contracts
+compartilhados, definidos em [`contracts/`](../../../contracts/README.md), pois têm o
+mesmo significado para mais de um módulo. Não introduza cópias locais desses conceitos.
 
-`visual-perception` depends on the repository-wide `contextual_mapping_contracts`
-package (`contracts/`) for `ObservationReference`, `SourceArtifactReference`, `FrameId`,
-and `Timestamp` (#99, #100, #101): identity, timing, frame, and source-artifact
-references are a repository-wide concept, not owned by this module.
+## Invariantes de coordenadas
 
-Everything specific to visual perception — region/mask geometry, semantic claims,
-relations, embeddings, `ModelProvenance` (which *model/stage* produced a claim, distinct
-from the shared `Provenance`, which links a derived item back to its *source
-observations*) — is defined locally under `domain/`.
+Toda máscara, box e transform obedece à convenção `top-left-origin,half-open-xyxy`,
+registrada em cada `VisualObservation`:
 
-## Image-coordinate invariants (issue #155)
+- `(0, 0)` é o pixel superior esquerdo; `x` cresce à direita e `y` para baixo;
+- `BoundingBox` usa `(x_min, y_min, x_max, y_max)` com mínimo inclusivo e máximo
+  exclusivo, compatível com `array[y_min:y_max, x_min:x_max]`;
+- `Mask` é booleana, tem shape `(height, width)` e usa a resolução integral da imagem;
+- transformações entre tile e imagem global passam por `CoordinateTransform`; não se
+  deve aplicar offsets ou escalas ad hoc em consumidores downstream.
 
-Binding for every mask, box, and transform in this module:
+Esses invariantes são validados por
+[`domain/geometry.py`](../src/visual_perception/domain/geometry.py) e pela construção de
+[`VisualObservation`](../src/visual_perception/domain/visual_observation.py). Uma
+relação só pode referenciar regiões presentes na mesma observação.
 
-- the pixel origin `(0, 0)` is the **top-left** corner;
-- `x` increases right, `y` increases down;
-- a `BoundingBox` is `(x_min, y_min, x_max, y_max)`, **half-open**: min is inclusive, max
-  is exclusive — matching `array[y_min:y_max, x_min:x_max]`;
-- a `Mask` is a boolean array shaped `(height, width)`, always tagged with the image
-  resolution it was computed against;
-- `CoordinateTransform` is the only way scale/tile-local geometry becomes global: it maps
-  `global = local * scale + offset` and is invertible in both directions.
+## Decisões de representação
 
-`VisualObservation.coordinate_convention` records this convention explicitly so a
-downstream consumer never has to guess it.
+Uma região preserva `geometric_confidence`, que mede a confiança da máscara e box,
+independentemente da confiança de cada `SemanticClaim`. Claims não são reduzidos a um
+único label: hipóteses conflitantes continuam visíveis para a auditoria. Relações são
+candidatas no plano da imagem; mesmo uma relação de fonte `geometric_2d` não é uma
+relação 3D confirmada.
 
-## The canonical pipeline (issue #169)
-
-```mermaid
-flowchart TD
-    Input[ImageObservation + ImagePayload] --> Tiling[Tiling #159]
-    Tiling --> Discovery[Region discovery #158]
-    Discovery --> Merge[Cross-scale merge #160]
-    Merge --> Features[Dense features #161]
-    Features --> Pooling[Mask-aware pooling #162]
-    Merge --> Lang[Language-aligned embedding #163]
-    Merge --> SceneCtx[Scene context #164]
-    SceneCtx --> RegionSem[Region semantics #165]
-    Merge --> RegionSem
-    RegionSem --> Relations[Relation generation #167]
-    Pooling --> Output
-    Lang --> Output
-    Relations --> Output[VisualObservation]
-    RegionSem --> Output
-    SceneCtx --> Output
-    Output --> Audit[Quality audit #168]
-```
-
-`application/pipeline.run_canonical_pipeline` is the single production entry point
-(`PerceptionPorts` bundles the four replaceable backends). It never requires choosing a
-legacy strategy, tolerates isolated region-interpretation failures (the region keeps its
-geometry and whatever claims other stages attached; see #165), and always ends by running
-the quality auditor (#168) over its own output.
-
-## Integration boundaries
-
-- **Upstream** (#177): consumes `contextual_mapping_adapters.CanonicalObservation`
-  (kind `"rgb"`) plus an already-resolved pixel array — decoding the source artifact URI
-  stays outside this module.
-- **Downstream** (#178): `sensor-association` consumes masks, boxes, timestamp, frame id,
-  and coordinate convention through `infrastructure/integration/sensor_association_contract.py`,
-  never a private type.
-- **Composition** (#179): `mapping-runtime` calls `run_canonical_pipeline` through
-  `visual_perception`'s public package root only; module failures surface as a
-  `RuntimeDiagnostic`, never a raw backend exception.
-- **Persistence** (#180): `infrastructure/integration/persistence_integration.py` defines
-  the minimal `EvidencePersistencePort` this module needs from repository persistence.
-
-## Configuration and reproducibility
-
-`config.ModuleConfig` (#157) owns every stage's backend identifier, checkpoint,
-resolution, and threshold; it validates incompatible combinations (e.g. the
-`reduced_cost` profile cannot enable multi-scale tiling) and produces a stable SHA-256
-fingerprint used by the stage cache (#170, see [execution.md](execution.md)).
+Embeddings visuais e de linguagem ficam fora do payload canônico. A observação armazena
+somente referências estáveis para que o vetor possa ter ciclo de vida e armazenamento
+adequados ao consumidor. Consulte [artifacts.md](artifacts.md) para a persistência e
+[research-traceability.md](research-traceability.md) para a motivação dessas escolhas.

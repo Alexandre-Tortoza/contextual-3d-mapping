@@ -1,10 +1,12 @@
-# Execution
+# Execução
 
-## Model lifecycle (issue #171)
+## Ciclo de vida do modelo (issue #171)
 
-`application/lifecycle.ModelLifecycleManager` creates one heavyweight adapter per stage,
-runs it, records `StageMetrics` (load time, inference time, peak memory), and releases
-the reference — so the canonical pipeline never needs every model resident at once.
+`application/lifecycle.ModelLifecycleManager` permite à orquestração criar um adapter
+pesado por estágio, executá-lo, registrar `StageMetrics` (tempo de load, tempo de
+inferência, pico de memória) e liberar a referência. Use-o quando a aplicação precisar
+limitar modelos residentes; `run_canonical_pipeline` continua recebendo ports já
+compostos e não cria um lifecycle manager implicitamente.
 
 ```python
 manager = ModelLifecycleManager()
@@ -12,28 +14,34 @@ with manager.stage("region_discovery", lambda: load_real_backend(config)) as mod
     result = model.discover(image, config)
 ```
 
-Peak memory is measured as CPU-RSS in this GPU-free environment (a proxy, not real VRAM);
-real peak-VRAM measurement is part of the real-hardware validation in #190. An
-out-of-memory condition during load or inference surfaces as
-`domain.errors.BackendExecutionError` — never a silent substitution of a different
-backend or configuration.
+O pico de memória é medido como CPU-RSS neste ambiente GPU-free (uma proxy, não VRAM
+real); a medição real de pico de VRAM pertence à validação experimental dos adapters.
+Uma condição de out-of-memory durante load ou inferência aparece como
+`domain.errors.BackendExecutionError` — nunca uma substituição silenciosa por outro
+backend ou configuração.
 
-## Stage cache (issue #170)
+## Cache de estágio (issue #170)
 
-`application/cache.StageCache` persists one JSON record per completed stage, keyed by a
-chained fingerprint (`compute_fingerprint`): a stage's fingerprint hashes its own version
-and configuration together with every upstream stage's fingerprint. Consequences:
+`application/cache.StageCache` persiste um registro JSON por estágio concluído,
+indexado por um fingerprint encadeado (`compute_fingerprint`): o fingerprint de um
+estágio faz hash de sua própria versão e configuração junto com o fingerprint de cada
+estágio upstream. Consequências:
 
-- an identical run reuses every valid cached stage;
-- changing one stage's configuration invalidates that stage and everything computed from
-  its output (its downstream dependents) — sibling stages that do not depend on it stay
-  valid;
-- an interrupted run is resumable: the next run with the same fingerprints picks up
-  where it left off;
-- `CACHE_SCHEMA_VERSION` rejects a cache entry written by an incompatible module version
-  instead of reusing it.
+- uma execução idêntica reutiliza todo estágio em cache válido;
+- mudar a configuração de um estágio invalida esse estágio e tudo que foi computado a
+  partir de sua saída (seus dependentes downstream) — estágios irmãos que não dependem
+  dele permanecem válidos;
+- uma execução interrompida é retomável: a próxima execução com os mesmos fingerprints
+  continua de onde parou;
+- `CACHE_SCHEMA_VERSION` rejeita uma entrada de cache escrita por uma versão de módulo
+  incompatível, em vez de reutilizá-la.
 
-## Quality checks
+O cache é uma otimização de execução, não a serialização pública de uma observação.
+Para persistir uma `VisualObservation` entre processos, use a fronteira descrita em
+[artifacts.md](artifacts.md). Para escolher e configurar ports, consulte
+[integration.md](integration.md).
+
+## Verificações de qualidade
 
 ```bash
 cd modules/visual-perception
@@ -44,8 +52,8 @@ ruff check .
 mypy
 ```
 
-`contextual_mapping_contracts` (and, for the integration tests only,
-`contextual_mapping_adapters`/`contextual_mapping_datasets`) resolve from their source
-trees via `[tool.pytest.ini_options].pythonpath` in `pyproject.toml` until those packages
-have their own installable build (see [model-backends.md](model-backends.md) for the
-equivalent gap on the ML side).
+`contextual_mapping_contracts` (e, apenas para os testes de integração,
+`contextual_mapping_adapters`/`contextual_mapping_datasets`) são resolvidos a partir de
+suas source trees via `[tool.pytest.ini_options].pythonpath` no `pyproject.toml`, até
+que esses pacotes tenham seu próprio build instalável (veja
+[model-backends.md](model-backends.md) para o gap equivalente do lado de ML).

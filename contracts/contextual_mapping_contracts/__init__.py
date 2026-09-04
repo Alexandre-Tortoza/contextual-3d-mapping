@@ -1,4 +1,4 @@
-"""Stable repository-wide contracts used across capabilities."""
+"""Contracts estáveis de nível de repositório, usados por múltiplas capacidades."""
 
 from .observations import ObservationReference, Provenance, SourceArtifactReference
 from .spatial import FrameId

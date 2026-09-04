@@ -1,3 +1,3 @@
-# state_estimation package
+# Pacote state_estimation
 
-Package namespace for the state-estimation module. Implementation files are introduced incrementally by their corresponding issues.
+Namespace do pacote para o módulo state-estimation. Arquivos de implementação são introduzidos incrementalmente por suas issues correspondentes.

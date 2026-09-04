@@ -1,9 +1,9 @@
-"""Multimodal reasoning boundary for scene- and region-level interpretation.
+"""Fronteira de raciocínio multimodal para interpretação em nível de cena e de região.
 
-Issue: #189 (real adapter shape). Used by the application stages in #164
-(scene) and #165 (region). The port returns a raw structured response;
-schema parsing and semantic validation stay in the application layer, not in
-backend-specific transport code (see #189's scope).
+Issue: #189 (shape do adapter real). Usada pelos estágios de application em
+#164 (scene) e #165 (region). O port retorna uma resposta estruturada bruta;
+o parsing de schema e a validação semântica ficam na camada de application,
+não em código de transporte específico de backend (ver escopo da #189).
 """
 
 from __future__ import annotations
@@ -14,21 +14,31 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.image_payload import ImagePayload
 
 
+# Port que desacopla o pipeline do VLM (vision-language model) concreto usado
+# para raciocínio multimodal. Existe para que backends diferentes (ou um
+# fake determinístico em testes) possam responder aos mesmos prompts
+# estruturados de scene/region sem vazar seu schema de transporte específico.
 class MultimodalReasoner(Protocol):
-    """Runs scene-level and region-level structured prompts on one backend."""
+    """Executa prompts estruturados em nível de cena e de região em um backend."""
 
+    # Roda um prompt estruturado sobre a cena inteira. Chamado pelo estágio
+    # de scene context do pipeline (#164) uma vez por observação de imagem.
     def analyze_scene(
         self, image: ImagePayload, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
-        """Return a raw structured response describing the whole scene.
+        """Retorna uma resposta estruturada bruta descrevendo a cena inteira.
 
-        Malformed/unparseable responses are the application stage's concern
-        (#164); this method should raise
-        :class:`~visual_perception.domain.errors.BackendExecutionError` only
-        for backend/transport failures.
+        Respostas malformadas/não parseáveis são responsabilidade do estágio
+        de application (#164); este método deve levantar
+        :class:`~visual_perception.domain.errors.BackendExecutionError` apenas
+        para falhas de backend/transporte.
         """
         ...
 
+    # Roda um prompt estruturado sobre uma região específica, opcionalmente
+    # usando o resumo de cena já produzido por ``analyze_scene`` como
+    # contexto adicional. Chamado pelo estágio de region semantics (#165)
+    # uma vez por região descoberta.
     def analyze_region(
         self,
         image: ImagePayload,
@@ -36,5 +46,5 @@ class MultimodalReasoner(Protocol):
         scene_summary: str | None,
         config: MultimodalReasoningConfig,
     ) -> dict[str, Any]:
-        """Return a raw structured response describing one region (#165)."""
+        """Retorna uma resposta estruturada bruta descrevendo uma região (#165)."""
         ...

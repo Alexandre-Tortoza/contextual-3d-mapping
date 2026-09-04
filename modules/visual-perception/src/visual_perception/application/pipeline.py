@@ -1,13 +1,14 @@
-"""Canonical visual perception pipeline.
+"""Pipeline canônico de percepção visual.
 
-Issue: #169. This is the module's single primary application entry point:
-region discovery -> multi-scale merge -> visual features -> language
-embeddings -> scene context -> region semantics -> relations -> audit.
+Issue: #169. Este é o único ponto de entrada de aplicação primário do
+módulo: region discovery -> merge multi-scale -> features visuais ->
+embeddings de linguagem -> scene context -> semântica de região ->
+relações -> audit.
 
-Isolated region-level interpretation failures (#165) do not abort the run:
-the affected regions are kept with their geometry and whatever claims other
-stages already attached, and the failures are reported alongside the
-canonical output rather than raised.
+Falhas isoladas de interpretação em nível de região (#165) não abortam a
+execução: as regiões afetadas são mantidas com sua geometria e quaisquer
+claims que outros stages já tenham anexado, e as falhas são reportadas
+junto com a saída canônica em vez de serem levantadas (raised).
 """
 
 from __future__ import annotations
@@ -36,9 +37,12 @@ from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 from visual_perception.ports.region_discovery import RegionDiscoverer
 
 
+# Agrupa os backends substituíveis contra os quais o pipeline canônico é
+# composto, permitindo trocar cada backend (ex: por um fake em teste, ou
+# por outro modelo em benchmark) sem alterar run_canonical_pipeline.
 @dataclass(frozen=True)
 class PerceptionPorts:
-    """The replaceable backends the canonical pipeline is composed against."""
+    """Os backends substituíveis contra os quais o pipeline canônico é composto."""
 
     region_discoverer: RegionDiscoverer
     feature_extractor: DenseFeatureExtractor
@@ -46,22 +50,30 @@ class PerceptionPorts:
     multimodal_reasoner: MultimodalReasoner
 
 
+# Agrupa a saída canônica do pipeline com tudo que é necessário para
+# auditar a execução, retornada por run_canonical_pipeline aos
+# consumidores (ex: integração com mapping-runtime, benchmarks).
 @dataclass(frozen=True)
 class PipelineResult:
-    """The canonical output plus everything needed to audit the run."""
+    """A saída canônica mais tudo que é necessário para auditar a execução."""
 
     observation: VisualObservation
     region_interpretation_failures: tuple[RegionInterpretationFailure, ...]
     audit: AuditResult
 
 
+# Ponto de entrada principal do módulo: conduz uma observação de imagem
+# validada por todos os stages do pipeline canônico (discovery, merge,
+# features, embeddings, scene context, semântica, relações, audit) até a
+# VisualObservation final. É o que mapping-runtime e benchmarks chamam
+# para processar um frame RGB.
 def run_canonical_pipeline(
     image: ImageObservation,
     payload: ImagePayload,
     config: ModuleConfig,
     ports: PerceptionPorts,
 ) -> PipelineResult:
-    """Transform one validated image observation into a canonical visual observation."""
+    """Transforma uma observação de imagem validada em uma observação visual canônica."""
     proposals = _discover_regions(payload, config, ports.region_discoverer)
     regions = merge_regions(image.observation_id, proposals, config.merge)
 
@@ -94,6 +106,9 @@ def run_canonical_pipeline(
     return PipelineResult(observation=observation, region_interpretation_failures=failures, audit=audit)
 
 
+# Descobre region proposals em nível de tile e as remapeia para
+# coordenadas globais da imagem; primeiro estágio de
+# run_canonical_pipeline, chamado antes do merge multi-scale.
 def _discover_regions(
     payload: ImagePayload, config: ModuleConfig, discoverer: RegionDiscoverer
 ) -> tuple[RegionProposal, ...]:
@@ -106,6 +121,9 @@ def _discover_regions(
     return tuple(proposals)
 
 
+# Preenche, de forma imutável, a referência de embedding visual de cada
+# região a partir do resultado do pooling; helper interno de
+# run_canonical_pipeline.
 def _attach_visual_refs(
     regions: tuple[ObservedRegion, ...], refs_by_region_id: dict[str, str]
 ) -> tuple[ObservedRegion, ...]:
@@ -115,6 +133,9 @@ def _attach_visual_refs(
     )
 
 
+# Preenche, de forma imutável, a referência de embedding de linguagem de
+# cada região a partir do resultado de encode_regions; helper interno de
+# run_canonical_pipeline.
 def _attach_language_refs(
     regions: tuple[ObservedRegion, ...], refs_by_region_id: dict[str, str]
 ) -> tuple[ObservedRegion, ...]:

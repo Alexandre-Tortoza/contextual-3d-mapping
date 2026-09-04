@@ -1,13 +1,14 @@
-"""Image-level relation generation.
+"""Geração de relations em nível de imagem.
 
 Issue: #167.
 
-Generates 2D-geometric relations directly from merged region geometry, and
-optionally accepts model-inferred relations that a multimodal stage has
-already resolved to canonical region ids (subject/object resolution from raw
-model text is not this function's responsibility). Both kinds keep their
-provenance separately, and both are still explicitly *candidate*, unverified
-relations (#166): no 3D validation happens here.
+Gera relations 2D-geométricas diretamente a partir da geometria de region
+já mesclada, e opcionalmente aceita relations inferidas por modelo que uma
+etapa multimodal já resolveu para region ids canônicos (a resolução
+subject/object a partir de texto bruto de modelo não é responsabilidade
+desta função). Ambos os tipos mantêm sua proveniência separadamente, e
+ambos ainda são explicitamente relations *candidatas*, não verificadas
+(#166): nenhuma validação 3D acontece aqui.
 """
 
 from __future__ import annotations
@@ -30,12 +31,17 @@ _CONTAINMENT_THRESHOLD = 0.9
 _ADJACENCY_MARGIN_PX = 5.0
 
 
+# Ponto de entrada público: gera todas as relations candidatas de uma
+# observation, combinando relations geométricas (calculadas par a par entre
+# regions) com relations inferidas por modelo (já resolvidas para region ids
+# canônicos), e valida que todas as referências apontam para regions
+# conhecidas. Chamada pelo pipeline principal após o merge de regions.
 def generate_relations(
     regions: tuple[ObservedRegion, ...],
     config: RegionMergeConfig,
     inferred_relations: tuple[dict[str, Any], ...] = (),
 ) -> tuple[CandidateRelation, ...]:
-    """Generate candidate relations, referencing only the given canonical regions."""
+    """Gera relations candidatas, referenciando apenas as regions canônicas fornecidas."""
     geometric_provenance = ModelProvenance(
         stage="relation_generation", producer="geometric_2d", config_fingerprint=fingerprint_of(config)
     )
@@ -55,6 +61,10 @@ def generate_relations(
     return result
 
 
+# Calcula as relations 2D-geométricas entre um par de regions (overlaps,
+# contains, near) a partir de IoU, containment ratio e proximidade de box.
+# Existe como o núcleo geométrico da geração de relations, sem depender de
+# nenhum modelo. Chamada por generate_relations para cada par de regions.
 def _geometric_relations(
     subject: ObservedRegion, target: ObservedRegion, provenance: ModelProvenance
 ) -> list[CandidateRelation]:
@@ -100,6 +110,10 @@ def _geometric_relations(
     return relations
 
 
+# Constrói a CandidateRelation "contains" entre uma region container e uma
+# region part. Existe para não duplicar a construção do objeto nos dois
+# sentidos possíveis (subject contém target, ou vice-versa) dentro de
+# _geometric_relations, que é quem chama esta função.
 def _contains(
     container: ObservedRegion, part: ObservedRegion, confidence: ConfidenceScore, provenance: ModelProvenance
 ) -> CandidateRelation:
@@ -115,6 +129,10 @@ def _contains(
     )
 
 
+# Verifica se os boxes de duas regions estão a uma distância pequena o
+# suficiente (dentro de _ADJACENCY_MARGIN_PX em ambos os eixos) para
+# justificar uma relation "near". Chamada por _geometric_relations quando
+# as masks não se sobrepõem (iou == 0).
 def _boxes_are_near(subject: ObservedRegion, target: ObservedRegion) -> bool:
     a, b = subject.box, target.box
     gap_x = max(a.x_min - b.x_max, b.x_min - a.x_max, 0.0)
@@ -122,6 +140,10 @@ def _boxes_are_near(subject: ObservedRegion, target: ObservedRegion) -> bool:
     return gap_x <= _ADJACENCY_MARGIN_PX and gap_y <= _ADJACENCY_MARGIN_PX
 
 
+# Converte uma relation bruta inferida por modelo (dict solto vindo do
+# reasoner) em uma CandidateRelation validada, verificando os campos
+# obrigatórios e os identifiers antes de aceitar o dado externo. Chamada
+# por generate_relations para cada relation em inferred_relations.
 def _model_inferred_relation(raw: dict[str, Any], index: int) -> CandidateRelation:
     try:
         subject_id = str(raw["subject_region_id"])

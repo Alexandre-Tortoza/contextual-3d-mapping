@@ -1,6 +1,6 @@
-"""Shared fake-backed ``PerceptionPorts`` fixture, kept separate from ``fixtures.py``
-so pure image/observation builders don't force every test to depend on the canonical
-pipeline and every fake adapter (#173).
+"""Fixture compartilhada de ``PerceptionPorts`` baseada em fakes, mantida separada de
+``fixtures.py`` para que os builders puros de imagem/observação não obriguem todo teste
+a depender do pipeline canônico e de todo adapter fake (#173).
 """
 
 from __future__ import annotations
@@ -12,6 +12,9 @@ from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import Fake
 from visual_perception.infrastructure.fakes.fake_region_discoverer import FakeRegionDiscoverer
 
 
+# Monta um PerceptionPorts completo usando só fakes GPU-free, para que qualquer teste
+# do pipeline canônico rode sem precisar de um backend real; usada por todos os testes
+# que exercitam o pipeline de ponta a ponta.
 def default_ports() -> PerceptionPorts:
     return PerceptionPorts(
         region_discoverer=FakeRegionDiscoverer(),

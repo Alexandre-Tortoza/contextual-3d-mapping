@@ -1,4 +1,4 @@
-"""Uncertainty-driven selective refinement tests (#183)."""
+"""Testes de refinamento seletivo guiado por incerteza (#183)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
 
+# Verifica que, com um threshold de confiança muito permissivo (1.0), toda região da
+# observação é selecionada como alvo de refinamento.
 def test_refinement_targets_low_confidence_regions() -> None:
     payload = payload_with_blobs(blobs=((2, 2, 8, 8, (200, 30, 30)),))
     result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
@@ -22,6 +24,8 @@ def test_refinement_targets_low_confidence_regions() -> None:
     assert set(targets) == {region.region_id for region in result.observation.regions}
 
 
+# Confirma duas garantias do loop de refinamento: ele sempre termina (respeitando
+# max_iterations) e nunca descarta evidência/claims que já existiam antes de refinar.
 def test_refinement_loop_terminates_and_preserves_previous_evidence() -> None:
     payload = payload_with_blobs(blobs=((2, 2, 8, 8, (200, 30, 30)),))
     result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
@@ -39,6 +43,8 @@ def test_refinement_loop_terminates_and_preserves_previous_evidence() -> None:
     assert len(refined.regions[0].claims) >= original_claim_count
 
 
+# Garante o caso de custo zero: quando nenhuma região atinge o critério de refinamento,
+# a observação sai inalterada e nenhuma iteração é registrada no histórico.
 def test_no_targets_means_no_refinement_needed() -> None:
     payload = payload_with_blobs(blobs=((2, 2, 8, 8, (200, 30, 30)),))
     result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())

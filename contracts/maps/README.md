@@ -1,5 +1,5 @@
 # Map Contracts
 
-Shared map identity, map manifests, artifact references, lifecycle metadata, and repository-wide map descriptors belong here.
+Identidade de mapa compartilhada, map manifests, referências de artifact, metadados de ciclo de vida e descritores de mapa de nível de repositório pertencem aqui.
 
-Concrete geometry, semantic, graph, memory, and index implementations remain owned by their respective modules or persistence adapters.
+Implementações concretas de geometria, semântica, grafo, memória e índice permanecem de posse de seus respectivos módulos ou adapters de persistência.

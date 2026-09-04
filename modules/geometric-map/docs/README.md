@@ -1,3 +1,3 @@
-# Geometric Map Documentation
+# Documentação do Geometric Map
 
-This directory will contain module-local documentation for `geometric-map`, including public contracts, internal architecture, configuration, implementation choices, benchmarks, evaluation methodology, limitations, and research references as development progresses.
+Este diretório vai conter a documentação local do módulo `geometric-map`, incluindo contracts públicos, arquitetura interna, configuração, escolhas de implementação, benchmarks, metodologia de avaliação, limitações e referências de pesquisa à medida que o desenvolvimento avança.

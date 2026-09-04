@@ -1,4 +1,4 @@
-"""Serialization round-trip tests (#172)."""
+"""Testes de round-trip de serialização (#172)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ from visual_perception.infrastructure.serialization import (
 )
 
 
+# Roda o pipeline canônico completo e verifica que serialize/deserialize é um
+# round-trip sem perda: regiões, claims e relações devem sobreviver intactos.
 def test_round_trip_preserves_regions_claims_and_relations() -> None:
     payload = payload_with_blobs(
         blobs=((2, 2, 8, 8, (200, 30, 30)), (20, 20, 28, 28, (30, 200, 30)))
@@ -25,6 +27,9 @@ def test_round_trip_preserves_regions_claims_and_relations() -> None:
     assert round_tripped == result.observation
 
 
+# Um payload serializado com um schema_version desconhecido deve falhar de forma
+# previsível (UnsupportedSchemaVersionError), nunca ser interpretado silenciosamente
+# como se fosse a versão atual.
 def test_unsupported_schema_version_fails_predictably() -> None:
     payload = serialize_observation(
         run_canonical_pipeline(

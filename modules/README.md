@@ -1,47 +1,47 @@
-# Modules
+# Módulos
 
-Each module represents one independently understandable, developable, testable, benchmarkable, and replaceable capability.
+Cada módulo representa uma capacidade independentemente compreensível, desenvolvível, testável, avaliável (benchmarkable) e substituível.
 
-The repository is capability-oriented. Prefer the smallest internal structure that makes the capability, its inputs, outputs, and variation points clear.
+O repositório é orientado a capacidades. Prefira a menor estrutura interna que deixe clara a capacidade, suas entradas, saídas e pontos de variação.
 
-## Capability ownership
+## Ownership de capacidades
 
-- `state-estimation`: LiDAR/IMU observations to pose, trajectory, and motion-corrected LiDAR frames.
-- `geometric-map`: persistent world geometry built from poses and geometric observations.
-- `visual-perception`: image observations to structured visual and semantic features.
-- `point-representation`: LiDAR points to learned 3D representations.
-- `sensor-association`: geometric and temporal association between sensor observations.
-- `semantic-fusion`: multi-source, temporal, and multi-view fusion into semantic 3D observations.
-- `semantic-map`: persistent open-vocabulary semantic information linked to world geometry.
-- `semantic-memory`: semantic and spatial retrieval over mapped information.
-- `scene-graph`: entities, hierarchy, and relations extracted from the map.
-- `context-reasoning`: contextual inference with explicit provenance.
-- `query-engine`: unified semantic, spatial, and contextual query interface.
+- `state-estimation`: observações LiDAR/IMU convertidas em pose, trajetória e frames LiDAR corrigidos por movimento.
+- `geometric-map`: geometria persistente do mundo construída a partir de poses e observações geométricas.
+- `visual-perception`: observações de imagem convertidas em features visuais e semânticas estruturadas.
+- `point-representation`: pontos LiDAR convertidos em representações 3D aprendidas.
+- `sensor-association`: associação geométrica e temporal entre observações de sensor.
+- `semantic-fusion`: fusão multi-fonte, temporal e multi-view em observações 3D semânticas.
+- `semantic-map`: informação semântica persistente de vocabulário aberto vinculada à geometria do mundo.
+- `semantic-memory`: recuperação semântica e espacial sobre a informação mapeada.
+- `scene-graph`: entidades, hierarquia e relações extraídas do mapa.
+- `context-reasoning`: inferência contextual com proveniência explícita.
+- `query-engine`: interface unificada de consulta semântica, espacial e contextual.
 
-Persistent geometric reconstruction is owned by `geometric-map`.
+A reconstrução geométrica persistente é de posse de `geometric-map`.
 
-Concrete odometry implementations are owned by `state-estimation`. Semantic modules reference geometry through documented public types so the system keeps one authoritative geometric representation.
+Implementações concretas de odometria são de posse de `state-estimation`. Módulos semânticos referenciam a geometria através de tipos públicos documentados, para que o sistema mantenha uma única representação geométrica autoritativa.
 
-## Public boundary
+## Fronteira pública
 
-Each module exposes a small documented public API.
+Cada módulo expõe uma pequena API pública documentada.
 
-Consumers depend on:
+Consumidores dependem de:
 
-- public data types;
-- public functions or classes;
-- stable entry points;
-- protocols that represent real variation points.
+- tipos de dados públicos;
+- funções ou classes públicas;
+- pontos de entrada estáveis;
+- protocolos que representam pontos de variação reais.
 
-Implementation-specific model objects, caches, storage layout, training structures, and backend representations remain local to the owning module.
+Objetos de modelo específicos de implementação, caches, layout de armazenamento, estruturas de treino e representações de backend permanecem locais ao módulo dono.
 
-Capability-specific contracts belong to the capability that defines them.
+Contracts específicos de capacidade pertencem à capacidade que os define.
 
-For example, a learned point representation contract belongs to `point-representation`, even when `sensor-association` consumes it.
+Por exemplo, um contract de representação de ponto aprendida pertence a `point-representation`, mesmo quando `sensor-association` o consome.
 
-## Internal structure
+## Estrutura interna
 
-A module may evolve toward:
+Um módulo pode evoluir para:
 
 ```text
 modules/<module>/
@@ -51,51 +51,51 @@ modules/<module>/
 │       ├── __init__.py
 │       ├── models.py
 │       ├── config.py
-│       └── <capability files>.py
+│       └── <arquivos de capacidade>.py
 ├── tests/
 ├── configs/
 ├── benchmarks/
 └── docs/
 ```
 
-Create each directory when it has a concrete responsibility and content.
+Crie cada diretório quando ele tiver uma responsabilidade e conteúdo concretos.
 
-Keep capability-specific external integrations close to the module that owns them. For example, a LiDAR-inertial odometry backend belongs under `state-estimation`, and a point-cloud backend used only for reconstruction belongs under `geometric-map`.
+Mantenha integrações externas específicas de capacidade próximas do módulo que as possui. Por exemplo, um backend de odometria LiDAR-inercial pertence a `state-estimation`, e um backend de point-cloud usado apenas para reconstrução pertence a `geometric-map`.
 
-## Implementation sequence
+## Sequência de implementação
 
-When developing a module:
+Ao desenvolver um módulo:
 
-1. state the capability responsibility in `README.md`;
-2. define public inputs and outputs;
-3. document units, frames, timestamps, shapes, provenance, and other boundary invariants;
-4. implement the simplest working behavior locally;
-5. introduce protocols only for actual replacement or comparison points;
-6. test local behavior and public contracts;
-7. add benchmarks for performance-sensitive behavior;
-8. document non-obvious algorithmic and research decisions under `docs/`.
+1. declare a responsabilidade da capacidade no `README.md`;
+2. defina entradas e saídas públicas;
+3. documente unidades, frames, timestamps, shapes, proveniência e outros invariantes de fronteira;
+4. implemente o comportamento funcional mais simples localmente;
+5. introduza protocolos apenas para pontos reais de substituição ou comparação;
+6. teste o comportamento local e os contracts públicos;
+7. adicione benchmarks para comportamento sensível a performance;
+8. documente decisões algorítmicas e de pesquisa não óbvias em `docs/`.
 
-## Abstractions
+## Abstrações
 
-Use protocols, interfaces, strategies, factories, or registries when they represent a concrete variation point, such as:
+Use protocolos, interfaces, strategies, factories ou registries quando representarem um ponto de variação concreto, como:
 
-- multiple implementations;
-- intentional replaceability;
-- research comparisons;
-- third-party dependency isolation;
-- module boundary stability;
-- contract-level testing with substitutes.
+- múltiplas implementações;
+- substituibilidade intencional;
+- comparações de pesquisa;
+- isolamento de dependência de terceiros;
+- estabilidade de fronteira de módulo;
+- testes em nível de contract com substitutos.
 
-For straightforward local behavior with one implementation, direct construction and direct calls are preferred because they make the code path easier to read.
+Para comportamento local direto com uma única implementação, construção e chamadas diretas são preferidas porque tornam o caminho do código mais fácil de ler.
 
-## Documentation
+## Documentação
 
-Detailed module behavior, algorithms, implementation rationale, model choices, benchmarks, limitations, and research references belong under:
+Comportamento detalhado de módulo, algoritmos, justificativa de implementação, escolhas de modelo, benchmarks, limitações e referências de pesquisa pertencem a:
 
 ```text
 modules/<module>/docs/
 ```
 
-Repository-wide architecture decisions belong under root `docs/`.
+Decisões arquiteturais de nível de repositório pertencem ao `docs/` raiz.
 
-Before implementing a module, read the root [`AGENTS.md`](../AGENTS.md), [`docs/architecture.md`](../docs/architecture.md), and [`docs/engineering-principles.md`](../docs/engineering-principles.md).
+Antes de implementar um módulo, leia o [`AGENTS.md`](../AGENTS.md) raiz, [`docs/architecture.md`](../docs/architecture.md) e [`docs/engineering-principles.md`](../docs/engineering-principles.md).

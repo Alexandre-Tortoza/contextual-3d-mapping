@@ -1,3 +1,3 @@
 # Dataset Splits
 
-Reproducible train, validation, test, benchmark, and experiment sequence selections belong here when they are repository-wide artifacts rather than module-private training data.
+Seleções reproduzíveis de sequência de treino, validação, teste, benchmark e experimento pertencem aqui quando são artifacts de nível de repositório, e não dados de treino privados de módulo.

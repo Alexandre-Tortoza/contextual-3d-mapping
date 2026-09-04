@@ -1,8 +1,8 @@
 # Adapters
 
-Repository-level adapters integrate external systems that are shared by more than one capability or application.
+Adapters de nível de repositório integram sistemas externos compartilhados por mais de uma capacidade ou aplicação.
 
-Initial adapter groups:
+Grupos iniciais de adapter:
 
 ```text
 adapters/
@@ -11,8 +11,8 @@ adapters/
 └── map-storage/
 ```
 
-An adapter used exclusively by one module should remain inside that module's infrastructure layer. Shared adapters belong here.
+Um adapter usado exclusivamente por um módulo deve permanecer na camada de infraestrutura desse módulo. Adapters compartilhados pertencem aqui.
 
-Examples include dataset normalization, ROS 2 boundary translation, persistent map storage, artifact stores, and repository-wide external transport integration.
+Exemplos incluem normalização de dataset, tradução de fronteira ROS 2, armazenamento persistente de mapa, artifact stores, e integração de transporte externo de nível de repositório.
 
-Adapters must translate external representations into project contracts instead of exposing third-party schemas directly to modules.
+Adapters devem traduzir representações externas em contracts do projeto, em vez de expor schemas de terceiros diretamente aos módulos.

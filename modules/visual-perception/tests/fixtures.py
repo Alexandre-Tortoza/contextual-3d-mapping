@@ -1,4 +1,4 @@
-"""Shared fixtures for canonical image and visual observations (#173)."""
+"""Fixtures compartilhadas para observações canônicas de imagem e visuais (#173)."""
 
 from __future__ import annotations
 
@@ -10,20 +10,25 @@ from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
 
 
+# Gera um payload totalmente branco; existe porque o fake region discoverer não
+# encontra nenhuma região nele, servindo como caso "imagem vazia" para os testes.
 def blank_payload(width: int = 32, height: int = 32) -> ImagePayload:
-    """An all-white image: the fake region discoverer finds zero regions in it."""
+    """Uma imagem toda branca: o fake region discoverer encontra zero regiões nela."""
     pixels = np.full((height, width, 3), 255, dtype=np.uint8)
     return ImagePayload(pixels, width=width, height=height)
 
 
+# Gera um payload branco com um ou mais blobs retangulares de cor sólida; usada pelos
+# testes que precisam de regiões detectáveis (contraste contra o fundo branco) sem
+# depender de uma imagem real.
 def payload_with_blobs(
     width: int = 32, height: int = 32, blobs: tuple[tuple[int, int, int, int, tuple[int, int, int]], ...] = (
         (4, 4, 10, 10, (200, 30, 30)),
     ),
 ) -> ImagePayload:
-    """A white image with one or more solid-color rectangular blobs.
+    """Uma imagem branca com um ou mais blobs retangulares de cor sólida.
 
-    Each blob is ``(x_min, y_min, x_max, y_max, rgb)``.
+    Cada blob é ``(x_min, y_min, x_max, y_max, rgb)``.
     """
     pixels = np.full((height, width, 3), 255, dtype=np.uint8)
     for x_min, y_min, x_max, y_max, rgb in blobs:
@@ -31,6 +36,9 @@ def payload_with_blobs(
     return ImagePayload(pixels, width=width, height=height)
 
 
+# Constrói uma ImageObservation canônica mínima e válida, com as referências de fonte
+# (source/observation) já preenchidas; usada como ponto de partida por praticamente
+# todos os testes que precisam de uma observação de imagem.
 def image_observation(
     observation_id: str = "frame-0001", width: int = 32, height: int = 32
 ) -> ImageObservation:
@@ -47,5 +55,7 @@ def image_observation(
     return ImageObservation(width=width, height=height, encoding="rgb8", image=image, source=source)
 
 
+# Retorna uma ModuleConfig com todos os defaults; existe para dar aos testes uma
+# configuração válida e neutra sem precisar repetir a construção em cada um.
 def default_config() -> ModuleConfig:
     return ModuleConfig()

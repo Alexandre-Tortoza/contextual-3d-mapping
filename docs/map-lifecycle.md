@@ -1,63 +1,63 @@
-# Map Lifecycle
+# Ciclo de Vida do Mapa
 
-This document defines the repository-level lifecycle of a map without prescribing internal algorithms or concrete storage technologies.
+Este documento define o ciclo de vida de nível de repositório de um mapa, sem prescrever algoritmos internos ou tecnologias concretas de armazenamento.
 
-## 1. Observation ingestion
+## 1. Ingestão de observações
 
-Live sensors, recorded sessions, and datasets are translated by adapters into stable project contracts. Raw source identity, timestamps, coordinate frames, calibration references, and provenance must be preserved.
+Sensores ao vivo, sessões gravadas e datasets são traduzidos por adapters em contracts estáveis do projeto. Identidade da fonte bruta, timestamps, frames de coordenadas, referências de calibração e proveniência devem ser preservados.
 
-## 2. Motion estimation and geometry
+## 2. Estimação de movimento e geometria
 
-`state-estimation` provides motion estimates and corrected LiDAR observations. `geometric-map` uses contract-compatible outputs to build persistent world geometry.
+`state-estimation` fornece estimativas de movimento e observações LiDAR corrigidas. `geometric-map` usa saídas compatíveis com o contract para construir geometria persistente do mundo.
 
-## 3. Semantic enrichment
+## 3. Enriquecimento semântico
 
-Visual and learned point representations are associated with geometry, fused across observations, and attached to the semantic map through stable geometry references.
+Representações visuais e de pontos aprendidas são associadas à geometria, fundidas entre observações, e anexadas ao mapa semântico através de referências de geometria estáveis.
 
-## 4. Memory and context
+## 4. Memória e contexto
 
-Mapped semantic information feeds semantic memory, scene-graph construction, contextual reasoning, and query indexes.
+A informação semântica mapeada alimenta a memória semântica, a construção do scene-graph, o raciocínio contextual e os índices de consulta.
 
-## 5. Persistence
+## 5. Persistência
 
-A map is persisted as a logical collection of related artifacts rather than as one mandatory file format.
+Um mapa é persistido como uma coleção lógica de artifacts relacionados, em vez de um único formato de arquivo obrigatório.
 
-A map manifest should be capable of referencing at least:
+Um manifest de mapa deve ser capaz de referenciar pelo menos:
 
 ```text
 MapManifest
-├── map identity
-├── coordinate frame
+├── identidade do mapa
+├── frame de coordenadas
 ├── bounds
 ├── trajectory
-├── geometry artifacts
-├── semantic artifacts
-├── observations
+├── artifacts de geometria
+├── artifacts semânticos
+├── observações
 ├── scene graph
-├── indexes
-└── provenance
+├── índices
+└── proveniência
 ```
 
-Concrete databases, object stores, point-cloud formats, and index implementations remain adapters.
+Bancos de dados concretos, object stores, formatos de point-cloud e implementações de índice permanecem adapters.
 
-## 6. Reopen and query
+## 6. Reabrir e consultar
 
-A persisted map can be opened without rerunning the original mapping pipeline. `query-engine` provides semantic, spatial, relational, and contextual retrieval over available map state.
+Um mapa persistido pode ser aberto sem reexecutar o pipeline de mapeamento original. `query-engine` fornece recuperação semântica, espacial, relacional e contextual sobre o estado de mapa disponível.
 
-## 7. Explore and inspect evidence
+## 7. Explorar e inspecionar evidência
 
-`map-explorer` consumes geometry, semantic overlays, query results, observations, and provenance. A query result should remain traceable to the evidence and map artifacts that support it.
+`map-explorer` consome geometria, overlays semânticos, resultados de consulta, observações e proveniência. Um resultado de consulta deve permanecer rastreável até a evidência e os artifacts de mapa que o sustentam.
 
 ```mermaid
 flowchart LR
-    O[Observations] --> R[Mapping runtime]
-    R --> M[Persisted map]
+    O[Observações] --> R[Mapping runtime]
+    R --> M[Mapa persistido]
     M --> Q[Query engine]
     Q --> E[Map explorer]
     M --> E
-    E --> P[Evidence / provenance]
+    E --> P[Evidência / proveniência]
 ```
 
-## Completeness criterion
+## Critério de completude
 
-The repository is end-to-end complete when a contract-compatible RGB, LiDAR, and motion input can be processed into a persistent 3D semantic/contextual map, reopened later, queried through public interfaces, visualized spatially, and traced back to supporting observations and provenance.
+O repositório está completo de ponta a ponta quando uma entrada de RGB, LiDAR e movimento compatível com o contract pode ser processada em um mapa 3D semântico/contextual persistente, reaberta mais tarde, consultada através de interfaces públicas, visualizada espacialmente, e rastreada de volta até as observações e proveniência que a sustentam.

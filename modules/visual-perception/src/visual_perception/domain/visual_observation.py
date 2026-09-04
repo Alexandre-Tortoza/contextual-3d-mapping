@@ -1,4 +1,4 @@
-"""Canonical visual observation output contract.
+"""Contract de saída canônico de observação visual.
 
 Issue: #154.
 """
@@ -12,14 +12,17 @@ from visual_perception.domain.regions import ObservedRegion
 from visual_perception.domain.relations import CandidateRelation, validate_relation_references
 from visual_perception.domain.semantics import SemanticClaim
 
-#: Binding image-coordinate convention for every VisualObservation.
-#: See ``domain/geometry.py`` for the full definition.
+#: Convenção de coordenadas de imagem vinculante para toda VisualObservation.
+#: Ver ``domain/geometry.py`` para a definição completa.
 COORDINATE_CONVENTION = "top-left-origin,half-open-xyxy"
 
 
+# Agrupa claims semânticos de nível de cena que não têm origem na geometria
+# de nenhuma região específica. Existe separado de ObservedRegion.claims
+# porque descreve a cena como um todo (#164), não uma região individual.
 @dataclass(frozen=True)
 class SceneContext:
-    """Scene-level semantic claims that are not the source of region geometry.
+    """Claims semânticos de nível de cena que não são a origem da geometria de nenhuma região.
 
     Issue: #164.
     """
@@ -27,12 +30,16 @@ class SceneContext:
     claims: tuple[SemanticClaim, ...] = field(default_factory=tuple)
 
 
+# Representa a saída completa e canônica da percepção visual para uma
+# imagem. Existe como o contract final que sensor-association e os módulos
+# downstream consomem, agregando cena, regiões e relações em um único
+# objeto auditável.
 @dataclass(frozen=True)
 class VisualObservation:
-    """The complete, canonical output of visual perception for one image.
+    """A saída completa e canônica da percepção visual para uma imagem.
 
-    Identity and timing live on ``source`` (the shared ``ObservationReference``,
-    #100), not duplicated as separate fields here.
+    Identidade e timing vivem em ``source`` (a ``ObservationReference``
+    compartilhada, #100), sem duplicação como campos separados aqui.
     """
 
     source: ObservationReference
@@ -44,6 +51,9 @@ class VisualObservation:
     schema_version: int = 1
     coordinate_convention: str = COORDINATE_CONVENTION
 
+    # Valida a resolução da imagem, a unicidade de region_id entre as
+    # regiões, que a resolução de cada máscara de região bate com a da
+    # observação, e que toda relação referencia apenas regiões conhecidas.
     def __post_init__(self) -> None:
         if self.image_width <= 0 or self.image_height <= 0:
             raise ValueError("image_width and image_height must be positive.")
@@ -61,10 +71,15 @@ class VisualObservation:
                 )
         validate_relation_references(self.relations, frozenset(region_ids))
 
+    # Expõe o observation_id a partir de source, sem duplicar o campo no
+    # próprio VisualObservation.
     @property
     def observation_id(self) -> str:
         return str(self.source.observation_id)
 
+    # Busca uma região pelo seu region_id. Usada por consumidores que
+    # recebem um region_id (ex: de uma relação) e precisam do objeto
+    # ObservedRegion completo.
     def region_by_id(self, region_id: str) -> ObservedRegion:
         for region in self.regions:
             if region.region_id == region_id:

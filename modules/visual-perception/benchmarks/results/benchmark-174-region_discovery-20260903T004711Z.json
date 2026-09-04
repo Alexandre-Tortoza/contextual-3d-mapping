@@ -1,0 +1,27 @@
+{
+  "stage": "region_discovery",
+  "gpu_memory_budget_gb": 8.0,
+  "frame_count": 18,
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "candidates": [
+    {
+      "name": "sam:facebook/sam-vit-huge",
+      "quality_score": 0.9559179634474196,
+      "peak_vram_gb": 4.5680718421936035,
+      "latency_s": 6.277609038944421
+    },
+    {
+      "name": "sam2:facebook/sam2.1-hiera-large",
+      "quality_score": 0.9369394191952805,
+      "peak_vram_gb": 3.654782295227051,
+      "latency_s": 4.155416275389143
+    },
+    {
+      "name": "fastsam:FastSAM-x.pt",
+      "quality_score": 0.5851243767473433,
+      "peak_vram_gb": 0.6186952590942383,
+      "latency_s": 0.10945917188817272
+    }
+  ],
+  "selected": "sam:facebook/sam-vit-huge"
+}

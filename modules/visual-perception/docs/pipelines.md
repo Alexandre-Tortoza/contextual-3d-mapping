@@ -1,47 +1,67 @@
-# Pipelines
+# Pipeline canônico
 
-## Canonical pipeline
+`run_canonical_pipeline` é o único caminho de produção do módulo. Ele recebe
+`ImageObservation`, `ImagePayload`, `ModuleConfig` e `PerceptionPorts`, e devolve um
+`PipelineResult`. A assinatura e os tipos públicos estão em
+[api-contracts.md](api-contracts.md).
 
-`application/pipeline.run_canonical_pipeline` (#169) is the module's single production
-entry point. Each stage is independently testable and independently replaceable behind
-its own port:
+```mermaid
+flowchart TD
+    Input[ImageObservation + ImagePayload] --> Tiling[Tiling]
+    Tiling --> Discovery[Region discovery]
+    Discovery --> Merge[Cross-scale merge]
+    Merge --> Features[Dense features]
+    Features --> Pooling[Mask-aware pooling]
+    Merge --> Language[Language embedding]
+    Merge --> Scene[Scene context]
+    Scene --> Semantics[Region semantics]
+    Merge --> Semantics
+    Semantics --> Relations[Candidate relations]
+    Pooling --> Output[VisualObservation]
+    Language --> Output
+    Relations --> Output
+    Scene --> Output
+    Output --> Audit[AuditResult]
+```
 
-| Stage | Module | Issue |
+## Estágios
+
+| Estágio | Responsabilidade | Código dono |
 | --- | --- | --- |
-| Multi-scale tiling & remapping | `application/tiling.py` | #159 |
-| Region discovery | `ports/region_discovery.py` + `application/pipeline.py` | #158 |
-| Cross-scale region merge | `application/region_merge.py` | #160 |
-| Dense visual features | `ports/feature_extraction.py` | #161 |
-| Mask-aware region pooling | `application/pooling.py` | #162 |
-| Language-aligned embedding | `application/language_embedding.py` | #163 |
-| Scene-level context | `application/scene_context.py` | #164 |
-| Region-level semantics | `application/region_semantics.py` | #165 |
-| Relation generation | `application/relation_generation.py` | #167 |
-| Quality audit | `application/quality_audit.py` | #168 |
+| Tiling | Divide a imagem e remapeia propostas locais para coordenadas globais. | [`application/tiling.py`](../src/visual_perception/application/tiling.py) |
+| Region discovery | Propõe geometria class-agnostic para cada tile. | [`ports/region_discovery.py`](../src/visual_perception/ports/region_discovery.py) |
+| Merge | Consolida propostas sobrepostas de tiles ou escalas. | [`application/region_merge.py`](../src/visual_perception/application/region_merge.py) |
+| Dense features e pooling | Produz feature map e embedding visual por máscara. | [`ports/feature_extraction.py`](../src/visual_perception/ports/feature_extraction.py), [`application/pooling.py`](../src/visual_perception/application/pooling.py) |
+| Language embedding | Gera uma representação de região alinhada com texto. | [`application/language_embedding.py`](../src/visual_perception/application/language_embedding.py) |
+| Contexto e semântica | Produz claims de cena e região a partir do reasoner multimodal. | [`application/scene_context.py`](../src/visual_perception/application/scene_context.py), [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
+| Relações | Deriva relações 2D candidatas entre regiões. | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) |
+| Auditoria | Reporta inconsistências e contradições sem alterar a observação. | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py) |
 
-Optional, non-canonical capabilities compose on top of the pipeline output rather than
-inside it:
+Sem regiões, o pipeline ainda analisa o contexto de cena, gera uma observação válida e a
+audita. Se a interpretação de uma região falhar isoladamente, a geometria e os dados
+anexados por outros estágios são preservados; a falha aparece em
+`PipelineResult.region_interpretation_failures`.
 
-- `application/fusion.py` (#182) — multi-source region/claim fusion;
-- `application/refinement.py` (#183) — uncertainty-driven selective reprocessing;
-- `application/execution_profile.py` (#181) — the quality-first backend selection policy.
+## Extensões pós-pipeline
 
-## Legacy baselines
+As capacidades abaixo compõem sobre a saída canônica e não mudam a ordem nem a API de
+`run_canonical_pipeline`:
 
-The former standalone `image-context` laboratory's two production pipelines —
-three-pass VLM (Grounding DINO -> SAM2) and region-first (SAM2 -> DINOv2 -> Qwen) — were
-removed before this migration (see the former repository's issue #4). They remain
-recoverable from that repository's git history for scientific comparison, but are not
-part of this module's canonical path: `run_canonical_pipeline` never exposes a legacy
-strategy selector. See `benchmarks/legacy/README.md` (#176) for exactly what is and is
-not reproduced here.
+- [`application/fusion.py`](../src/visual_perception/application/fusion.py) funde
+  propostas e claims de múltiplas fontes, preservando proveniência e contradições;
+- [`application/refinement.py`](../src/visual_perception/application/refinement.py)
+  reinterpreta seletivamente regiões incertas;
+- [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py)
+  seleciona um candidato de pesquisa sujeito ao orçamento de memória.
 
-## Dataset/ROS bag sampling
+Elas são APIs de capability, não etapas obrigatórias. Um consumidor que apenas precisa
+de uma observação visual deve chamar o pipeline canônico e decidir explicitamente se
+alguma extensão é necessária.
 
-Sampling images from a ROS bag or dataset is not part of this module's public
-capability (#151): visual-perception consumes normalized RGB observations from
-`[adapters]` (`contextual_mapping_adapters.CanonicalObservation`, kind `"rgb"`) through
-`infrastructure/integration/rgb_adapter_boundary.py` (#177). The original
-`image_context.adapters.rosbag_sampler` and its `sample` CLI command were removed during
-migration rather than kept as dead weight in this module's public surface; that
-capability's home is a dataset/transport adapter, not visual-perception.
+## Pipelines legadas
+
+Os pipelines do laboratório histórico `image-context` não fazem parte deste módulo e
+não são selecionáveis em produção. Seu status e as condições para uma comparação futura
+estão em [`../benchmarks/legacy/README.md`](../benchmarks/legacy/README.md). A ausência
+deliberada de um seletor de estratégia evita que aplicações escolham uma baseline que
+não é reproduzível neste repositório.

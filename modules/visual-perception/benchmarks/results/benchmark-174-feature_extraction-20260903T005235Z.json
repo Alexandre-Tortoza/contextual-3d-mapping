@@ -1,0 +1,21 @@
+{
+  "stage": "feature_extraction",
+  "gpu_memory_budget_gb": 8.0,
+  "frame_count": 18,
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "candidates": [
+    {
+      "name": "dinov2:facebook/dinov2-base",
+      "quality_score": 0.9661458333333334,
+      "peak_vram_gb": 0.34253787994384766,
+      "latency_s": 0.07158910849991823
+    },
+    {
+      "name": "dinov2:facebook/dinov2-large",
+      "quality_score": 0.9578993055555556,
+      "peak_vram_gb": 1.1572685241699219,
+      "latency_s": 0.10294759027763373
+    }
+  ],
+  "selected": "dinov2:facebook/dinov2-base"
+}

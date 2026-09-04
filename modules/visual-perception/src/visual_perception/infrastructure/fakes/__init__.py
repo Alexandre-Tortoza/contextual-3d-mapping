@@ -1,4 +1,4 @@
-"""Model-free fake adapters used by unit and pipeline tests.
+"""Adapters fake sem modelo, usados por testes unitários e de pipeline.
 
-Issue: #173. None of these fakes require a GPU or any model download.
+Issue: #173. Nenhum desses fakes exige GPU ou download de modelo.
 """

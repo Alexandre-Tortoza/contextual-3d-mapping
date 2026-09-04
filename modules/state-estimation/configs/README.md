@@ -1,3 +1,3 @@
 # Configs
 
-Runtime and benchmark configuration files for state-estimation belong here. Backend-specific settings should be translated at the infrastructure boundary rather than becoming domain configuration types.
+Arquivos de configuração de runtime e benchmark para state-estimation pertencem aqui. Configurações específicas de backend devem ser traduzidas na fronteira de infrastructure, em vez de se tornarem tipos de configuração de domain.

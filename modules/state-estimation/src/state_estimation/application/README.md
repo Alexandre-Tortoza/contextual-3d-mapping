@@ -1,3 +1,3 @@
 # Application
 
-Use cases and orchestration that coordinate validation, estimator ports, replay, and downstream output publication belong here. Application code must not depend on backend-specific message types.
+Use cases e orquestração que coordenam validação, ports de estimator, replay, e publicação de saída downstream pertencem aqui. Código de application não deve depender de tipos de mensagem específicos de backend.

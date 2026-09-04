@@ -1,4 +1,4 @@
-"""Deterministic, GPU-free fake for the multimodal reasoning boundary (#164, #165, #189)."""
+"""Fake determinístico e livre de GPU para a fronteira de raciocínio multimodal (#164, #165, #189)."""
 
 from __future__ import annotations
 
@@ -15,14 +15,21 @@ SceneResponseFn = Callable[[ImagePayload], dict[str, Any]]
 RegionResponseFn = Callable[[ImagePayload, "str | None"], dict[str, Any]]
 
 
+# Implementação fake do port MultimodalReasoner. Existe para permitir testar
+# e desenvolver o pipeline sem GPU nem VLM real, substituindo o adapter real
+# (#189) até que ele esteja pronto.
 class FakeMultimodalReasoner:
-    """Derives canned-but-content-sensitive scene/region responses.
+    """Deriva respostas de cena/região pré-definidas mas sensíveis ao conteúdo.
 
-    Tests that need a malformed response, an ambiguous region (multiple
-    label hypotheses), or a hard backend failure inject ``scene_response_fn``
-    / ``region_response_fn`` instead of relying on the content heuristic.
+    Testes que precisam de uma resposta malformada, uma região ambígua
+    (múltiplas hipóteses de label), ou uma falha dura de backend injetam
+    ``scene_response_fn`` / ``region_response_fn`` em vez de depender da
+    heurística de conteúdo.
     """
 
+    # Guarda os hooks opcionais de resposta e o conjunto de regiões que
+    # devem simular falha, usados para controlar o comportamento do fake
+    # em cenários de teste específicos.
     def __init__(
         self,
         scene_response_fn: SceneResponseFn | None = None,
@@ -33,6 +40,9 @@ class FakeMultimodalReasoner:
         self._region_response_fn = region_response_fn
         self._fail_on_region_ids = fail_on_region_ids
 
+    # Gera a análise fake de cena completa: usa o hook injetado se houver,
+    # senão deriva um resultado determinístico a partir do brilho médio da
+    # imagem.
     def analyze_scene(self, image: ImagePayload, config: MultimodalReasoningConfig) -> dict[str, Any]:
         if self._scene_response_fn is not None:
             return self._scene_response_fn(image)
@@ -45,6 +55,9 @@ class FakeMultimodalReasoner:
             "confidence": 0.95,
         }
 
+    # Gera a análise fake de uma região/recorte: usa o hook injetado se
+    # houver, senão deriva um label determinístico a partir da cor
+    # dominante do recorte.
     def analyze_region(
         self,
         image: ImagePayload,
@@ -64,11 +77,16 @@ class FakeMultimodalReasoner:
             "material": "unknown",
         }
 
+    # Levanta BackendExecutionError se region_id estiver na lista configurada
+    # para simular falha; usada pelos testes para exercitar o caminho de
+    # tratamento de erro do pipeline sem precisar de um backend real falhando.
     def fail_if_configured(self, region_id: str) -> None:
         if region_id in self._fail_on_region_ids:
             raise BackendExecutionError(f"Simulated backend failure for region {region_id!r}.")
 
 
+# Converte a cor média de um recorte em um label determinístico baseado no
+# canal RGB dominante; usado por analyze_region como heurística de conteúdo.
 def _bucket_label(mean_rgb: np.ndarray) -> str:
     channel = int(np.argmax(mean_rgb))
     return {0: "reddish_object", 1: "greenish_object", 2: "bluish_object"}[channel]

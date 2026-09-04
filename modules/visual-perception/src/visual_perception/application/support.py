@@ -1,4 +1,4 @@
-"""Small helpers shared across application stages."""
+"""Pequenos helpers compartilhados entre as etapas da application."""
 
 from __future__ import annotations
 
@@ -8,11 +8,15 @@ from dataclasses import asdict, is_dataclass
 from typing import Any
 
 
+# Gera um hash estável de qualquer configuração em dataclass (aninhada ou
+# não). Existe para popular ``ModelProvenance.config_fingerprint`` em toda
+# etapa (#156, #164, #165, #167) sem duplicar lógica de hashing; chamada por
+# scene_context.py, region_semantics.py e relation_generation.py.
 def fingerprint_of(config: Any) -> str:
-    """A stable hash of any (nested) dataclass configuration.
+    """Um hash estável de qualquer configuração em dataclass (aninhada).
 
-    Used to populate ``ModelProvenance.config_fingerprint`` for every stage
-    (#156, #164, #165, #167) without duplicating hashing logic.
+    Usado para popular ``ModelProvenance.config_fingerprint`` em toda etapa
+    (#156, #164, #165, #167) sem duplicar lógica de hashing.
     """
     if not is_dataclass(config) or isinstance(config, type):
         raise TypeError(f"fingerprint_of requires a dataclass instance, got {type(config)!r}.")

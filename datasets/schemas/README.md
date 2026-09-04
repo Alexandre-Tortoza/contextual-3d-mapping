@@ -1,3 +1,3 @@
 # Dataset Schemas
 
-Repository-level schemas used to validate dataset manifests and normalized dataset metadata.
+Schemas de nível de repositório usados para validar manifests de dataset e metadados de dataset normalizados.

@@ -1,37 +1,45 @@
 # Artifacts
 
-## Canonical serialization (issue #172)
+## Serialização canônica (issue #172)
 
-`infrastructure/serialization.py` serializes a `VisualObservation` to a plain JSON-able
-dict and back, round-tripping without information loss:
+[`infrastructure/serialization.py`](../src/visual_perception/infrastructure/serialization.py)
+serializa uma `VisualObservation` para um dict JSON-able simples e de volta, fazendo
+round-trip sem perda de informação:
 
-- masks are embedded as compact run-length-encoded booleans — small, exact, and
-  self-contained, since a region's own geometry is required to interpret the observation
-  at all;
-- visual/language embeddings are referenced by id only
-  (`visual_embedding_ref`/`language_embedding_ref`); the vectors themselves are not part
-  of the canonical observation (see [persistence integration](#persistence));
-  `Evidence.artifact` references raw model evidence the same way, through the shared
-  `SourceArtifactReference`;
-- `schema_version` and `coordinate_convention` travel with every payload;
-  `UnsupportedSchemaVersionError` fails predictably on a version this module cannot read.
+- masks são embutidas como booleanos compactos com run-length-encoding — pequenas,
+  exatas e autocontidas, já que a própria geometria de uma região é necessária para
+  interpretar a observação de qualquer forma;
+- embeddings visuais/de linguagem são referenciados só por id
+  (`visual_embedding_ref`/`language_embedding_ref`); os vetores em si não fazem parte da
+  observação canônica (veja [integração de persistência](#persistência));
+  `Evidence.artifact` referencia evidência crua de modelo da mesma forma, através da
+  `SourceArtifactReference` compartilhada;
+- `schema_version` e `coordinate_convention` viajam com cada payload;
+  `UnsupportedSchemaVersionError` falha de forma previsível em uma versão que este
+  módulo não consegue ler.
 
-## Persistence
+## Persistência
 
-`infrastructure/integration/persistence_integration.py` (#180) defines the
-`EvidencePersistencePort` this module needs from repository persistence (#112) — an
-opaque `put(id, payload) -> reference` / `get(reference) -> payload` pair — and:
+`infrastructure/integration/persistence_integration.py` (#180) define o
+`EvidencePersistencePort` que este módulo precisa da persistência do repositório (#112)
+— um par opaco `put(id, payload) -> reference` / `get(reference) -> payload` — e:
 
-- `persist_observation` / `reload_observation` round-trip a full `VisualObservation`;
-- `persist_visual_embeddings` / `persist_language_embeddings` persist the pooled
-  embeddings a pipeline run produced (these live outside the canonical observation
-  itself, referenced only by id).
+- `persist_observation` / `reload_observation` fazem round-trip de uma
+  `VisualObservation` completa;
+- `persist_visual_embeddings` / `persist_language_embeddings` persistem os embeddings
+  pooled que uma execução do pipeline produziu (eles vivem fora da observação canônica
+  em si, referenciados só por id).
 
-No storage-specific client or path appears in any public module contract; tests exercise
-this boundary with `infrastructure/fakes/fake_evidence_store.InMemoryEvidenceStore`.
+Nenhum client ou path específico de armazenamento aparece em nenhum contract público de
+módulo; os testes exercitam essa fronteira com
+`infrastructure/fakes/fake_evidence_store.InMemoryEvidenceStore`.
 
-## Stage cache artifacts
+O guia [integration.md](integration.md) posiciona essa fronteira no fluxo de uma
+aplicação. A semântica dos campos serializados continua sendo definida pelos contracts
+em [api-contracts.md](api-contracts.md), não pelo backend de persistência.
 
-See [execution.md](execution.md#stage-cache-issue-170): `application/cache.StageCache`
-writes one JSON record per `(stage_name, fingerprint)` under a caller-chosen cache
-directory, independent of the canonical serialization format above.
+## Artifacts do cache de estágio
+
+Veja [execution.md](execution.md#cache-de-estágio-issue-170): `application/cache.StageCache`
+escreve um registro JSON por `(stage_name, fingerprint)` sob um diretório de cache
+escolhido pelo chamador, independente do formato de serialização canônico acima.

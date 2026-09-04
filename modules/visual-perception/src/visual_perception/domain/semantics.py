@@ -1,11 +1,11 @@
-"""Semantic claims, confidence, evidence, and provenance contracts.
+"""Contracts de claims semânticos, confiança, evidência e proveniência.
 
 Issue: #156.
 
-Semantic interpretation is represented as a set of auditable *claims* rather
-than one label and one score. Multiple, even contradictory, claims of the
-same kind may coexist (e.g. two label hypotheses for an ambiguous region);
-nothing is silently overwritten.
+A interpretação semântica é representada como um conjunto de *claims*
+auditáveis, em vez de um único label e um único score. Múltiplos claims do
+mesmo tipo, até contraditórios entre si, podem coexistir (ex: duas hipóteses
+de label para uma região ambígua); nada é sobrescrito silenciosamente.
 """
 
 from __future__ import annotations
@@ -16,12 +16,17 @@ from enum import StrEnum
 from visual_perception.domain.references import ModelProvenance, SourceArtifactReference
 
 
+# Categoriza o tipo de um claim semântico. Existe para distinguir os
+# diferentes tipos de interpretação (label, atributo, condição, etc.) sem
+# misturá-los com a confiança geométrica da região, que é um conceito
+# separado.
 class ClaimKind(StrEnum):
-    """The category of a semantic claim.
+    """A categoria de um claim semântico.
 
-    Geometric confidence (mask/box quality) is a separate concept, tracked on
-    ``ObservedRegion.geometric_confidence`` (see ``domain/regions.py``), never
-    mixed with a claim's semantic confidence.
+    A confiança geométrica (qualidade da máscara/box) é um conceito
+    separado, rastreado em ``ObservedRegion.geometric_confidence`` (ver
+    ``domain/regions.py``), nunca misturado com a confiança semântica de um
+    claim.
     """
 
     LABEL = "label"
@@ -33,13 +38,17 @@ class ClaimKind(StrEnum):
     SCENE_DESCRIPTION = "scene_description"
 
 
+# Representa um valor de confiança em [0, 1] atribuído a uma fonte. Existe
+# como o formato compartilhado de confiança usado por claims e relações,
+# sempre amarrado a qual fonte a produziu.
 @dataclass(frozen=True)
 class ConfidenceScore:
-    """A confidence value in ``[0, 1]`` attributed to one source."""
+    """Um valor de confiança em ``[0, 1]`` atribuído a uma fonte."""
 
     value: float
     source: str
 
+    # Valida que o valor está em [0, 1] e que a fonte não está vazia.
     def __post_init__(self) -> None:
         if not 0.0 <= self.value <= 1.0:
             raise ValueError(f"ConfidenceScore.value must be in [0, 1], got {self.value}.")
@@ -47,26 +56,36 @@ class ConfidenceScore:
             raise ValueError("ConfidenceScore.source must not be empty.")
 
 
+# Aponta para a evidência bruta que sustenta um claim (crop, prompt/resposta,
+# etc.). Existe para tornar cada claim auditável até sua evidência de
+# origem, reutilizando o formato SourceArtifactReference compartilhado em
+# vez de introduzir um tipo local quase idêntico.
 @dataclass(frozen=True)
 class Evidence:
-    """A pointer to the raw evidence that supports a claim (crop, prompt/response, etc.).
+    """Um ponteiro para a evidência bruta que sustenta um claim (crop, prompt/resposta, etc.).
 
-    Reuses the shared ``SourceArtifactReference`` shape (uri/media_type/digest)
-    for this module's own derived evidence artifacts too, rather than
-    introducing a near-identical local type.
+    Reutiliza o formato compartilhado ``SourceArtifactReference``
+    (uri/media_type/digest) também para os artifacts de evidência derivados
+    próprios deste módulo, em vez de introduzir um tipo local quase
+    idêntico.
     """
 
     description: str
     artifact: SourceArtifactReference | None = None
 
+    # Exige uma descrição não vazia, já que uma Evidence sem descrição não
+    # seria auditável por um humano.
     def __post_init__(self) -> None:
         if not self.description:
             raise ValueError("Evidence.description must not be empty.")
 
 
+# Representa uma unidade auditável de interpretação semântica. Existe como o
+# átomo do modelo de claims: todo label/atributo/condição inferido é um
+# SemanticClaim com sua própria confiança, evidência e proveniência.
 @dataclass(frozen=True)
 class SemanticClaim:
-    """One auditable unit of semantic interpretation."""
+    """Uma unidade auditável de interpretação semântica."""
 
     kind: ClaimKind
     value: str
@@ -74,6 +93,8 @@ class SemanticClaim:
     evidence: tuple[Evidence, ...]
     provenance: ModelProvenance
 
+    # Exige um valor não vazio e ao menos uma Evidence, para que todo claim
+    # seja auditável até sua origem.
     def __post_init__(self) -> None:
         if not self.value:
             raise ValueError("SemanticClaim.value must not be empty.")
@@ -83,11 +104,14 @@ class SemanticClaim:
             )
 
 
+# Retorna os claims de um dado kind que discordam entre si (mais de um valor
+# distinto). Existe para que o auditor de qualidade (#168) sinalize
+# contradições em vez de resolvê-las silenciosamente.
 def contradicting_claims(claims: tuple[SemanticClaim, ...], kind: ClaimKind) -> tuple[SemanticClaim, ...]:
-    """Return the claims of ``kind`` that disagree with each other (more than one distinct value).
+    """Retorna os claims de ``kind`` que discordam entre si (mais de um valor distinto).
 
-    Used by the quality auditor (#168) to flag, not silently resolve,
-    contradictions.
+    Usada pelo auditor de qualidade (#168) para sinalizar, e não resolver
+    silenciosamente, contradições.
     """
     matching = tuple(claim for claim in claims if claim.kind is kind)
     distinct_values = {claim.value for claim in matching}

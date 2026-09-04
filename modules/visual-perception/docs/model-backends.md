@@ -1,48 +1,106 @@
 # Model Backends
 
-## Current status: everything is a GPU-free fake
+## Estado e seleção
 
-Every canonical stage defaults to `backend="fake"` (`config.py`) and runs against a
-deterministic, model-free implementation under `infrastructure/fakes/`:
+O módulo roda por default com `backend="fake"`. Os fakes são determinísticos, sensíveis
+ao conteúdo e livres de GPU; eles exercitam contracts, pipeline, cache e fronteiras sem
+baixar modelos. Adapters reais também estão implementados e foram validados na GPU de
+referência (RTX 3060 8GB) — os checkpoints abaixo foram escolhidos por benchmark real
+(#174), não por conveniência de integração. `research_quality_config(real_backends=True)`
+(em [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py))
+retorna a `ModuleConfig` de referência com os 4 backends reais já configurados.
 
-| Port | Fake | Real adapter (blocked) |
-| --- | --- | --- |
-| `RegionDiscoverer` | `fake_region_discoverer.FakeRegionDiscoverer` | `adapters/region_discovery_backend.py` (#186) |
-| `DenseFeatureExtractor` | `fake_feature_extractor.FakeDenseFeatureExtractor` | `adapters/feature_extraction_backend.py` (#187) |
-| `LanguageAlignedEncoder` | `fake_language_encoder.FakeLanguageAlignedEncoder` | `adapters/language_embedding_backend.py` (#188) |
-| `MultimodalReasoner` | `fake_multimodal_reasoner.FakeMultimodalReasoner` | `adapters/multimodal_reasoning_backend.py` (#189) |
+| Port | Fake default | Adapter real selecionado (#174) | Identificador |
+| --- | --- | --- | --- |
+| `RegionDiscoverer` | `FakeRegionDiscoverer` | SAM ViT-H via Transformers (`facebook/sam-vit-huge`) | `sam` |
+| `DenseFeatureExtractor` | `FakeDenseFeatureExtractor` | DINOv2-base via Transformers (`facebook/dinov2-base`) | `dinov2` |
+| `LanguageAlignedEncoder` | `FakeLanguageAlignedEncoder` | CLIP ViT-L/14 via Transformers (`openai/clip-vit-large-patch14`) | `clip` |
+| `MultimodalReasoner` | `FakeMultimodalReasoner` | Qwen2.5-VL-3B-Instruct em 4-bit (`Qwen/Qwen2.5-VL-3B-Instruct`) | `qwen_vl` |
 
-The fakes are real, content-sensitive implementations (connected-component region
-discovery, average-pooled feature grids, seeded deterministic embeddings, brightness/color
-heuristics for scene and region responses) — not stubs — so every stage, and the
-canonical pipeline end-to-end, is genuinely exercised by tests without a GPU.
+Os detalhes de runtime ficam isolados em
+[`infrastructure/adapters/`](../src/visual_perception/infrastructure/adapters/); o
+pipeline continua conhecendo apenas seus ports. Consulte
+[api-contracts.md](api-contracts.md#ports-de-extensão) se precisar fornecer outra
+implementação.
 
-## Why the real adapters are stubs right now
+## Por que estes checkpoints
 
-This development environment has no GPU (`nvidia-smi` fails, no `torch` installed). The
-four `infrastructure/adapters/*_backend.py` classes satisfy their port's shape but raise
-`domain.errors.BackendUnavailableError` when called, so a caller that accidentally wires
-one in fails explicitly and immediately rather than silently getting fake output.
+Metodologia completa e resultados brutos em `../benchmarks/results/benchmark-174-*.json`
+(candidatos, quality score, peak VRAM, latência, `benchmarks/candidates/*.py` para os
+proxies de qualidade usados por estágio — todos medidos com o conjunto representativo de
+18 frames do corridor-02, ver `../benchmarks/prepare_corridor02_frames.py`).
 
-Issues #174 (benchmark-driven backend selection), #186-#189 (real adapters), and #190
-(reference-hardware validation) stay **open** until this module is finished on a
-GPU-equipped machine. `benchmarks/backend_benchmark.py` and
-`application/execution_profile.py` already implement the selection *harness and policy*
-(quality-first subject to the memory budget, latency never excludes a candidate that
-fits) — what is missing is real candidates to run it against.
+- **Region discovery**: SAM ViT-H bateu SAM2.1-hiera-large e FastSAM-x no IoU previsto
+  médio (0.956 vs 0.937 vs 0.585); todos cabem no budget de 8GB, então venceu por
+  qualidade.
+- **Feature extraction**: DINOv2-base bateu DINOv2-large (0.966 vs 0.958) na coerência
+  espacial do primeiro componente PCA — o modelo maior não melhorou a estruturação das
+  features para este dataset, e ainda usa mais VRAM.
+- **Language embedding**: CLIP ViT-L/14 bateu SigLIP-base (0.024 vs 0.009) na margem
+  top1/top2 de similaridade de cosseno zero-shot contra um vocabulário indoor genérico.
+- **Multimodal reasoning**: Qwen2.5-VL-3B-Instruct em 4-bit (bitsandbytes nf4) — o
+  candidato 7B (tanto quantização on-the-fly quanto o checkpoint pré-quantizado da
+  Unsloth) falhou em 3 tentativas diferentes nesta GPU (OOM no carregamento e um bug de
+  compatibilidade `bitsandbytes`/Transformers no vision tower fundido), documentado no
+  próprio JSON de resultado. O 3B-4bit rodou com score de qualidade perfeito (1.0) e
+  grande folga de VRAM (2.5GB de 8GB), então venceu por eliminação com evidência real, não
+  por ausência de alternativa testada.
 
-## What "done" looks like for #174/#186-#190
+## Orçamento de VRAM: liberação sequencial obrigatória
 
-1. Implement one real adapter per port, translating canonical inputs/outputs and
-   surfacing backend failures as `BackendExecutionError` (never a backend-specific
-   exception or tensor type).
-2. Run `benchmarks/backend_benchmark.benchmark_candidate` for each candidate under the
-   reference GPU budget; record latency, peak VRAM, and a task-relevant quality score.
-3. Use `application/execution_profile.select_research_quality_backend` to pick the
-   highest-quality candidate that fits the memory budget, and
-   `additional_compute_is_justified` before enabling multi-scale tiling in the reference
-   config.
-4. Run `application/pipeline.run_canonical_pipeline` end-to-end with the real adapters on
-   a representative image set (#190), verifying no OOM, valid stage-cache reuse on a
-   repeated run, and that outputs still pass the quality auditor.
-5. Update this file's status table and close #174/#186-#190.
+Cada um dos 4 backends reais cabe individualmente no budget de 8GB, mas a **soma** dos
+picos (SAM 4.6GB + DINOv2 0.3GB + CLIP 1.6GB + Qwen 2.5GB ≈ 9GB) o estoura. Por isso os 4
+adapters reais recebem (ou criam, se omitido) um
+[`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py) compartilhado
+via [`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py):
+no máximo um modelo pesado fica residente em VRAM por vez, mesmo com os 4 ports já
+construídos para uma única chamada de `run_canonical_pipeline`. Isso foi confirmado na
+prática: sem o manager compartilhado, o pipeline real estourava VRAM ao tentar carregar o
+VLM depois de SAM+DINOv2+CLIP ficarem residentes.
+
+`ModelLifecycleManager.metrics` também funciona como log de auditoria por estágio (nome do
+backend/checkpoint, tempo de load, pico de VRAM real via `torch.cuda.max_memory_allocated`)
+— usado pelas amostras de validação em `../benchmarks/results/samples/`.
+
+## Instalação e configuração
+
+O ambiente fake-only requer apenas a instalação base. Para executar todos os adapters
+reais, instale o extra `ml` no diretório do módulo:
+
+```bash
+pip install -e ".[ml]"
+```
+
+Cada configuração real deve declarar o backend, um checkpoint explícito e o device
+desejado. `device="auto"` seleciona CUDA somente quando disponível; `device="cuda"`
+falha se não houver uma GPU utilizável. Um checkpoint `"none"`, dependência ausente ou
+GPU indisponível gera `BackendUnavailableError`. Falhas no carregamento ou na inferência
+são encapsuladas em `BackendExecutionError`. Nenhum adapter substitui silenciosamente o
+backend por um fake.
+
+Use os campos específicos em [`config.py`](../src/visual_perception/config.py), não
+configuração de aplicação para parâmetros do algoritmo. O fingerprint de `ModuleConfig`
+deve acompanhar artifacts e resultados que dependam de um backend real.
+
+## Limites atuais
+
+- SAM produz propostas geométricas class-agnostic; merge e semântica continuam sendo
+  responsabilidade dos estágios canônicos. Em superfícies repetitivas (ex: teto em
+  ladrilhos) o gerador automático over-segmenta — cada ladrilho pode virar sua própria
+  proposta, já que o merge atual (`region_merge`) só funde por IoU/sobreposição, não por
+  similaridade semântica entre regiões vizinhas não sobrepostas.
+- DINOv2 expõe um `FeatureMap` espacial; tensors e tokens internos não cruzam o port.
+- CLIP mantém embeddings de imagem e texto no mesmo espaço, com dimensão configurada
+  (768 para ViT-L/14).
+- O VLM devolve JSON bruto; parsing e validação semântica pertencem a `application/`. Em
+  crops de região pequenos ou ambíguos, o Qwen2.5-VL-3B às vezes falha em produzir JSON
+  parseável (isolado por região via `RegionInterpretationFailure`, não derruba o resto) ou
+  responde com o contexto geral da cena em vez de descrever o conteúdo específico do crop.
+
+## Validação end-to-end (#190)
+
+`../benchmarks/validate_reference_pipeline.py` roda o pipeline canônico real sobre o
+conjunto representativo do corridor-02, gerando por frame: a `VisualObservation`
+serializada (JSON), um overlay das máscaras/labels sobre a imagem original, e um
+`manifest.json` com git revision, configuração completa e o log de estágios do
+`ModelLifecycleManager`. Saída em `../benchmarks/results/samples/<run-id>/`.

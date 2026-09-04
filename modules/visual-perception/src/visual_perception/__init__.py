@@ -1,7 +1,8 @@
-"""Structured visual and semantic observations from RGB images.
+"""Observações visuais e semânticas estruturadas a partir de imagens RGB.
 
-Public boundary (issue #152): consumers should only need these imports.
-Everything else under ``visual_perception`` is an implementation detail.
+Fronteira pública (issue #152): consumidores só devem precisar desses
+imports. Tudo o mais dentro de ``visual_perception`` é detalhe de
+implementação.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.visual_observation import VisualObservation
+from visual_perception.infrastructure.adapters.factory import create_perception_ports
 
 __all__ = [
     "AuditResult",
@@ -28,5 +30,6 @@ __all__ = [
     "QualityProfile",
     "SourceArtifactReference",
     "VisualObservation",
+    "create_perception_ports",
     "run_canonical_pipeline",
 ]

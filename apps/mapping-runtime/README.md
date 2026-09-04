@@ -1,10 +1,10 @@
 # Mapping Runtime
 
-`mapping-runtime` is the composition root for building or updating maps from live sensors, recorded sessions, or dataset adapters.
+`mapping-runtime` é o composition root para construir ou atualizar mapas a partir de sensores ao vivo, sessões gravadas, ou adapters de dataset.
 
-It owns configuration, dependency wiring, lifecycle, and execution order. It does not implement research capabilities that belong to modules.
+Possui a configuração, o wiring de dependências, o ciclo de vida e a ordem de execução. Não implementa capacidades de pesquisa que pertencem aos módulos.
 
-Initial structure:
+Estrutura inicial:
 
 ```text
 mapping-runtime/
@@ -13,4 +13,4 @@ mapping-runtime/
 └── src/
 ```
 
-The runtime should consume public contracts and module entry points so the same downstream pipeline can operate with live sensors, recorded data, datasets, simulator output, or test fixtures.
+O runtime deve consumir contracts públicos e pontos de entrada de módulo, para que o mesmo pipeline downstream possa operar com sensores ao vivo, dados gravados, datasets, saída de simulador ou fixtures de teste.

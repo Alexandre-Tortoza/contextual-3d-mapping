@@ -18,10 +18,27 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
 ]
-# Reserved for the real backend adapters selected by issue #174 (#186-#189).
-# No heavyweight ML dependency is declared yet: this environment has no GPU,
-# and every canonical stage defaults to its GPU-free fake (see config.py).
-ml = []
+# Real backend adapters selected by issue #174 (#186-#189), benchmarked on the
+# reference RTX 3060 8GB GPU. The dataclass defaults in config.py stay "fake";
+# these deps are only exercised when a caller opts into a real backend/checkpoint.
+ml = [
+    "torch>=2.4",
+    "transformers>=4.47",
+    "accelerate>=1.0",
+    "pillow>=10",
+    "safetensors>=0.4",
+    "qwen-vl-utils>=0.0.8",
+    "bitsandbytes>=0.44",
+    "ultralytics>=8.3",
+    "scipy>=1.13",
+    "sentencepiece>=0.2",
+    "protobuf>=4",
+]
+# Local benchmark/validation data prep only (e.g. prepare_corridor02_frames.py).
+# Unrelated to inference; kept separate from `ml` on purpose.
+bench = [
+    "rosbags>=0.9",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/visual_perception"]

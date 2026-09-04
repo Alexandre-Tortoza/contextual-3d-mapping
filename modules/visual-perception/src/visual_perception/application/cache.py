@@ -1,12 +1,13 @@
-"""Stage fingerprints and a reusable, resumable artifact cache.
+"""Fingerprints de stage e um cache de artifacts reutilizável e retomável.
 
 Issue: #170.
 
-A stage's fingerprint is chained: it hashes the stage's own version and
-configuration together with every upstream stage's fingerprint. Changing one
-stage's configuration therefore changes only that stage's fingerprint and
-every fingerprint computed from it (its downstream dependents), while
-sibling stages that do not consume its output keep a valid cache entry.
+O fingerprint de um stage é encadeado: ele faz hash da própria versão e
+configuração do stage junto com o fingerprint de cada stage upstream.
+Mudar a configuração de um stage, portanto, muda apenas o fingerprint
+daquele stage e todos os fingerprints computados a partir dele (seus
+dependentes downstream), enquanto stages irmãos que não consomem sua
+saída mantêm uma entrada de cache válida.
 """
 
 from __future__ import annotations
@@ -17,18 +18,22 @@ import os
 from pathlib import Path
 from typing import Any
 
-#: Bump when the on-disk artifact record shape changes, to reject stale
-#: cache entries written by an incompatible module version.
+#: Incrementar quando o formato do registro de artifact em disco mudar, para
+#: rejeitar entradas de cache obsoletas gravadas por uma versão incompatível
+#: do módulo.
 CACHE_SCHEMA_VERSION = 1
 
 
+# Calcula o fingerprint de cache de um stage combinando sua própria versão e
+# configuração com os fingerprints de todos os stages upstream, formando a
+# cadeia que StageCache usa para decidir hits/misses de cache.
 def compute_fingerprint(
     stage_name: str,
     stage_version: str,
     config_fingerprint: str,
     upstream_fingerprints: tuple[str, ...] = (),
 ) -> str:
-    """Compute one stage's cache fingerprint."""
+    """Calcula o fingerprint de cache de um stage."""
     payload = {
         "schema_version": CACHE_SCHEMA_VERSION,
         "stage_name": stage_name,
@@ -40,14 +45,21 @@ def compute_fingerprint(
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+# Armazena em disco os resultados de stages já concluídos, permitindo
+# retomar um pipeline sem reprocessar stages cujo fingerprint já bate com
+# uma entrada existente no cache.
 class StageCache:
-    """A resumable, disk-backed cache of completed stage results."""
+    """Um cache retomável, baseado em disco, de resultados de stage concluídos."""
 
+    # Guarda o diretório raiz onde os registros de cache deste StageCache
+    # são lidos e gravados.
     def __init__(self, cache_directory: Path) -> None:
         self.cache_directory = cache_directory
 
+    # Consulta o cache por um resultado de stage já computado; usado pelo
+    # pipeline para pular reprocessamento quando o fingerprint bate.
     def get(self, stage_name: str, fingerprint: str) -> dict[str, Any] | None:
-        """Return the cached artifact record, or ``None`` on a cache miss."""
+        """Retorna o registro de artifact em cache, ou ``None`` em caso de cache miss."""
         path = self._record_path(stage_name, fingerprint)
         if not path.exists():
             return None
@@ -57,8 +69,11 @@ class StageCache:
         artifacts: dict[str, Any] = record["artifacts"]
         return artifacts
 
+    # Persiste o resultado de um stage concluído em disco, escrevendo
+    # primeiro em um arquivo temporário e renomeando de forma atômica para
+    # evitar registros corrompidos em caso de falha no meio da escrita.
     def put(self, stage_name: str, fingerprint: str, artifacts: dict[str, Any]) -> None:
-        """Durably record that ``stage_name`` completed for ``fingerprint``."""
+        """Registra de forma durável que ``stage_name`` foi concluído para ``fingerprint``."""
         path = self._record_path(stage_name, fingerprint)
         path.parent.mkdir(parents=True, exist_ok=True)
         record = {"schema_version": CACHE_SCHEMA_VERSION, "artifacts": artifacts}
@@ -66,8 +81,12 @@ class StageCache:
         temporary.write_text(json.dumps(record, sort_keys=True, indent=2), encoding="utf-8")
         os.replace(temporary, path)
 
+    # Atalho booleano sobre `get`: True quando já existe um registro de
+    # cache válido para esse stage e fingerprint.
     def is_complete(self, stage_name: str, fingerprint: str) -> bool:
         return self.get(stage_name, fingerprint) is not None
 
+    # Resolve o caminho em disco onde o registro de cache de um stage e
+    # fingerprint específicos fica armazenado.
     def _record_path(self, stage_name: str, fingerprint: str) -> Path:
         return self.cache_directory / stage_name / f"{fingerprint}.json"

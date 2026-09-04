@@ -1,17 +1,17 @@
 # Map Explorer
 
-`map-explorer` is the primary human-facing application for opening, querying, and visually inspecting persistent maps.
+`map-explorer` é a principal aplicação voltada a humanos para abrir, consultar e inspecionar visualmente mapas persistentes.
 
-## Responsibilities
+## Responsabilidades
 
-- open a map through stable application contracts;
-- render 3D geometry and semantic overlays;
-- submit semantic, spatial, relational, and contextual queries through `query-engine`;
-- focus the viewer on returned entities or regions;
-- expose related observations, evidence, confidence, and provenance;
-- visualize scene-graph relations without owning graph construction.
+- abrir um mapa através de contracts de aplicação estáveis;
+- renderizar geometria 3D e overlays semânticos;
+- submeter consultas semânticas, espaciais, relacionais e contextuais através do `query-engine`;
+- focar o viewer nas entidades ou regiões retornadas;
+- expor observações relacionadas, evidência, confiança e proveniência;
+- visualizar relações de scene-graph sem possuir a construção do grafo.
 
-## Initial structure
+## Estrutura inicial
 
 ```text
 map-explorer/
@@ -21,4 +21,4 @@ map-explorer/
 └── configs/
 ```
 
-The API and frontend are delivery layers. They must not directly depend on private module implementations or storage-specific schemas.
+A API e o frontend são camadas de entrega. Não devem depender diretamente de implementações privadas de módulo nem de schemas específicos de armazenamento.

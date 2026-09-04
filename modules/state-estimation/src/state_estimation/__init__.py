@@ -1,1 +1,1 @@
-"""State-estimation module package."""
+"""Pacote do módulo state-estimation."""

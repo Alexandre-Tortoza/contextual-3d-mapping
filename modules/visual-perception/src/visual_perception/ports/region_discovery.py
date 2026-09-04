@@ -1,12 +1,13 @@
-"""Replaceable region discovery boundary.
+"""Fronteira substituível de descoberta de regiões.
 
 Issue: #158.
 
-Implementations discover image regions independently from semantic
-reasoning: they return geometry and a geometric confidence only, never a
-semantic label. This boundary must stay satisfiable by a GPU-free fake (see
-``infrastructure/fakes/fake_region_discoverer.py``) and must never leak
-backend-specific tensor/model types.
+Implementações descobrem regiões da imagem de forma independente do
+raciocínio semântico: elas retornam apenas geometria e uma confiança
+geométrica, nunca um rótulo semântico. Essa fronteira precisa continuar
+satisfazível por um fake sem GPU (ver
+``infrastructure/fakes/fake_region_discoverer.py``) e nunca deve vazar tipos
+de tensor/modelo específicos de backend.
 """
 
 from __future__ import annotations
@@ -18,11 +19,18 @@ from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.regions import LocalRegionProposal
 
 
+# Port que desacopla o pipeline do backend concreto de descoberta de regiões
+# (ex: SAM, um detector de propostas). Existe para manter geometria separada
+# de semântica: quem atribui rótulos é o estágio de region semantics, não
+# este port.
 class RegionDiscoverer(Protocol):
-    """Discovers class-agnostic, promptable, or dense region proposals."""
+    """Descobre propostas de região class-agnostic, promptable, ou densas."""
 
+    # Ponto de entrada único do port: recebe uma imagem e devolve as
+    # propostas de região encontradas. Chamado pelo estágio de region
+    # discovery do pipeline, antes de qualquer merge ou rotulagem semântica.
     def discover(
         self, image: ImagePayload, config: RegionDiscoveryConfig
     ) -> tuple[LocalRegionProposal, ...]:
-        """Return zero, one, or many proposals in ``image``-local coordinates."""
+        """Retorna zero, uma ou várias propostas em coordenadas locais de ``image``."""
         ...

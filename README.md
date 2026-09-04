@@ -1,22 +1,22 @@
 # contextual-3d-mapping
 
-Research framework for building open-vocabulary 3D semantic and contextual maps from RGB, LiDAR, and motion estimates, combining persistent world geometry, visual-language features, learned point representations, semantic memory, scene graphs, and spatial reasoning.
+Framework de pesquisa para construir mapas 3D semânticos e contextuais de vocabulário aberto a partir de RGB, LiDAR e estimativas de movimento, combinando geometria persistente do mundo, features visual-language, representações de pontos aprendidas, memória semântica, grafos de cena e raciocínio espacial.
 
-## Architecture
+## Arquitetura
 
-The repository uses a **simple capability-oriented modular architecture**.
+O repositório usa uma **arquitetura modular simples orientada a capacidades**.
 
-The main goals are readability, explicit responsibility, low coupling, testability, replaceability, maintainability, and scientific reproducibility. SOLID principles guide code and dependency design at meaningful boundaries.
+Os principais objetivos são legibilidade, responsabilidade explícita, baixo acoplamento, testabilidade, substituibilidade, manutenibilidade e reprodutibilidade científica. Os princípios SOLID guiam o design de código e dependências nas fronteiras relevantes.
 
-The central rule is simple:
+A regra central é simples:
 
 ```text
-one capability -> one clear owner module -> small public API -> explicit composition
+uma capacidade -> um módulo dono claro -> API pública pequena -> composição explícita
 ```
 
-Capability-specific integrations and implementation details stay with the module that owns them. Applications compose modules into runnable workflows. Shared primitives remain small and stable.
+Integrações e detalhes de implementação específicos de capacidade ficam com o módulo dono. Aplicações compõem módulos em workflows executáveis. Primitivas compartilhadas permanecem pequenas e estáveis.
 
-## High-level flow
+## Fluxo de alto nível
 
 ```text
 RGB + LiDAR + IMU
@@ -31,15 +31,15 @@ RGB + LiDAR + IMU
         -> applications
 ```
 
-`apps/mapping-runtime` composes map construction workflows. `apps/map-explorer` opens persisted maps for 3D visualization, query, evidence inspection, and graph exploration. `apps/cli` provides scriptable access to application-level operations.
+`apps/mapping-runtime` compõe workflows de construção de mapa. `apps/map-explorer` abre mapas persistidos para visualização 3D, consulta, inspeção de evidências e exploração de grafo. `apps/cli` fornece acesso scriptável a operações de nível de aplicação.
 
-Coding agents and contributors should read [`AGENTS.md`](./AGENTS.md) before creating or changing code, folders, interfaces, or repository-wide architecture.
+Agentes de código e contribuidores devem ler [`AGENTS.md`](./AGENTS.md) antes de criar ou alterar código, pastas, interfaces, ou arquitetura de nível de repositório.
 
-## Documentation
+## Documentação
 
-Repository-level architecture and integration documentation is available in [`docs/README.md`](./docs/README.md).
+A documentação de arquitetura e integração de nível de repositório está disponível em [`docs/README.md`](./docs/README.md).
 
-Important architecture decisions are documented in:
+Decisões arquiteturais importantes são documentadas em:
 
 - [`docs/architecture.md`](./docs/architecture.md)
 - [`docs/system-flow.md`](./docs/system-flow.md)
@@ -48,4 +48,4 @@ Important architecture decisions are documented in:
 - [`docs/engineering-principles.md`](./docs/engineering-principles.md)
 - [`docs/documentation-policy.md`](./docs/documentation-policy.md)
 
-Detailed implementation documentation lives inside each module under `modules/<module>/docs/` as those modules are developed.
+Documentação detalhada de implementação vive dentro de cada módulo, em `modules/<module>/docs/`, à medida que esses módulos são desenvolvidos.

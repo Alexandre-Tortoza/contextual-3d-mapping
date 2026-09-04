@@ -1,3 +1,3 @@
 # Benchmarks
 
-Reusable state-estimation benchmarks for trajectory accuracy, robustness, runtime latency, and memory usage belong here.
+Benchmarks reutilizáveis de state-estimation para acurácia de trajectory, robustez, latência de runtime e uso de memória pertencem aqui.

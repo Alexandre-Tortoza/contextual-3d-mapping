@@ -1,0 +1,21 @@
+{
+  "stage": "language_embedding",
+  "gpu_memory_budget_gb": 8.0,
+  "frame_count": 18,
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "candidates": [
+    {
+      "name": "clip:openai/clip-vit-large-patch14",
+      "quality_score": 0.023649262057410345,
+      "peak_vram_gb": 1.621068000793457,
+      "latency_s": 0.053256513167677134
+    },
+    {
+      "name": "siglip:google/siglip-base-patch16-224",
+      "quality_score": 0.009448304617156586,
+      "peak_vram_gb": 0.7729430198669434,
+      "latency_s": 0.017507739444327954
+    }
+  ],
+  "selected": "clip:openai/clip-vit-large-patch14"
+}

@@ -1,4 +1,4 @@
-"""Language-aligned region embedding stage.
+"""Stage de embedding de região alinhado a linguagem.
 
 Issue: #163.
 """
@@ -12,13 +12,16 @@ from visual_perception.domain.regions import ObservedRegion
 from visual_perception.ports.language_embedding import LanguageAlignedEncoder
 
 
+# Codifica o crop de cada região no espaço de embedding alinhado a
+# linguagem, usada pelo pipeline canônico logo após o pooling de features
+# visuais para permitir consultas semânticas por texto sobre as regiões.
 def encode_regions(
     regions: tuple[ObservedRegion, ...],
     image: ImagePayload,
     encoder: LanguageAlignedEncoder,
     config: LanguageEmbeddingConfig,
 ) -> tuple[LanguageEmbedding, ...]:
-    """Encode every region's crop into the language-aligned embedding space."""
+    """Codifica o crop de cada região no espaço de embedding alinhado a linguagem."""
     embeddings = []
     for region in regions:
         box = region.box

@@ -1,10 +1,10 @@
-"""Scene-level contextual analysis stage.
+"""Etapa de análise contextual em nível de cena.
 
 Issue: #164.
 
-Analyzes the full image for scene type, description, global attributes, and
-hazards. Never touches region geometry: region enumeration stays owned by
-region discovery/merge.
+Analisa a imagem completa para scene type, description, atributos globais
+e hazards. Nunca toca na geometria de region: a enumeração de regions
+permanece de posse de region discovery/merge.
 """
 
 from __future__ import annotations
@@ -22,12 +22,16 @@ from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 _REQUIRED_FIELDS = ("scene_type", "description")
 
 
+# Ponto de entrada público: analisa a cena inteira via multimodal reasoner
+# e converte a resposta bruta validada em um SceneContext com claims e
+# proveniência. Chamada pelo pipeline principal antes da interpretação por
+# region, para fornecer contexto de cena a etapas downstream.
 def analyze_scene(
     image: ImagePayload,
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
 ) -> SceneContext:
-    """Produce a validated :class:`SceneContext` from a raw multimodal response."""
+    """Produz um :class:`SceneContext` validado a partir de uma resposta multimodal bruta."""
     response = reasoner.analyze_scene(image, config)
     _validate_scene_response(response)
 
@@ -55,6 +59,9 @@ def analyze_scene(
     return SceneContext(claims=tuple(claims))
 
 
+# Valida a forma mínima da resposta bruta de cena (campos obrigatórios
+# scene_type/description como strings não vazias, listas opcionais bem
+# tipadas) antes de convertê-la em claims. Chamada por analyze_scene.
 def _validate_scene_response(response: dict[str, Any]) -> None:
     if not isinstance(response, dict):
         raise ValueError(f"Malformed scene response: expected an object, got {type(response)!r}.")

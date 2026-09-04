@@ -1,32 +1,32 @@
 # State Estimation
 
-`state-estimation` provides motion and pose estimates required to place LiDAR observations in a consistent spatial reference before persistent mapping and semantic processing.
+`state-estimation` fornece estimativas de movimento e pose necessárias para posicionar observações LiDAR em uma referência espacial consistente antes do mapeamento persistente e do processamento semântico.
 
-The module is independently executable, testable, benchmarkable, and replaceable. Downstream modules depend on its public contracts rather than on a specific odometry implementation.
+O módulo é independentemente executável, testável, avaliável (benchmarkable) e substituível. Módulos downstream dependem de seus contracts públicos, não de uma implementação específica de odometria.
 
-## Responsibilities
+## Responsabilidades
 
-- consume timestamped LiDAR and IMU observations;
-- estimate sensor/platform pose and trajectory;
-- expose motion-corrected LiDAR observations when supported by the selected backend;
-- preserve coordinate-frame, timestamp, uncertainty, and provenance metadata;
-- expose health and validity information for downstream consumers.
+- consumir observações LiDAR e IMU com timestamp;
+- estimar a pose e a trajectory do sensor/plataforma;
+- expor observações LiDAR corrigidas por movimento quando suportado pelo backend selecionado;
+- preservar metadados de frame de coordenadas, timestamp, incerteza e proveniência;
+- expor informação de saúde e validade para consumidores downstream.
 
-## Non-responsibilities
+## Não-responsabilidades
 
-- camera-LiDAR calibration or visual correspondence generation;
-- learned point embeddings;
-- semantic fusion;
-- persistent geometric or semantic map construction;
-- scene graphs, semantic memory, or contextual reasoning.
+- calibração câmera-LiDAR ou geração de correspondência visual;
+- point embeddings aprendidos;
+- fusão semântica;
+- construção de mapa geométrico ou semântico persistente;
+- scene graphs, memória semântica ou raciocínio contextual.
 
-Camera-LiDAR association remains owned by `sensor-association`. Learned LiDAR features remain owned by `point-representation`. Persistent geometric reconstruction is owned by `geometric-map`.
+A associação câmera-LiDAR permanece de posse de `sensor-association`. Features LiDAR aprendidas permanecem de posse de `point-representation`. A reconstrução geométrica persistente é de posse de `geometric-map`.
 
-## External implementations
+## Implementações externas
 
-Concrete LiDAR-inertial odometry systems are integrated behind adapters. The initial integration target is FAST-LIO, while the public module contracts remain implementation-agnostic so other estimators, simulator ground truth, or dataset-provided poses can be substituted later.
+Sistemas concretos de odometria LiDAR-inercial são integrados por trás de adapters. O alvo inicial de integração é o FAST-LIO, mas os contracts públicos do módulo permanecem independentes de implementação, para que outros estimators, ground truth de simulador, ou poses fornecidas por dataset possam ser substituídos mais tarde.
 
-## Initial structure
+## Estrutura inicial
 
 ```text
 state-estimation/
@@ -45,4 +45,4 @@ state-estimation/
 └── benchmarks/
 ```
 
-The package manifest and concrete implementation files should be introduced only when the corresponding implementation issues are addressed.
+O manifest do pacote e os arquivos de implementação concreta devem ser introduzidos apenas quando as issues de implementação correspondentes forem tratadas.

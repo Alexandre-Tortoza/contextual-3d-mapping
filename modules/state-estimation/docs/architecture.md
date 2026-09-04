@@ -1,30 +1,30 @@
-# State Estimation Architecture
+# Arquitetura do State Estimation
 
-`state-estimation` is the geometric motion boundary between raw LiDAR/IMU observations and downstream persistent 3D mapping and semantic processing.
+`state-estimation` é a fronteira geométrica de movimento entre observações brutas de LiDAR/IMU e o processamento downstream de mapeamento 3D persistente e semântico.
 
-## Internal flow
+## Fluxo interno
 
 ```mermaid
 flowchart LR
-    L[LiDAR observation] --> A[Input adapters]
-    I[IMU observation] --> A
+    L[Observação LiDAR] --> A[Adapters de entrada]
+    I[Observação IMU] --> A
 
-    A --> V[Validation and time checks]
-    V --> P[StateEstimator port]
+    A --> V[Validação e checagem temporal]
+    V --> P[Port StateEstimator]
 
-    P --> B[LiDAR-inertial backend adapter]
-    B --> S[State estimate]
-    B --> C[Motion-corrected LiDAR frame]
+    P --> B[Adapter de backend LiDAR-inercial]
+    B --> S[Estimativa de estado]
+    B --> C[Frame LiDAR corrigido por movimento]
 
-    S --> O[Public outputs]
+    S --> O[Saídas públicas]
     C --> O
 ```
 
-The backend adapter is replaceable. FAST-LIO is the initial concrete integration target, but no downstream consumer should depend on FAST-LIO-specific messages, configuration structures, ROS types, or internal state.
+O adapter de backend é substituível. FAST-LIO é o alvo inicial de integração concreta, mas nenhum consumidor downstream deve depender de mensagens, estruturas de configuração, tipos ROS ou estado interno específicos do FAST-LIO.
 
-## Public outputs
+## Saídas públicas
 
-The module is expected to expose contract-compatible information conceptually equivalent to:
+Espera-se que o módulo exponha informação compatível com o contract, conceitualmente equivalente a:
 
 ```text
 StateEstimate
@@ -44,58 +44,58 @@ MotionCorrectedLiDARFrame
 └── provenance
 ```
 
-Exact schemas are defined by implementation issues rather than this document.
+Os schemas exatos são definidos por issues de implementação, não por este documento.
 
-## Boundary with geometric-map
+## Fronteira com geometric-map
 
-`geometric-map` owns persistent world geometry. It consumes contract-compatible pose/trajectory information and motion-corrected LiDAR observations from `state-estimation`.
+`geometric-map` possui a geometria persistente do mundo. Ele consome informação de pose/trajectory compatível com o contract e observações LiDAR corrigidas por movimento vindas de `state-estimation`.
 
 ```mermaid
 flowchart LR
     SE[state-estimation] -->|pose / trajectory| GM[geometric-map]
-    SE -->|motion-corrected LiDAR| GM
-    GM -->|persistent geometry refs| SA[sensor-association]
-    GM -->|persistent geometry| APP[applications]
+    SE -->|LiDAR corrigido por movimento| GM
+    GM -->|refs de geometria persistente| SA[sensor-association]
+    GM -->|geometria persistente| APP[applications]
 ```
 
-`state-estimation` therefore does not own persistent reconstruction, map chunking, map storage, spatial indexing, or visualization.
+`state-estimation`, portanto, não possui a reconstrução persistente, o chunking de mapa, o armazenamento de mapa, a indexação espacial ou a visualização.
 
-## Boundary with point-representation
+## Fronteira com point-representation
 
-`point-representation` consumes point geometry and produces learned point embeddings. It must not own odometry, pose estimation, IMU fusion, scan deskewing, trajectory estimation, or persistent geometric-map ownership.
+`point-representation` consome geometria de pontos e produz point embeddings aprendidos. Não deve possuir odometria, estimação de pose, fusão de IMU, deskewing de scan, estimação de trajectory, ou ownership do mapa geométrico persistente.
 
 ```mermaid
 flowchart LR
-    SE[state-estimation] -->|motion-corrected LiDAR| PR[point-representation]
+    SE[state-estimation] -->|LiDAR corrigido por movimento| PR[point-representation]
     PR -->|point embeddings| SA[sensor-association]
     SE -->|pose / trajectory| SA
 ```
 
-## Boundary with sensor-association
+## Fronteira com sensor-association
 
-`state-estimation` may provide the platform trajectory and LiDAR-side pose information required for multimodal alignment. It does not calibrate the camera to the LiDAR and does not generate point-to-pixel or point-to-feature correspondences.
+`state-estimation` pode fornecer a trajectory da plataforma e a informação de pose do lado LiDAR necessárias para o alinhamento multimodal. Ele não calibra a câmera em relação ao LiDAR e não gera correspondências ponto-para-pixel ou ponto-para-feature.
 
 ```mermaid
 flowchart LR
-    SE[state-estimation] -->|trajectory / LiDAR pose| SA[sensor-association]
-    GM[geometric-map] -->|persistent geometry refs| SA
-    VP[visual-perception] -->|visual observations| SA
-    PR[point-representation] -->|point representations| SA
-    CAL[camera-LiDAR calibration] --> SA
+    SE[state-estimation] -->|trajectory / pose LiDAR| SA[sensor-association]
+    GM[geometric-map] -->|refs de geometria persistente| SA
+    VP[visual-perception] -->|observações visuais| SA
+    PR[point-representation] -->|representações de ponto| SA
+    CAL[calibração câmera-LiDAR] --> SA
 ```
 
-## External backend isolation
+## Isolamento do backend externo
 
-The initial backend integration must be isolated under infrastructure code. The adapter is responsible for translating external runtime inputs and outputs into module contracts.
+A integração inicial do backend deve ser isolada em código de infrastructure. O adapter é responsável por traduzir entradas e saídas de runtime externas para os contracts do módulo.
 
-Backend-specific concerns include:
+Preocupações específicas de backend incluem:
 
-- middleware message types;
-- process lifecycle;
-- sensor topic names;
-- LiDAR-IMU extrinsics;
-- backend configuration files;
-- runtime diagnostics;
-- external dependency installation.
+- tipos de mensagem de middleware;
+- ciclo de vida do processo;
+- nomes de tópico de sensor;
+- extrinsics LiDAR-IMU;
+- arquivos de configuração do backend;
+- diagnósticos de runtime;
+- instalação de dependências externas.
 
-None of these concerns should leak into the domain or downstream modules.
+Nenhuma dessas preocupações deve vazar para o domain ou para módulos downstream.
