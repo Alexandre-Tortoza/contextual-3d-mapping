@@ -22,6 +22,7 @@ nenhum calibrador.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -29,15 +30,22 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 from contextual_mapping_datasets import (
     ReferenceManifest,
     Split,
     load_reference_manifest,
+    validate_reference,
 )
 from contextual_mapping_datasets.annotation_manifest import AnnotationCertainty
+from contextual_mapping_datasets.annotation_manifest_io import reference_manifest_to_mapping
 from visual_perception_evaluation.masks import decode_mask
 from visual_perception_evaluation.metrics import match_regions
-from visual_perception_evaluation.prediction import PredictionSet, load_predictions
+from visual_perception_evaluation.prediction import (
+    PredictionSet,
+    load_predictions,
+    prediction_set_to_mapping,
+)
 from visual_perception_evaluation.suite import EvaluationConfig
 
 #: Versão de contract do artifact produzido. Precisa estar entre as versões
@@ -47,6 +55,12 @@ CALIBRATION_VERSION = "calibration/1"
 #: Mínimo de observações para um bin entrar no artifact. Abaixo disso a
 #: acurácia empírica é ruído, e o calibrador deve se abster naquela faixa.
 MIN_BIN_SAMPLES = 5
+
+# Gate conservador para ativação: um artifact pode ser produzido para
+# diagnóstico com menos dados, mas não deve virar configuração de referência
+# sem volume total e cobertura de faixas minimamente informativos.
+MIN_ACTIVATION_OBSERVATIONS = 30
+MIN_ACTIVATION_BINS = 3
 
 
 # Registra um par (score bruto, acerto) observado no split de calibração.
@@ -178,15 +192,31 @@ def build_artifact(
     source: str,
     reference_id: str,
     run_id: str,
+    reference_digest: str,
+    predictions_digest: str,
+    config_fingerprint: str,
+    code_revision: str,
+    min_activation_observations: int = MIN_ACTIVATION_OBSERVATIONS,
+    min_activation_bins: int = MIN_ACTIVATION_BINS,
 ) -> dict[str, Any]:
     """Monta o documento JSON do artifact de calibração."""
-    return {
+    total_observations = sum(counts.values())
+    populated_bins = sum(len(entries) for entries in table.values())
+    activation_enabled = (
+        total_observations >= min_activation_observations
+        and populated_bins >= min_activation_bins
+    )
+    document: dict[str, Any] = {
         "calibration_version": CALIBRATION_VERSION,
         "domain": domain,
         "fitted_from": {
             "reference_id": reference_id,
             "split": Split.CALIBRATION.value,
             "prediction_run_id": run_id,
+            "reference_digest": reference_digest,
+            "predictions_digest": predictions_digest,
+            "config_fingerprint": config_fingerprint,
+            "code_revision": code_revision,
         },
         "created_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "sources": {
@@ -195,7 +225,49 @@ def build_artifact(
                 for claim_kind, entries in table.items()
             }
         },
+        "activation": {
+            "enabled": activation_enabled,
+            "observations": total_observations,
+            "populated_bins": populated_bins,
+            "minimum_observations": min_activation_observations,
+            "minimum_populated_bins": min_activation_bins,
+            "reason": (
+                None
+                if activation_enabled
+                else "cobertura medida insuficiente; manter calibração desabilitada"
+            ),
+        },
     }
+    document["payload_digest"] = _payload_digest(document)
+    return document
+
+
+# Calcula um digest canônico de um documento, excluindo o próprio campo de
+# digest. Usado para detectar edição/truncamento do artifact após o ajuste.
+def _payload_digest(document: dict[str, Any]) -> str:
+    """Retorna o SHA-256 do payload JSON canônico sem ``payload_digest``."""
+    payload = {key: value for key, value in document.items() if key != "payload_digest"}
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+# Garante que o arquivo entregue ao ajuste contém exclusivamente amostras do
+# split calibration. Mesmo que a coleta filtre, recusar test no input evita
+# provenance ambígua e vazamento acidental em futuras transformações.
+def validate_calibration_predictions(
+    manifest: ReferenceManifest, predictions: PredictionSet
+) -> None:
+    """Rejeita predições ausentes ou pertencentes a development/test."""
+    calibration_ids = {sample.sample_id for sample in manifest.samples_in(Split.CALIBRATION)}
+    predicted_ids = {sample.sample_id for sample in predictions.samples}
+    foreign = sorted(predicted_ids - calibration_ids)
+    if foreign:
+        raise ValueError(
+            f"Calibration predictions contain samples outside the calibration split: {foreign}."
+        )
+    missing = sorted(calibration_ids - predicted_ids)
+    if missing:
+        raise ValueError(f"Calibration predictions are missing samples: {missing}.")
 
 
 # Ponto de entrada do ajuste: coleta, ajusta e grava o artifact. Recusa
@@ -225,6 +297,8 @@ def fit_reliability_table(
     Levanta:
         SystemExit: se não houver observação pontuável suficiente.
     """
+    validate_reference(manifest, require_reviewed=True)
+    validate_calibration_predictions(manifest, predictions)
     observations = collect_observations(manifest, predictions)
     if not observations:
         raise SystemExit(
@@ -249,6 +323,10 @@ def fit_reliability_table(
         source=source,
         reference_id=manifest.reference_id,
         run_id=predictions.run_id,
+        reference_digest=_payload_digest(reference_manifest_to_mapping(manifest)),
+        predictions_digest=_payload_digest(prediction_set_to_mapping(predictions)),
+        config_fingerprint=predictions.config_fingerprint,
+        code_revision=predictions.code_revision,
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(

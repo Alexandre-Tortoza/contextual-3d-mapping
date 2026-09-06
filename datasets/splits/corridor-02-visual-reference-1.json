@@ -1,0 +1,33 @@
+{
+  "schema_version": "visual-reference-split/1",
+  "reference_id": "corridor-02-visual-reference-1",
+  "source_manifest": "datasets/manifests/corridor-02-visual-reference.json",
+  "source_manifest_sha256": "94ac036dadc6df55ae314a7300eb17cfd623ae29a3bfb1cf543c948b901d8d3f",
+  "partition_rule": "blocos temporais contíguos separados por guard bands; amostragem uniforme por bloco",
+  "splits": {
+    "development": [
+      "corridor-02-development-000355", "corridor-02-development-001066",
+      "corridor-02-development-001778", "corridor-02-development-002489",
+      "corridor-02-development-003200", "corridor-02-development-003911",
+      "corridor-02-development-004623", "corridor-02-development-005334",
+      "corridor-02-development-006045", "corridor-02-development-006756",
+      "corridor-02-development-007468", "corridor-02-development-008179"
+    ],
+    "calibration": [
+      "corridor-02-calibration-009397", "corridor-02-calibration-009841",
+      "corridor-02-calibration-010286", "corridor-02-calibration-010730",
+      "corridor-02-calibration-011175", "corridor-02-calibration-011619",
+      "corridor-02-calibration-012064", "corridor-02-calibration-012508",
+      "corridor-02-calibration-012953", "corridor-02-calibration-013397",
+      "corridor-02-calibration-013842", "corridor-02-calibration-014286"
+    ],
+    "test": [
+      "corridor-02-test-015406", "corridor-02-test-015922",
+      "corridor-02-test-016438", "corridor-02-test-016954",
+      "corridor-02-test-017470", "corridor-02-test-017986",
+      "corridor-02-test-018501", "corridor-02-test-019017",
+      "corridor-02-test-019533", "corridor-02-test-020049",
+      "corridor-02-test-020565", "corridor-02-test-021081"
+    ]
+  }
+}

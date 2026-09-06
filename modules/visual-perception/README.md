@@ -56,13 +56,18 @@ visual-perception/
 ## Desenvolvimento
 
 ```bash
-python3.12 -m venv .venv
+mise trust ../../.mise.toml  # uma vez, se o ambiente usa mise
+python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
-pytest
-ruff check .
-mypy
+pip install -e ".[dev,bench]"
+cd ../..
+make verify
 ```
+
+O alvo `verify` da raiz é a fonte única para a suíte ampliada: testes unitários, de
+integração e de contract dos benchmarks, `ruff` no repositório inteiro e `mypy` em
+modo estrito. Dependências pesadas dos backends reais continuam no extra `ml` e não
+são necessárias para a suíte determinística em CPU.
 
 `contextual_mapping_contracts` (e, apenas para os testes de integração,
 `contextual_mapping_adapters`/`contextual_mapping_datasets`) são resolvidos a partir de

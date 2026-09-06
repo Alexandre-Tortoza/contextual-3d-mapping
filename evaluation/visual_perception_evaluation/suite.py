@@ -27,6 +27,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
+
 from contextual_mapping_datasets.annotation_manifest import (
     AnnotationCertainty,
     ReferenceManifest,

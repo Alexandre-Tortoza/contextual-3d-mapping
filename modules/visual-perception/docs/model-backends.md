@@ -129,6 +129,10 @@ por mask.
 - adapter: `infrastructure/adapters/feature_extraction_backend.py`;
 - backend: `dinov2`;
 - checkpoint: `facebook/dinov2-base`.
+- resolução de entrada do perfil real: maior aresta 448, preservando aspect ratio e
+  alinhamento ao patch 14;
+- candidato aprendido: `FeatUpDenseFeatureExtractionAdapter`, FeatUp/JBU sobre
+  DINOv2-small, instalado pelo extra `feature-upsample`.
 
 ### Por que foi escolhido
 
@@ -146,6 +150,11 @@ somente o `FeatureMap` definido pelo módulo.
 A transformação de feature map para embedding por região pertence a
 [`application/pooling.py`](../src/visual_perception/application/pooling.py), não ao
 adapter DINO.
+
+O adapter FeatUp é uma implementação alternativa do mesmo port, não um stage escondido.
+Sua revisão Git, checkpoint JBU, grade fonte, resolução efetiva e eventual fallback são
+campos de provenance do `FeatureMap`. Como o JBU oficial usa DINOv2-small (384 canais),
+seus vetores não são misturados ou comparados diretamente com DINOv2-base (768 canais).
 
 ## Language-aligned embedding
 
@@ -326,17 +335,26 @@ Um resultado que altere a configuração de referência deve registrar pelo meno
 - consumo de memória;
 - falhas de execução.
 
-## Validação end-to-end (#190)
+## Validação end-to-end reproduzível (#190/#212)
 
 [`../benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py)
-executa a configuração real sobre os frames de referência.
+executa a configuração real sobre todos os frames, uma seleção explícita por `--frame-id`
+ou um prefixo ordenado por `--limit`. Para o protocolo de três frames:
+
+```bash
+python benchmarks/validate_reference_pipeline.py \
+  --frame-id corridor-02-000 \
+  --frame-id corridor-02-008 \
+  --frame-id corridor-02-017
+```
 
 Por frame, a validação produz:
 
-- `VisualObservation` serializada;
-- overlay de masks/labels;
-- manifest com git revision e configuração;
-- métricas do lifecycle.
+- `VisualObservation` canônica serializada em `canonical/`;
+- overlay de masks/labels canônicas;
+- manifest com IDs ordenados, hashes de entrada, git revision, configuração e fingerprint;
+- latência, VRAM, falhas, audit e cobertura por estado de cada slot;
+- variante em `postprocessed/semantic-merge/` somente quando solicitada explicitamente.
 
 Saída:
 

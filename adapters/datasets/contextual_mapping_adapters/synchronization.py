@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from contextual_mapping_datasets.manifest import SensorKind
+
 from .dataset import CanonicalObservation
 
 

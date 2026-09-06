@@ -77,6 +77,8 @@ class CalibrationArtifact:
     bins: dict[str, dict[str, tuple[tuple[float, float, float], ...]]]
     #: ``{producer: {claim_kind: samples}}``, usado como confiabilidade da fonte.
     samples: dict[str, dict[str, int]]
+    activation_enabled: bool = True
+    activation_reason: str | None = None
 
     # Responde se a tabela cobre um par (produtor, tipo de claim). Usada
     # pelo calibrador para decidir entre pontuar e se abster por tipo não
@@ -336,6 +338,12 @@ def build_calibrator(config: CalibrationConfig) -> ClaimCalibrator:
             f"but the configuration requests {config.version!r}",
             config.domain,
         )
+    if not artifact.activation_enabled:
+        return FailedCalibrator(
+            artifact.activation_reason
+            or "calibration artifact did not pass its measured activation gate",
+            config.domain,
+        )
     if config.method == "temperature":
         return FailedCalibrator(
             "temperature scaling has no measured artifact in this repository yet; "
@@ -378,9 +386,33 @@ def load_calibration_artifact(path: Path) -> CalibrationArtifact:
     if not isinstance(domain, str) or not domain:
         raise ValueError("calibration artifact must declare a non-empty 'domain'.")
 
+    payload_digest = document.get("payload_digest")
+    if payload_digest is not None:
+        if not isinstance(payload_digest, str) or len(payload_digest) != 64:
+            raise ValueError("calibration artifact payload_digest must be a SHA-256 hex digest.")
+        canonical_payload = {
+            key: value for key, value in document.items() if key != "payload_digest"
+        }
+        canonical = json.dumps(
+            canonical_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        )
+        measured_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        if measured_digest != payload_digest:
+            raise ValueError("calibration artifact payload_digest does not match its content.")
+
+    activation = document.get("activation", {"enabled": True, "reason": None})
+    if not isinstance(activation, dict) or not isinstance(activation.get("enabled"), bool):
+        raise ValueError("calibration artifact activation must declare a boolean 'enabled'.")
+
     bins, samples = _parse_sources(document.get("sources"))
     return CalibrationArtifact(
-        version=version, domain=domain, digest=digest, bins=bins, samples=samples
+        version=version,
+        domain=domain,
+        digest=digest,
+        bins=bins,
+        samples=samples,
+        activation_enabled=activation["enabled"],
+        activation_reason=activation.get("reason"),
     )
 
 

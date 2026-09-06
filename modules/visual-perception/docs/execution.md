@@ -298,10 +298,13 @@ A seleção atual está documentada em [model-backends.md](model-backends.md).
 
 ## Validação end-to-end
 
-A pipeline real de referência pode ser exercitada por:
+A pipeline real de referência pode ser exercitada nos três frames de auditoria por:
 
-```text
-benchmarks/validate_reference_pipeline.py
+```bash
+python benchmarks/validate_reference_pipeline.py \
+  --frame-id corridor-02-000 \
+  --frame-id corridor-02-008 \
+  --frame-id corridor-02-017
 ```
 
 A execução gera samples em:
@@ -310,9 +313,18 @@ A execução gera samples em:
 benchmarks/results/samples/<run-id>/
 ```
 
-Os artifacts incluem observação serializada, overlay e manifest de execução. Eles são
-úteis para inspeção qualitativa e diagnóstico, mas não substituem protocolos de avaliação
-quantitativa específicos.
+`manifest.json` preserva IDs na ordem solicitada, SHA-256 de cada entrada, revisão Git,
+configuração e fingerprint, latência, VRAM, falhas, audit e estados dos slots por frame.
+As observações e overlays emitidos diretamente pelo pipeline ficam em `canonical/`.
+O merge semântico externo só roda com `--semantic-merge` e fica separado em
+`postprocessed/semantic-merge/`; portanto ele nunca substitui silenciosamente o artifact
+canônico. Esses artifacts são úteis para inspeção qualitativa e diagnóstico, mas não
+substituem protocolos de avaliação quantitativa específicos.
+
+Para a ablation operacional da #209, execute os mesmos IDs com
+`--context-profile baseline` e `--context-profile full`. O manifest registra o perfil,
+os estados, chamadas e latência de cada slot; IDs e geometria continuam sendo a saída
+canônica anterior à evidência contextual.
 
 ## Quero diagnosticar X: onde olhar?
 
@@ -339,3 +351,29 @@ quantitativa específicos.
 - preserve `AuditResult` e warnings;
 - mantenha artifacts de benchmark ligados ao dataset/subset usado;
 - compare resultados somente sob protocolo equivalente.
+
+## Ajuste e validação da calibração semântica (#211)
+
+O ajuste aceita somente um manifest integralmente `reviewed` e um arquivo de predições
+que contenha exatamente as amostras do split `calibration`. Amostras de `development` ou
+`test` no arquivo de ajuste causam erro antes da construção dos bins.
+
+```bash
+python -m visual_perception_experiments.fit_calibration \
+  --manifest datasets/manifests/corridor-02-visual-reference.json \
+  --predictions <calibration-predictions.json> \
+  --out <calibration-artifact.json> \
+  --source qwen_vl \
+  --domain indoor_corridor
+```
+
+O artifact registra digests canônicos da referência e das predições, revisão de código,
+fingerprint da configuração, contagem por claim e um `payload_digest` verificado no
+carregamento. O gate padrão requer ao menos 30 decisões observadas e três bins populados.
+Um artifact abaixo do gate pode existir para diagnóstico, mas carrega
+`activation.enabled=false` e não é aplicado pelo pipeline.
+
+O split `test` é usado apenas depois do ajuste, pelo relatório de avaliação já existente,
+que compara raw/calibrated em ECE e Brier e também reporta cobertura, taxa de abstenção,
+selective risk e casos de falha auditáveis. Nenhuma dessas métricas é produzida enquanto
+a revisão humana da #210 estiver pendente.

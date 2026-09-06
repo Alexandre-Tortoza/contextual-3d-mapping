@@ -1,6 +1,11 @@
 from contextual_mapping_adapters import CanonicalObservation
 from contextual_mapping_contracts import FrameId, ObservationReference, SourceArtifactReference, Timestamp
-from contextual_mapping_datasets import CalibrationManifest, DatasetManifest, SensorSourceManifest, SequenceManifest
+from contextual_mapping_datasets import (
+    CalibrationManifest,
+    DatasetManifest,
+    SensorSourceManifest,
+    SequenceManifest,
+)
 
 
 # Constrói um DatasetManifest mínimo válido (uma sequência com lidar + imu,

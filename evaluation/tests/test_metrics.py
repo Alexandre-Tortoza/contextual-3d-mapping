@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+
 from visual_perception_evaluation.masks import (
     boundary,
     boundary_f1,

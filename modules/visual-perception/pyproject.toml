@@ -37,14 +37,22 @@ ml = [
 # Local benchmark/validation data prep only (e.g. prepare_corridor02_frames.py).
 # Unrelated to inference; kept separate from `ml` on purpose.
 bench = [
+    "pillow>=10",
     "rosbags>=0.9",
+]
+# Elevação aprendida opcional. O adapter usa operações torch públicas para
+# evitar a extensão CUDA sem wheel do upstream, mas carrega seus pesos oficiais.
+feature-upsample = [
+    "torch>=2.4",
+    "transformers>=4.47",
+    "safetensors>=0.4",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/visual_perception"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "benchmarks"]
 addopts = "-ra"
 # `contextual_mapping_contracts` (#99/#100/#101) and, for the integration
 # tests only, `contextual_mapping_adapters`/`contextual_mapping_datasets`
@@ -58,6 +66,7 @@ src = ["src", "tests", "benchmarks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -67,4 +76,10 @@ strict = true
 
 [[tool.mypy.overrides]]
 module = ["contextual_mapping_contracts.*", "contextual_mapping_adapters.*", "contextual_mapping_datasets.*"]
+ignore_missing_imports = true
+
+# Torch é um backend opcional: a suíte de desenvolvimento mínima deve manter
+# tipagem estrita sem precisar instalar o runtime CUDA pesado.
+[[tool.mypy.overrides]]
+module = ["torch", "torch.*"]
 ignore_missing_imports = true

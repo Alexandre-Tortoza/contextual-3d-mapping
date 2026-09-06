@@ -1,7 +1,7 @@
 import pytest
+from support import manifest, observation
 
 from contextual_mapping_adapters import SynchronizationConfig, SyntheticDatasetAdapter, synchronize
-from support import manifest, observation
 
 
 # Constrói uma SynchronizationConfig padrão (âncora lidar, tipos

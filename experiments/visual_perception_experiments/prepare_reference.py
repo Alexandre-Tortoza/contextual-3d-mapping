@@ -31,6 +31,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
+
 from contextual_mapping_datasets import (
     AnnotationProvenance,
     ReferenceManifest,
@@ -321,8 +322,9 @@ def _read_frames(bag_path: Path, topic: str | None) -> list[tuple[int, np.ndarra
     import sys
 
     sys.path.insert(0, str(REPOSITORY_ROOT / "modules" / "visual-perception" / "benchmarks"))
-    from prepare_corridor02_frames import _decode_image, _pick_rgb_topic  # type: ignore[import-not-found]
     from rosbags.highlevel import AnyReader
+
+    from prepare_corridor02_frames import _decode_image, _pick_rgb_topic  # type: ignore[import-not-found]
 
     frames: list[tuple[int, np.ndarray]] = []
     with AnyReader([bag_path]) as reader:

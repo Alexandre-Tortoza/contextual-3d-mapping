@@ -18,7 +18,7 @@ def test_raw_dataset_root_uses_the_repository_convention() -> None:
     """Verifica a resolução da raiz canônica de um dataset."""
     repository_root = Path("/workspace/contextual-3d-mapping")
 
-    assert RAW_DATASETS_DIRECTORY == Path("datasets/raw")
+    assert Path("datasets/raw") == RAW_DATASETS_DIRECTORY
     assert raw_dataset_root(repository_root, "cerberus-subt") == (
         repository_root / "datasets/raw/cerberus-subt"
     )

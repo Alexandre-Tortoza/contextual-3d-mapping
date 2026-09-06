@@ -46,7 +46,20 @@ class RealDenseFeatureExtractionAdapter:
         """Retorna um grid denso DINOv2, sem tokens CLS ou register, para a imagem dada."""
         torch, processor, model, device = self._get_runtime(config)
         try:
-            inputs = processor(images=payload_to_pil(image, config.backend), return_tensors="pt")
+            processor_options: dict[str, object] = {}
+            if config.input_resolution is not None:
+                target_height, target_width = _scaled_size(
+                    image.height, image.width, config.input_resolution, multiple=14
+                )
+                processor_options = {
+                    "size": {"height": target_height, "width": target_width},
+                    "do_center_crop": False,
+                }
+            inputs = processor(
+                images=payload_to_pil(image, config.backend),
+                return_tensors="pt",
+                **processor_options,
+            )
             inputs = {name: value.to(device) for name, value in inputs.items()}
             with torch.inference_mode():
                 output = model(**inputs)
@@ -111,6 +124,28 @@ class RealDenseFeatureExtractionAdapter:
             f"feature_extraction:{checkpoint}:{device}", factory
         )
         return torch, processor, model, device
+
+
+# Calcula um resize aspect-preserving cuja maior aresta é limitada pela
+# resolução pedida e cujas dimensões são múltiplas do patch. Existe para
+# elevar a densidade nativa sem distorcer a geometria do frame (#208).
+def _scaled_size(height: int, width: int, long_edge: int, *, multiple: int) -> tuple[int, int]:
+    """Retorna ``(altura, largura)`` proporcionais e divisíveis pelo patch.
+
+    Argumentos:
+        height: altura original do frame.
+        width: largura original do frame.
+        long_edge: tamanho alvo aproximado da maior aresta.
+        multiple: múltiplo exigido pelo backbone.
+    Retorna:
+        dimensões positivas, proporcionais e alinhadas ao patch.
+    """
+    if min(height, width, long_edge, multiple) <= 0:
+        raise ValueError("Image dimensions, long_edge and multiple must be positive.")
+    scale = long_edge / max(height, width)
+    target_height = max(multiple, round(height * scale / multiple) * multiple)
+    target_width = max(multiple, round(width * scale / multiple) * multiple)
+    return target_height, target_width
 
 
 # Determina a grade espacial DINOv2 a partir da resolução efetivamente

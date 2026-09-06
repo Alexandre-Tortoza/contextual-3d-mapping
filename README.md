@@ -35,6 +35,25 @@ RGB + LiDAR + IMU
 
 Agentes de código e contribuidores devem ler [`AGENTS.md`](./AGENTS.md) antes de criar ou alterar código, pastas, interfaces, ou arquitetura de nível de repositório.
 
+## Verificação de desenvolvimento
+
+O módulo executável atual requer Python 3.12. Um ambiente reproduzível para a suíte
+completa pode ser preparado e verificado com:
+
+```bash
+mise trust .mise.toml  # uma vez, se o ambiente usa mise
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e "modules/visual-perception[dev,bench]"
+make verify
+```
+
+`make verify` executa todos os testes de repositório (inclusive os contracts dos
+benchmarks), o lint do repositório inteiro e o `mypy` estrito da API pública de
+`visual-perception`. Testes que exigem GPU fazem `skip` explícito quando o hardware ou
+o backend opcional não está disponível.
+
 ## Documentação
 
 A documentação de arquitetura e integração de nível de repositório está disponível em [`docs/README.md`](./docs/README.md).

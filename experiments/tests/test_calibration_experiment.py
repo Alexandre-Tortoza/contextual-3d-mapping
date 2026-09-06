@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
 import pytest
+
 from contextual_mapping_datasets import Split
 from visual_perception.application.semantic_calibration import load_calibration_artifact
 from visual_perception_evaluation.prediction import (
@@ -27,12 +29,14 @@ from visual_perception_experiments.fit_calibration import (
     Observation,
     fit_bins,
     fit_reliability_table,
+    validate_calibration_predictions,
 )
 from visual_perception_experiments.fixture_reference import (
     FIXTURE_SIZE,
     build_fixture_manifest,
     encode_runs,
 )
+from visual_perception_experiments.run_predictions import select_samples
 
 
 # Constrói uma máscara pequena fora das regiões anotadas. Existe para criar
@@ -241,3 +245,90 @@ def test_fitted_artifact_is_versioned_and_loadable(tmp_path: Path) -> None:
     assert document["fitted_from"]["split"] == "calibration"
     assert artifact.version == "calibration/1"
     assert artifact.domain == "synthetic"
+    assert document["fitted_from"]["reference_digest"]
+    assert document["fitted_from"]["predictions_digest"]
+    assert document["payload_digest"]
+    assert not document["activation"]["enabled"]
+
+
+# Confirma que nem mesmo um arquivo misto é aceito como entrada de ajuste,
+# embora a coleta atual filtre o split internamente.
+def test_calibration_fit_rejects_predictions_from_test_split() -> None:
+    """Rejeita leakage de test antes de ajustar qualquer bin."""
+    manifest = build_fixture_manifest()
+    calibration = manifest.samples_in(Split.CALIBRATION)[0]
+    test = manifest.samples_in(Split.TEST)[0]
+    predictions = PredictionSet(
+        run_id="mixed-run",
+        configuration="raw",
+        config_fingerprint="mixed-config",
+        code_revision="deadbeef",
+        samples=(
+            SamplePrediction(calibration.sample_id, calibration.width, calibration.height),
+            SamplePrediction(test.sample_id, test.width, test.height),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="outside the calibration split"):
+        validate_calibration_predictions(manifest, predictions)
+
+
+# Confirma que a assinatura canônica detecta qualquer edição posterior dos
+# valores calibrados, preservando a auditabilidade do artifact.
+def test_calibration_artifact_rejects_tampered_payload_digest(tmp_path: Path) -> None:
+    """Falha ao carregar um artifact cujo conteúdo não corresponde ao digest."""
+    manifest = build_fixture_manifest()
+    sample = manifest.samples_in(Split.CALIBRATION)[0]
+    annotation = sample.regions[0]
+    predictions = PredictionSet(
+        run_id="tamper-run",
+        configuration="raw",
+        config_fingerprint="tamper-config",
+        code_revision="deadbeef",
+        samples=(
+            SamplePrediction(
+                sample.sample_id,
+                sample.width,
+                sample.height,
+                regions=(
+                    PredictedRegion(
+                        "pred-a",
+                        sample.width,
+                        sample.height,
+                        annotation.mask.runs,
+                        labels=(ScoredValue("porta", raw_confidence=0.9, source="vlm"),),
+                    ),
+                ),
+            ),
+        ),
+    )
+    destination = tmp_path / "calibration.json"
+    fit_reliability_table(
+        manifest,
+        predictions,
+        destination,
+        source="vlm",
+        domain="synthetic",
+        bins=2,
+        min_samples=1,
+    )
+    document = json.loads(destination.read_text(encoding="utf-8"))
+    document["domain"] = "tampered"
+    destination.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="payload_digest does not match"):
+        load_calibration_artifact(destination)
+
+
+# Confirma que runs de calibration/test podem fixar IDs sem depender da
+# ordem do filesystem ou processar silenciosamente outra amostra.
+def test_prediction_runner_preserves_explicit_sample_order() -> None:
+    """Seleciona IDs na ordem pedida e rejeita identidade desconhecida."""
+    manifest = build_fixture_manifest()
+    requested = (manifest.samples[2].sample_id, manifest.samples[0].sample_id)
+
+    selected = select_samples(manifest, sample_ids=requested)
+
+    assert tuple(sample.sample_id for sample in selected) == requested
+    with pytest.raises(ValueError, match="unknown sample ids"):
+        select_samples(manifest, sample_ids=("absent",))

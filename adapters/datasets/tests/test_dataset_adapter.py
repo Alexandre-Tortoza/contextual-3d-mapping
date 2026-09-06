@@ -1,8 +1,8 @@
 import pytest
+from support import manifest, observation
 
 from contextual_mapping_adapters import SyntheticDatasetAdapter
 from contextual_mapping_datasets import SensorSourceManifest, SequenceManifest
-from support import manifest, observation
 
 
 # Confere que SyntheticDatasetAdapter.observations sempre devolve as

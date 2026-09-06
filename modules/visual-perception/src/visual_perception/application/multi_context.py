@@ -26,6 +26,7 @@ de omitidos, para que um report de ablation (#200) mostre a diferença entre
 from __future__ import annotations
 
 import dataclasses
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -68,6 +69,21 @@ class EvidenceExtractionFailure:
     reason: str
 
 
+# Agrega custo e cobertura observados por slot em um frame. Existe para que
+# perfis e benchmarks distingam slot desabilitado, falha e evidência real,
+# além de contabilizar chamadas ao encoder compartilhado (#209).
+@dataclass(frozen=True)
+class EvidenceSlotMetrics:
+    """Métricas operacionais agregadas de um slot em um frame."""
+
+    slot: EvidenceSlot
+    available: int
+    missing: int
+    failed: int
+    model_calls: int
+    latency_s: float
+
+
 # Agrupa tudo que a etapa de evidência produz: as regiões já com seus slots,
 # os embeddings referenciados por eles e as falhas isoladas. Existe para que
 # o pipeline receba um único objeto em vez de quatro retornos posicionais.
@@ -79,6 +95,7 @@ class MultiContextResult:
     visual_embeddings: tuple[VisualEmbedding, ...]
     language_embeddings: tuple[LanguageEmbedding, ...]
     failures: tuple[EvidenceExtractionFailure, ...]
+    metrics: tuple[EvidenceSlotMetrics, ...] = ()
 
 
 # Ponto de entrada público da etapa: produz todos os slots de evidência
@@ -109,10 +126,17 @@ def extract_region_evidence(
     language_embeddings: list[LanguageEmbedding] = []
     failures: list[EvidenceExtractionFailure] = []
     updated: list[ObservedRegion] = []
+    latency = dict.fromkeys(EvidenceSlot, 0.0)
+    model_calls = dict.fromkeys(EvidenceSlot, 0)
 
-    scene_slot_template = _scene_evidence(
-        image, config, encoder, language_embeddings, failures
-    ) if settings.scene_conditioned_enabled and regions else None
+    scene_slot_template = None
+    if settings.scene_conditioned_enabled and regions:
+        started = time.monotonic()
+        scene_slot_template = _scene_evidence(
+            image, config, encoder, language_embeddings, failures
+        )
+        latency[EvidenceSlot.SCENE_CONDITIONED] += time.monotonic() - started
+        model_calls[EvidenceSlot.SCENE_CONDITIONED] += 1
 
     for region in regions:
         slots: list[RegionEvidenceSlot] = []
@@ -122,7 +146,9 @@ def extract_region_evidence(
         if not settings.foreground_enabled or feature_map is None:
             slots.append(_missing(region, EvidenceSlot.FOREGROUND_DENSE, _why_disabled(feature_map)))
         else:
+            started = time.monotonic()
             dense_slot, visual = _foreground_evidence(region, feature_map, config, failures)
+            latency[EvidenceSlot.FOREGROUND_DENSE] += time.monotonic() - started
             slots.append(dense_slot)
             if visual is not None:
                 visual_embeddings.append(visual)
@@ -135,7 +161,10 @@ def extract_region_evidence(
             if not enabled:
                 slots.append(_missing(region, slot_kind, "slot disabled by configuration"))
                 continue
+            started = time.monotonic()
             crop_slot, language = _crop_evidence(region, image, config, encoder, slot_kind, failures)
+            latency[slot_kind] += time.monotonic() - started
+            model_calls[slot_kind] += 1
             slots.append(crop_slot)
             if language is not None:
                 language_embeddings.append(language)
@@ -158,11 +187,30 @@ def extract_region_evidence(
             )
         )
 
+    state_counts = {
+        slot: {state: 0 for state in EvidenceState}
+        for slot in EvidenceSlot
+    }
+    for region in updated:
+        for evidence_slot in region.evidence:
+            state_counts[evidence_slot.slot][evidence_slot.state] += 1
+    metrics = tuple(
+        EvidenceSlotMetrics(
+            slot=slot,
+            available=state_counts[slot][EvidenceState.AVAILABLE],
+            missing=state_counts[slot][EvidenceState.MISSING],
+            failed=state_counts[slot][EvidenceState.FAILED],
+            model_calls=model_calls[slot],
+            latency_s=latency[slot],
+        )
+        for slot in EvidenceSlot
+    )
     return MultiContextResult(
         regions=tuple(updated),
         visual_embeddings=tuple(visual_embeddings),
         language_embeddings=tuple(language_embeddings),
         failures=tuple(failures),
+        metrics=metrics,
     )
 
 

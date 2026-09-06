@@ -23,16 +23,25 @@ from .annotation_manifest_io import (
 from .manifest import CalibrationManifest, DatasetManifest, SensorSourceManifest, SequenceManifest
 from .manifest_io import dataset_manifest_from_mapping, load_dataset_manifest
 from .paths import RAW_DATASETS_DIRECTORY, raw_dataset_root, validate_dataset_name
+from .reference_split import (
+    REFERENCE_SPLIT_SCHEMA_VERSION,
+    ReferenceSplit,
+    load_and_validate_reference_split,
+    load_reference_split,
+    validate_reference_split,
+)
 
 __all__ = [
     "RAW_DATASETS_DIRECTORY",
     "REFERENCE_SCHEMA_VERSION",
+    "REFERENCE_SPLIT_SCHEMA_VERSION",
     "AnnotationCertainty",
     "AnnotationProvenance",
     "CalibrationManifest",
     "DatasetManifest",
     "MaskAnnotation",
     "ReferenceManifest",
+    "ReferenceSplit",
     "RegionAnnotation",
     "RelationAnnotation",
     "ReviewState",
@@ -43,11 +52,14 @@ __all__ = [
     "Split",
     "dataset_manifest_from_mapping",
     "load_dataset_manifest",
+    "load_and_validate_reference_split",
     "load_reference_manifest",
+    "load_reference_split",
     "raw_dataset_root",
     "reference_manifest_from_mapping",
     "reference_manifest_to_mapping",
     "save_reference_manifest",
     "validate_dataset_name",
     "validate_reference",
+    "validate_reference_split",
 ]

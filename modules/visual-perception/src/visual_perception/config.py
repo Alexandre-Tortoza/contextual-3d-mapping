@@ -107,13 +107,25 @@ class RegionMergeConfig:
 # Configuração do backend de extração de features densas (DenseFeatureExtractor).
 @dataclass(frozen=True)
 class FeatureExtractionConfig:
-    """Seleciona o backbone e a regra de amostragem de evidência densa (#191/#192)."""
+    """Seleciona o backbone e a produção de evidência densa (#191/#192/#208)."""
 
     backend: str = "fake"
     checkpoint: str = "none"
     feature_resolution: int = 16
     device: str = "auto"
     upsampling: str = "nearest"
+    input_resolution: int | None = None
+    max_feature_map_mb: int = 384
+    upsampler_repository: str = "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d"
+    upsampler_checkpoint: str = (
+        "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/"
+        "pretrained/dinov2_jbu_stack_cocostuff.ckpt"
+    )
+    upsampler_checkpoint_digest: str = (
+        "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c"
+    )
+    fallback_backend: str | None = None
+    fallback_checkpoint: str | None = None
 
     # Garante que a resolução do feature map configurada é um valor
     # utilizável (positivo) e que a regra de amostragem densa é conhecida,
@@ -124,10 +136,22 @@ class FeatureExtractionConfig:
         """Rejeita resoluções e métodos de amostragem incompatíveis."""
         if self.feature_resolution <= 0:
             raise ValueError("feature_extraction.feature_resolution must be positive.")
+        if self.input_resolution is not None and self.input_resolution <= 0:
+            raise ValueError("feature_extraction.input_resolution must be positive when provided.")
+        if self.max_feature_map_mb <= 0:
+            raise ValueError("feature_extraction.max_feature_map_mb must be positive.")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("feature_extraction.device must be 'auto', 'cpu', or 'cuda'.")
         if self.upsampling not in {"patch_grid", "nearest", "bilinear"}:
             raise ValueError("feature_extraction.upsampling must be patch_grid, nearest or bilinear.")
+        if self.fallback_backend not in {None, "dinov2"}:
+            raise ValueError("feature_extraction.fallback_backend must be None or 'dinov2'.")
+        if self.fallback_backend is not None and not self.fallback_checkpoint:
+            raise ValueError("feature_extraction.fallback_backend requires fallback_checkpoint.")
+        if len(self.upsampler_checkpoint_digest) != 64 or any(
+            char not in "0123456789abcdef" for char in self.upsampler_checkpoint_digest
+        ):
+            raise ValueError("feature_extraction.upsampler_checkpoint_digest must be SHA-256 hex.")
 
 
 # Configuração da extração de evidência multi-contexto por região (#193/#194).

@@ -353,3 +353,72 @@ def test_without_a_dense_feature_map_the_foreground_slot_says_so() -> None:
     assert foreground.state is EvidenceState.MISSING
     assert foreground.reason == "no dense feature map available"
     assert region.visual_embedding_ref is None
+
+
+# Verifica que o report operacional contabiliza custo e cobertura por slot,
+# inclusive para os contextos habilitados no perfil de referência (#209).
+def test_multi_context_metrics_report_actual_calls_and_states_per_slot() -> None:
+    """Conta uma chamada por crop/região e uma única chamada global de cena."""
+    config = dataclasses.replace(
+        default_config(),
+        multi_context=MultiContextConfig(
+            contextual_crop_enabled=True,
+            scene_conditioned_enabled=True,
+        ),
+    )
+    payload = payload_with_blobs()
+    feature_map = FakeDenseFeatureExtractor().extract(payload, config.feature_extraction)
+
+    result = extract_region_evidence(
+        (_region(),), payload, config, FakeLanguageAlignedEncoder(), feature_map=feature_map
+    )
+    metrics = {metric.slot: metric for metric in result.metrics}
+
+    assert metrics[EvidenceSlot.FOREGROUND_DENSE].available == 1
+    assert metrics[EvidenceSlot.FOREGROUND_DENSE].model_calls == 0
+    assert metrics[EvidenceSlot.TIGHT_CROP].model_calls == 1
+    assert metrics[EvidenceSlot.CONTEXTUAL_CROP].model_calls == 1
+    assert metrics[EvidenceSlot.SCENE_CONDITIONED].model_calls == 1
+    assert all(metric.failed == 0 for metric in metrics.values())
+
+
+# Compara baseline e perfil completo sobre as mesmas regiões para proteger
+# a regra de que evidência contextual nunca altera IDs, masks ou boxes.
+def test_enabling_all_context_slots_preserves_canonical_geometry_and_ids() -> None:
+    """Mantém identidade e geometria idênticas ao habilitar contexto e cena."""
+    payload = payload_with_blobs()
+    base_config = default_config()
+    full_config = dataclasses.replace(
+        base_config,
+        multi_context=MultiContextConfig(
+            contextual_crop_enabled=True,
+            scene_conditioned_enabled=True,
+        ),
+    )
+    source_regions = (_region(), _region("region-b", (16, 16, 24, 24)))
+    feature_map = FakeDenseFeatureExtractor().extract(payload, base_config.feature_extraction)
+
+    baseline = extract_region_evidence(
+        source_regions,
+        payload,
+        base_config,
+        FakeLanguageAlignedEncoder(),
+        feature_map=feature_map,
+    )
+    full = extract_region_evidence(
+        source_regions,
+        payload,
+        full_config,
+        FakeLanguageAlignedEncoder(),
+        feature_map=feature_map,
+    )
+
+    assert tuple(region.region_id for region in full.regions) == tuple(
+        region.region_id for region in baseline.regions
+    )
+    assert tuple(region.mask for region in full.regions) == tuple(
+        region.mask for region in baseline.regions
+    )
+    assert tuple(region.box for region in full.regions) == tuple(
+        region.box for region in baseline.regions
+    )

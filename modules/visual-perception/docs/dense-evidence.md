@@ -1,6 +1,6 @@
 # Evidência densa em alta resolução
 
-Issues: #191 (contract), #192 (benchmark).
+Issues: #191 (contract), #192 (amostragem) e #208 (elevação real).
 
 Este documento descreve o contract de evidência densa pixel-aligned e o que
 o benchmark mediu sobre ele na GPU de referência.
@@ -13,11 +13,13 @@ sua coordenada na imagem original:
 
 | campo | o que responde |
 | --- | --- |
-| `representation` | é uma grade de patches ou um mapa pixel-aligned? |
+| `representation` | é uma grade de patches, uma grade elevada ou um mapa pixel-aligned? |
+| `generation` | valores nativos, reamostrados ou produzidos por upsampler aprendido? |
 | `interpolation` | qual regra de amostragem vale para ler este mapa |
 | `stride_x`/`stride_y` + `origin_x`/`origin_y` | o `CoordinateTransform` invertível grade → imagem |
 | `valid_support` | quais células têm suporte real |
 | `model_id`, `checkpoint`, `preprocessing`, `upsampling_method` | proveniência numérica |
+| `source_grid_*`, `upsampler_checkpoint`, `fallback_reason` | origem da elevação e fallback observável |
 
 `sample_feature_map(feature_map, xs, ys)` é a única forma pública de ler o
 mapa. Ela devolve `(values, valid)`: coordenadas fora da área coberta, sem
@@ -142,6 +144,37 @@ importa mais que cobertura — mas quem o usar precisa contar com a perda de
 
 `patch_grid` permanece como baseline reproduzível da ablation, não como
 opção de produção.
+
+## Elevação real (#208)
+
+A #192 mostrou que `nearest` e `bilinear` apenas leem uma grade existente:
+eles melhoram representabilidade da máscara, mas não criam detalhe visual. A #208 mantém
+esses caminhos como baselines e acrescenta duas produções efetivamente distintas:
+
+- `dinov2` com `input_resolution=448`: o backbone recebe o frame em resize
+  aspect-preserving e produz uma grade nativa maior (32x24 em frames 640x480), em vez da
+  grade 16x16 do processor 224x224;
+- `featup`: adapter isolado que usa o JBU pré-treinado do FeatUp sobre DINOv2-small e
+  produz `FeatureGeneration.LEARNED_UPSAMPLER`. O checkpoint tem 384 canais e não é
+  comparado diretamente ao espaço DINOv2-base de 768 canais.
+
+O teto `max_feature_map_mb` é aplicado antes da inferência FeatUp: a resolução de entrada
+é reduzida por múltiplos do patch quando o mapa float32 previsto não cabe. Um fallback só
+existe quando `fallback_backend` e `fallback_checkpoint` são declarados; o mapa retornado
+carrega `fallback_reason`, portanto uma indisponibilidade nunca parece uma execução FeatUp
+bem-sucedida.
+
+O benchmark reproduzível compara os cinco caminhos nos mesmos três frames e nas mesmas
+regiões:
+
+```bash
+python benchmarks/feature_elevation_benchmark.py
+```
+
+Ele grava `benchmark-208-feature-elevation-<run-id>.json` e `.md`, com resolução efetiva,
+proveniência, representabilidade, cobertura, consistência, separação, latência e VRAM.
+Resultados só devem orientar o perfil depois de o artifact real ser produzido; a presença
+do adapter, isoladamente, não demonstra ganho de qualidade.
 
 ### O que estes números **não** sustentam
 

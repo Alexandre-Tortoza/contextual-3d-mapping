@@ -20,13 +20,15 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from importlib import import_module
+from typing import Any
 
 from visual_perception.domain.errors import BackendExecutionError
 
 try:
-    import torch
-except ImportError:
-    torch = None  # type: ignore[assignment]
+    torch: Any = import_module("torch")
+except ModuleNotFoundError:
+    torch = None
 
 # torch.cuda.OutOfMemoryError is a RuntimeError subclass, not a MemoryError,
 # so it needs its own catch clause alongside MemoryError below.

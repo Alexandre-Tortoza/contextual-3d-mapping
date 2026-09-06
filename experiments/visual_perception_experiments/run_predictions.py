@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 from contextual_mapping_datasets import ReferenceManifest, SampleAnnotation, load_reference_manifest
 from visual_perception.application.lifecycle import ModelLifecycleManager
 from visual_perception.application.pipeline import PerceptionPorts, run_canonical_pipeline
@@ -148,6 +149,7 @@ def run_configuration(
     real_backends: bool = False,
     run_id: str | None = None,
     limit: int | None = None,
+    sample_ids: tuple[str, ...] = (),
 ) -> PredictionSet:
     """Executa ``ablation`` sobre as amostras do manifest e devolve as predições.
 
@@ -158,6 +160,7 @@ def run_configuration(
         real_backends: usa os backends reais de GPU em vez dos fakes.
         run_id: identidade da execução; o default é o instante UTC.
         limit: processa no máximo este número de amostras (ensaios rápidos).
+        sample_ids: IDs explícitos na ordem desejada; vazio usa todo o manifest.
     Retorna:
         o :class:`PredictionSet` da configuração.
     """
@@ -165,7 +168,7 @@ def run_configuration(
     counter = PortCallCounter()
     instrumented = counting_ports(ports, counter)
 
-    samples = manifest.samples[:limit] if limit else manifest.samples
+    samples = select_samples(manifest, sample_ids=sample_ids, limit=limit)
     predictions = [
         _run_sample(sample, ablation, instrumented, counter, frames_dir=frames_dir) for sample in samples
     ]
@@ -178,6 +181,27 @@ def run_configuration(
         hardware=describe_hardware(real_backends=real_backends),
         created_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
+
+
+# Seleciona amostras antes de carregar frames/modelos, preservando a ordem
+# explícita e recusando execução parcial com IDs desconhecidos ou repetidos.
+def select_samples(
+    manifest: ReferenceManifest,
+    *,
+    sample_ids: tuple[str, ...] = (),
+    limit: int | None = None,
+) -> tuple[SampleAnnotation, ...]:
+    """Retorna amostras selecionadas deterministicamente pelo chamador."""
+    if limit is not None and limit <= 0:
+        raise ValueError("limit must be positive when provided.")
+    if len(sample_ids) != len(set(sample_ids)):
+        raise ValueError("sample_ids must not contain duplicates.")
+    indexed = {sample.sample_id: sample for sample in manifest.samples}
+    unknown = sorted(set(sample_ids) - set(indexed))
+    if unknown:
+        raise ValueError(f"unknown sample ids {unknown}.")
+    selected = tuple(indexed[sample_id] for sample_id in sample_ids) if sample_ids else manifest.samples
+    return selected[:limit] if limit is not None else selected
 
 
 # Executa uma amostra, medindo custo e isolando a falha. Helper de
@@ -331,6 +355,7 @@ def main() -> None:
     parser.add_argument("--calibration-domain", type=str, default="indoor_corridor")
     parser.add_argument("--only", nargs="*", default=[])
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--sample-id", action="append", default=[])
     arguments = parser.parse_args()
 
     manifest = load_reference_manifest(arguments.manifest)
@@ -352,6 +377,7 @@ def main() -> None:
             real_backends=arguments.real_backends,
             run_id=run_id,
             limit=arguments.limit,
+            sample_ids=tuple(arguments.sample_id),
         )
         path = destination / f"{ablation.name}.json"
         save_predictions(predictions, path)

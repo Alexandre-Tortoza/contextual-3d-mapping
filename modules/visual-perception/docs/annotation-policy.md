@@ -3,6 +3,7 @@
 Issue: #197. Schema: `visual-reference/1`
 (`datasets/contextual_mapping_datasets/annotation_manifest.py`).
 Manifest: `datasets/manifests/corridor-02-visual-reference.json`.
+Partição fixa: `datasets/splits/corridor-02-visual-reference-1.json`.
 
 Este documento define o que anotar, o que ignorar e como resolver
 divergência no conjunto de referência usado para avaliar percepção visual.
@@ -160,10 +161,20 @@ python -m visual_perception_experiments.prepare_reference --frames-per-split 12
 
 # Gera o pacote HTML autocontido de revisão.
 python -m visual_perception_experiments.review_package
+
+# Opcional: transforma predições reais em um manifest de rascunho separado.
+python -m visual_perception_experiments.draft_reference \
+  --predictions <predictions.json> \
+  --out <reference-draft.json>
 ```
 
-O pacote de revisão mostra cada frame, sua identidade, seu digest, suas
-condições de captura medidas e o que já foi anotado, junto desta checklist.
+O pacote de revisão mostra cada frame com overlays das masks/labels, sua identidade, seu
+digest, suas condições de captura medidas e o que já foi anotado, junto desta checklist.
+O gerador de rascunho sempre grava `model_assisted_draft` e
+`pending_review`; ele não sobrescreve o manifest canônico nem pode satisfazer
+`require_reviewed=True`. O revisor humano precisa corrigir masks, labels, ambiguidade e
+`ignored`, e o split `test` continua sujeito às duas passagens independentes descritas
+acima.
 
 ## Estado atual
 

@@ -19,6 +19,7 @@ from visual_perception.config import (
     FeatureExtractionConfig,
     LanguageEmbeddingConfig,
     ModuleConfig,
+    MultiContextConfig,
     MultimodalReasoningConfig,
     QualityProfile,
     RegionDiscoveryConfig,
@@ -90,12 +91,24 @@ def additional_compute_is_justified(
 _REAL_REGION_DISCOVERY = RegionDiscoveryConfig(
     backend="sam", checkpoint="facebook/sam-vit-huge", min_mask_area=500
 )
-_REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(backend="dinov2", checkpoint="facebook/dinov2-base")
+_REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(
+    backend="dinov2",
+    checkpoint="facebook/dinov2-base",
+    input_resolution=448,
+)
 _REAL_LANGUAGE_EMBEDDING = LanguageEmbeddingConfig(
     backend="clip", checkpoint="openai/clip-vit-large-patch14", dimension=768
 )
 _REAL_MULTIMODAL_REASONING = MultimodalReasoningConfig(
     backend="qwen_vl", checkpoint="Qwen/Qwen2.5-VL-3B-Instruct", load_in_4bit=True
+)
+_REAL_MULTI_CONTEXT = MultiContextConfig(
+    foreground_enabled=True,
+    tight_crop_enabled=True,
+    contextual_crop_enabled=True,
+    scene_conditioned_enabled=True,
+    context_expansion=0.25,
+    masked_tight_crop=False,
 )
 
 
@@ -126,4 +139,5 @@ def research_quality_config(
         feature_extraction=_REAL_FEATURE_EXTRACTION if real_backends else FeatureExtractionConfig(),
         language_embedding=_REAL_LANGUAGE_EMBEDDING if real_backends else LanguageEmbeddingConfig(),
         multimodal_reasoning=_REAL_MULTIMODAL_REASONING if real_backends else MultimodalReasoningConfig(),
+        multi_context=_REAL_MULTI_CONTEXT if real_backends else MultiContextConfig(),
     )

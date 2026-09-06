@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from contextual_mapping_datasets import (
     AnnotationCertainty,
     AnnotationProvenance,

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 from visual_perception.application.multi_context import (
     EvidenceExtractionFailure,
+    EvidenceSlotMetrics,
     extract_region_evidence,
 )
 from visual_perception.application.quality_audit import audit_observation
@@ -71,6 +72,7 @@ class PipelineResult:
     audit: AuditResult
     evidence_failures: tuple[EvidenceExtractionFailure, ...] = ()
     calibration_failures: tuple[CalibrationFailure, ...] = ()
+    evidence_metrics: tuple[EvidenceSlotMetrics, ...] = ()
 
 
 # Ponto de entrada principal do módulo: conduz uma observação de imagem
@@ -89,6 +91,7 @@ def run_canonical_pipeline(
     regions = merge_regions(image.observation_id, proposals, config.merge)
 
     evidence_failures: tuple[EvidenceExtractionFailure, ...] = ()
+    evidence_metrics: tuple[EvidenceSlotMetrics, ...] = ()
     if regions:
         feature_map = ports.feature_extractor.extract(payload, config.feature_extraction)
         evidence = extract_region_evidence(
@@ -96,6 +99,7 @@ def run_canonical_pipeline(
         )
         regions = evidence.regions
         evidence_failures = evidence.failures
+        evidence_metrics = evidence.metrics
 
     scene_context = analyze_scene(payload, ports.multimodal_reasoner, config.multimodal_reasoning)
     regions, failures = interpret_regions(
@@ -123,6 +127,7 @@ def run_canonical_pipeline(
         audit=audit,
         evidence_failures=evidence_failures,
         calibration_failures=calibration_failures,
+        evidence_metrics=evidence_metrics,
     )
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 # Representa o diretório relativo, versionado como convenção do repositório,
 # onde ficam os dados brutos locais. Existe para que adapters, experimentos e
 # manifests não reconstruam nem divirjam do layout `datasets/raw/<nome>/`.

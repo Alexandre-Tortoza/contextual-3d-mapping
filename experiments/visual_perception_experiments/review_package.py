@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import base64
 import html
+import io
 from collections import Counter
 from pathlib import Path
 
@@ -140,7 +141,7 @@ def _sample_card(sample: SampleAnnotation, frames_dir: Path, embed_images: bool)
     return (
         f'<article class="sample">'
         f"<h3><code>{html.escape(sample.sample_id)}</code></h3>"
-        f"{_image_tag(frames_dir / f'{sample.sample_id}.png', embed_images)}"
+        f"{_image_tag(frames_dir / f'{sample.sample_id}.png', sample, embed_images)}"
         f"<ul>"
         f"<li>resolução: {sample.width}x{sample.height}</li>"
         f"<li>condições medidas: {html.escape(conditions)}</li>"
@@ -155,8 +156,8 @@ def _sample_card(sample: SampleAnnotation, frames_dir: Path, embed_images: bool)
 
 # Embute a imagem como data URI, ou explica por que ela não está disponível.
 # Existe para que a página funcione mesmo em uma máquina sem os dados brutos.
-def _image_tag(path: Path, embed_images: bool) -> str:
-    """Renderiza a imagem embutida, ou uma nota quando ela não está disponível."""
+def _image_tag(path: Path, sample: SampleAnnotation, embed_images: bool) -> str:
+    """Renderiza a imagem com masks embutida, ou uma nota quando indisponível."""
     if not embed_images:
         return ""
     if not path.exists():
@@ -164,8 +165,50 @@ def _image_tag(path: Path, embed_images: bool) -> str:
             '<p class="missing">Frame não disponível localmente: '
             f"<code>{html.escape(path.name)}</code></p>"
         )
-    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    encoded = base64.b64encode(_overlay_bytes(path, sample)).decode("ascii")
     return f'<img src="data:image/png;base64,{encoded}" alt="{html.escape(path.stem)}">'
+
+
+# Desenha as masks e labels do rascunho sobre o frame para que o humano
+# revise geometria e semântica juntas, sem depender de ferramenta externa.
+def _overlay_bytes(path: Path, sample: SampleAnnotation) -> bytes:
+    """Retorna um PNG com overlays das regiões anotadas da amostra."""
+    from PIL import Image, ImageDraw
+
+    image = Image.open(path).convert("RGBA")
+    colors = ((230, 25, 75), (60, 180, 75), (0, 130, 200), (245, 130, 48))
+    for index, region in enumerate(sample.regions):
+        mask_bytes = _decode_mask_bytes(region.mask.runs, sample.width * sample.height)
+        mask = Image.frombytes("L", (sample.width, sample.height), mask_bytes)
+        color = colors[index % len(colors)]
+        layer = Image.new("RGBA", image.size, (*color, 0))
+        layer.putalpha(mask.point(lambda value: 90 if value else 0))
+        image = Image.alpha_composite(image, layer)
+        box = mask.getbbox()
+        if box is not None:
+            draw = ImageDraw.Draw(image)
+            label = ", ".join(region.labels) or "unknown"
+            draw.rectangle(box, outline=(*color, 255), width=2)
+            draw.text((box[0] + 2, box[1] + 2), label, fill=(255, 255, 255, 255), stroke_width=2)
+    output = io.BytesIO()
+    image.convert("RGB").save(output, format="PNG")
+    return output.getvalue()
+
+
+# Decodifica o RLE começando em fundo diretamente para bytes 0/255. Existe
+# para manter o pacote de revisão leve e independente de numpy/evaluation.
+def _decode_mask_bytes(runs: tuple[int, ...], expected_size: int) -> bytes:
+    """Decodifica uma máscara RLE validada para bytes de imagem L."""
+    values = bytearray()
+    foreground = False
+    for run in runs:
+        values.extend(bytes((255 if foreground else 0,)) * run)
+        foreground = not foreground
+    if len(values) != expected_size:
+        raise ValueError(
+            f"Mask RLE covers {len(values)} pixels, expected {expected_size}."
+        )
+    return bytes(values)
 
 
 _STYLE = """

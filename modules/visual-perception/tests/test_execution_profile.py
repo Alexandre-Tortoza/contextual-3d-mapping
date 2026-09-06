@@ -55,3 +55,16 @@ def test_research_quality_config_only_enables_multi_scale_when_justified() -> No
     assert justified.tiling.multi_scale_enabled
     assert not unjustified.tiling.multi_scale_enabled
     assert justified.quality_profile is QualityProfile.RESEARCH_QUALITY
+
+
+# Confirma que o perfil de referência real declara os quatro slots em vez
+# de herdar defaults que mantinham contexto e cena desabilitados (#209).
+def test_real_research_profile_enables_every_multi_context_slot_explicitly() -> None:
+    """Habilita foreground, crop justo, crop contextual e cena no perfil real."""
+    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+
+    assert config.multi_context.foreground_enabled
+    assert config.multi_context.tight_crop_enabled
+    assert config.multi_context.contextual_crop_enabled
+    assert config.multi_context.scene_conditioned_enabled
+    assert config.feature_extraction.input_resolution == 448

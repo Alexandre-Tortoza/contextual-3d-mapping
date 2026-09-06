@@ -28,6 +28,7 @@ from __future__ import annotations
 import numpy as np
 
 from visual_perception.domain.feature_map import (
+    FeatureGeneration,
     FeatureMap,
     FeatureRepresentation,
     SamplingRule,
@@ -133,5 +134,8 @@ def upsample_feature_map(
         checkpoint=feature_map.checkpoint,
         preprocessing=feature_map.preprocessing,
         upsampling_method=method,
+        generation=FeatureGeneration.RESAMPLED,
+        source_grid_width=feature_map.grid_width,
+        source_grid_height=feature_map.grid_height,
         valid_support=support,
     )

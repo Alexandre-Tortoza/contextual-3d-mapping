@@ -44,7 +44,19 @@ class FeatureRepresentation(StrEnum):
     """Qual é a natureza espacial de um :class:`FeatureMap`."""
 
     PATCH_GRID = "patch_grid"
+    ELEVATED_GRID = "elevated_grid"
     PIXEL_ALIGNED = "pixel_aligned"
+
+
+# Registra como os valores espaciais foram produzidos, separadamente de sua
+# resolução final. Existe para impedir que interpolação geométrica seja
+# reportada como detalhe aprendido ou extraído nativamente (#208).
+class FeatureGeneration(StrEnum):
+    """Origem dos valores de um :class:`FeatureMap`."""
+
+    BACKBONE_NATIVE = "backbone_native"
+    RESAMPLED = "resampled"
+    LEARNED_UPSAMPLER = "learned_upsampler"
 
 
 # Declara qual regra de amostragem é válida para ler um mapa. Existe para
@@ -84,6 +96,12 @@ class FeatureMap:
     checkpoint: str | None = None
     preprocessing: str | None = None
     upsampling_method: str | None = None
+    generation: FeatureGeneration = FeatureGeneration.BACKBONE_NATIVE
+    source_grid_width: int | None = None
+    source_grid_height: int | None = None
+    upsampler_checkpoint: str | None = None
+    upsampler_checkpoint_digest: str | None = None
+    fallback_reason: str | None = None
     valid_support: np.ndarray | None = None  # shape (grid_height, grid_width), bool
 
     # Valida shape, consistência de dimensão, strides positivos, coerência
@@ -108,6 +126,19 @@ class FeatureMap:
             raise ValueError("A pixel_aligned FeatureMap must have unit strides.")
         if self.representation is FeatureRepresentation.PIXEL_ALIGNED and self.upsampling_method is None:
             raise ValueError("A pixel_aligned FeatureMap must record its upsampling_method.")
+        if self.generation is FeatureGeneration.LEARNED_UPSAMPLER:
+            if self.representation is not FeatureRepresentation.ELEVATED_GRID:
+                raise ValueError("A learned upsampler must produce an elevated_grid FeatureMap.")
+            if (
+                not self.upsampling_method
+                or not self.upsampler_checkpoint
+                or not self.upsampler_checkpoint_digest
+            ):
+                raise ValueError(
+                    "A learned upsampler must record method, checkpoint and checkpoint digest."
+                )
+            if not self.source_grid_width or not self.source_grid_height:
+                raise ValueError("A learned upsampler must record its positive source grid resolution.")
         if self.valid_support is not None:
             if self.valid_support.dtype != np.bool_:
                 raise ValueError(
@@ -297,6 +328,12 @@ def feature_map_spec_to_dict(feature_map: FeatureMap) -> dict[str, Any]:
         "checkpoint": feature_map.checkpoint,
         "preprocessing": feature_map.preprocessing,
         "upsampling_method": feature_map.upsampling_method,
+        "generation": feature_map.generation.value,
+        "source_grid_width": feature_map.source_grid_width,
+        "source_grid_height": feature_map.source_grid_height,
+        "upsampler_checkpoint": feature_map.upsampler_checkpoint,
+        "upsampler_checkpoint_digest": feature_map.upsampler_checkpoint_digest,
+        "fallback_reason": feature_map.fallback_reason,
         "dtype": str(feature_map.data.dtype),
         "support_ratio": feature_map.support_ratio,
         "has_valid_support": feature_map.valid_support is not None,
@@ -323,6 +360,9 @@ def feature_map_spec_from_dict(payload: dict[str, Any]) -> dict[str, Any]:
     spec = dict(payload)
     spec["representation"] = FeatureRepresentation(payload["representation"]).value
     spec["interpolation"] = SamplingRule(payload["interpolation"]).value
+    spec["generation"] = FeatureGeneration(
+        payload.get("generation", FeatureGeneration.BACKBONE_NATIVE.value)
+    ).value
     for key in ("grid_width", "grid_height", "dimension"):
         if type(spec[key]) is not int or spec[key] <= 0:
             raise ValueError(f"Dense feature spec field {key!r} must be a positive integer.")

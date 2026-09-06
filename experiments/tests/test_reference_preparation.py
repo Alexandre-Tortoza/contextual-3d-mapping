@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from contextual_mapping_datasets import (
     ReviewState,
     Split,
@@ -15,6 +16,13 @@ from contextual_mapping_datasets import (
     save_reference_manifest,
     validate_reference,
 )
+from visual_perception_evaluation.prediction import (
+    PredictedRegion,
+    PredictionSet,
+    SamplePrediction,
+    ScoredValue,
+)
+from visual_perception_experiments.draft_reference import build_draft_manifest
 from visual_perception_experiments.fixture_reference import (
     FIXTURE_REFERENCE_ID,
     build_fixture_manifest,
@@ -194,3 +202,57 @@ def test_the_manifest_written_by_the_tool_round_trips_through_disk(tmp_path: Pat
 
     assert load_reference_manifest(path) == manifest
     assert json.loads(path.read_text(encoding="utf-8"))["schema_version"] == "visual-reference/1"
+
+
+# Confirma que predições podem reduzir o trabalho mecânico sem se passarem
+# por anotações ou revisão humana concluída.
+def test_prediction_drafts_remain_pending_human_review() -> None:
+    """Converte máscara/label previstos e mantém estado e proveniência honestos."""
+    manifest = build_fixture_manifest()
+    sample = manifest.samples[0]
+    source_region = sample.regions[0]
+    predictions = PredictionSet(
+        run_id="draft-run",
+        configuration="multi_context",
+        config_fingerprint="draft-config",
+        code_revision="deadbeef",
+        samples=(
+            SamplePrediction(
+                sample.sample_id,
+                sample.width,
+                sample.height,
+                regions=(
+                    PredictedRegion(
+                        "predicted-a",
+                        sample.width,
+                        sample.height,
+                        source_region.mask.runs,
+                        labels=(ScoredValue("porta", raw_confidence=0.8),),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    draft = build_draft_manifest(manifest, predictions)
+    drafted = draft.samples[0]
+
+    assert drafted.review_state is ReviewState.PENDING_REVIEW
+    assert drafted.provenance.method == "model_assisted_draft"
+    assert drafted.regions[0].labels == ("porta",)
+    assert "revisão humana" in drafted.regions[0].notes
+
+
+# Confirma que o pacote visual realmente incorpora overlays das masks, não
+# apenas a imagem bruta e uma lista textual de IDs.
+def test_review_package_renders_annotation_overlay(tmp_path: Path) -> None:
+    """Gera uma imagem PNG embutida diferente do frame sem overlay."""
+    frames = write_fixture_frames(tmp_path)
+    manifest = build_fixture_manifest(tmp_path)
+
+    page = render_review_page(manifest, frames_dir=tmp_path)
+    raw_base64 = __import__("base64").b64encode(
+        frames[manifest.samples[0].sample_id].read_bytes()
+    ).decode("ascii")
+
+    assert raw_base64 not in page

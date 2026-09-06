@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from contextual_mapping_datasets import (
     AnnotationCertainty,
     AnnotationProvenance,
@@ -17,16 +18,20 @@ from contextual_mapping_datasets import (
     SampleAnnotation,
     SampleArtifact,
     Split,
+    load_and_validate_reference_split,
     load_reference_manifest,
+    load_reference_split,
     reference_manifest_from_mapping,
     reference_manifest_to_mapping,
     save_reference_manifest,
     validate_reference,
+    validate_reference_split,
 )
 
 _POLICY = AnnotationProvenance(
     annotator="pending", method="tool_generated", policy_version="annotation-policy/1"
 )
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 # Constrói uma máscara RLE que cobre um retângulo de uma imagem 8x8, para
@@ -278,3 +283,51 @@ def test_an_unsupported_schema_version_is_refused(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="unsupported schema_version"):
         load_reference_manifest(path)
+
+
+# Confirma que o artifact versionado cobre exatamente o manifest corrente e
+# preserva três blocos temporais exclusivos e ordenados.
+def test_versioned_reference_split_matches_the_source_manifest() -> None:
+    """Valida digest, cobertura, pertença e ordem temporal dos splits reais."""
+    partition = load_and_validate_reference_split(
+        _REPOSITORY_ROOT / "datasets/splits/corridor-02-visual-reference-1.json",
+        _REPOSITORY_ROOT / "datasets/manifests/corridor-02-visual-reference.json",
+    )
+
+    assert {split: len(items) for split, items in partition.splits.items()} == {
+        Split.DEVELOPMENT: 12,
+        Split.CALIBRATION: 12,
+        Split.TEST: 12,
+    }
+
+
+# Simula vazamento explícito entre calibration e development para garantir
+# que um mesmo frame nunca possa alimentar ajuste e outra partição.
+def test_reference_split_rejects_cross_split_sample_leakage(tmp_path: Path) -> None:
+    """Rejeita um ID declarado em dois splits mesmo com manifest íntegro."""
+    split_path = _REPOSITORY_ROOT / "datasets/splits/corridor-02-visual-reference-1.json"
+    manifest_path = _REPOSITORY_ROOT / "datasets/manifests/corridor-02-visual-reference.json"
+    document = json.loads(split_path.read_text(encoding="utf-8"))
+    document["splits"]["calibration"].append(document["splits"]["development"][0])
+    tampered_path = tmp_path / "split.json"
+    tampered_path.write_text(json.dumps(document), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="more than one split"):
+        validate_reference_split(
+            load_reference_split(tampered_path),
+            load_reference_manifest(manifest_path),
+            manifest_path,
+        )
+
+
+# Altera apenas os bytes do manifest para provar que o vínculo criptográfico
+# detecta regeneração ou edição não acompanhada por uma nova partição.
+def test_reference_split_rejects_source_manifest_digest_drift(tmp_path: Path) -> None:
+    """Rejeita um manifest semanticamente legível cujo SHA-256 mudou."""
+    split_path = _REPOSITORY_ROOT / "datasets/splits/corridor-02-visual-reference-1.json"
+    manifest_path = _REPOSITORY_ROOT / "datasets/manifests/corridor-02-visual-reference.json"
+    changed_manifest = tmp_path / "manifest.json"
+    changed_manifest.write_bytes(manifest_path.read_bytes() + b"\n")
+
+    with pytest.raises(ValueError, match="digest does not match"):
+        load_and_validate_reference_split(split_path, changed_manifest)

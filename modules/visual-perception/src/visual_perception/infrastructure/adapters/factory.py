@@ -13,6 +13,10 @@ from visual_perception.config import ModuleConfig
 from visual_perception.infrastructure.adapters.feature_extraction_backend import (
     RealDenseFeatureExtractionAdapter,
 )
+from visual_perception.infrastructure.adapters.feature_upsampling_backend import (
+    FallbackDenseFeatureExtractionAdapter,
+    FeatUpDenseFeatureExtractionAdapter,
+)
 from visual_perception.infrastructure.adapters.language_embedding_backend import (
     RealLanguageAlignedEncoderAdapter,
 )
@@ -60,12 +64,25 @@ def _region_discoverer_for(
 # Seleciona o backend que produz o FeatureMap denso para o pooling existente.
 def _feature_extractor_for(
     config: ModuleConfig, lifecycle: ModelLifecycleManager
-) -> FakeDenseFeatureExtractor | RealDenseFeatureExtractionAdapter:
+) -> (
+    FakeDenseFeatureExtractor
+    | RealDenseFeatureExtractionAdapter
+    | FeatUpDenseFeatureExtractionAdapter
+    | FallbackDenseFeatureExtractionAdapter
+):
     """Seleciona o port de extração de features declarado pela configuração."""
     if config.feature_extraction.backend == "fake":
         return FakeDenseFeatureExtractor()
     if config.feature_extraction.backend == "dinov2":
         return RealDenseFeatureExtractionAdapter(lifecycle)
+    if config.feature_extraction.backend == "featup":
+        primary = FeatUpDenseFeatureExtractionAdapter(lifecycle)
+        if config.feature_extraction.fallback_backend is None:
+            return primary
+        return FallbackDenseFeatureExtractionAdapter(
+            primary,
+            RealDenseFeatureExtractionAdapter(lifecycle),
+        )
     raise ValueError(f"Backend de feature extraction não suportado: {config.feature_extraction.backend!r}.")
 
 

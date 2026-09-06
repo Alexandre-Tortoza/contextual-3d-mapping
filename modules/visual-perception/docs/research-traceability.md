@@ -302,6 +302,16 @@ self-supervised usadas antes do pooling por região.
 
 Pesquisa: [arXiv:2304.07193](https://arxiv.org/abs/2304.07193).
 
+### FeatUp
+
+FeatUp fundamenta o adapter opcional de elevação aprendida JBU da #208. O projeto fixa a
+revisão do repositório oficial e preserva o checkpoint do upsampler na provenance. Essa
+referência sustenta o método de elevação; não sustenta, sem o benchmark local, ganho na
+tarefa semântica do `corridor-02`.
+
+Pesquisa: [ICLR 2024](https://openreview.net/forum?id=GkJiNn2QDF).
+Código oficial: [mhamilton723/FeatUp](https://github.com/mhamilton723/FeatUp).
+
 ### CLIP, LSeg e Detic
 
 CLIP fundamenta o espaço compartilhado imagem-texto utilizado pelo módulo.
