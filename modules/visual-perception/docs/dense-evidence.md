@@ -1,0 +1,152 @@
+# Evidência densa em alta resolução
+
+Issues: #191 (contract), #192 (benchmark).
+
+Este documento descreve o contract de evidência densa pixel-aligned e o que
+o benchmark mediu sobre ele na GPU de referência.
+
+## O contract (#191)
+
+`domain/feature_map.py` define `FeatureMap` como uma grade espacial de
+features **mais** a metadata necessária para amarrar cada valor de volta à
+sua coordenada na imagem original:
+
+| campo | o que responde |
+| --- | --- |
+| `representation` | é uma grade de patches ou um mapa pixel-aligned? |
+| `interpolation` | qual regra de amostragem vale para ler este mapa |
+| `stride_x`/`stride_y` + `origin_x`/`origin_y` | o `CoordinateTransform` invertível grade → imagem |
+| `valid_support` | quais células têm suporte real |
+| `model_id`, `checkpoint`, `preprocessing`, `upsampling_method` | proveniência numérica |
+
+`sample_feature_map(feature_map, xs, ys)` é a única forma pública de ler o
+mapa. Ela devolve `(values, valid)`: coordenadas fora da área coberta, sem
+vizinhança completa (bilinear) ou sem suporte voltam marcadas como inválidas
+com vetor zero. Nada é extrapolado em silêncio.
+
+O array denso nunca é serializado inline. `feature_map_spec_to_dict`
+persiste só a metadata; os valores viajam por referência de artifact.
+
+### Materializar ou amostrar
+
+`application/dense_evidence.py::upsample_feature_map` materializa o mapa
+pixel-aligned completo, linha a linha, atrás de um teto explícito de
+memória. Ele existe porque a #191 exige que as duas resoluções sejam
+representações distinguíveis, e porque o benchmark precisa medir o custo
+real desse caminho.
+
+Em produção, o pooling **não** materializa: ele amostra sob demanda com
+`sample_feature_map`. Uma região cobre uma fração pequena da imagem, e os
+dois caminhos produzem os mesmos valores para as mesmas coordenadas — a
+diferença é só de memória. Quando a materialização não cabe no budget, o
+erro diz isso e aponta para a amostragem.
+
+## O que o benchmark mediu (#192)
+
+Execução real: RTX 3060 (8,2 GB), DINOv2-base, SAM-huge para descoberta de
+regiões, 6 frames do `corridor-02` a 640x480, 115 regiões descobertas.
+Relatório completo em
+`benchmarks/results/benchmark-192-dense-upsampling-20260906T140720Z.md`.
+
+Sem conjunto de referência anotado revisado (#197), **nenhuma métrica de
+acerto semântico foi calculada**. As medidas abaixo não dependem de
+anotação, e as conclusões estão limitadas ao que elas cobrem.
+
+### 1. A grade de patches não representa 54% das regiões pequenas
+
+| caminho | representáveis | pequenas (≤1024 px²) |
+| --- | --- | --- |
+| `patch_grid` | 94/115 | **17/37** |
+| `nearest` | 115/115 | 37/37 |
+| `bilinear` | 112/115 | 34/37 |
+
+O baseline rejeita qualquer região sem centro de célula dentro da máscara.
+Isso não é uma perda de qualidade: é uma falha dura, em que a região não
+recebe embedding nenhum. É o resultado mais forte do benchmark.
+
+Os 3 casos que o `bilinear` perde são regiões pequenas encostadas na borda,
+onde não existe vizinhança completa de quatro células para interpolar.
+
+### 2. A amostragem pixel-aligned representa melhor os próprios pixels
+
+Sobre as 94 regiões que **todos** os caminhos representam (comparar médias
+sobre conjuntos diferentes creditaria ao baseline justamente as regiões em
+que ele falha):
+
+| caminho | consistência intra-região | suporte médio |
+| --- | --- | --- |
+| `patch_grid` | 0,7760 | 1,0000 |
+| `nearest` | 0,7976 | 1,0000 |
+| `bilinear` | **0,8831** | 0,8188 |
+
+O ganho do `bilinear` é maior justamente nas regiões pequenas (0,8805 →
+0,9665). Em compensação, 18% dos pixels de máscara ficam sem suporte por
+caírem na meia-célula de borda.
+
+### 3. Resolução mais alta *reduz* a separação entre regiões vizinhas
+
+| caminho | separação inter-região |
+| --- | --- |
+| `patch_grid` | **0,6405** |
+| `nearest` | 0,6043 |
+| `bilinear` | 0,5879 |
+
+Resultado negativo, e o mais importante para calibrar expectativa: amostrar
+cada pixel de uma máscara a partir de uma grade grosseira faz duas regiões
+adjacentes puxarem as *mesmas* células. A evidência fica mais fiel aos
+pixels de cada região e, ao mesmo tempo, um pouco menos discriminativa
+entre vizinhas.
+
+### 4. O gargalo real é o resize do backbone, não a regra de pooling
+
+A proveniência registrada pelo contract da #191 mostra o motivo:
+
+```
+"preprocessing": "BitImageProcessor:224x224",
+"stride_x": 40.0, "stride_y": 30.0, "grid_width": 16, "grid_height": 16
+```
+
+O processor do DINOv2 redimensiona a imagem de 640x480 para 224x224 antes
+de qualquer coisa. Com patch 14, sobram 16x16 células, e **uma célula cobre
+40x30 pixels da imagem original**. Nenhuma regra de leitura recupera
+detalhe que o resize já descartou.
+
+Aumentar a resolução de entrada do backbone tem, portanto, mais potencial do
+que qualquer upsampler aplicado depois. Isso não estava visível antes da
+#191: sem `preprocessing` e `stride` no contract, o `16` da configuração
+parecia ser a resolução efetiva.
+
+### 5. Custo
+
+| caminho | pooling de 115 regiões (s) | pico de VRAM |
+| --- | --- | --- |
+| `patch_grid` | 0,12 | 0,35 GB |
+| `nearest` | 6,12 | 0,35 GB |
+| `bilinear` | 24,99 | 0,35 GB |
+
+A regra de leitura não muda a residência de VRAM — o custo é de CPU. Já
+materializar o mapa pixel-aligned completo de um frame ocupa 0,94 GB
+(640x480x768 em float32), o que só é viável um frame por vez dentro do
+budget de 8 GB.
+
+## Candidato justificado para o quality profile
+
+**`nearest`.** Ele elimina a falha dura de representabilidade (94/115 →
+115/115, e 17/37 → 37/37 nas regiões pequenas) sem perder suporte de pixel
+e a um custo de CPU aceitável. É por isso que ele é o default de
+`FeatureExtractionConfig.upsampling`.
+
+`bilinear` fica disponível, e é a escolha certa quando fidelidade de borda
+importa mais que cobertura — mas quem o usar precisa contar com a perda de
+18% de suporte e com a invalidação da meia-célula de borda.
+
+`patch_grid` permanece como baseline reproduzível da ablation, não como
+opção de produção.
+
+### O que estes números **não** sustentam
+
+- que a evidência de alta resolução melhora acerto semântico: isso exige o
+  conjunto de referência anotado (#197), ainda em `pending_review`;
+- que a separação inter-região menor prejudica a tarefa final: a medida é um
+  proxy geométrico, não uma métrica de tarefa;
+- qualquer conclusão fora de 640x480, DINOv2-base e este ambiente interno.
