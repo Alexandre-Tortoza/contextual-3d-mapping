@@ -1,82 +1,309 @@
 # Arquitetura
 
-## Responsabilidade e fronteira
+Este documento explica **onde cada responsabilidade pertence, como as dependências devem
+fluir e em quais arquivos uma mudança arquitetural deve começar**.
 
-`visual-perception` recebe uma imagem RGB já identificada, datada e associada ao frame
-do sensor. Ele produz uma `VisualObservation` com regiões 2D, embeddings referenciados,
-claims semânticos de cena e região, relações candidatas e o resultado de uma auditoria.
-O ponto de entrada de produção é
-[`run_canonical_pipeline`](../src/visual_perception/application/pipeline.py).
+Para a ordem concreta dos estágios, consulte [pipelines.md](pipelines.md). Para os tipos
+que atravessam a API pública, consulte [api-contracts.md](api-contracts.md).
 
-O módulo não lê datasets, ROS bags ou URIs de artifact; essa é a responsabilidade de
-[`adapters`](../../../adapters/README.md). Também não calibra sensores, associa pixels a
-geometria 3D, persiste o mapa, verifica relações em 3D ou constrói scene graphs. Essas
-capacidades pertencem, respectivamente, a `sensor-association`, módulos de mapa e
-`scene-graph`/`context-reasoning`.
+## O módulo em 30 segundos
 
-```text
-CanonicalObservation RGB + pixels resolvidos
-    -> ImageObservation + ImagePayload
-    -> visual-perception
-    -> VisualObservation + AuditResult
-    -> sensor-association / persistência / mapping-runtime
+`visual-perception` transforma uma observação RGB canônica em evidência visual 2D
+estruturada, semântica e auditável.
+
+```mermaid
+flowchart LR
+    A[ImageObservation + ImagePayload] --> B[visual-perception]
+    B --> C[VisualObservation]
+    B --> D[AuditResult]
+    C --> E[sensor-association]
+    C --> F[persistência]
+    C --> G[mapping-runtime]
 ```
 
-Veja [integration.md](integration.md) para as fronteiras de entrada e saída e
-[api-contracts.md](api-contracts.md) para os tipos do fluxo.
+O módulo é responsável por:
+
+- geometria visual 2D, masks, boxes e regiões;
+- features densas e embeddings por região;
+- embeddings alinhados à linguagem;
+- contexto global da cena;
+- claims semânticos de região;
+- relações candidatas no plano da imagem;
+- auditoria e proveniência da evidência produzida.
+
+O módulo termina no domínio visual 2D. Ele **não** calibra sensores, estima pose,
+projeta pixels no LiDAR, confirma relações em 3D, funde observações temporais em um mapa
+persistente nem constrói scene graphs.
+
+## Fronteira do módulo
+
+```text
+adapters / aplicação
+        |
+        v
+ImageObservation + ImagePayload
+        |
+        v
+visual-perception
+        |
+        +--> VisualObservation
+        +--> AuditResult
+        +--> RegionInterpretationFailure[]
+        |
+        v
+sensor-association / persistência / mapping-runtime
+```
+
+Dados de origem, como dataset, sequência, sensor, timestamp, frame e artifact, chegam ao
+módulo por contracts compartilhados. Não crie versões locais desses conceitos dentro de
+`visual-perception`.
+
+A entrada de datasets, ROS bags ou outras fontes pertence aos adapters. A associação
+entre evidência 2D e geometria 3D pertence a `sensor-association`. Fusão temporal,
+representação de mapa, memória, scene graph e reasoning pertencem aos módulos downstream.
 
 ## Organização interna
 
 ```text
 src/visual_perception/
-├── domain/           # contracts, tipos e invariantes do domínio visual
-├── ports/            # Protocols para backends substituíveis
-├── application/      # estágios e orquestração do pipeline
+├── domain/           # conceitos, tipos e invariantes do domínio visual
+├── ports/            # interfaces mínimas para capacidades substituíveis
+├── application/      # regras, transformações e orquestração do pipeline
 ├── infrastructure/
-│   ├── fakes/        # implementações determinísticas, sem GPU
-│   ├── adapters/     # runtimes reais isolados de bibliotecas externas
-│   ├── integration/  # fronteiras com adapters, runtime e persistência
+│   ├── adapters/     # backends reais e isolamento de bibliotecas externas
+│   ├── fakes/        # implementações determinísticas sem GPU
+│   ├── integration/  # fronteiras com outros módulos e runtimes
 │   └── serialization.py
-└── config.py          # configuração validada e reproduzível do módulo
+└── config.py          # configuração validada e reproduzível
 ```
 
-`domain/` é dono de geometria de imagem, regiões, embeddings, claims, relações e
-proveniência de modelo. `ports/` define os quatro pontos de variação reais: descoberta
-de regiões, feature extraction densa, encoding alinhado à linguagem e raciocínio
-multimodal. `application/` depende desses contracts, não dos runtimes de terceiros. A
-factory [`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py)
-é o local de composição entre configuração e implementações concretas.
+### `domain/`
 
-Os identificadores, timestamp, frame e referências de artifacts são contracts
-compartilhados, definidos em [`contracts/`](../../../contracts/README.md), pois têm o
-mesmo significado para mais de um módulo. Não introduza cópias locais desses conceitos.
+É dono dos conceitos que precisam continuar verdadeiros independentemente de backend ou
+runtime, como:
+
+- geometria de imagem;
+- regiões e propostas;
+- embeddings e referências;
+- claims semânticos;
+- relações candidatas;
+- auditoria;
+- erros e proveniência.
+
+Se uma regra precisa ser verdadeira mesmo usando fakes, outro checkpoint ou outro
+runtime, ela provavelmente pertence ao domínio.
+
+### `ports/`
+
+Define as capacidades substituíveis usadas pela aplicação:
+
+- `RegionDiscoverer`;
+- `DenseFeatureExtractor`;
+- `LanguageAlignedEncoder`;
+- `MultimodalReasoner`.
+
+Um port descreve **o que o pipeline precisa**, não como uma biblioteca específica faz a
+inferência. Tensors, classes de framework e exceptions específicas do backend não devem
+atravessar essa fronteira.
+
+### `application/`
+
+Contém as transformações e políticas do pipeline. Exemplos:
+
+- tiling;
+- merge de regiões;
+- pooling de features;
+- semântica de regiões;
+- contexto de cena;
+- relações candidatas;
+- fusão e refinamento internos;
+- auditoria;
+- cache e lifecycle.
+
+A aplicação depende de `domain/` e `ports/`. Ela não deve selecionar checkpoints nem
+importar diretamente runtimes de terceiros.
+
+### `infrastructure/`
+
+Conecta o módulo ao mundo externo.
+
+`infrastructure/adapters/` contém implementações concretas dos ports. A factory
+[`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py)
+é o único ponto de composição entre `ModuleConfig` e backends concretos.
+
+`infrastructure/integration/` contém fronteiras cujo tipo de entrada ou saída pertence a
+outro módulo, como adapters RGB, mapping runtime, persistência e `sensor-association`.
+
+## Direção das dependências
+
+A regra de dependência é simples:
+
+```mermaid
+flowchart TD
+    I[Infrastructure] --> A[Application]
+    I --> P[Ports]
+    I --> D[Domain]
+    A --> P
+    A --> D
+    P --> D
+```
+
+Na prática:
+
+- `domain/` não conhece adapters, frameworks de ML ou integração;
+- `ports/` não conhece implementações concretas;
+- `application/` conhece contracts, não bibliotecas específicas;
+- `infrastructure/` pode conhecer bibliotecas externas e traduzir seus resultados para
+  os contracts do módulo;
+- consumidores externos devem depender da API pública de `visual_perception`, não de
+  detalhes internos.
+
+## Quero adicionar X: onde isso pertence?
+
+| Quero adicionar ou alterar | Local principal | Regra |
+| --- | --- | --- |
+| Novo conceito visual ou nova invariável | `domain/` | Deve continuar válido independentemente do backend. |
+| Nova capacidade substituível de inferência | `ports/` | Crie um contract mínimo antes da implementação concreta. |
+| Novo algoritmo entre estágios existentes | `application/` | Deve operar sobre contracts do módulo. |
+| Nova política de merge, pooling, refinamento ou auditoria | `application/` | Não acople a um checkpoint específico. |
+| Novo modelo para uma capability existente | `infrastructure/adapters/` | Implemente o port existente. |
+| Trocar checkpoint ou backend selecionado | `config.py`, `application/execution_profile.py`, `infrastructure/adapters/factory.py` | Não altere `pipeline.py` apenas para trocar modelo. |
+| Integração com outro módulo | `infrastructure/integration/` | Mantenha tipos externos fora de `domain/` e `application/`. |
+| Novo campo público em `VisualObservation` | `domain/` + serialização + testes | Trate como mudança de contract e avalie versionamento. |
+| Novo estágio canônico | `application/pipeline.py` | Só quando a capacidade realmente altera o fluxo do módulo. |
+| Nova configuração de algoritmo | `config.py` | Deve participar de fingerprint quando afeta resultados. |
+
+## Exemplos de mudanças corretas
+
+### Trocar SAM por outro segmentador
+
+Não crie um novo pipeline. Implemente `RegionDiscoverer`, adicione a composição do
+adapter e exponha a seleção por configuração.
+
+```text
+novo backend
+    -> infrastructure/adapters/
+    -> RegionDiscoverer
+    -> factory.py
+    -> config.py
+    -> benchmark/testes
+```
+
+### Alterar como masks viram embeddings
+
+A responsabilidade é uma transformação do pipeline e começa em
+[`application/pooling.py`](../src/visual_perception/application/pooling.py), não no
+adapter de DINO.
+
+### Consumir `VisualObservation` em outro módulo
+
+A adaptação pertence à fronteira de integração. Não faça o domínio de
+`visual-perception` importar tipos do consumidor.
+
+## Mudanças arquiteturalmente erradas
+
+Evite:
+
+- selecionar modelos ou checkpoints dentro de `pipeline.py`;
+- importar `torch`, `transformers` ou tipos equivalentes em contracts públicos;
+- criar uma segunda representação de timestamp, frame ou artifact;
+- transformar uma `RegionProposal` diretamente em entidade semântica 3D;
+- tratar uma `CandidateRelation` como relação espacial confirmada;
+- armazenar vetores grandes diretamente em `VisualObservation` quando existe uma
+  referência estável para o artifact;
+- introduzir uma nova estratégia de pipeline apenas para trocar uma implementação de
+  port.
 
 ## Invariantes de coordenadas
 
-Toda máscara, box e transform obedece à convenção `top-left-origin,half-open-xyxy`,
-registrada em cada `VisualObservation`:
+Toda máscara, box e transform obedece à convenção
+`top-left-origin,half-open-xyxy`, registrada em cada `VisualObservation`:
 
-- `(0, 0)` é o pixel superior esquerdo; `x` cresce à direita e `y` para baixo;
+- `(0, 0)` é o pixel superior esquerdo;
+- `x` cresce para a direita e `y` para baixo;
 - `BoundingBox` usa `(x_min, y_min, x_max, y_max)` com mínimo inclusivo e máximo
-  exclusivo, compatível com `array[y_min:y_max, x_min:x_max]`;
+  exclusivo;
 - `Mask` é booleana, tem shape `(height, width)` e usa a resolução integral da imagem;
-- transformações entre tile e imagem global passam por `CoordinateTransform`; não se
-  deve aplicar offsets ou escalas ad hoc em consumidores downstream.
+- transformações entre tile e imagem global passam por `CoordinateTransform`.
 
-Esses invariantes são validados por
+Essas regras são validadas por
 [`domain/geometry.py`](../src/visual_perception/domain/geometry.py) e pela construção de
-[`VisualObservation`](../src/visual_perception/domain/visual_observation.py). Uma
-relação só pode referenciar regiões presentes na mesma observação.
+[`VisualObservation`](../src/visual_perception/domain/visual_observation.py).
 
-## Decisões de representação
+Offsets ou escalas aplicados manualmente por consumidores quebram a convenção canônica.
 
-Uma região preserva `geometric_confidence`, que mede a confiança da máscara e box,
-independentemente da confiança de cada `SemanticClaim`. Claims não são reduzidos a um
-único label: hipóteses conflitantes continuam visíveis para a auditoria. Relações são
-candidatas no plano da imagem; mesmo uma relação de fonte `geometric_2d` não é uma
-relação 3D confirmada.
+## Invariantes semânticos
 
-Embeddings visuais e de linguagem ficam fora do payload canônico. A observação armazena
-somente referências estáveis para que o vetor possa ter ciclo de vida e armazenamento
-adequados ao consumidor. Consulte [artifacts.md](artifacts.md) para a persistência e
-[research-traceability.md](research-traceability.md) para a motivação dessas escolhas.
+Uma proposta geométrica não é uma entidade do mundo:
+
+```text
+RegionProposal
+    = evidência geométrica candidata
+
+ObservedRegion
+    = região 2D consolidada
+
+SemanticClaim
+    = interpretação anexada à região
+```
+
+Além disso:
+
+- `geometric_confidence` mede a qualidade/confiança da geometria, não a certeza do label;
+- `SemanticClaim.confidence=None` significa ausência de score, não confiança zero;
+- claims conflitantes podem coexistir e devem permanecer auditáveis;
+- uma relação geométrica 2D continua sendo candidata até validação downstream;
+- `AuditResult` avalia validade e inconsistências da observação, não transforma uma
+  hipótese semântica em verdade 3D.
+
+Consulte [api-contracts.md](api-contracts.md) para a semântica detalhada desses tipos.
+
+## Embeddings e artifacts
+
+Embeddings visuais e alinhados à linguagem ficam fora do payload canônico. A observação
+armazena referências estáveis para permitir ciclo de vida, persistência e reutilização
+independentes do JSON principal.
+
+```text
+VisualObservation
+    |
+    +--> geometry / claims / relations
+    |
+    +--> visual_embedding_ref ------> embedding artifact
+    |
+    +--> language_embedding_ref ----> embedding artifact
+```
+
+Consulte [artifacts.md](artifacts.md) para serialização e persistência.
+
+## Pontos de extensão
+
+Antes de criar um novo componente, verifique se a mudança cabe em uma extensão existente:
+
+| Necessidade | Ponto de extensão |
+| --- | --- |
+| descobrir regiões | `RegionDiscoverer` |
+| produzir feature map denso | `DenseFeatureExtractor` |
+| produzir embedding imagem-texto | `LanguageAlignedEncoder` |
+| interpretar cena ou região | `MultimodalReasoner` |
+| transformar evidências entre estágios | `application/` |
+| integrar com sistema externo | `infrastructure/integration/` |
+
+A criação de um novo port deve ser exceção. Ela se justifica quando existe uma nova
+capacidade independente, substituível e necessária ao pipeline, não apenas outra forma de
+implementar uma capacidade já existente.
+
+## Testes que protegem a arquitetura
+
+Ao alterar uma fronteira, verifique pelo menos:
+
+- testes do contract ou domínio afetado;
+- testes unitários da transformação em `application/`;
+- fake equivalente quando houver port novo;
+- testes do adapter real quando houver implementação concreta;
+- serialização quando um tipo público mudar;
+- testes de integração quando outro módulo passar a participar da fronteira;
+- benchmark quando a alteração muda qualidade, latência ou consumo de memória.
+
+O índice operacional por comportamento e arquivo está em
+[pipelines.md](pipelines.md#quero-mudar-x-em-qual-arquivo-mexo).

@@ -1,40 +1,127 @@
 # Documentação de Visual Perception
 
 `visual-perception` transforma uma observação RGB canônica em uma `VisualObservation`
-estruturada, auditável e pronta para consumidores downstream. Estas páginas explicam
-como consumir e operar o módulo; as regras locais de cada tipo, função e classe ficam
-documentadas ao lado do código.
+estruturada, semântica, auditável e pronta para consumidores downstream.
+
+A documentação foi organizada para permitir sair de uma intenção concreta e chegar ao
+arquivo, contract ou estágio responsável, sem precisar primeiro percorrer todo o código.
+
+## O módulo em uma linha
+
+```text
+RGB canônico
+    -> regiões 2D
+    -> features e embeddings
+    -> claims semânticos
+    -> relações candidatas
+    -> VisualObservation + AuditResult
+```
+
+O módulo termina no domínio visual 2D. Associação com LiDAR, fusão temporal/3D, mapa,
+memória espacial, scene graph e reasoning contextual pertencem aos módulos downstream.
 
 ## Por onde começar
 
-- Para integrar o módulo a uma aplicação ou adapter, comece por
-  [integration.md](integration.md).
-- Para entender os tipos que atravessam a API pública, consulte
-  [api-contracts.md](api-contracts.md).
-- Para compreender responsabilidades e fluxo interno, leia
-  [architecture.md](architecture.md) e [pipelines.md](pipelines.md).
+| Quero entender | Comece por |
+| --- | --- |
+| o pipeline completo e onde alterar cada comportamento | [pipelines.md](pipelines.md) |
+| onde cada responsabilidade pertence | [architecture.md](architecture.md) |
+| os tipos que atravessam a API pública | [api-contracts.md](api-contracts.md) |
+| como integrar entrada e consumidores downstream | [integration.md](integration.md) |
+| quais modelos reais são usados e por quê | [model-backends.md](model-backends.md) |
+| lifecycle, cache, fingerprints e runtime | [execution.md](execution.md) |
+| serialização, embeddings e persistência | [artifacts.md](artifacts.md) |
+| relação entre papers, decisões e implementação | [research-traceability.md](research-traceability.md) |
+| significado preciso dos termos | [glossary.md](glossary.md) |
+
+## Rotas de leitura
+
+### Quero modificar o pipeline
+
+1. [pipelines.md](pipelines.md)
+2. [architecture.md](architecture.md)
+3. [api-contracts.md](api-contracts.md)
+
+### Quero trocar ou testar um modelo
+
+1. [model-backends.md](model-backends.md)
+2. [execution.md](execution.md)
+3. [pipelines.md](pipelines.md)
+
+### Quero integrar outro módulo
+
+1. [integration.md](integration.md)
+2. [api-contracts.md](api-contracts.md)
+3. [artifacts.md](artifacts.md)
+
+### Quero justificar uma decisão no trabalho acadêmico
+
+1. [research-traceability.md](research-traceability.md)
+2. [model-backends.md](model-backends.md)
+3. benchmark/avaliação que sustenta a afirmação
 
 ## Referência por necessidade
 
-| Necessidade | Página |
+| Necessidade | Página | Seção útil |
+| --- | --- | --- |
+| encontrar o arquivo que controla um comportamento | [pipelines.md](pipelines.md) | `Quero mudar X` |
+| decidir onde colocar código novo | [architecture.md](architecture.md) | `Quero adicionar X` |
+| entender `ObservedRegion`, claims e confidence | [api-contracts.md](api-contracts.md) | contracts individuais |
+| adaptar `CanonicalObservation` RGB | [integration.md](integration.md) | entrada vinda de adapters |
+| conectar `sensor-association` | [integration.md](integration.md) | saída para `sensor-association` |
+| trocar checkpoint/backend | [model-backends.md](model-backends.md) | índice operacional + capability |
+| diagnosticar OOM/cache/runtime | [execution.md](execution.md) | `Quero diagnosticar X` |
+| entender o que é persistido | [artifacts.md](artifacts.md) | tipos de artifact + ciclo de vida |
+| saber se uma ideia veio de paper ou é decisão própria | [research-traceability.md](research-traceability.md) | mapa de influência + decisões próprias |
+
+## Mapa da documentação
+
+```mermaid
+flowchart TD
+    R[README] --> P[pipelines.md]
+    R --> A[architecture.md]
+    R --> C[api-contracts.md]
+    R --> I[integration.md]
+    P --> B[model-backends.md]
+    P --> E[execution.md]
+    C --> T[artifacts.md]
+    A --> Q[research-traceability.md]
+    R --> G[glossary.md]
+```
+
+## Estado atual do módulo
+
+O pipeline canônico, fakes determinísticos e adapters reais estão implementados.
+
+A configuração real de referência para a RTX 3060 8GB foi selecionada pelo benchmark
+#174:
+
+| Capability | Referência atual |
 | --- | --- |
-| Chamar `run_canonical_pipeline` e tratar sua saída | [api-contracts.md](api-contracts.md) |
-| Adaptar uma observação RGB ou compor o runtime | [integration.md](integration.md) |
-| Entender estágios e extensões opcionais | [pipelines.md](pipelines.md) |
-| Escolher, instalar ou diagnosticar um backend | [model-backends.md](model-backends.md) |
-| Entender cache, auditoria e verificações locais | [execution.md](execution.md) |
-| Persistir ou recarregar uma observação | [artifacts.md](artifacts.md) |
-| Distinguir engenharia de hipóteses de pesquisa | [research-traceability.md](research-traceability.md) |
-| Consultar vocabulário do módulo | [glossary.md](glossary.md) |
+| Region discovery | SAM ViT-H |
+| Dense features | DINOv2-base |
+| Language embedding | CLIP ViT-L/14 |
+| Multimodal reasoning | Qwen2.5-VL-3B-Instruct em 4-bit |
 
-## Estado do módulo
+O uso padrão continua sendo `backend="fake"`, portanto desenvolvimento e testes básicos
+não exigem GPU.
 
-O pipeline canônico, os fakes determinísticos e os adapters reais estão implementados.
-O uso padrão continua sendo `backend="fake"`, portanto desenvolvimento, testes e
-integração inicial não exigem GPU nem download de modelo. A seleção de checkpoints de
-referência e a validação quantitativa em hardware real continuam pendentes; consulte
-[model-backends.md](model-backends.md) antes de tratar um backend real como uma
-configuração de produção validada.
+A seleção de referência não é uma afirmação de ótimo universal. Ela representa o melhor
+resultado observado sob o hardware, dataset e proxies usados no benchmark documentado.
+Consulte [model-backends.md](model-backends.md) antes de comparar ou trocar checkpoints.
 
-Os benchmarks locais existem em `../benchmarks/`, mas seus resultados não fazem parte
-desta documentação até que sejam versionados com o ambiente e dataset de referência.
+## Regra de manutenção da documentação
+
+Quando uma mudança relevante for feita:
+
+- mudança na ordem/semântica dos estágios, atualize `pipelines.md`;
+- mudança de responsabilidade ou fronteira, atualize `architecture.md`;
+- mudança de contract público, atualize `api-contracts.md`;
+- mudança de integração downstream, atualize `integration.md`;
+- mudança de backend/checkpoint, atualize `model-backends.md`;
+- mudança de lifecycle/cache/fingerprint, atualize `execution.md`;
+- mudança de serialização/persistência, atualize `artifacts.md`;
+- mudança motivada por pesquisa ou benchmark, atualize `research-traceability.md`.
+
+A documentação deve descrever o código atual. Não preserve instruções antigas apenas
+porque já foram verdadeiras em uma versão anterior.
