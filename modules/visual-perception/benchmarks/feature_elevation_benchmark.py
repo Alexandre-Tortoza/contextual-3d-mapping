@@ -22,6 +22,7 @@ from dense_upsampling_benchmark import (  # noqa: E402
     HIGH_RESOLUTION,
     PIXEL_BILINEAR,
     PathResult,
+    _combined,
     _describe_hardware,
     _git_revision,
     measure_path,
@@ -93,6 +94,23 @@ def serialize_candidate(
 ) -> dict[str, Any]:
     """Converte um candidato medido em um documento JSON compacto."""
     document = asdict(result)
+    document["representability"] = {
+        "regions": result.regions,
+        "representable_regions": result.representable_regions,
+        "strata": result.strata,
+    }
+    document["evidence_quality"] = {
+        **_combined(list(result.measurements)),
+        "inter_region_separation": result.inter_region_separation,
+    }
+    document["cost"] = {
+        "pool_latency_s": result.pool_latency_s,
+        "materialized_bytes": result.materialized_bytes,
+        "materialize_latency_s": result.materialize_latency_s,
+        "materialize_refused": result.materialize_refused,
+        "extraction_latency_s": extraction_latency_s,
+        "extraction_peak_vram_bytes": extraction_peak_vram_bytes,
+    }
     document.pop("measurements")
     document.pop("vectors")
     document["extraction_latency_s"] = extraction_latency_s
@@ -131,6 +149,40 @@ def render_summary(document: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## Qualidade da evidência",
+            "",
+            "| caminho | suporte médio | consistência intra | separação inter |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+    )
+    for candidate in document["candidates"]:
+        quality = candidate["evidence_quality"]
+        lines.append(
+            f"| {candidate['name']} | "
+            f"{_format_metric(quality.get('mean_support_ratio'))} | "
+            f"{_format_metric(quality.get('mean_intra_region_consistency'))} | "
+            f"{_format_metric(quality.get('inter_region_separation'))} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Custo de pooling e materialização",
+            "",
+            "| caminho | pooling (s) | mapa materializado | materialização (s) |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+    )
+    for candidate in document["candidates"]:
+        cost = candidate["cost"]
+        materialized = cost["materialized_bytes"]
+        lines.append(
+            f"| {candidate['name']} | {cost['pool_latency_s']:.3f} | "
+            f"{'n/a' if materialized is None else f'{materialized / 2**20:.1f} MiB'} | "
+            f"{_format_metric(cost['materialize_latency_s'])} |"
+        )
+    lines.extend(
+        [
+            "",
             "A concordância vetorial só é calculada dentro do espaço DINOv2-base. ",
             "FeatUp usa DINOv2-small (384 dimensões), portanto sua qualidade é comparada por ",
             "representabilidade, cobertura, consistência, separação e custo — nunca por produto ",
@@ -139,6 +191,12 @@ def render_summary(document: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+# Formata métricas opcionais mantendo ausência distinta de zero medido.
+def _format_metric(value: float | None) -> str:
+    """Representa uma métrica numérica ou a marca explícita de ausência."""
+    return "n/a" if value is None else f"{value:.4f}"
 
 
 # Executa todos os candidatos sobre geometria fixa e grava JSON/Markdown.
