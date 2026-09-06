@@ -81,8 +81,10 @@ def select_refinement_targets(observation: VisualObservation, config: Refinement
         )
         if not region.claims or too_small or low_confidence:
             targets.add(region.region_id)
+    # Uma relation sem score não dispara a regra, pela mesma razão de uma
+    # claim sem score: não há valor informado para comparar com o limiar.
     for relation in observation.relations:
-        if relation.confidence.value < config.low_confidence_threshold:
+        if relation.confidence is not None and relation.confidence.value < config.low_confidence_threshold:
             targets.add(relation.subject_region_id)
             targets.add(relation.object_region_id)
     return tuple(sorted(targets))

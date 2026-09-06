@@ -1,14 +1,22 @@
 """Etapa de análise contextual em nível de cena.
 
-Issue: #164.
+Issues: #164 (contexto de cena), #195 (proibição de confiança inventada).
 
 Analisa a imagem completa para scene type, description, atributos globais
 e hazards. Nunca toca na geometria de region: a enumeração de regions
 permanece de posse de region discovery/merge.
+
+Esta etapa atribuía ``ConfidenceScore(1.0)`` a *todo* claim de cena sempre
+que o modelo omitia o score — inclusive a descrições livres e hazards, que
+são exatamente os claims que a #195 proíbe de carregar confiança bruta.
+Agora só ``scene_type`` recebe o score que o modelo de fato informou, e a
+resposta bruta é preservada em ``Evidence.raw_response_json`` para que a
+calibração (#196) possa pontuar os demais a partir de evidência.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from visual_perception.application.support import fingerprint_of
@@ -42,21 +50,47 @@ def analyze_scene(
         checkpoint=config.checkpoint,
         prompt_version=config.prompt_version,
     )
-    confidence = ConfidenceScore(float(response.get("confidence", 1.0)), source=config.backend)
-    evidence = (Evidence(description="raw multimodal scene response"),)
+    scene_type_confidence = _parse_scene_confidence(response.get("confidence"), config.backend)
+    evidence = (
+        Evidence(
+            description="raw multimodal scene response",
+            raw_response_json=json.dumps(response, sort_keys=True, default=str),
+        ),
+    )
 
     claims = [
-        SemanticClaim(ClaimKind.SCENE_TYPE, str(response["scene_type"]), confidence, evidence, provenance),
         SemanticClaim(
-            ClaimKind.SCENE_DESCRIPTION, str(response["description"]), confidence, evidence, provenance
+            ClaimKind.SCENE_TYPE, str(response["scene_type"]), scene_type_confidence, evidence, provenance
         ),
+        SemanticClaim(ClaimKind.SCENE_DESCRIPTION, str(response["description"]), None, evidence, provenance),
     ]
     for attribute in response.get("attributes", []):
-        claims.append(SemanticClaim(ClaimKind.ATTRIBUTE, str(attribute), confidence, evidence, provenance))
+        claims.append(SemanticClaim(ClaimKind.ATTRIBUTE, str(attribute), None, evidence, provenance))
     for hazard in response.get("hazards", []):
-        claims.append(SemanticClaim(ClaimKind.HAZARD, str(hazard), confidence, evidence, provenance))
+        claims.append(SemanticClaim(ClaimKind.HAZARD, str(hazard), None, evidence, provenance))
 
     return SceneContext(claims=tuple(claims))
+
+
+# Converte o score de cena bruto em ConfidenceScore, mantendo ausência como
+# ausência. Existe para que a regra que substituiu o antigo fallback ``1.0``
+# fique em um único lugar testável; chamada por analyze_scene.
+def _parse_scene_confidence(raw: Any, source: str) -> ConfidenceScore | None:
+    """Converte o score de cena informado pelo modelo, ou ``None`` quando ausente.
+
+    Argumentos:
+        raw: valor bruto do campo ``confidence`` da resposta.
+        source: identidade do backend que produziu a resposta.
+    Retorna:
+        o :class:`ConfidenceScore` informado, ou ``None``.
+    Levanta:
+        ValueError: se o campo existir mas não for um número em ``[0, 1]``.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int | float):
+        raise ValueError(f"Malformed scene response: 'confidence' must be a number or absent, got {raw!r}.")
+    return ConfidenceScore(float(raw), source=source)
 
 
 # Valida a forma mínima da resposta bruta de cena (campos obrigatórios

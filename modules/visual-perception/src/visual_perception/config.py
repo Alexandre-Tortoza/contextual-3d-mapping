@@ -1,6 +1,7 @@
 """Schema de configuração validada do módulo.
 
-Issue: #157.
+Issues: #157 (schema base), #191/#192 (amostragem de evidência densa),
+#193/#194 (slots multi-contexto), #196 (fronteira de calibração).
 
 Este módulo possui os parâmetros que controlam seus próprios algoritmos
 (identificadores de backend, checkpoints, resoluções, thresholds, quality
@@ -15,6 +16,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 
@@ -105,18 +107,91 @@ class RegionMergeConfig:
 # Configuração do backend de extração de features densas (DenseFeatureExtractor).
 @dataclass(frozen=True)
 class FeatureExtractionConfig:
+    """Seleciona o backbone e a amostragem de evidência densa reproduzível."""
+
     backend: str = "fake"
     checkpoint: str = "none"
     feature_resolution: int = 16
     device: str = "auto"
+    upsampling: str = "patch_grid"
 
     # Garante que a resolução do feature map configurada é um valor
     # utilizável (positivo) antes de chegar ao backend de extração.
     def __post_init__(self) -> None:
+        """Rejeita resoluções e métodos de amostragem incompatíveis."""
         if self.feature_resolution <= 0:
             raise ValueError("feature_extraction.feature_resolution must be positive.")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("feature_extraction.device must be 'auto', 'cpu', or 'cuda'.")
+        if self.upsampling not in {"patch_grid", "nearest", "bilinear"}:
+            raise ValueError("feature_extraction.upsampling must be patch_grid, nearest or bilinear.")
+
+
+# Configuração da extração de evidência multi-contexto por região (#193/#194).
+# Existe aqui, e não junto do contract de domínio, porque é configuração de
+# algoritmo: quais slots o módulo gasta compute para produzir, e com que
+# margem de contexto — a mesma regra de ownership que vale para as demais
+# sub-configs deste arquivo.
+@dataclass(frozen=True)
+class MultiContextConfig:
+    """Quais slots de evidência de região o pipeline extrai, e com que geometria."""
+
+    foreground_enabled: bool = True
+    tight_crop_enabled: bool = True
+    contextual_crop_enabled: bool = False
+    scene_conditioned_enabled: bool = False
+    context_expansion: float = 0.25
+    masked_tight_crop: bool = False
+
+    # Garante que a margem de contexto é uma fração utilizável e que pedir
+    # evidência condicionada à cena não faz sentido sem um crop de contexto
+    # para condicionar.
+    def __post_init__(self) -> None:
+        """Rejeita margens de contexto inválidas e combinações incoerentes de slot."""
+        if not 0.0 <= self.context_expansion <= 4.0:
+            raise ValueError("multi_context.context_expansion must be in [0, 4].")
+        if self.contextual_crop_enabled and self.context_expansion <= 0.0:
+            raise ValueError(
+                "multi_context.contextual_crop_enabled requires a positive context_expansion."
+            )
+
+
+# Configuração da fronteira de calibração semântica (#196). Existe para que
+# a regra de calibração seja selecionável e versionada por configuração, e
+# para que o artifact de calibração participe do fingerprint de cache: uma
+# tabela de calibração diferente produz claims diferentes.
+@dataclass(frozen=True)
+class CalibrationConfig:
+    """Qual regra de calibração pontua claims, e quando ela deve se abster."""
+
+    enabled: bool = False
+    method: str = "reliability_table"
+    version: str = "calibration/1"
+    artifact_path: str | None = None
+    min_visual_support: float = 0.2
+    min_region_quality: float = 0.0
+    domain: str = "unspecified"
+
+    # Valida o método, a versão e os limiares de abstenção, e exige um
+    # artifact quando o método é orientado a dados: calibrar sem artifact
+    # seria inventar a curva de confiança.
+    def __post_init__(self) -> None:
+        """Rejeita métodos desconhecidos, limiares inválidos e calibração sem artifact."""
+        if self.method not in {"reliability_table", "temperature"}:
+            raise ValueError("calibration.method must be 'reliability_table' or 'temperature'.")
+        if not self.version:
+            raise ValueError("calibration.version must not be empty.")
+        for name in ("min_visual_support", "min_region_quality"):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"calibration.{name} must be in [0, 1].")
+        if not self.domain:
+            raise ValueError("calibration.domain must not be empty.")
+        if self.enabled and self.artifact_path is None:
+            raise ValueError(
+                "calibration.enabled requires an artifact_path: a calibration rule without "
+                "measured data would fabricate the confidence it claims to calibrate."
+            )
 
 
 # Configuração do backend de embedding alinhado com linguagem (LanguageAlignedEncoder).
@@ -184,6 +259,8 @@ class ModuleConfig:
     multimodal_reasoning: MultimodalReasoningConfig = field(
         default_factory=MultimodalReasoningConfig
     )
+    multi_context: MultiContextConfig = field(default_factory=MultiContextConfig)
+    calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
 
     # Valida invariantes que dependem de mais de um campo ao mesmo tempo
     # (o que os ``__post_init__`` das sub-configs não conseguem verificar
@@ -225,6 +302,8 @@ class ModuleConfig:
             ("feature_extraction", FeatureExtractionConfig),
             ("language_embedding", LanguageEmbeddingConfig),
             ("multimodal_reasoning", MultimodalReasoningConfig),
+            ("multi_context", MultiContextConfig),
+            ("calibration", CalibrationConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
                 payload[key] = config_type(**payload[key])
@@ -235,5 +314,10 @@ class ModuleConfig:
     # mesma configuração.
     def fingerprint(self) -> str:
         """Um hash estável da configuração completa, usado para caching (#170)."""
-        canonical = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+        payload = self.to_dict()
+        if self.calibration.artifact_path is not None:
+            payload["calibration_artifact_digest"] = hashlib.sha256(
+                Path(self.calibration.artifact_path).read_bytes()
+            ).hexdigest()
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()

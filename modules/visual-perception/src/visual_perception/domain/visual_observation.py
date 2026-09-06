@@ -48,13 +48,18 @@ class VisualObservation:
     scene_context: SceneContext
     regions: tuple[ObservedRegion, ...]
     relations: tuple[CandidateRelation, ...]
-    schema_version: int = 1
+    schema_version: int = 2
     coordinate_convention: str = COORDINATE_CONVENTION
 
     # Valida a resolução da imagem, a unicidade de region_id entre as
     # regiões, que a resolução de cada máscara de região bate com a da
     # observação, e que toda relação referencia apenas regiões conhecidas.
     def __post_init__(self) -> None:
+        """Valida identidade, geometria e versão da fronteira canônica."""
+        if self.schema_version not in (1, 2):
+            raise ValueError("VisualObservation supports schema versions 1 and 2.")
+        if self.coordinate_convention != COORDINATE_CONVENTION:
+            raise ValueError("Unsupported image coordinate convention.")
         if self.image_width <= 0 or self.image_height <= 0:
             raise ValueError("image_width and image_height must be positive.")
         region_ids = [region.region_id for region in self.regions]

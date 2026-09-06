@@ -6,6 +6,11 @@ Relações são candidatas apenas em nível de imagem 2D. Elas nunca são
 tratadas como relações 3D verificadas: essa validação é de posse de módulos
 downstream (scene-graph / context-reasoning), depois que a geometria foi
 associada entre sensores.
+
+A #195 tornou ``confidence`` opcional: uma relação inferida por modelo cujo
+produtor não pontuou permanece representável sem que o módulo invente um
+score. Relações geométricas continuam pontuadas, porque a medida que as
+gera (IoU, containment ratio) *é* a evidência.
 """
 
 from __future__ import annotations
@@ -40,13 +45,18 @@ class RelationSource(StrEnum):
 # scene-graph/context-reasoning eventualmente verificam em 3D.
 @dataclass(frozen=True)
 class CandidateRelation:
-    """Uma relação não verificada, em nível de imagem, entre duas regiões canônicas."""
+    """Uma relação não verificada, em nível de imagem, entre duas regiões canônicas.
+
+    ``confidence`` é ``None`` quando o produtor não pontuou a relação. Assim
+    como em :class:`~visual_perception.domain.semantics.SemanticClaim`,
+    ausência de score nunca é convertida em número.
+    """
 
     relation_id: str
     subject_region_id: str
     predicate: str
     object_region_id: str
-    confidence: ConfidenceScore
+    confidence: ConfidenceScore | None
     source: RelationSource
     evidence: tuple[Evidence, ...]
     provenance: ModelProvenance
@@ -54,6 +64,7 @@ class CandidateRelation:
     # Valida os ids envolvidos, rejeita auto-relações, exige um predicate em
     # snake_case normalizado, e exige ao menos uma Evidence.
     def __post_init__(self) -> None:
+        """Valida identidade, predicate normalizado e presença de evidência."""
         validate_identifier(self.relation_id, field="relation_id")
         validate_identifier(self.subject_region_id, field="subject_region_id")
         validate_identifier(self.object_region_id, field="object_region_id")

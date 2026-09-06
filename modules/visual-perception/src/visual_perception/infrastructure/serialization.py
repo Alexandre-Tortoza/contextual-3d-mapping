@@ -22,14 +22,18 @@ from contextual_mapping_contracts import FrameId, ObservationReference, SourceAr
 from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.references import ModelProvenance
+from visual_perception.domain.region_evidence import evidence_from_dict, evidence_to_dict
 from visual_perception.domain.regions import ObservedRegion
 from visual_perception.domain.relations import CandidateRelation, RelationSource
+from visual_perception.domain.semantic_support import (
+    semantic_support_from_dict,
+    semantic_support_to_dict,
+)
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
-#: A única versão de schema que este módulo consegue ler. Incremente junto
-#: com uma migração ou um erro explícito de incompatibilidade, nunca em silêncio.
-SUPPORTED_SCHEMA_VERSION = 1
+#: Escrita canônica v2; a leitura v1 é migrada explicitamente preservando scores brutos.
+SUPPORTED_SCHEMA_VERSION = 2
 
 
 # Sinaliza que um payload foi serializado com uma versão de schema que este
@@ -67,7 +71,7 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
 def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
     """Reconstrói uma VisualObservation canônica, fazendo o round-trip sem perda de informação."""
     schema_version = payload.get("schema_version")
-    if schema_version != SUPPORTED_SCHEMA_VERSION:
+    if type(schema_version) is not int or schema_version not in (1, SUPPORTED_SCHEMA_VERSION):
         raise UnsupportedSchemaVersionError(
             f"Cannot deserialize schema_version={schema_version!r}; "
             f"this module reads schema_version={SUPPORTED_SCHEMA_VERSION}."
@@ -81,7 +85,7 @@ def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
         ),
         regions=tuple(_region_from_dict(region) for region in payload["regions"]),
         relations=tuple(_relation_from_dict(relation) for relation in payload["relations"]),
-        schema_version=schema_version,
+        schema_version=SUPPORTED_SCHEMA_VERSION,
         coordinate_convention=payload["coordinate_convention"],
     )
 
@@ -126,7 +130,14 @@ def _mask_to_dict(mask: Mask) -> dict[str, Any]:
 # Reconstrói a mask booleana a partir da codificação RLE — lado inverso de
 # _mask_to_dict.
 def _mask_from_dict(payload: dict[str, Any]) -> Mask:
+    """Valida o RLE completo antes de alocar e reconstruir a máscara."""
     width, height, runs = payload["width"], payload["height"], payload["rle"]
+    if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
+        raise ValueError("Mask dimensions must be positive integers.")
+    if (not isinstance(runs, list) or not runs
+            or any(type(run) is not int or run < 0 for run in runs)
+            or sum(runs) != width * height):
+        raise ValueError("Mask RLE must contain nonnegative integer runs covering the complete image.")
     flat = np.zeros(width * height, dtype=np.bool_)
     cursor = 0
     value = False
@@ -172,13 +183,15 @@ def _provenance_from_dict(payload: dict[str, Any]) -> ModelProvenance:
 # dict serializável, achatando o SourceArtifactReference quando presente.
 def _evidence_to_dict(evidence: Evidence) -> dict[str, Any]:
     artifact = None if evidence.artifact is None else vars(evidence.artifact)
-    return {"description": evidence.description, "artifact": artifact}
+    return {"description": evidence.description, "artifact": artifact,
+            "raw_response_json": evidence.raw_response_json}
 
 
 # Reconstrói a Evidence a partir do dict — lado inverso de _evidence_to_dict.
 def _evidence_from_dict(payload: dict[str, Any]) -> Evidence:
     artifact = None if payload.get("artifact") is None else SourceArtifactReference(**payload["artifact"])
-    return Evidence(description=payload["description"], artifact=artifact)
+    return Evidence(description=payload["description"], artifact=artifact,
+                    raw_response_json=payload.get("raw_response_json"))
 
 
 # Converte uma SemanticClaim completa (kind, value, confidence, evidence,
@@ -198,6 +211,7 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
         "confidence": confidence,
         "evidence": [_evidence_to_dict(item) for item in claim.evidence],
         "provenance": _provenance_to_dict(claim.provenance),
+        "support": semantic_support_to_dict(claim.support),
     }
 
 
@@ -211,6 +225,7 @@ def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
         confidence=None if confidence is None else ConfidenceScore(**confidence),
         evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
         provenance=_provenance_from_dict(payload["provenance"]),
+        support=semantic_support_from_dict(payload.get("support")),
     )
 
 
@@ -227,6 +242,7 @@ def _region_to_dict(region: ObservedRegion) -> dict[str, Any]:
         "claims": [_claim_to_dict(claim) for claim in region.claims],
         "visual_embedding_ref": region.visual_embedding_ref,
         "language_embedding_ref": region.language_embedding_ref,
+        "evidence": [evidence_to_dict(slot) for slot in region.evidence],
     }
 
 
@@ -243,6 +259,7 @@ def _region_from_dict(payload: dict[str, Any]) -> ObservedRegion:
         claims=tuple(_claim_from_dict(claim) for claim in payload["claims"]),
         visual_embedding_ref=payload["visual_embedding_ref"],
         language_embedding_ref=payload["language_embedding_ref"],
+        evidence=tuple(evidence_from_dict(slot) for slot in payload.get("evidence", ())),
     )
 
 
@@ -254,7 +271,8 @@ def _relation_to_dict(relation: CandidateRelation) -> dict[str, Any]:
         "subject_region_id": relation.subject_region_id,
         "predicate": relation.predicate,
         "object_region_id": relation.object_region_id,
-        "confidence": {"value": relation.confidence.value, "source": relation.confidence.source},
+        "confidence": (None if relation.confidence is None else
+                       {"value": relation.confidence.value, "source": relation.confidence.source}),
         "source": relation.source.value,
         "evidence": [_evidence_to_dict(item) for item in relation.evidence],
         "provenance": _provenance_to_dict(relation.provenance),
@@ -269,7 +287,7 @@ def _relation_from_dict(payload: dict[str, Any]) -> CandidateRelation:
         subject_region_id=payload["subject_region_id"],
         predicate=payload["predicate"],
         object_region_id=payload["object_region_id"],
-        confidence=ConfidenceScore(**payload["confidence"]),
+        confidence=None if payload["confidence"] is None else ConfidenceScore(**payload["confidence"]),
         source=RelationSource(payload["source"]),
         evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
         provenance=_provenance_from_dict(payload["provenance"]),

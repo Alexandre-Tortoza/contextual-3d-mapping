@@ -21,7 +21,7 @@ from typing import Any
 #: Incrementar quando o formato do registro de artifact em disco mudar, para
 #: rejeitar entradas de cache obsoletas gravadas por uma versão incompatível
 #: do módulo.
-CACHE_SCHEMA_VERSION = 1
+CACHE_SCHEMA_VERSION = 2
 
 
 # Calcula o fingerprint de cache de um stage combinando sua própria versão e

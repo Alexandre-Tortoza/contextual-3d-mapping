@@ -9,7 +9,7 @@ tipos de runtime para domain ou application.
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import Any, NoReturn
 
 import numpy as np
 
@@ -57,7 +57,7 @@ def payload_to_pil(image: ImagePayload, backend: str) -> Any:
 
 # Padroniza a tradução de falhas de bibliotecas externas para o erro estável
 # do módulo. O encadeamento preserva debugging sem expor tipos na API pública.
-def raise_backend_execution_error(backend: str, operation: str, error: Exception) -> None:
+def raise_backend_execution_error(backend: str, operation: str, error: Exception) -> NoReturn:
     """Levanta ``BackendExecutionError`` com contexto do backend e da operação."""
     raise BackendExecutionError(
         f"O backend {backend!r} falhou durante {operation}: {error}"

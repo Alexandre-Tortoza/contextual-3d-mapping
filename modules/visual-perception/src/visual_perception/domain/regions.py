@@ -1,6 +1,7 @@
 """Contracts de proposta de região e de região observada canônica.
 
-Issues: #158 (saída de fronteira de region discovery), #154/#160 (região canônica).
+Issues: #158 (saída de fronteira de region discovery), #154/#160 (região
+canônica), #193 (evidência multi-contexto por região).
 """
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ from dataclasses import dataclass, field
 
 from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.identifiers import validate_identifier
+from visual_perception.domain.region_evidence import EvidenceSlot, RegionEvidenceSlot
 from visual_perception.domain.semantics import SemanticClaim
 
 
@@ -106,6 +108,11 @@ class ObservedRegion:
     ``geometric_confidence`` é distinta da confiança de qualquer claim
     semântico (ver #156): ela descreve só o quão confiável é a geometria da
     máscara/box.
+
+    ``visual_embedding_ref``/``language_embedding_ref`` continuam sendo as
+    referências canônicas de slot único. ``evidence`` (#193) acrescenta os
+    slots multi-contexto complementares sem substituí-las: um consumidor que
+    só entende o contract antigo continua funcionando.
     """
 
     region_id: str
@@ -116,11 +123,14 @@ class ObservedRegion:
     claims: tuple[SemanticClaim, ...] = field(default_factory=tuple)
     visual_embedding_ref: str | None = None
     language_embedding_ref: str | None = None
+    evidence: tuple[RegionEvidenceSlot, ...] = field(default_factory=tuple)
 
-    # Valida o region_id, a confiança geométrica em [0, 1], e que ao menos
+    # Valida o region_id, a confiança geométrica em [0, 1], que ao menos
     # uma proposta contribuinte foi preservada (para rastreabilidade até a
-    # proveniência do merge).
+    # proveniência do merge), e que todo slot de evidência pertence a esta
+    # região e não sobrescreve outro do mesmo slot/view.
     def __post_init__(self) -> None:
+        """Valida identidade, confiança geométrica e coerência dos slots de evidência."""
         validate_identifier(self.region_id, field="region_id")
         if not 0.0 <= self.geometric_confidence <= 1.0:
             raise ValueError(
@@ -128,3 +138,29 @@ class ObservedRegion:
             )
         if not self.contributing_proposal_ids:
             raise ValueError("ObservedRegion must preserve at least one contributing proposal id.")
+        seen: set[tuple[EvidenceSlot, str | None]] = set()
+        for slot in self.evidence:
+            if slot.region_id != self.region_id:
+                raise ValueError(
+                    f"Evidence slot {slot.slot.value!r} references region {slot.region_id!r}, "
+                    f"but belongs to {self.region_id!r}."
+                )
+            key = (slot.slot, slot.view_id)
+            if key in seen:
+                raise ValueError(
+                    f"Region {self.region_id!r} has duplicate evidence for slot {slot.slot.value!r}"
+                    f"{'' if slot.view_id is None else f' and view {slot.view_id!r}'}."
+                )
+            seen.add(key)
+
+    # Busca um slot de evidência específico da região. Existe para que
+    # consumidores (#194, #199) leiam foreground e contexto pelo nome do
+    # slot, em vez de varrer a tupla em cada chamada.
+    def evidence_for(
+        self, slot: EvidenceSlot, *, view_id: str | None = None
+    ) -> RegionEvidenceSlot | None:
+        """Retorna o slot de evidência pedido, ou ``None`` se a região não o retém."""
+        for item in self.evidence:
+            if item.slot is slot and item.view_id == view_id:
+                return item
+        return None

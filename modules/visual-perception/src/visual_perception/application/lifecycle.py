@@ -15,6 +15,7 @@ from __future__ import annotations
 import dataclasses
 import gc
 import resource
+import sys
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -45,6 +46,9 @@ class StageMetrics:
     load_time_s: float
     inference_time_s: float
     peak_memory_bytes: int
+    memory_kind: str = "cpu_rss"
+    peak_vram_bytes: int | None = None
+    peak_cpu_rss_bytes: int = 0
 
 
 # Cria, usa e libera um adapter pesado por stage, garantindo que apenas um
@@ -103,6 +107,9 @@ class ModelLifecycleManager:
                     load_time_s=load_time,
                     inference_time_s=inference_time,
                     peak_memory_bytes=_peak_memory_bytes(),
+                    memory_kind=_memory_kind(),
+                    peak_vram_bytes=_peak_vram_bytes(),
+                    peak_cpu_rss_bytes=_peak_cpu_rss_bytes(),
                 )
             )
             del model
@@ -142,6 +149,9 @@ class ModelLifecycleManager:
                 load_time_s=time.monotonic() - load_start,
                 inference_time_s=0.0,
                 peak_memory_bytes=_peak_memory_bytes(),
+                memory_kind=_memory_kind(),
+                peak_vram_bytes=_peak_vram_bytes(),
+                peak_cpu_rss_bytes=_peak_cpu_rss_bytes(),
             )
         )
         self._active_key = key
@@ -163,8 +173,12 @@ class ModelLifecycleManager:
             if self._metrics and self._metrics[-1].stage_name == self._active_key:
                 current_peak = _peak_memory_bytes()
                 last = self._metrics[-1]
-                if current_peak > last.peak_memory_bytes:
-                    self._metrics[-1] = dataclasses.replace(last, peak_memory_bytes=current_peak)
+                self._metrics[-1] = dataclasses.replace(
+                    last,
+                    peak_memory_bytes=max(current_peak, last.peak_memory_bytes),
+                    peak_vram_bytes=_peak_vram_bytes(),
+                    peak_cpu_rss_bytes=_peak_cpu_rss_bytes(),
+                )
             del self._active_model
             self._active_model = None
             self._active_key = None
@@ -181,9 +195,28 @@ class ModelLifecycleManager:
 # visível está disponível, ou RSS de CPU como proxy caso contrário; helper
 # interno usado por ModelLifecycleManager para preencher StageMetrics.
 def _peak_memory_bytes() -> int:
+    """Mantém a medida legada, acompanhada de seu tipo explícito em StageMetrics."""
     if torch is not None and torch.cuda.is_available():
         return int(torch.cuda.max_memory_allocated())
-    # NOTE: ru_maxrss é KB no Linux e bytes no macOS; o proxy de CPU só
-    # precisa ser monotônico e comparável entre stages dentro de uma mesma
-    # execução.
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+    return _peak_cpu_rss_bytes()
+
+
+# Identifica a unidade de observação para evitar interpretar RSS como VRAM.
+def _memory_kind() -> str:
+    """Retorna o tipo da medida legada de pico de memória."""
+    return "cuda_allocated" if torch is not None and torch.cuda.is_available() else "cpu_rss"
+
+
+# Mede somente a memória CUDA; ausência de GPU permanece explícita.
+def _peak_vram_bytes() -> int | None:
+    """Retorna bytes alocados em CUDA ou None quando essa medição não existe."""
+    if torch is None or not torch.cuda.is_available():
+        return None
+    return int(torch.cuda.max_memory_allocated())
+
+
+# Converte o high-water mark de RSS do processo para bytes na plataforma atual.
+def _peak_cpu_rss_bytes() -> int:
+    """Retorna o pico acumulado de RSS do processo, separado da VRAM."""
+    multiplier = 1 if sys.platform == "darwin" else 1024
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * multiplier
