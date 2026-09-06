@@ -14,6 +14,7 @@ instalados e os frames já extraídos):
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import subprocess
 import sys
@@ -35,6 +36,9 @@ from render_overlay import render_overlay  # noqa: E402
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
 from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
 from visual_perception.application.pipeline import run_canonical_pipeline  # noqa: E402
+from visual_perception.application.quality_audit import audit_observation  # noqa: E402
+from visual_perception.application.relation_generation import generate_relations  # noqa: E402
+from visual_perception.application.semantic_merge import merge_same_label_regions  # noqa: E402
 from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
@@ -111,6 +115,21 @@ def main() -> None:
             summary_rows.append(f"## {name}\n\n**FALHOU:** `{error!r}`\n")
             continue
 
+        # Passo de pós-processamento (#190, não faz parte de run_canonical_pipeline):
+        # funde regiões com o mesmo label predominante que se sobrepõem, reduzindo
+        # o over-segmentation do SAM em superfícies uniformes. Relações e audit são
+        # recalculados porque a identidade das regiões mudou.
+        region_count_before_merge = len(result.observation.regions)
+        merged_regions = merge_same_label_regions(result.observation.regions)
+        merged_observation = dataclasses.replace(
+            result.observation,
+            regions=merged_regions,
+            relations=generate_relations(merged_regions, config.merge),
+        )
+        result = dataclasses.replace(
+            result, observation=merged_observation, audit=audit_observation(merged_observation)
+        )
+
         json_path = out_dir / f"{name}.json"
         json_path.write_text(json.dumps(serialize_observation(result.observation), indent=2))
 
@@ -123,7 +142,7 @@ def main() -> None:
         )
         audit_status = "pass" if result.audit.passed else "FAIL"
         print(
-            f"  regions={len(result.observation.regions)} "
+            f"  regions={region_count_before_merge}->{len(result.observation.regions)} (semantic merge) "
             f"relations={len(result.observation.relations)} "
             f"interpretation_failures={len(result.region_interpretation_failures)} "
             f"audit={audit_status} warnings={len(result.audit.warnings)}"
@@ -132,6 +151,7 @@ def main() -> None:
             {
                 "frame": name,
                 "failed": False,
+                "region_count_before_merge": region_count_before_merge,
                 "region_count": len(result.observation.regions),
                 "relation_count": len(result.observation.relations),
                 "interpretation_failure_count": len(result.region_interpretation_failures),
@@ -143,7 +163,9 @@ def main() -> None:
         summary_rows.append(
             f"## {name}\n\n"
             f"![{name}]({overlay_path.name})\n\n"
-            f"**scene_type:** {scene_type} · **regiões:** {len(result.observation.regions)} · "
+            f"**scene_type:** {scene_type} · "
+            f"**regiões:** {region_count_before_merge}→{len(result.observation.regions)} "
+            "(pré/pós merge semântico) · "
             f"**relações:** {len(result.observation.relations)} · "
             f"**falhas de interpretação:** {len(result.region_interpretation_failures)} · "
             f"**audit:** {'✅ pass' if result.audit.passed else '❌ FAIL'} "

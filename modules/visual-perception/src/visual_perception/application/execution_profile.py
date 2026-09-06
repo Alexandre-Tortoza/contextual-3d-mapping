@@ -82,7 +82,14 @@ def additional_compute_is_justified(
 # 8GB na RTX 3060 (ver benchmarks/results/benchmark-174-*.json). Mantidos
 # aqui, próximos de research_quality_config, para que a config de referência
 # real-backend tenha uma única fonte de verdade.
-_REAL_REGION_DISCOVERY = RegionDiscoveryConfig(backend="sam", checkpoint="facebook/sam-vit-huge")
+# min_mask_area acima do default (64px², um patch de 8x8): o SAM automático
+# propõe muitos slivers minúsculos em superfícies uniformes (teto, parede)
+# que dão pouco sinal visual ao VLM e inflam o over-segmentation sem
+# agregar conteúdo distinto (visto na prática em #190: ~82% de falha de
+# interpretação antes de ajustar o prompt, muitas delas em crops <30x30px).
+_REAL_REGION_DISCOVERY = RegionDiscoveryConfig(
+    backend="sam", checkpoint="facebook/sam-vit-huge", min_mask_area=500
+)
 _REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(backend="dinov2", checkpoint="facebook/dinov2-base")
 _REAL_LANGUAGE_EMBEDDING = LanguageEmbeddingConfig(
     backend="clip", checkpoint="openai/clip-vit-large-patch14", dimension=768
