@@ -1,145 +1,363 @@
 # Model Backends
 
-## Estado e seleção
+Este documento explica **qual implementação concreta atende cada capability, por que ela
+foi selecionada, onde alterá-la e quais limites precisam ser considerados**.
 
-O módulo roda por default com `backend="fake"`. Os fakes são determinísticos, sensíveis
-ao conteúdo e livres de GPU; eles exercitam contracts, pipeline, cache e fronteiras sem
-baixar modelos. Adapters reais também estão implementados e foram validados na GPU de
-referência (RTX 3060 8GB) — os checkpoints abaixo foram escolhidos por benchmark real
-(#174), não por conveniência de integração. `research_quality_config(real_backends=True)`
-(em [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py))
-retorna a `ModuleConfig` de referência com os 4 backends reais já configurados.
+O pipeline canônico continua dependente apenas dos ports. Checkpoints, bibliotecas e
+regras de runtime ficam isolados em `infrastructure/adapters/`.
 
-| Port | Fake default | Adapter real selecionado (#174) | Identificador |
-| --- | --- | --- | --- |
-| `RegionDiscoverer` | `FakeRegionDiscoverer` | SAM ViT-H via Transformers (`facebook/sam-vit-huge`) | `sam` |
-| `DenseFeatureExtractor` | `FakeDenseFeatureExtractor` | DINOv2-base via Transformers (`facebook/dinov2-base`) | `dinov2` |
-| `LanguageAlignedEncoder` | `FakeLanguageAlignedEncoder` | CLIP ViT-L/14 via Transformers (`openai/clip-vit-large-patch14`) | `clip` |
-| `MultimodalReasoner` | `FakeMultimodalReasoner` | Qwen2.5-VL-3B-Instruct em 4-bit (`Qwen/Qwen2.5-VL-3B-Instruct`) | `qwen_vl` |
+## Visão geral
 
-Os detalhes de runtime ficam isolados em
-[`infrastructure/adapters/`](../src/visual_perception/infrastructure/adapters/); o
-pipeline continua conhecendo apenas seus ports. Consulte
-[api-contracts.md](api-contracts.md#ports-de-extensão) se precisar fornecer outra
-implementação.
+O módulo roda por padrão com `backend="fake"`. Os fakes são determinísticos, não exigem
+GPU e exercitam contracts, pipeline, cache e integração.
 
-## Por que estes checkpoints
+A configuração real de referência foi escolhida por benchmark reproduzível na RTX 3060
+8GB (#174):
 
-Metodologia completa e resultados brutos em `../benchmarks/results/benchmark-174-*.json`
-(candidatos, quality score, peak VRAM, latência, `benchmarks/candidates/*.py` para os
-proxies de qualidade usados por estágio — todos medidos com o conjunto representativo de
-18 frames do corridor-02, ver `../benchmarks/prepare_corridor02_frames.py`).
+| Capability | Port | Backend real | Checkpoint | Identificador |
+| --- | --- | --- | --- | --- |
+| Region discovery | `RegionDiscoverer` | SAM ViT-H | `facebook/sam-vit-huge` | `sam` |
+| Dense feature extraction | `DenseFeatureExtractor` | DINOv2-base | `facebook/dinov2-base` | `dinov2` |
+| Language-aligned embedding | `LanguageAlignedEncoder` | CLIP ViT-L/14 | `openai/clip-vit-large-patch14` | `clip` |
+| Multimodal reasoning | `MultimodalReasoner` | Qwen2.5-VL-3B-Instruct 4-bit | `Qwen/Qwen2.5-VL-3B-Instruct` | `qwen_vl` |
 
-- **Region discovery**: SAM ViT-H bateu SAM2.1-hiera-large e FastSAM-x no IoU previsto
-  médio (0.956 vs 0.937 vs 0.585); todos cabem no budget de 8GB, então venceu por
-  qualidade.
-- **Feature extraction**: DINOv2-base bateu DINOv2-large (0.966 vs 0.958) na coerência
-  espacial do primeiro componente PCA — o modelo maior não melhorou a estruturação das
-  features para este dataset, e ainda usa mais VRAM.
-- **Language embedding**: CLIP ViT-L/14 bateu SigLIP-base (0.024 vs 0.009) na margem
-  top1/top2 de similaridade de cosseno zero-shot contra um vocabulário indoor genérico.
-- **Multimodal reasoning**: Qwen2.5-VL-3B-Instruct em 4-bit (bitsandbytes nf4) — o
-  candidato 7B (tanto quantização on-the-fly quanto o checkpoint pré-quantizado da
-  Unsloth) falhou em 3 tentativas diferentes nesta GPU (OOM no carregamento e um bug de
-  compatibilidade `bitsandbytes`/Transformers no vision tower fundido), documentado no
-  próprio JSON de resultado. O 3B-4bit rodou com score de qualidade perfeito (1.0) e
-  grande folga de VRAM (2.5GB de 8GB), então venceu por eliminação com evidência real, não
-  por ausência de alternativa testada.
+`research_quality_config(real_backends=True)` em
+[`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py)
+retorna a configuração de referência com os quatro backends reais.
 
-## Orçamento de VRAM: liberação sequencial obrigatória
+## Quero mudar X: onde mexo?
 
-Cada um dos 4 backends reais cabe individualmente no budget de 8GB, mas a **soma** dos
-picos (SAM 4.6GB + DINOv2 0.3GB + CLIP 1.6GB + Qwen 2.5GB ≈ 9GB) o estoura. Por isso os 4
-adapters reais recebem (ou criam, se omitido) um
-[`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py) compartilhado
-via [`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py):
-no máximo um modelo pesado fica residente em VRAM por vez, mesmo com os 4 ports já
-construídos para uma única chamada de `run_canonical_pipeline`. Isso foi confirmado na
-prática: sem o manager compartilhado, o pipeline real estourava VRAM ao tentar carregar o
-VLM depois de SAM+DINOv2+CLIP ficarem residentes.
+| Quero alterar | Arquivo principal | Também revisar |
+| --- | --- | --- |
+| backend selecionado por capability | [`factory.py`](../src/visual_perception/infrastructure/adapters/factory.py) | `config.py`, testes e docs |
+| checkpoint/configuração de referência | [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py) | `config.py`, benchmark e fingerprint |
+| implementação de region discovery | [`region_discovery_backend.py`](../src/visual_perception/infrastructure/adapters/region_discovery_backend.py) | `ports/region_discovery.py` e testes GPU |
+| implementação de dense features | [`feature_extraction_backend.py`](../src/visual_perception/infrastructure/adapters/feature_extraction_backend.py) | `ports/feature_extraction.py`, pooling e benchmark |
+| implementação de language embedding | [`language_embedding_backend.py`](../src/visual_perception/infrastructure/adapters/language_embedding_backend.py) | `ports/language_embedding.py` e benchmark |
+| modelo ou prompt do VLM | [`multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py) | parser de cena/região, fingerprint e testes |
+| parsing de resposta de região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) | `domain/semantics.py` e testes do parser |
+| lifecycle e VRAM | [`application/lifecycle.py`](../src/visual_perception/application/lifecycle.py) | `factory.py`, `_runtime.py` e validação real |
+| candidatos de benchmark | [`benchmarks/candidates/`](../benchmarks/candidates/) | `run_backend_benchmark.py` e resultados |
+| execução real de referência | [`benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py) | overlays, manifests e samples |
 
-`ModelLifecycleManager.metrics` também funciona como log de auditoria por estágio (nome do
-backend/checkpoint, tempo de load, pico de VRAM real via `torch.cuda.max_memory_allocated`)
-— usado pelas amostras de validação em `../benchmarks/results/samples/`.
+## Instalação
 
-## Instalação e configuração
-
-O ambiente fake-only requer apenas a instalação base. Para executar todos os adapters
-reais, instale o extra `ml` no diretório do módulo:
+O ambiente fake-only usa a instalação base/dev. Para os adapters reais:
 
 ```bash
 pip install -e ".[ml]"
 ```
 
-Cada configuração real deve declarar o backend, um checkpoint explícito e o device
-desejado. `device="auto"` seleciona CUDA somente quando disponível; `device="cuda"`
-falha se não houver uma GPU utilizável. Um checkpoint `"none"`, dependência ausente ou
-GPU indisponível gera `BackendUnavailableError`. Falhas no carregamento ou na inferência
-são encapsuladas em `BackendExecutionError`. Nenhum adapter substitui silenciosamente o
-backend por um fake.
+Uma configuração real deve declarar backend, checkpoint e device válidos.
 
-Use os campos específicos em [`config.py`](../src/visual_perception/config.py), não
-configuração de aplicação para parâmetros do algoritmo. O fingerprint de `ModuleConfig`
-deve acompanhar artifacts e resultados que dependam de um backend real.
+Semântica dos erros:
 
-## Limites atuais
+```text
+checkpoint ausente / dependência ausente / GPU solicitada indisponível
+    -> BackendUnavailableError
 
-- SAM produz propostas geométricas class-agnostic; merge e semântica continuam sendo
-  responsabilidade dos estágios canônicos. Em superfícies repetitivas (ex: teto em
-  ladrilhos) o gerador automático over-segmenta — cada ladrilho pode virar sua própria
-  proposta, já que o merge atual (`region_merge`) só funde por IoU/sobreposição, não por
-  similaridade semântica entre regiões vizinhas não sobrepostas.
-- DINOv2 expõe um `FeatureMap` espacial; tensors e tokens internos não cruzam o port.
-- CLIP mantém embeddings de imagem e texto no mesmo espaço, com dimensão configurada
-  (768 para ViT-L/14).
-- O VLM devolve JSON bruto; parsing e validação semântica pertencem a `application/`. Em
-  crops de região pequenos ou ambíguos, o Qwen2.5-VL-3B às vezes falha em produzir JSON
-  parseável (isolado por região via `RegionInterpretationFailure`, não derruba o resto) ou
-  responde com o contexto geral da cena em vez de descrever o conteúdo específico do crop.
+falha durante load ou inferência
+    -> BackendExecutionError
+```
+
+Nunca existe fallback silencioso de backend real para fake.
+
+## Composição dos backends
+
+A seleção concreta acontece em:
+
+[`infrastructure/adapters/factory.py`](../src/visual_perception/infrastructure/adapters/factory.py)
+
+```mermaid
+flowchart LR
+    C[ModuleConfig] --> F[create_perception_ports]
+    F --> R[RegionDiscoverer]
+    F --> D[DenseFeatureExtractor]
+    F --> L[LanguageAlignedEncoder]
+    F --> M[MultimodalReasoner]
+    R --> P[PerceptionPorts]
+    D --> P
+    L --> P
+    M --> P
+    P --> X[run_canonical_pipeline]
+```
+
+`pipeline.py` não escolhe bibliotecas ou checkpoints. Para substituir uma implementação,
+prefira manter o mesmo port e trocar somente o adapter/factory/configuração.
+
+## Region discovery
+
+### Responsabilidade
+
+Produzir propostas geométricas 2D class-agnostic. O backend não atribui identidade
+semântica final à região.
+
+### Implementação atual
+
+- port: `RegionDiscoverer`;
+- adapter: `infrastructure/adapters/region_discovery_backend.py`;
+- backend: `sam`;
+- checkpoint: `facebook/sam-vit-huge`.
+
+### Por que foi escolhido
+
+No benchmark #174, SAM ViT-H apresentou IoU previsto médio de `0.956`, contra `0.937`
+para SAM2.1-hiera-large e `0.585` para FastSAM-x. Todos cabiam individualmente no budget
+de 8GB, então a seleção priorizou qualidade.
+
+### Output esperado
+
+O adapter deve produzir `RegionProposal` e respeitar o contract do port. Merge,
+consolidação e semântica são etapas posteriores.
+
+### Limites atuais
+
+SAM pode over-segmentar superfícies repetitivas, como tetos em ladrilhos. O merge atual
+atua por IoU/sobreposição e não une automaticamente regiões vizinhas não sobrepostas com
+semântica semelhante.
+
+## Dense feature extraction
+
+### Responsabilidade
+
+Produzir um `FeatureMap` espacial que preserve estrutura visual suficiente para pooling
+por mask.
+
+### Implementação atual
+
+- port: `DenseFeatureExtractor`;
+- adapter: `infrastructure/adapters/feature_extraction_backend.py`;
+- backend: `dinov2`;
+- checkpoint: `facebook/dinov2-base`.
+
+### Por que foi escolhido
+
+No benchmark #174, DINOv2-base obteve `0.966` no proxy de coerência espacial do primeiro
+componente PCA, contra `0.958` do DINOv2-large. O modelo maior não melhorou o proxy no
+conjunto de referência e consumia mais recursos.
+
+### Output esperado
+
+Tensors internos, tokens e objetos de framework não atravessam o port. O adapter expõe
+somente o `FeatureMap` definido pelo módulo.
+
+### Relação com pooling
+
+A transformação de feature map para embedding por região pertence a
+[`application/pooling.py`](../src/visual_perception/application/pooling.py), não ao
+adapter DINO.
+
+## Language-aligned embedding
+
+### Responsabilidade
+
+Produzir embeddings em um espaço compartilhado entre imagem/região e linguagem.
+
+### Implementação atual
+
+- port: `LanguageAlignedEncoder`;
+- adapter: `infrastructure/adapters/language_embedding_backend.py`;
+- backend: `clip`;
+- checkpoint: `openai/clip-vit-large-patch14`.
+
+### Por que foi escolhido
+
+No benchmark #174, CLIP ViT-L/14 apresentou margem top1/top2 de similaridade de cosseno
+zero-shot `0.024`, contra `0.009` do SigLIP-base, usando o vocabulário indoor genérico do
+benchmark.
+
+### Output esperado
+
+O espaço de embedding deve continuar compatível com a operação imagem-texto prevista
+pelo port. A dimensão de referência do ViT-L/14 é 768.
+
+## Multimodal reasoning
+
+### Responsabilidade
+
+Produzir respostas estruturadas para:
+
+- contexto global da cena;
+- interpretação semântica de regiões;
+- relações multimodais candidatas quando solicitadas pelo pipeline.
+
+### Implementação atual
+
+- port: `MultimodalReasoner`;
+- adapter: `infrastructure/adapters/multimodal_reasoning_backend.py`;
+- backend: `qwen_vl`;
+- checkpoint: `Qwen/Qwen2.5-VL-3B-Instruct`;
+- execução de referência: 4-bit `bitsandbytes` NF4.
+
+### Por que foi escolhido
+
+O candidato 7B falhou em três tentativas na GPU de referência, por OOM no carregamento e
+por incompatibilidade `bitsandbytes`/Transformers no vision tower fundido. O 3B em 4-bit
+rodou com score de qualidade `1.0` no benchmark e pico aproximado de 2.5GB de VRAM.
+
+A escolha é baseada na evidência do hardware de referência, não em uma afirmação de que o
+3B seja universalmente superior ao 7B.
+
+### Limites atuais
+
+Em crops pequenos ou ambíguos, o VLM pode:
+
+- retornar JSON malformado;
+- usar o contexto global da cena em vez do conteúdo específico do crop;
+- omitir score quando não consegue estimar confiança.
+
+Falhas locais de interpretação viram `RegionInterpretationFailure` e não precisam
+invalidar toda a observação.
+
+## Contract de resposta de região
+
+A versão atual é `prompt_version = v2`.
+
+O adapter pede um único objeto JSON por região:
+
+```json
+{
+  "label": "door",
+  "kind": "thing",
+  "category": "opening",
+  "confidence": 0.71,
+  "alternatives": [
+    {"label": "panel", "confidence": 0.2}
+  ],
+  "description": "...",
+  "attributes": ["closed"],
+  "condition": "worn",
+  "material": "wood"
+}
+```
+
+Semântica dos campos:
+
+- `label`, open-vocabulary, singular e obrigatório;
+- `kind`, `thing | stuff | part | unknown`; ausência vira `unknown`;
+- `category`, string livre, sem taxonomia canônica versionada neste módulo;
+- `confidence`, score informado pelo modelo; a chave deve ser omitida quando o modelo
+  não sabe estimá-la;
+- `alternatives`, hipóteses concorrentes que viram claims irmãos do principal.
+
+O parsing é feito por `parse_region_interpretation` em
+[`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py).
+O formato legado `{"labels": [...]}` é rejeitado com `InvalidInterpretation`.
+
+`prompt_version` participa de `ModelProvenance` e do fingerprint de configuração, então
+uma mudança de versão invalida cache dependente da resposta anterior.
+
+## Política de confiança
+
+Ausência de score é representada como `None`.
+
+```text
+confidence ausente
+    -> None
+
+confidence = 0.0
+    -> score explicitamente fornecido
+```
+
+O adapter não deve inventar `1.0`, `0.0` ou outro valor para preencher ausência.
+Consumidores usam a política canônica em `most_confident_claim`; consulte
+[api-contracts.md](api-contracts.md#confiança-ausente).
+
+## Orçamento de VRAM e lifecycle
+
+Os picos observados na configuração de referência são aproximadamente:
+
+| Backend | Pico de referência |
+| --- | ---: |
+| SAM ViT-H | 4.6 GB |
+| DINOv2-base | 0.3 GB |
+| CLIP ViT-L/14 | 1.6 GB |
+| Qwen2.5-VL-3B 4-bit | 2.5 GB |
+
+A soma aproximada excede 8GB. Por isso, os adapters reais compartilham um
+[`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py).
+
+`create_perception_ports(config, lifecycle=None)` cria um manager quando ele não é
+fornecido e o compartilha entre os ports compostos. O pipeline recebe os ports já
+construídos e não seleciona modelos por conta própria.
+
+```text
+SAM   -> inferência -> unload
+DINO  -> inferência -> unload
+CLIP  -> inferência -> unload
+Qwen  -> inferência -> unload
+```
+
+`ModelLifecycleManager.metrics` registra métricas por estágio, incluindo identificação do
+backend/checkpoint, tempo de load e pico de memória medido pelo runtime disponível.
+
+## Benchmark de seleção (#174)
+
+Resultados brutos:
+
+```text
+../benchmarks/results/benchmark-174-*.json
+```
+
+Candidatos e proxies:
+
+```text
+../benchmarks/candidates/
+../benchmarks/run_backend_benchmark.py
+../benchmarks/backend_benchmark.py
+```
+
+Conjunto de referência usado na seleção:
+
+```text
+18 frames de corridor-02
+../benchmarks/prepare_corridor02_frames.py
+```
+
+Um resultado que altere a configuração de referência deve registrar pelo menos:
+
+- dataset e subset;
+- revisão do código;
+- checkpoint;
+- configuração;
+- hardware;
+- métrica/proxy;
+- latência;
+- consumo de memória;
+- falhas de execução.
 
 ## Validação end-to-end (#190)
 
-`../benchmarks/validate_reference_pipeline.py` roda o pipeline canônico real sobre o
-conjunto representativo do corridor-02, gerando por frame: a `VisualObservation`
-serializada (JSON), um overlay das máscaras/labels sobre a imagem original, e um
-`manifest.json` com git revision, configuração completa e o log de estágios do
-`ModelLifecycleManager`. Saída em `../benchmarks/results/samples/<run-id>/`.
+[`../benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py)
+executa a configuração real sobre os frames de referência.
 
-## Contract de resposta de região (`prompt_version = v2`)
+Por frame, a validação produz:
 
-O adapter de raciocínio multimodal pede ao VLM um único objeto JSON por região:
+- `VisualObservation` serializada;
+- overlay de masks/labels;
+- manifest com git revision e configuração;
+- métricas do lifecycle.
 
-```json
-{"label": "door", "kind": "thing", "category": "opening", "confidence": 0.71,
- "alternatives": [{"label": "panel", "confidence": 0.2}],
- "description": "...", "attributes": ["closed"], "condition": "worn", "material": "wood"}
+Saída:
+
+```text
+../benchmarks/results/samples/<run-id>/
 ```
 
-- `label` — open-vocabulary, livre, singular. Único campo obrigatório.
-- `kind` — `thing` | `stuff` | `part` | `unknown`. Omissão vira `unknown`, **nunca**
-  `thing`; um valor fora do enum é resposta malformada.
-- `category` — categoria grosseira, string livre. Não há taxonomia canônica versionada
-  no módulo, então nenhum valor é rejeitado por não pertencer a uma lista.
-- `confidence` — a certeza real do modelo. O prompt manda **omitir a chave** quando o
-  modelo não sabe estimá-la, em vez de chutar. A ausência vira `None` no claim.
-- `alternatives` — hipóteses concorrentes, que viram claims de label irmãos do primário.
+Esses artifacts servem para inspeção qualitativa e rastreabilidade. Métricas de pesquisa
+mais fortes devem ser definidas em protocolos de avaliação específicos.
 
-O parsing é feito por `parse_region_interpretation`
-([`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py)),
-uma fronteira pura e sem I/O, testável sem mocks. O formato legado `{"labels": [...]}`
-é **rejeitado** com `InvalidInterpretation`.
+## Dívidas conhecidas
 
-`prompt_version` entra em `ModelProvenance` e em `ModuleConfig.fingerprint()`, então o
-bump de `v1` para `v2` invalida automaticamente resultados em cache produzidos pelo
-prompt anterior.
+- `application/scene_context.py` e `application/relation_generation.py` ainda devem ser
+  revisados para garantir a mesma política explícita de confiança ausente aplicada ao
+  parser de regiões;
+- relações `geometric_2d` podem usar `ConfidenceScore(1.0)` legitimamente quando o valor
+  representa o resultado de um predicado determinístico, não ausência de score;
+- over-segmentation de superfícies repetitivas não é resolvida apenas pela troca de
+  checkpoint;
+- crops semanticamente ambíguos ainda podem induzir o VLM a responder com contexto da
+  cena em vez da região.
 
-### Dívida conhecida
-
-`application/scene_context.py` e `application/relation_generation.py` ainda usam
-`get("confidence", 1.0)` ao parsear respostas do mesmo VLM — a mesma classe de bug que
-`v2` corrigiu no nível de região, agora restrita a claims de cena e de relação. Fora do
-escopo da mudança que introduziu `v2`; tratar em passo separado.
-
-`relation_generation.py` também atribui `ConfidenceScore(1.0, source="geometric_2d")` a
-relações geométricas, mas ali o `1.0` é legítimo: é o resultado de um predicado
-determinístico sobre boxes, não a ausência de um score.
+Quando uma dívida for resolvida, atualize este documento junto com os testes e o
+benchmark que comprovam a mudança.
