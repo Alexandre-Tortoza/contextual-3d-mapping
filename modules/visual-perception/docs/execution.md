@@ -326,6 +326,12 @@ Para a ablation operacional da #209, execute os mesmos IDs com
 os estados, chamadas e latência de cada slot; IDs e geometria continuam sendo a saída
 canônica anterior à evidência contextual.
 
+O resultado medido na RTX 3060 está em
+[`../benchmarks/results/benchmark-209-multi-context-20260906T201128Z.md`](../benchmarks/results/benchmark-209-multi-context-20260906T201128Z.md).
+Nos três frames, o perfil full produziu os quatro slots em 126/126 regiões, sem falhas,
+preservou exatamente a geometria canônica e adicionou 5,489 s (+1,09%) ao wall-clock,
+sem aumentar o pico observado de 4,57 GiB.
+
 ## Quero diagnosticar X: onde olhar?
 
 | Sintoma | Primeiro local | Depois verificar |

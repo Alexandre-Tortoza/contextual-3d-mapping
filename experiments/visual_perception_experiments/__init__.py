@@ -11,3 +11,9 @@ que permite que a avaliação permaneça independente da representação interna
 do módulo, conforme AGENTS.md ("experiments/ comparações, ablations e
 orquestração de experimentos").
 """
+
+from .paths import ensure_import_roots
+
+# Prepara as source trees pertencentes à composição antes que qualquer CLI
+# do pacote importe datasets, evaluation ou visual_perception.
+ensure_import_roots()

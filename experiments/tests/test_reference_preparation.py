@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +43,26 @@ from visual_perception_experiments.prepare_reference import (
     split_windows,
 )
 from visual_perception_experiments.review_package import render_review_page, write_review_package
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+# Executa um CLI de experimento como documentado, sem depender do pythonpath
+# injetado pelo pytest no processo pai.
+def test_experiment_entrypoint_prepares_composition_import_roots() -> None:
+    """Confirma que o pacote resolve suas dependências locais ao iniciar."""
+    environment = {**os.environ, "PYTHONPATH": str(_REPOSITORY_ROOT / "experiments")}
+    completed = subprocess.run(
+        [sys.executable, "-m", "visual_perception_experiments.review_package", "--help"],
+        cwd=_REPOSITORY_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "--output-dir" in completed.stdout
 
 
 def test_split_windows_are_contiguous_and_separated_by_guard_bands() -> None:
