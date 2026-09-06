@@ -1,6 +1,12 @@
 """Stage de embedding de região alinhado a linguagem.
 
 Issue: #163.
+
+NOTE: o pipeline canônico passou a obter esse embedding através de
+``application/multi_context.py`` (#194), que produz o mesmo crop justo como
+um slot de evidência ao lado dos demais. Esta função continua pública como o
+caminho de slot único, para consumidores que só precisam do embedding de
+região e não da estrutura multi-contexto.
 """
 
 from __future__ import annotations

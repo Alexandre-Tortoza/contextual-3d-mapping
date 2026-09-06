@@ -107,16 +107,19 @@ class RegionMergeConfig:
 # Configuração do backend de extração de features densas (DenseFeatureExtractor).
 @dataclass(frozen=True)
 class FeatureExtractionConfig:
-    """Seleciona o backbone e a amostragem de evidência densa reproduzível."""
+    """Seleciona o backbone e a regra de amostragem de evidência densa (#191/#192)."""
 
     backend: str = "fake"
     checkpoint: str = "none"
     feature_resolution: int = 16
     device: str = "auto"
-    upsampling: str = "patch_grid"
+    upsampling: str = "nearest"
 
     # Garante que a resolução do feature map configurada é um valor
-    # utilizável (positivo) antes de chegar ao backend de extração.
+    # utilizável (positivo) e que a regra de amostragem densa é conhecida,
+    # antes de chegar ao backend de extração. O default ``nearest`` preserva
+    # o comportamento canônico do pipeline (pooling pixel-aligned por vizinho
+    # mais próximo); ``patch_grid`` é o baseline explícito da ablation #192.
     def __post_init__(self) -> None:
         """Rejeita resoluções e métodos de amostragem incompatíveis."""
         if self.feature_resolution <= 0:

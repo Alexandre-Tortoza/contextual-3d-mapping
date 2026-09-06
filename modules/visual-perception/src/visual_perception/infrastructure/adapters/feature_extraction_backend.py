@@ -12,7 +12,7 @@ import numpy as np
 from visual_perception.application.lifecycle import ModelLifecycleManager
 from visual_perception.config import FeatureExtractionConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
-from visual_perception.domain.feature_map import FeatureMap
+from visual_perception.domain.feature_map import FeatureMap, FeatureRepresentation, SamplingRule
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.infrastructure.adapters._runtime import (
     payload_to_pil,
@@ -68,7 +68,20 @@ class RealDenseFeatureExtractionAdapter:
                 stride_x=image.width / grid_width,
                 stride_y=image.height / grid_height,
                 dimension=int(data.shape[-1]),
-                model_id=config.checkpoint,
+                model_id=config.backend,
+                representation=FeatureRepresentation.PATCH_GRID,
+                interpolation=(
+                    SamplingRule.BILINEAR if config.upsampling == "bilinear" else SamplingRule.NEAREST
+                ),
+                checkpoint=config.checkpoint,
+                # A grade nasce da resolução que o processor efetivamente
+                # usou, e não da resolução original: registrar isso é o que
+                # torna o mapa reproduzível (#191).
+                preprocessing=(
+                    f"{type(processor).__name__}:"
+                    f"{int(pixel_values.shape[-1])}x{int(pixel_values.shape[-2])}"
+                ),
+                valid_support=np.ones((grid_height, grid_width), dtype=np.bool_),
             )
         except BackendExecutionError:
             raise

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from visual_perception.config import FeatureExtractionConfig
-from visual_perception.domain.feature_map import FeatureMap
+from visual_perception.domain.feature_map import FeatureMap, FeatureRepresentation, SamplingRule
 from visual_perception.domain.image_payload import ImagePayload
 
 _DIMENSION = 4  # média de R, média de G, média de B, termo de bias constante.
@@ -19,8 +19,11 @@ class FakeDenseFeatureExtractor:
     """Faz average-pooling dos pixels brutos em um grid pequeno: sinal real, zero dependências de ML."""
 
     # Extrai o FeatureMap fake a partir da imagem, com resolução de grid
-    # limitada pelas dimensões da imagem e por config.feature_resolution.
+    # limitada pelas dimensões da imagem e por config.feature_resolution,
+    # já preenchendo a metadata de evidência densa da #191 para que os
+    # testes exercitem o mesmo contract que o backend real produz.
     def extract(self, image: ImagePayload, config: FeatureExtractionConfig) -> FeatureMap:
+        """Retorna um feature map denso com proveniência e suporte declarados."""
         grid_h = max(1, min(config.feature_resolution, image.height))
         grid_w = max(1, min(config.feature_resolution, image.width))
         stride_y = image.height / grid_h
@@ -36,5 +39,16 @@ class FakeDenseFeatureExtractor:
                 data[gy, gx] = (*mean_rgb, 1.0)
 
         return FeatureMap(
-            data=data, stride_x=stride_x, stride_y=stride_y, dimension=_DIMENSION, model_id="fake-features"
+            data=data,
+            stride_x=stride_x,
+            stride_y=stride_y,
+            dimension=_DIMENSION,
+            model_id="fake-features",
+            representation=FeatureRepresentation.PATCH_GRID,
+            interpolation=(
+                SamplingRule.BILINEAR if config.upsampling == "bilinear" else SamplingRule.NEAREST
+            ),
+            checkpoint=config.checkpoint,
+            preprocessing=f"mean_pool_rgb:{grid_w}x{grid_h}",
+            valid_support=np.ones((grid_h, grid_w), dtype=np.bool_),
         )

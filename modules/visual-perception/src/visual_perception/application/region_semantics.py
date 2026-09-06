@@ -18,6 +18,7 @@ Ausência de score agora é ``None``, nunca um número inventado.
 from __future__ import annotations
 
 import dataclasses
+import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -265,7 +266,15 @@ def _interpret_one_region(
         checkpoint=config.checkpoint,
         prompt_version=config.prompt_version,
     )
-    evidence = (Evidence(description=f"raw multimodal region response for {region.region_id}"),)
+    # A resposta literal do modelo acompanha a claim para que a calibração
+    # (#196) e a auditoria (#199) possam voltar do score até o texto que o
+    # originou, sem depender de logs externos.
+    evidence = (
+        Evidence(
+            description=f"raw multimodal region response for {region.region_id}",
+            raw_response_json=_raw_response_json(response),
+        ),
+    )
 
     # A hipótese primária e as alternativas viram claims de label irmãos: hipóteses
     # concorrentes coexistem, conforme o design "claims, não labels" (#156). Cada
@@ -276,6 +285,20 @@ def _interpret_one_region(
     ]
     claims.extend(_descriptive_claims(response, evidence, provenance))
     return tuple(claims)
+
+
+# Serializa a resposta bruta do reasoner quando ela é um objeto JSON.
+# Existe porque o port permite uma resposta em string simples, que não
+# satisfaz o contract de ``Evidence.raw_response_json`` (um objeto); nesse
+# caso a resposta é envolvida em um objeto de um campo só, preservando o
+# texto literal. Chamada por _interpret_one_region.
+def _raw_response_json(response: Any) -> str | None:
+    """Serializa a resposta bruta como objeto JSON, ou ``None`` se não for serializável."""
+    payload = response if isinstance(response, dict) else {"response": response}
+    try:
+        return json.dumps(payload, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return None
 
 
 # Converte os campos descritivos livres da resposta (description, attributes,
