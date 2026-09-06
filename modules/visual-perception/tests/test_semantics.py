@@ -9,8 +9,10 @@ from visual_perception.domain.semantics import (
     ClaimKind,
     ConfidenceScore,
     Evidence,
+    RegionKind,
     SemanticClaim,
     contradicting_claims,
+    most_confident_claim,
 )
 
 
@@ -64,3 +66,73 @@ def test_contradictory_hypotheses_coexist_and_are_detected() -> None:
     contradictions = contradicting_claims(claims, ClaimKind.LABEL)
     assert len(contradictions) == 2
     assert {claim.value for claim in contradictions} == {"box", "crate"}
+
+
+# RegionKind separa o que a região *é* (objeto contável, superfície, parte) do
+# label livre que o VLM escreveu. UNKNOWN existe para que "o modelo não disse"
+# nunca seja confundido com "o modelo disse thing".
+def test_region_kind_covers_thing_stuff_part_and_unknown() -> None:
+    assert {kind.value for kind in RegionKind} == {"thing", "stuff", "part", "unknown"}
+
+
+# O valor serializado de RegionKind é a string minúscula do próprio contrato do
+# VLM, para que parsing e serialização não precisem de tabela de tradução.
+def test_region_kind_value_matches_the_vlm_contract_string() -> None:
+    assert RegionKind("thing") is RegionKind.THING
+    assert RegionKind.UNKNOWN.value == "unknown"
+
+
+# Caso central do passo: um claim pode legitimamente não ter score. None significa
+# "o produtor não forneceu", e é diferente de 0.0 (score baixo informado).
+def test_claim_accepts_absent_confidence() -> None:
+    claim = SemanticClaim(ClaimKind.LABEL, "floor", None, (Evidence("e"),), _provenance())
+    assert claim.confidence is None
+
+
+# Um score de 0.0 continua sendo um score informado, não ausência — a distinção
+# que o passo inteiro existe para preservar.
+def test_zero_confidence_is_a_score_not_an_absence() -> None:
+    claim = SemanticClaim(
+        ClaimKind.LABEL, "floor", ConfidenceScore(0.0, source="fake"), (Evidence("e"),), _provenance()
+    )
+    assert claim.confidence is not None
+    assert claim.confidence.value == 0.0
+
+
+# Constrói um claim de label sem score; a hipótese que o VLM devolveu mas não pontuou.
+def _unscored(value: str) -> SemanticClaim:
+    return SemanticClaim(ClaimKind.LABEL, value, None, (Evidence("e"),), _provenance())
+
+
+# Caso central da política §6: uma claim pontuada sempre vence uma não pontuada.
+def test_scored_claim_outranks_unscored() -> None:
+    winner = most_confident_claim((_unscored("carpet"), _claim(ClaimKind.LABEL, "floor", 0.62)))
+    assert winner is not None
+    assert winner.value == "floor"
+
+
+# Impede o "conserto" futuro de tratar None como um default alto: mesmo com score
+# ridiculamente baixo, a pontuada continua vencendo a não pontuada.
+def test_unscored_never_wins_over_scored_even_at_low_confidence() -> None:
+    winner = most_confident_claim((_unscored("carpet"), _claim(ClaimKind.LABEL, "floor", 0.01)))
+    assert winner is not None
+    assert winner.value == "floor"
+
+
+# Entre claims pontuadas, vence a de maior confiança — o comportamento que já existia.
+def test_most_confident_scored_claim_wins() -> None:
+    claims = (_claim(ClaimKind.LABEL, "box", 0.4), _claim(ClaimKind.LABEL, "crate", 0.9))
+    winner = most_confident_claim(claims)
+    assert winner is not None
+    assert winner.value == "crate"
+
+
+# Quando nada foi pontuado não há decisão a tomar. Devolver a primeira seria uma
+# escolha arbitrária disfarçada de resultado.
+def test_all_unscored_claims_yield_no_decision() -> None:
+    assert most_confident_claim((_unscored("carpet"), _unscored("floor"))) is None
+
+
+# Sem claims não há decisão.
+def test_no_claims_yield_no_decision() -> None:
+    assert most_confident_claim(()) is None

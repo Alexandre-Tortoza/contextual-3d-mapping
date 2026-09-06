@@ -73,8 +73,11 @@ def select_refinement_targets(observation: VisualObservation, config: Refinement
     }
     for region in observation.regions:
         too_small = region.mask.area() < config.small_region_area_px
+        # Uma claim não pontuada não dispara a regra de confiança baixa: não há
+        # score informado para comparar com o limiar, e ausência nunca decide.
         low_confidence = any(
-            claim.confidence.value < config.low_confidence_threshold for claim in region.claims
+            claim.confidence is not None and claim.confidence.value < config.low_confidence_threshold
+            for claim in region.claims
         )
         if not region.claims or too_small or low_confidence:
             targets.add(region.region_id)

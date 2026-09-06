@@ -144,14 +144,17 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v1"
+    prompt_version: str = "v2"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
     load_in_4bit: bool = False
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar.
+    # qual template estruturado o backend deve usar. ``v2`` introduz o contract
+    # label/kind/category/confidence/alternatives e a confiança opcional; ela
+    # entra em ModelProvenance e no fingerprint() de cache, então o bump é o que
+    # invalida resultados produzidos pelo prompt anterior.
     def __post_init__(self) -> None:
         if not self.prompt_version:
             raise ValueError("multimodal_reasoning.prompt_version must not be empty.")

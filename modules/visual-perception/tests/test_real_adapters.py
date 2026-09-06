@@ -61,7 +61,7 @@ def test_sam_mask_with_wrong_resolution_is_rejected() -> None:
     ("text", "expected"),
     [
         ('{"scene_type": "room"}', {"scene_type": "room"}),
-        ('```json\n{"labels": ["chair"]}\n```', {"labels": ["chair"]}),
+        ('```json\n{"label": "chair"}\n```', {"label": "chair"}),
     ],
 )
 def test_vlm_json_parser_extracts_one_object(text: str, expected: dict[str, object]) -> None:

@@ -57,7 +57,9 @@ class FakeMultimodalReasoner:
 
     # Gera a análise fake de uma região/recorte: usa o hook injetado se
     # houver, senão deriva um label determinístico a partir da cor
-    # dominante do recorte.
+    # dominante do recorte. Emite o mesmo contract que o adapter real
+    # (category/label/kind/confidence/alternatives), para que a suíte exercite
+    # o schema de produção e não um formato que só o fake fala.
     def analyze_region(
         self,
         image: ImagePayload,
@@ -70,7 +72,11 @@ class FakeMultimodalReasoner:
         mean_rgb = mask_crop.pixels.astype(np.float64).mean(axis=(0, 1))
         label = _bucket_label(mean_rgb)
         return {
-            "labels": [{"value": label, "confidence": 0.9}],
+            "category": "object",
+            "label": label,
+            "kind": "thing",
+            "confidence": 0.9,
+            "alternatives": [],
             "description": f"Region with dominant color bucket {label}.",
             "attributes": [],
             "condition": "intact",

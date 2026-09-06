@@ -104,3 +104,42 @@ conjunto representativo do corridor-02, gerando por frame: a `VisualObservation`
 serializada (JSON), um overlay das máscaras/labels sobre a imagem original, e um
 `manifest.json` com git revision, configuração completa e o log de estágios do
 `ModelLifecycleManager`. Saída em `../benchmarks/results/samples/<run-id>/`.
+
+## Contract de resposta de região (`prompt_version = v2`)
+
+O adapter de raciocínio multimodal pede ao VLM um único objeto JSON por região:
+
+```json
+{"label": "door", "kind": "thing", "category": "opening", "confidence": 0.71,
+ "alternatives": [{"label": "panel", "confidence": 0.2}],
+ "description": "...", "attributes": ["closed"], "condition": "worn", "material": "wood"}
+```
+
+- `label` — open-vocabulary, livre, singular. Único campo obrigatório.
+- `kind` — `thing` | `stuff` | `part` | `unknown`. Omissão vira `unknown`, **nunca**
+  `thing`; um valor fora do enum é resposta malformada.
+- `category` — categoria grosseira, string livre. Não há taxonomia canônica versionada
+  no módulo, então nenhum valor é rejeitado por não pertencer a uma lista.
+- `confidence` — a certeza real do modelo. O prompt manda **omitir a chave** quando o
+  modelo não sabe estimá-la, em vez de chutar. A ausência vira `None` no claim.
+- `alternatives` — hipóteses concorrentes, que viram claims de label irmãos do primário.
+
+O parsing é feito por `parse_region_interpretation`
+([`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py)),
+uma fronteira pura e sem I/O, testável sem mocks. O formato legado `{"labels": [...]}`
+é **rejeitado** com `InvalidInterpretation`.
+
+`prompt_version` entra em `ModelProvenance` e em `ModuleConfig.fingerprint()`, então o
+bump de `v1` para `v2` invalida automaticamente resultados em cache produzidos pelo
+prompt anterior.
+
+### Dívida conhecida
+
+`application/scene_context.py` e `application/relation_generation.py` ainda usam
+`get("confidence", 1.0)` ao parsear respostas do mesmo VLM — a mesma classe de bug que
+`v2` corrigiu no nível de região, agora restrita a claims de cena e de relação. Fora do
+escopo da mudança que introduziu `v2`; tratar em passo separado.
+
+`relation_generation.py` também atribui `ConfidenceScore(1.0, source="geometric_2d")` a
+relações geométricas, mas ali o `1.0` é legítimo: é o resultado de um predicado
+determinístico sobre boxes, não a ausência de um score.

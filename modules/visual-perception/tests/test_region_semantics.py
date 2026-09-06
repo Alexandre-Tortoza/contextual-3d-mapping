@@ -51,7 +51,10 @@ def test_region_geometry_is_never_modified() -> None:
 def test_ambiguous_region_preserves_multiple_label_hypotheses() -> None:
     reasoner = FakeMultimodalReasoner(
         region_response_fn=lambda crop, scene: {
-            "labels": [{"value": "box", "confidence": 0.6}, {"value": "crate", "confidence": 0.4}]
+            "label": "box",
+            "confidence": 0.6,
+            "kind": "thing",
+            "alternatives": [{"label": "crate", "confidence": 0.4}],
         }
     )
     region = _region("region-a")
@@ -67,7 +70,7 @@ def test_ambiguous_region_preserves_multiple_label_hypotheses() -> None:
 # ambas as regiões falham juntas — ver test_one_failing_region_does_not_invalidate_others
 # para o caso de isolamento por região.
 def test_malformed_response_isolates_failure_without_dropping_other_regions() -> None:
-    reasoner = FakeMultimodalReasoner(region_response_fn=lambda crop, scene: {"labels": []})
+    reasoner = FakeMultimodalReasoner(region_response_fn=lambda crop, scene: {"label": ""})
     good_region = _region("region-good")
     bad_region = _region("region-bad")
     updated, failures = interpret_regions(
@@ -80,9 +83,6 @@ def test_malformed_response_isolates_failure_without_dropping_other_regions() ->
 # Verifica que uma região sem claims (resposta vazia) ainda é reportada como
 # sucesso (sem failures) e mantida no resultado, sem impedir a região boa.
 def test_one_failing_region_does_not_invalidate_others() -> None:
-    def region_response(crop: object, scene: object) -> dict:
-        return {"labels": []}
-
     good_reasoner = FakeMultimodalReasoner()
     good_region = _region("region-good")
 

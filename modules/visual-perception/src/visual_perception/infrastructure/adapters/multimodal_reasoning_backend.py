@@ -62,6 +62,11 @@ class RealMultimodalReasoningAdapter:
 
     # Analisa um crop de região e usa o resumo de cena como contexto textual
     # opcional. A imagem completa não é reenviada para evitar custo duplicado.
+    #
+    # O prompt pede explicitamente que o modelo OMITA "confidence" quando não
+    # souber estimá-la, em vez de chutar: a ausência é representável no contract
+    # (ver parse_region_interpretation) e um score inventado destruiria a
+    # capacidade de medir qualquer mudança downstream.
     def analyze_region(
         self,
         image: ImagePayload,
@@ -73,15 +78,22 @@ class RealMultimodalReasoningAdapter:
         context = f" Broader scene context (do not just repeat it): {scene_summary}" if scene_summary else ""
         prompt = (
             "Describe ONLY what is visible in THIS cropped image, even if the crop is small "
-            "or blurry — a plain surface (wall, floor, ceiling, door) is a valid, specific "
-            "answer; do not just restate the whole-scene description. Respond with EXACTLY ONE "
-            "JSON object (never a list/array, never markdown fences) with exactly these keys: "
-            '"labels" (non-empty list of short strings — the key MUST be called "labels", '
-            'plural, never "label"), "description" (string, optional), "attributes" (list of '
-            'strings, optional), "condition" (string, optional), "material" (string, optional). '
+            "or blurry — a plain surface (wall, floor, ceiling) is a valid, specific answer; "
+            "do not just restate the whole-scene description. Respond with EXACTLY ONE JSON "
+            "object (never a list/array, never markdown fences) with exactly these keys: "
+            '"label" (non-empty short string, singular — the single best description), '
+            '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
+            'uncountable surface or material, "part" for a component of a larger object, or '
+            '"unknown"), "category" (short coarse category string, optional), "confidence" '
+            "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
+            'cannot estimate it, never guess 1.0), "alternatives" (list of '
+            '{"label", "confidence"} objects for competing hypotheses, may be empty), '
+            '"description" (string, optional), "attributes" (list of strings, optional), '
+            '"condition" (string, optional), "material" (string, optional). '
             "Example of the exact shape required:\n"
-            '{"labels": ["door"], "description": "...", "attributes": ["closed"], '
-            f'"condition": "worn", "material": "wood"}}{context}'
+            '{"label": "door", "kind": "thing", "category": "opening", "confidence": 0.71, '
+            '"alternatives": [{"label": "panel", "confidence": 0.2}], "description": "...", '
+            f'"attributes": ["closed"], "condition": "worn", "material": "wood"}}{context}'
         )
         return self._generate_json(mask_crop, prompt, config)
 

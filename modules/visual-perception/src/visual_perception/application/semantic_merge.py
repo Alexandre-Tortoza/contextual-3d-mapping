@@ -23,17 +23,17 @@ import dataclasses
 
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.semantics import ClaimKind
+from visual_perception.domain.semantics import ClaimKind, most_confident_claim
 
 
 # Extrai o valor do claim de label de maior confiança de uma região, ou None
-# se a região não tiver nenhum claim de label (nunca funde regiões sem label
-# — não há base para agrupá-las).
+# se a região não tiver nenhum claim de label pontuado (nunca funde regiões sem
+# label decidível — não há base para agrupá-las). A política de "pontuada vence
+# não pontuada" mora em most_confident_claim, não aqui.
 def _top_label(region: ObservedRegion) -> str | None:
-    label_claims = [claim for claim in region.claims if claim.kind is ClaimKind.LABEL]
-    if not label_claims:
-        return None
-    return max(label_claims, key=lambda claim: claim.confidence.value).value
+    label_claims = tuple(claim for claim in region.claims if claim.kind is ClaimKind.LABEL)
+    winner = most_confident_claim(label_claims)
+    return None if winner is None else winner.value
 
 
 # Funde, dentro de cada grupo de mesmo label predominante, as regiões cujas

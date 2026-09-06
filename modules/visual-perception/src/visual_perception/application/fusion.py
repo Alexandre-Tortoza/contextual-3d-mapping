@@ -94,13 +94,17 @@ def _fuse_region_claims(claims: tuple[SemanticClaim, ...]) -> tuple[SemanticClai
             fused.append(group[0])
             continue
         sources = sorted({claim.provenance.producer for claim in group})
-        average_confidence = sum(claim.confidence.value for claim in group) / len(group)
+        # A média combina só as confianças efetivamente informadas: uma fonte que
+        # não pontuou não pode contribuir com um número inventado, e concordância
+        # entre fontes não pontuadas não fabrica confiança.
+        scored = [claim.confidence.value for claim in group if claim.confidence is not None]
+        confidence = (
+            None
+            if not scored
+            else ConfidenceScore(sum(scored) / len(scored), source=f"fused({','.join(sources)})")
+        )
         combined_evidence = tuple(evidence for claim in group for evidence in claim.evidence)
         fused.append(
-            dataclasses.replace(
-                group[0],
-                confidence=ConfidenceScore(average_confidence, source=f"fused({','.join(sources)})"),
-                evidence=combined_evidence,
-            )
+            dataclasses.replace(group[0], confidence=confidence, evidence=combined_evidence)
         )
     return tuple(fused)

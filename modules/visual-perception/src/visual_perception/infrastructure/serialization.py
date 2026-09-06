@@ -183,12 +183,19 @@ def _evidence_from_dict(payload: dict[str, Any]) -> Evidence:
 
 # Converte uma SemanticClaim completa (kind, value, confidence, evidence,
 # provenance) em um dict serializável, delegando os sub-tipos aos helpers
-# correspondentes.
+# correspondentes. Um claim sem score é gravado como ``null``, nunca como 0.0 ou
+# 1.0: a ausência precisa sobreviver ao disco para não voltar como número
+# inventado.
 def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
+    confidence = (
+        None
+        if claim.confidence is None
+        else {"value": claim.confidence.value, "source": claim.confidence.source}
+    )
     return {
         "kind": claim.kind.value,
         "value": claim.value,
-        "confidence": {"value": claim.confidence.value, "source": claim.confidence.source},
+        "confidence": confidence,
         "evidence": [_evidence_to_dict(item) for item in claim.evidence],
         "provenance": _provenance_to_dict(claim.provenance),
     }
@@ -197,10 +204,11 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
 # Reconstrói a SemanticClaim a partir do dict — lado inverso de
 # _claim_to_dict.
 def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
+    confidence = payload["confidence"]
     return SemanticClaim(
         kind=ClaimKind(payload["kind"]),
         value=payload["value"],
-        confidence=ConfidenceScore(**payload["confidence"]),
+        confidence=None if confidence is None else ConfidenceScore(**confidence),
         evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
         provenance=_provenance_from_dict(payload["provenance"]),
     )

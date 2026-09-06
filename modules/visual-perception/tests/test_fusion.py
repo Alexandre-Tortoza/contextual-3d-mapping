@@ -89,3 +89,33 @@ def test_disagreeing_claims_are_preserved_as_competing_hypotheses() -> None:
     fused = fuse_claims((region,))
     label_values = {c.value for c in fused[0].claims if c.kind is ClaimKind.LABEL}
     assert label_values == {"box", "crate"}
+
+
+# Constrói um claim de label sem score, produzido por uma fonte que não pontuou.
+def _unscored_claim(value: str, producer: str) -> SemanticClaim:
+    return SemanticClaim(
+        ClaimKind.LABEL,
+        value,
+        None,
+        (Evidence("e"),),
+        ModelProvenance(stage="t", producer=producer, config_fingerprint="abc"),
+    )
+
+
+# A média de confiança da fusão não pode inventar um número para a fonte que não
+# pontuou: ela combina só o que foi efetivamente informado.
+def test_fused_confidence_averages_only_scored_claims() -> None:
+    region = _region_with_claims((_claim("box", "a", 0.6), _unscored_claim("box", "b")))
+    fused = fuse_claims((region,))
+    (label_claim,) = [c for c in fused[0].claims if c.kind is ClaimKind.LABEL]
+    assert label_claim.confidence is not None
+    assert label_claim.confidence.value == 0.6
+
+
+# Se nenhuma fonte pontuou, o claim fundido permanece não pontuado — a fusão não
+# fabrica confiança a partir de concordância.
+def test_fusing_only_unscored_claims_stays_unscored() -> None:
+    region = _region_with_claims((_unscored_claim("box", "a"), _unscored_claim("box", "b")))
+    fused = fuse_claims((region,))
+    (label_claim,) = [c for c in fused[0].claims if c.kind is ClaimKind.LABEL]
+    assert label_claim.confidence is None

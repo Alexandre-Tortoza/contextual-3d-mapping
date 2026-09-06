@@ -61,7 +61,8 @@ regiões, relações, versão de schema e convenção de coordenadas. Seus contr
 | Conceito | Significado para o consumidor | Código dono |
 | --- | --- | --- |
 | `ObservedRegion` | Região com máscara, box, confiança geométrica, propostas contribuintes, claims e referências de embedding. | [`domain/regions.py`](../src/visual_perception/domain/regions.py) |
-| `SemanticClaim` | Hipótese auditável com tipo, valor, confiança, evidência e proveniência de modelo. | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py) |
+| `SemanticClaim` | Hipótese auditável com tipo, valor, confiança **opcional**, evidência e proveniência de modelo. | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py) |
+| `RegionKind` | O que a região é (`thing`/`stuff`/`part`/`unknown`), separado do label em linguagem natural. | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py) |
 | `CandidateRelation` | Relação entre regiões válida apenas como candidata 2D. | [`domain/relations.py`](../src/visual_perception/domain/relations.py) |
 | `AuditResult` | Achados determinísticos; `ERROR` invalida a observação, `WARNING` preserva contradição visível. | [`domain/audit.py`](../src/visual_perception/domain/audit.py) |
 | `ModelProvenance` | Identidade do produtor de claim ou relação; não substitui a proveniência compartilhada. | [`domain/references.py`](../src/visual_perception/domain/references.py) |
@@ -70,6 +71,23 @@ Não suponha que claims de mesmo tipo concordam, que `geometric_confidence` é c
 semântica, ou que uma relação é confirmada em 3D. Antes de enviar a saída a outro módulo,
 trate `audit.passed` como o critério de validade estrutural e preserve warnings,
 evidências e proveniência.
+
+### Confiança ausente
+
+`SemanticClaim.confidence` é `ConfidenceScore | None`. `None` significa **"o produtor não
+forneceu score"** e é diferente de `ConfidenceScore(0.0)`, que é um score baixo
+efetivamente informado.
+
+Um consumidor **não deve** converter a ausência em número. A política de ordenação é
+única e vive em `most_confident_claim`
+([`domain/semantics.py`](../src/visual_perception/domain/semantics.py)): uma claim
+pontuada sempre vence uma não pontuada, mesmo com confiança baixíssima; se nenhuma foi
+pontuada, não há decisão. A claim não pontuada permanece visível para auditoria, mas
+nunca decide.
+
+Isto corrige uma regressão em que o parser atribuía `1.0` sempre que o modelo omitia o
+score, fazendo todo claim sair com confiança máxima artificial e tornando impossível
+medir qualquer mudança de qualidade downstream.
 
 ## Ports de extensão
 
