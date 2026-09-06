@@ -1,0 +1,821 @@
+{
+  "candidates": [
+    {
+      "comparable_embedding_space": true,
+      "cost": {
+        "extraction_latency_s": 1.2028783679998014,
+        "extraction_peak_vram_bytes": 713357312,
+        "materialize_latency_s": null,
+        "materialize_refused": null,
+        "materialized_bytes": null,
+        "pool_latency_s": 0.18113899899981334
+      },
+      "evidence_quality": {
+        "inter_region_separation": 0.4317009818183586,
+        "mean_intra_region_consistency": 0.8190617931397663,
+        "mean_support_ratio": 1.0,
+        "regions": 168,
+        "representable": 138
+      },
+      "extraction_latency_s": 1.2028783679998014,
+      "extraction_peak_vram_bytes": 713357312,
+      "feature_specs": [
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-000",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-008",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-017",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        }
+      ],
+      "inter_region_separation": 0.4317009818183586,
+      "materialize_latency_s": null,
+      "materialize_refused": null,
+      "materialized_bytes": null,
+      "name": "patch_grid",
+      "peak_vram_bytes": 354841600,
+      "pool_latency_s": 0.18113899899981334,
+      "pooling_method": "patch_grid_baseline",
+      "regions": 168,
+      "representability": {
+        "regions": 168,
+        "representable_regions": 138,
+        "strata": {
+          "large": {
+            "mean_intra_region_consistency": 0.7283848047540095,
+            "mean_support_ratio": 1.0,
+            "regions": 28,
+            "representable": 28,
+            "representable_fraction": 1.0
+          },
+          "medium": {
+            "mean_intra_region_consistency": 0.8256120709571863,
+            "mean_support_ratio": 1.0,
+            "regions": 86,
+            "representable": 79,
+            "representable_fraction": 0.9186046511627907
+          },
+          "small": {
+            "mean_intra_region_consistency": 0.8842709456308958,
+            "mean_support_ratio": 1.0,
+            "regions": 54,
+            "representable": 31,
+            "representable_fraction": 0.5740740740740741
+          }
+        }
+      },
+      "representable_regions": 138,
+      "strata": {
+        "large": {
+          "mean_intra_region_consistency": 0.7283848047540095,
+          "mean_support_ratio": 1.0,
+          "regions": 28,
+          "representable": 28,
+          "representable_fraction": 1.0
+        },
+        "medium": {
+          "mean_intra_region_consistency": 0.8256120709571863,
+          "mean_support_ratio": 1.0,
+          "regions": 86,
+          "representable": 79,
+          "representable_fraction": 0.9186046511627907
+        },
+        "small": {
+          "mean_intra_region_consistency": 0.8842709456308958,
+          "mean_support_ratio": 1.0,
+          "regions": 54,
+          "representable": 31,
+          "representable_fraction": 0.5740740740740741
+        }
+      }
+    },
+    {
+      "comparable_embedding_space": true,
+      "cost": {
+        "extraction_latency_s": 0.0,
+        "extraction_peak_vram_bytes": 0,
+        "materialize_latency_s": 0.3334342350026418,
+        "materialize_refused": null,
+        "materialized_bytes": 943718400,
+        "pool_latency_s": 3.4288393589995394
+      },
+      "evidence_quality": {
+        "inter_region_separation": 0.36808415435904324,
+        "mean_baseline_agreement": 0.9750416900057848,
+        "mean_intra_region_consistency": 0.846955374696108,
+        "mean_support_ratio": 1.0,
+        "regions": 168,
+        "representable": 168
+      },
+      "extraction_latency_s": 0.0,
+      "extraction_peak_vram_bytes": 0,
+      "feature_specs": [
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-000",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-008",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-017",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        }
+      ],
+      "inter_region_separation": 0.36808415435904324,
+      "materialize_latency_s": 0.3334342350026418,
+      "materialize_refused": null,
+      "materialized_bytes": 943718400,
+      "name": "nearest",
+      "peak_vram_bytes": 354841600,
+      "pool_latency_s": 3.4288393589995394,
+      "pooling_method": "pixel_nearest_highres",
+      "regions": 168,
+      "representability": {
+        "regions": 168,
+        "representable_regions": 168,
+        "strata": {
+          "large": {
+            "mean_baseline_agreement": 0.9947214683849028,
+            "mean_intra_region_consistency": 0.7323802989321404,
+            "mean_support_ratio": 1.0,
+            "regions": 28,
+            "representable": 28,
+            "representable_fraction": 1.0
+          },
+          "medium": {
+            "mean_baseline_agreement": 0.9725537492576001,
+            "mean_intra_region_consistency": 0.8486311478760412,
+            "mean_support_ratio": 1.0,
+            "regions": 86,
+            "representable": 86,
+            "representable_fraction": 1.0
+          },
+          "small": {
+            "mean_baseline_agreement": 0.9636066424087296,
+            "mean_intra_region_consistency": 0.903695849287161,
+            "mean_support_ratio": 1.0,
+            "regions": 54,
+            "representable": 54,
+            "representable_fraction": 1.0
+          }
+        }
+      },
+      "representable_regions": 168,
+      "strata": {
+        "large": {
+          "mean_baseline_agreement": 0.9947214683849028,
+          "mean_intra_region_consistency": 0.7323802989321404,
+          "mean_support_ratio": 1.0,
+          "regions": 28,
+          "representable": 28,
+          "representable_fraction": 1.0
+        },
+        "medium": {
+          "mean_baseline_agreement": 0.9725537492576001,
+          "mean_intra_region_consistency": 0.8486311478760412,
+          "mean_support_ratio": 1.0,
+          "regions": 86,
+          "representable": 86,
+          "representable_fraction": 1.0
+        },
+        "small": {
+          "mean_baseline_agreement": 0.9636066424087296,
+          "mean_intra_region_consistency": 0.903695849287161,
+          "mean_support_ratio": 1.0,
+          "regions": 54,
+          "representable": 54,
+          "representable_fraction": 1.0
+        }
+      }
+    },
+    {
+      "comparable_embedding_space": true,
+      "cost": {
+        "extraction_latency_s": 0.0,
+        "extraction_peak_vram_bytes": 0,
+        "materialize_latency_s": 1.1208272959993337,
+        "materialize_refused": null,
+        "materialized_bytes": 943718400,
+        "pool_latency_s": 14.311401579998346
+      },
+      "evidence_quality": {
+        "inter_region_separation": 0.3440649355671961,
+        "mean_baseline_agreement": 0.9630195320491317,
+        "mean_intra_region_consistency": 0.9230194932645571,
+        "mean_support_ratio": 0.8298042768091517,
+        "regions": 168,
+        "representable": 164
+      },
+      "extraction_latency_s": 0.0,
+      "extraction_peak_vram_bytes": 0,
+      "feature_specs": [
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-000",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-008",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-017",
+          "generation": "backbone_native",
+          "grid_height": 16,
+          "grid_width": 16,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:224x224",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 40.0,
+          "stride_y": 30.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        }
+      ],
+      "inter_region_separation": 0.3440649355671961,
+      "materialize_latency_s": 1.1208272959993337,
+      "materialize_refused": null,
+      "materialized_bytes": 943718400,
+      "name": "bilinear",
+      "peak_vram_bytes": 354841600,
+      "pool_latency_s": 14.311401579998346,
+      "pooling_method": "pixel_bilinear_highres",
+      "regions": 168,
+      "representability": {
+        "regions": 168,
+        "representable_regions": 164,
+        "strata": {
+          "large": {
+            "mean_baseline_agreement": 0.9913799522715516,
+            "mean_intra_region_consistency": 0.8231340847046524,
+            "mean_support_ratio": 0.8611544660736306,
+            "regions": 28,
+            "representable": 28,
+            "representable_fraction": 1.0
+          },
+          "medium": {
+            "mean_baseline_agreement": 0.9598908201298284,
+            "mean_intra_region_consistency": 0.92835534259494,
+            "mean_support_ratio": 0.8004896989826114,
+            "regions": 86,
+            "representable": 86,
+            "representable_fraction": 1.0
+          },
+          "small": {
+            "mean_baseline_agreement": 0.9453768377071059,
+            "mean_intra_region_consistency": 0.969777661209845,
+            "mean_support_ratio": 0.8626692446826931,
+            "regions": 54,
+            "representable": 50,
+            "representable_fraction": 0.9259259259259259
+          }
+        }
+      },
+      "representable_regions": 164,
+      "strata": {
+        "large": {
+          "mean_baseline_agreement": 0.9913799522715516,
+          "mean_intra_region_consistency": 0.8231340847046524,
+          "mean_support_ratio": 0.8611544660736306,
+          "regions": 28,
+          "representable": 28,
+          "representable_fraction": 1.0
+        },
+        "medium": {
+          "mean_baseline_agreement": 0.9598908201298284,
+          "mean_intra_region_consistency": 0.92835534259494,
+          "mean_support_ratio": 0.8004896989826114,
+          "regions": 86,
+          "representable": 86,
+          "representable_fraction": 1.0
+        },
+        "small": {
+          "mean_baseline_agreement": 0.9453768377071059,
+          "mean_intra_region_consistency": 0.969777661209845,
+          "mean_support_ratio": 0.8626692446826931,
+          "regions": 54,
+          "representable": 50,
+          "representable_fraction": 0.9259259259259259
+        }
+      }
+    },
+    {
+      "comparable_embedding_space": true,
+      "cost": {
+        "extraction_latency_s": 1.0320855169993592,
+        "extraction_peak_vram_bytes": 736872448,
+        "materialize_latency_s": 0.3457632259996899,
+        "materialize_refused": null,
+        "materialized_bytes": 943718400,
+        "pool_latency_s": 3.4044149280016427
+      },
+      "evidence_quality": {
+        "inter_region_separation": 0.4294616703688629,
+        "mean_baseline_agreement": 0.6604066592785968,
+        "mean_intra_region_consistency": 0.8408362515236647,
+        "mean_support_ratio": 1.0,
+        "regions": 168,
+        "representable": 168
+      },
+      "extraction_latency_s": 1.0320855169993592,
+      "extraction_peak_vram_bytes": 736872448,
+      "feature_specs": [
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-000",
+          "generation": "backbone_native",
+          "grid_height": 24,
+          "grid_width": 32,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:448x336",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 20.0,
+          "stride_y": 20.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-008",
+          "generation": "backbone_native",
+          "grid_height": 24,
+          "grid_width": 32,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:448x336",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 20.0,
+          "stride_y": 20.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        },
+        {
+          "checkpoint": "facebook/dinov2-base",
+          "dimension": 768,
+          "dtype": "float64",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-017",
+          "generation": "backbone_native",
+          "grid_height": 24,
+          "grid_width": 32,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "dinov2",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "BitImageProcessor:448x336",
+          "representation": "patch_grid",
+          "source_grid_height": null,
+          "source_grid_width": null,
+          "stride_x": 20.0,
+          "stride_y": 20.0,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": null,
+          "upsampler_checkpoint_digest": null,
+          "upsampling_method": null
+        }
+      ],
+      "inter_region_separation": 0.4294616703688629,
+      "materialize_latency_s": 0.3457632259996899,
+      "materialize_refused": null,
+      "materialized_bytes": 943718400,
+      "name": "dinov2_native_448",
+      "peak_vram_bytes": 354841600,
+      "pool_latency_s": 3.4044149280016427,
+      "pooling_method": "pixel_nearest_highres",
+      "regions": 168,
+      "representability": {
+        "regions": 168,
+        "representable_regions": 168,
+        "strata": {
+          "large": {
+            "mean_baseline_agreement": 0.7470358339394696,
+            "mean_intra_region_consistency": 0.7548122307867301,
+            "mean_support_ratio": 1.0,
+            "regions": 28,
+            "representable": 28,
+            "representable_fraction": 1.0
+          },
+          "medium": {
+            "mean_baseline_agreement": 0.677525492731557,
+            "mean_intra_region_consistency": 0.8451127767480472,
+            "mean_support_ratio": 1.0,
+            "regions": 86,
+            "representable": 86,
+            "representable_fraction": 1.0
+          },
+          "small": {
+            "mean_baseline_agreement": 0.5385355388499414,
+            "mean_intra_region_consistency": 0.8786305369187991,
+            "mean_support_ratio": 1.0,
+            "regions": 54,
+            "representable": 54,
+            "representable_fraction": 1.0
+          }
+        }
+      },
+      "representable_regions": 168,
+      "strata": {
+        "large": {
+          "mean_baseline_agreement": 0.7470358339394696,
+          "mean_intra_region_consistency": 0.7548122307867301,
+          "mean_support_ratio": 1.0,
+          "regions": 28,
+          "representable": 28,
+          "representable_fraction": 1.0
+        },
+        "medium": {
+          "mean_baseline_agreement": 0.677525492731557,
+          "mean_intra_region_consistency": 0.8451127767480472,
+          "mean_support_ratio": 1.0,
+          "regions": 86,
+          "representable": 86,
+          "representable_fraction": 1.0
+        },
+        "small": {
+          "mean_baseline_agreement": 0.5385355388499414,
+          "mean_intra_region_consistency": 0.8786305369187991,
+          "mean_support_ratio": 1.0,
+          "regions": 54,
+          "representable": 54,
+          "representable_fraction": 1.0
+        }
+      }
+    },
+    {
+      "comparable_embedding_space": false,
+      "cost": {
+        "extraction_latency_s": 3.872724725999433,
+        "extraction_peak_vram_bytes": 3110617088,
+        "materialize_latency_s": 0.20454374300243217,
+        "materialize_refused": null,
+        "materialized_bytes": 471859200,
+        "pool_latency_s": 1.8567570880004496
+      },
+      "evidence_quality": {
+        "inter_region_separation": 0.35810444176104844,
+        "mean_intra_region_consistency": 0.9589564604513038,
+        "mean_support_ratio": 1.0,
+        "regions": 168,
+        "representable": 168
+      },
+      "extraction_latency_s": 3.872724725999433,
+      "extraction_peak_vram_bytes": 3110617088,
+      "feature_specs": [
+        {
+          "checkpoint": "facebookresearch/dinov2:dinov2_vits14",
+          "dimension": 384,
+          "dtype": "float32",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-000",
+          "generation": "learned_upsampler",
+          "grid_height": 384,
+          "grid_width": 512,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "featup-dinov2-small-jbu",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "imagenet_normalization:aspect_preserving:448x336",
+          "representation": "elevated_grid",
+          "source_grid_height": 24,
+          "source_grid_width": 32,
+          "stride_x": 1.25,
+          "stride_y": 1.25,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+          "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+          "upsampling_method": "featup_jbu_stack_cocostuff"
+        },
+        {
+          "checkpoint": "facebookresearch/dinov2:dinov2_vits14",
+          "dimension": 384,
+          "dtype": "float32",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-008",
+          "generation": "learned_upsampler",
+          "grid_height": 384,
+          "grid_width": 512,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "featup-dinov2-small-jbu",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "imagenet_normalization:aspect_preserving:448x336",
+          "representation": "elevated_grid",
+          "source_grid_height": 24,
+          "source_grid_width": 32,
+          "stride_x": 1.25,
+          "stride_y": 1.25,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+          "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+          "upsampling_method": "featup_jbu_stack_cocostuff"
+        },
+        {
+          "checkpoint": "facebookresearch/dinov2:dinov2_vits14",
+          "dimension": 384,
+          "dtype": "float32",
+          "fallback_reason": null,
+          "frame_id": "corridor-02-017",
+          "generation": "learned_upsampler",
+          "grid_height": 384,
+          "grid_width": 512,
+          "has_valid_support": true,
+          "interpolation": "nearest",
+          "model_id": "featup-dinov2-small-jbu",
+          "origin_x": 0.0,
+          "origin_y": 0.0,
+          "preprocessing": "imagenet_normalization:aspect_preserving:448x336",
+          "representation": "elevated_grid",
+          "source_grid_height": 24,
+          "source_grid_width": 32,
+          "stride_x": 1.25,
+          "stride_y": 1.25,
+          "support_ratio": 1.0,
+          "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+          "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+          "upsampling_method": "featup_jbu_stack_cocostuff"
+        }
+      ],
+      "inter_region_separation": 0.35810444176104844,
+      "materialize_latency_s": 0.20454374300243217,
+      "materialize_refused": null,
+      "materialized_bytes": 471859200,
+      "name": "featup_dinov2_small_jbu",
+      "peak_vram_bytes": 354841600,
+      "pool_latency_s": 1.8567570880004496,
+      "pooling_method": "pixel_nearest_highres",
+      "regions": 168,
+      "representability": {
+        "regions": 168,
+        "representable_regions": 168,
+        "strata": {
+          "large": {
+            "mean_intra_region_consistency": 0.8988057300595423,
+            "mean_support_ratio": 1.0,
+            "regions": 28,
+            "representable": 28,
+            "representable_fraction": 1.0
+          },
+          "medium": {
+            "mean_intra_region_consistency": 0.965100222528953,
+            "mean_support_ratio": 1.0,
+            "regions": 86,
+            "representable": 86,
+            "representable_fraction": 1.0
+          },
+          "small": {
+            "mean_intra_region_consistency": 0.9803612180863313,
+            "mean_support_ratio": 1.0,
+            "regions": 54,
+            "representable": 54,
+            "representable_fraction": 1.0
+          }
+        }
+      },
+      "representable_regions": 168,
+      "strata": {
+        "large": {
+          "mean_intra_region_consistency": 0.8988057300595423,
+          "mean_support_ratio": 1.0,
+          "regions": 28,
+          "representable": 28,
+          "representable_fraction": 1.0
+        },
+        "medium": {
+          "mean_intra_region_consistency": 0.965100222528953,
+          "mean_support_ratio": 1.0,
+          "regions": 86,
+          "representable": 86,
+          "representable_fraction": 1.0
+        },
+        "small": {
+          "mean_intra_region_consistency": 0.9803612180863313,
+          "mean_support_ratio": 1.0,
+          "regions": 54,
+          "representable": 54,
+          "representable_fraction": 1.0
+        }
+      }
+    }
+  ],
+  "code_revision": "0bc03b2",
+  "created_at": "2026-09-06T19:52:06Z",
+  "hardware": "NVIDIA GeForce RTX 3060 (8.2 GB)",
+  "issue": 208,
+  "ordered_frame_ids": [
+    "corridor-02-000",
+    "corridor-02-008",
+    "corridor-02-017"
+  ],
+  "run_id": "20260906T195206Z",
+  "schema_version": "feature-elevation-benchmark/1"
+}

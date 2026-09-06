@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,6 +32,22 @@ from visual_perception.domain.visual_observation import (  # noqa: E402
     SceneContext,
     VisualObservation,
 )
+
+
+# Executa o entrypoint como o usuário o invoca na documentação para impedir
+# que os imports preparados pelo próprio pytest escondam um script quebrado.
+def test_documented_validator_entrypoint_is_self_contained() -> None:
+    """Confirma que ``python benchmarks/... --help`` resolve seus imports."""
+    completed = subprocess.run(
+        [sys.executable, str(_THIS_DIR / "validate_reference_pipeline.py"), "--help"],
+        cwd=_THIS_DIR.parent,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "--frame-id" in completed.stdout
 
 
 # Cria arquivos PNG mínimos apenas pelo nome; a seleção não deve abrir nem

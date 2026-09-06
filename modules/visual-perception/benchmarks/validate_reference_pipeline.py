@@ -31,7 +31,7 @@ from pathlib import Path
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(_MODULE_ROOT / "tests"))
-for relative in ("../../contracts", "../../adapters/datasets", "../../datasets"):
+for relative in ("src", "../../contracts", "../../adapters/datasets", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / relative).resolve()))
 
 import numpy as np  # noqa: E402

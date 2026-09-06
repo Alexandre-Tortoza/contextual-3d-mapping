@@ -214,22 +214,20 @@ def run_benchmark(frame_paths: tuple[Path, ...], results_dir: Path = RESULTS_DIR
     lifecycle = ModelLifecycleManager()
     baseline_ports = create_perception_ports(baseline_config, lifecycle)
     baseline_frames = prepare_frames(frame_paths, baseline_config, baseline_ports)
+    baseline_frames, baseline_latency, baseline_vram = extract_candidate_maps(
+        baseline_frames,
+        RealDenseFeatureExtractionAdapter(ModelLifecycleManager()),
+        baseline_config.feature_extraction,
+    )
 
     candidates: list[dict[str, Any]] = []
     patch = measure_path("patch_grid", BASELINE, baseline_frames)
-    feature_metrics = tuple(
-        metric
-        for metric in lifecycle.metrics
-        if metric.stage_name.startswith("feature_extraction:")
-    )
     candidates.append(
         serialize_candidate(
             patch,
             baseline_frames,
-            extraction_latency_s=sum(metric.inference_time_s for metric in feature_metrics),
-            extraction_peak_vram_bytes=max(
-                (metric.peak_vram_bytes or 0 for metric in feature_metrics), default=0
-            ),
+            extraction_latency_s=baseline_latency,
+            extraction_peak_vram_bytes=baseline_vram,
             comparable_embedding_space=True,
         )
     )
