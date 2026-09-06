@@ -118,8 +118,11 @@ def _source_from_dict(payload: dict[str, Any]) -> ObservationReference:
 
 # Compacta a mask booleana via run-length encoding para manter o payload
 # serializado pequeno e exato, sem depender de um artifact store externo —
-# ver a justificativa de design na docstring do módulo.
-def _mask_to_dict(mask: Mask) -> dict[str, Any]:
+# ver a justificativa de design na docstring do módulo. Pública porque o
+# mesmo RLE é o formato de máscara do contract de predição consumido pela
+# avaliação (#198): um segundo codificador divergiria em silêncio.
+def mask_to_dict(mask: Mask) -> dict[str, Any]:
+    """Codifica a máscara em RLE, começando sempre por uma contagem ``False``."""
     flat = mask.data.reshape(-1)
     runs = [len(list(group)) for _, group in groupby(flat.tolist())]
     if flat.size > 0 and bool(flat[0]):
@@ -128,8 +131,8 @@ def _mask_to_dict(mask: Mask) -> dict[str, Any]:
 
 
 # Reconstrói a mask booleana a partir da codificação RLE — lado inverso de
-# _mask_to_dict.
-def _mask_from_dict(payload: dict[str, Any]) -> Mask:
+# mask_to_dict.
+def mask_from_dict(payload: dict[str, Any]) -> Mask:
     """Valida o RLE completo antes de alocar e reconstruir a máscara."""
     width, height, runs = payload["width"], payload["height"], payload["rle"]
     if type(width) is not int or type(height) is not int or width <= 0 or height <= 0:
@@ -235,7 +238,7 @@ def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
 def _region_to_dict(region: ObservedRegion) -> dict[str, Any]:
     return {
         "region_id": region.region_id,
-        "mask": _mask_to_dict(region.mask),
+        "mask": mask_to_dict(region.mask),
         "box": _box_to_dict(region.box),
         "geometric_confidence": region.geometric_confidence,
         "contributing_proposal_ids": list(region.contributing_proposal_ids),
@@ -252,7 +255,7 @@ def _region_from_dict(payload: dict[str, Any]) -> ObservedRegion:
     validate_identifier(payload["region_id"], field="region_id")
     return ObservedRegion(
         region_id=payload["region_id"],
-        mask=_mask_from_dict(payload["mask"]),
+        mask=mask_from_dict(payload["mask"]),
         box=_box_from_dict(payload["box"]),
         geometric_confidence=payload["geometric_confidence"],
         contributing_proposal_ids=tuple(payload["contributing_proposal_ids"]),

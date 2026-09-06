@@ -1,0 +1,4 @@
+# Pacotes de revisão embutem os frames como data URI e chegam a dezenas de MB.
+# Eles são integralmente regeneráveis a partir do manifest versionado e dos
+# dados brutos, então não entram no controle de versão.
+review/

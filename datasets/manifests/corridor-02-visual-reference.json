@@ -1,0 +1,1017 @@
+{
+  "created_at": "2026-09-06T13:56:12Z",
+  "dataset_id": "corridor-02",
+  "policy_uri": "modules/visual-perception/docs/annotation-policy.md",
+  "reference_id": "corridor-02-visual-reference-1",
+  "samples": [
+    {
+      "artifact": {
+        "digest": "02b7107bc3d814fb15e1cc16c4e8c90c3869a8f8b4b24847c0bc759003b7d59a",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-000355.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-000355",
+      "source_frame_id": "corridor-02:1724621103744773747",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "9b94db724db02ff80ea8876e0896aa2b67ea69a2b2b849dcf9b42a5623749c7f",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-001066.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-001066",
+      "source_frame_id": "corridor-02:1724621133366721305",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "95110737dae07d54409a89066295a8399f44462279c7c46b5a53b20e3666ea3d",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-001778.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-001778",
+      "source_frame_id": "corridor-02:1724621163036317845",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "6acb3d0d17ca587689e9d61db242a977581cca8e5b52bacd60c81a2c2ecdb559",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-002489.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-002489",
+      "source_frame_id": "corridor-02:1724621192659551943",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "7d212b52865e1e52184677332b614734ad45b3b5e63fa368e82a0dd7a25085c5",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-003200.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-003200",
+      "source_frame_id": "corridor-02:1724621222283882669",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "26bf7b508a54e2cff7910eabbdff0c303166b0daa951100a9d235a74c12c1d4b",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-003911.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-003911",
+      "source_frame_id": "corridor-02:1724621251911682333",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "318e0faf16e41dcad766f9098dbf7dfe0f3303ed73b9de6db95788b18aa2d909",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-004623.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-004623",
+      "source_frame_id": "corridor-02:1724621281581265561",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "d97807b09c1f498137897108c994205769f63681a5c9ebe9c9088fe8e57e3414",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-005334.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-005334",
+      "source_frame_id": "corridor-02:1724621311204713542",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "e51495b8fc87f6f37d1c9a1e4709ee00e9ccbb7020aa204007d1c841f7d8c9a4",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-006045.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-006045",
+      "source_frame_id": "corridor-02:1724621340830708516",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "231db0abddd4a3f0708889e48a9a3323c052ca5ee03ee11f630af2d8fd16c974",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-006756.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-006756",
+      "source_frame_id": "corridor-02:1724621370471629033",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "1e64cd6d904a50762d98ff411e701a4acaa91353d89abfdc583921ed297e8ed0",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-007468.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-007468",
+      "source_frame_id": "corridor-02:1724621400117874299",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "bd2ae80e5b0d0bf322e94dec19354160bce8480d9f7ed44a51023da643464c9e",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-development-008179.png"
+      },
+      "capture_conditions": [
+        "normal_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-development-008179",
+      "source_frame_id": "corridor-02:1724621429743437121",
+      "split": "development",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "0aedd8b24f8e797fde3a461eff221b12e143a3878f7f6cc4c52cc1b3246a2fa3",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-009397.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-009397",
+      "source_frame_id": "corridor-02:1724621480492675287",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "11b54098cdd3c2de75fb19d61559d674a8f9a2f3e3fddbf9f8c75446cf25bae3",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-009841.png"
+      },
+      "capture_conditions": [
+        "normal_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-009841",
+      "source_frame_id": "corridor-02:1724621498995746527",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "046b24043703434d802bd02e23852ac7baf70ecb7169dd903924ecdad6083a2a",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-010286.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-010286",
+      "source_frame_id": "corridor-02:1724621517536781906",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "4c061f24c453b7cee4dea61c74c820ab65c20fc659bc0d2269491f9dba237b5d",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-010730.png"
+      },
+      "capture_conditions": [
+        "normal_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-010730",
+      "source_frame_id": "corridor-02:1724621536034872910",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "12e184518021d1ee016be16f565e60e70b5e266ae6968145b5372c1981fefd40",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-011175.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-011175",
+      "source_frame_id": "corridor-02:1724621554584924021",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "3c6cab2f270a9fa42e46295936adcffc15b3aea16e773559c8a566b64b8564c8",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-011619.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-011619",
+      "source_frame_id": "corridor-02:1724621573076493827",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "ad1574fab518a5e721ae076ed5d4916770d303a967d741aec75de14b2d698321",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-012064.png"
+      },
+      "capture_conditions": [
+        "normal_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-012064",
+      "source_frame_id": "corridor-02:1724621591619798378",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "76190e97577422ac5e98bed0577151b1e6b772168e48633d2f8cf7162475d176",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-012508.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-012508",
+      "source_frame_id": "corridor-02:1724621610123640954",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "8edf21445a58e6cc6320c9af4c8d2a5f60d49ee6e74339a05a43024290d62268",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-012953.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-012953",
+      "source_frame_id": "corridor-02:1724621628659265530",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "f02046cb2110f4e9d04202060c6ed54de15b8c78b515368402b7d30228765aee",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-013397.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-013397",
+      "source_frame_id": "corridor-02:1724621647160543080",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "1349024e1be2a3d35b39a118bc189bfa945862f6a71ba1323c990a290d541244",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-013842.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-013842",
+      "source_frame_id": "corridor-02:1724621665702371140",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "803f8f96ba7813a927e5b198301c0d518ddc688c7ba6e909dfd68f21b13f5aa2",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-calibration-014286.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-calibration-014286",
+      "source_frame_id": "corridor-02:1724621684202632864",
+      "split": "calibration",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "70b04280a3c99b343135297ca376687b1c4bb062f18b270d251213e117640b63",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-015406.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-015406",
+      "source_frame_id": "corridor-02:1724621730867921863",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "50a99de3d4dad99255684a2bb86244299ff9a29f54b1144fa4dd4136cc20eabd",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-015922.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-015922",
+      "source_frame_id": "corridor-02:1724621752378410979",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "70b429b8d7bd719bf1dcf6437dc72196cbd0955ec60b364d081f9477df21c221",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-016438.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-016438",
+      "source_frame_id": "corridor-02:1724621773872037328",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "a500fecc28b33966857394f8e8c8bf9dd5e30c435235658c66fc47160dfd3ae3",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-016954.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-016954",
+      "source_frame_id": "corridor-02:1724621795369247643",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "07f51db4f1d2d8fd6e1f00b3c24898faf10d71fa5f168acddee2bc9adc281386",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-017470.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-017470",
+      "source_frame_id": "corridor-02:1724621816877500600",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "2dcf0712d61eec2780aec8a7e35cefe0447471ad02b251b3aa8427958a61cb6a",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-017986.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-017986",
+      "source_frame_id": "corridor-02:1724621838374862877",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "ec8a6f169253141083145ed0bbe874c415a2afe5968b678b8ce4d8b38fe51e1d",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-018501.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-018501",
+      "source_frame_id": "corridor-02:1724621859827580205",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "7c2842936663b636f1bc214da5c620a63476ef3205576d13d207328f823ff793",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-019017.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-019017",
+      "source_frame_id": "corridor-02:1724621881326957950",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "32acd448d9acde18ddc7b3d4dd0ba963c8389ace3f28cb475e29f1d954ee278d",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-019533.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-019533",
+      "source_frame_id": "corridor-02:1724621902825856592",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "63ee873c6352924e61b4127d43369e400e84f51aa6afbf2f2bc9a3821feb83b1",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-020049.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-020049",
+      "source_frame_id": "corridor-02:1724621924332563205",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "bbcf2aa976e1dad464377f6cbaeb7a87fd6537a2bed65ae01280ac24cd197c8e",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-020565.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-020565",
+      "source_frame_id": "corridor-02:1724621945829017609",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    },
+    {
+      "artifact": {
+        "digest": "b208c25b8195dfcc3b77ee100db5a7d8bd8fec5b2ce60f7d090b1335b140f78d",
+        "media_type": "image/png",
+        "uri": "visual-reference/corridor-02-test-021081.png"
+      },
+      "capture_conditions": [
+        "low_light",
+        "sharp",
+        "ego_vehicle_masked"
+      ],
+      "height": 480,
+      "provenance": {
+        "annotated_at": null,
+        "annotator": "unassigned",
+        "method": "tool_extracted_pending_annotation",
+        "policy_version": "annotation-policy/1",
+        "resolution": "not yet reviewed"
+      },
+      "regions": [],
+      "relations": [],
+      "review_state": "pending_review",
+      "sample_id": "corridor-02-test-021081",
+      "source_frame_id": "corridor-02:1724621967332931063",
+      "split": "test",
+      "strata": [],
+      "width": 640
+    }
+  ],
+  "schema_version": "visual-reference/1"
+}
