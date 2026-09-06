@@ -139,4 +139,12 @@ def _scored(claim: SemanticClaim) -> ScoredValue:
         calibrated_confidence=None if calibrated is None else calibrated.value,
         support_state=SupportState(support.state.value) if support is not None else SupportState.UNKNOWN,
         reason=None if support is None else support.reason,
+        source=(
+            claim.confidence.source if claim.confidence is not None else claim.provenance.producer
+        ),
+        calibration_version=None if support is None else support.calibration_version,
+        calibration_artifact=None if support is None else support.calibration_artifact,
+        evidence_artifacts=(
+            () if support is None else tuple(item.artifact_uri for item in support.evidence)
+        ),
     )

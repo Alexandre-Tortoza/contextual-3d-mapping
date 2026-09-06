@@ -60,6 +60,10 @@ class ScoredValue:
     calibrated_confidence: float | None = None
     support_state: SupportState = SupportState.UNKNOWN
     reason: str | None = None
+    source: str | None = None
+    calibration_version: str | None = None
+    calibration_artifact: str | None = None
+    evidence_artifacts: tuple[str, ...] = field(default_factory=tuple)
 
     # Valida o valor e a faixa dos dois scores, para que uma métrica nunca
     # receba uma probabilidade fora de [0, 1].
@@ -417,6 +421,12 @@ def _scored(value: object, source: str) -> ScoredValue:
         calibrated_confidence=document.get("calibrated_confidence"),
         support_state=SupportState(document.get("support_state", SupportState.UNKNOWN.value)),
         reason=document.get("reason"),
+        source=document.get("source"),
+        calibration_version=document.get("calibration_version"),
+        calibration_artifact=document.get("calibration_artifact"),
+        evidence_artifacts=tuple(
+            str(item) for item in _sequence(document, "evidence_artifacts", source, ())
+        ),
     )
 
 
@@ -429,6 +439,10 @@ def _scored_to_mapping(value: ScoredValue) -> dict[str, Any]:
         "calibrated_confidence": value.calibrated_confidence,
         "support_state": value.support_state.value,
         "reason": value.reason,
+        "source": value.source,
+        "calibration_version": value.calibration_version,
+        "calibration_artifact": value.calibration_artifact,
+        "evidence_artifacts": list(value.evidence_artifacts),
     }
 
 
