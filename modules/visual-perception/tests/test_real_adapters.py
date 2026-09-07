@@ -20,6 +20,7 @@ from visual_perception.infrastructure.adapters.multimodal_reasoning_backend impo
     _describe_scene_claims,
     _describe_views,
     _parse_json_object,
+    _region_prompt,
 )
 from visual_perception.infrastructure.adapters.region_discovery_backend import _proposal_from_mask
 
@@ -217,3 +218,18 @@ def test_absent_scene_context_adds_nothing_to_the_prompt() -> None:
     """Um request sem claims de cena não acrescenta bloco de contexto ao prompt."""
     request = _reasoning_request((EvidenceSlot.FOREGROUND_DENSE,))
     assert _describe_scene_claims(request) == ""
+
+
+# O exemplo de formato do prompt não pode ser uma resposta plausível. Com o
+# exemplo concreto anterior, o modelo o reproduzia inteiro em 27/54 regiões de
+# um frame; um placeholder mantém a forma inequívoca e torna o eco detectável
+# pelo parser em vez de plausível.
+def test_the_region_prompt_example_uses_placeholders_not_answerable_values() -> None:
+    """O exemplo de formato do prompt não oferece um label copiável."""
+    prompt = _region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)))
+
+    assert '"label": "<one noun naming the subject>"' in prompt
+    assert '"label": "door"' not in prompt
+    assert '"material": "wood"' not in prompt
+    assert '"label": "panel"' not in prompt
+    assert "never copy a placeholder" in prompt

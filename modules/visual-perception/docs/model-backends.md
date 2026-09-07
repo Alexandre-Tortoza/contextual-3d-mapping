@@ -215,12 +215,47 @@ Em crops pequenos ou ambíguos, o VLM pode:
 - usar o contexto global da cena em vez do conteúdo específico do crop;
 - omitir score quando não consegue estimar confiança.
 
+Medido: nos três frames de referência em `ebe211f`, o Qwen2.5-VL-3B **nunca** omitiu
+`confidence` — 177 claims de label, 177 pontuadas. A distribuição é concentrada em
+poucos valores âncora: 117 das 177 valem exatamente 0,90, e 138 ficam em 0,90 ou acima
+(mínimo 0,05, máximo 0,98). O contract representa a ausência corretamente, mas este
+backend não a exerce, e o score que ele emite parece mais um hábito de formatação do que
+uma estimativa. Tratá-lo como confiança calibrada seria um erro; é para isso que existe
+a calibração da #196, ainda bloqueada pela anotação humana da #210.
+
+Cuidado ao ler os overlays: o número ao lado do label é a `geometric_confidence` da
+região, não a confiança do claim.
+
 Falhas locais de interpretação viram `RegionInterpretationFailure` e não precisam
 invalidar toda a observação.
 
 ## Contract de resposta de região
 
-A versão atual é `prompt_version = v2`.
+A versão atual é `prompt_version = v4`. O schema da resposta é o mesmo desde `v2`; o que
+mudou foi a entrada e o exemplo.
+
+`v3` passou a receber um `RegionReasoningRequest` e a enviar ao VLM as views da região
+como imagens numeradas e rotuladas pelo seu papel (foreground isolado, crop justo,
+contexto), seguidas do contexto de cena como claims tipadas. Em `v2` ele mandava um único
+recorte pelo bounding box e a primeira string de `scene_description`.
+
+`v4` trocou o exemplo de formato por placeholders. **Medido em `0fda5cf`:** com o exemplo
+concreto de `v3` (`"label": "door"`, `category "opening"`, alternativa `panel`,
+`material "wood"`), 26 das 27 regiões rotuladas `door` em `corridor-02-000` reproduziam a
+assinatura inteira do exemplo — inclusive a região que cobre o frame inteiro. A taxa de
+eco saltou de 1/54 para 27/54 naquele frame e de 1/50 para 12/50 em `corridor-02-017`
+quando a entrada passou a ser multi-imagem.
+
+A lição é geral: **um exemplo de formato cujos valores formam uma resposta plausível vira
+a resposta padrão quando a entrada fica mais difícil**, e `door` num corredor é plausível
+o bastante para não parecer erro. O `v4` mantém a forma inequívoca com placeholders
+`<...>`, e `parse_region_interpretation` recusa um label ainda em forma de placeholder
+como `InvalidInterpretation` — de modo que o eco vira uma falha local visível em vez de um
+claim silencioso. Um placeholder ecoado numa *alternativa* é descartado, porque a
+alternativa é evidência opcional e não deve custar um label primário válido.
+
+Ao comparar runs, a assinatura do eco (`category == "opening"` com alternativa `panel`) é
+um diagnóstico barato, e vale medi-la junto com os labels.
 
 O adapter pede um único objeto JSON por região:
 

@@ -149,6 +149,11 @@ def parse_region_interpretation(
         raise InvalidInterpretation(
             f"Malformed region response: 'label' must be a non-empty string, got {label!r}."
         )
+    if _is_placeholder(label):
+        raise InvalidInterpretation(
+            f"Malformed region response: 'label' echoes the prompt placeholder {label!r} "
+            "instead of naming the region."
+        )
 
     category = response.get("category")
     if category is not None and not isinstance(category, str):
@@ -162,6 +167,17 @@ def parse_region_interpretation(
         kind=_parse_kind(response.get("kind")),
         alternatives=_parse_alternatives(response.get("alternatives"), source),
     )
+
+
+# Reconhece um label que apenas repete o placeholder do prompt (``<...>``) em
+# vez de nomear a região. Existe porque um exemplo de formato copiado não é uma
+# interpretação: sem esta guarda, o eco entraria como claim e a falha ficaria
+# indistinguível de uma leitura genuína. Chamada por
+# parse_region_interpretation e por _parse_alternatives.
+def _is_placeholder(value: str) -> bool:
+    """Indica se ``value`` é um placeholder do prompt em vez de um label real."""
+    stripped = value.strip()
+    return stripped.startswith("<") and stripped.endswith(">")
 
 
 # Converte o score bruto em ConfidenceScore, distinguindo ausência (None) de
@@ -220,6 +236,11 @@ def _parse_alternatives(raw: Any, source: str) -> tuple[LabelHypothesis, ...]:
                 f"Malformed region response: alternative 'label' must be a non-empty string, "
                 f"got {value!r}."
             )
+        # Um placeholder ecoado numa alternativa é descartado, não fatal: a
+        # alternativa é evidência opcional, e derrubar a região inteira por
+        # causa dela perderia um label primário perfeitamente válido.
+        if _is_placeholder(value):
+            continue
         hypotheses.append(LabelHypothesis(value, _parse_confidence(entry.get("confidence"), source)))
     return tuple(hypotheses)
 

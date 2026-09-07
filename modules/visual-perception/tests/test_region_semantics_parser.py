@@ -189,3 +189,40 @@ def test_legacy_labels_dict_is_rejected() -> None:
 def test_empty_response_is_rejected() -> None:
     with pytest.raises(InvalidInterpretation):
         parse_region_interpretation({})
+
+
+# Um exemplo de formato copiado não é uma interpretação. Medido em `0fda5cf`:
+# com um exemplo concreto no prompt, 26 das 27 regiões rotuladas "door" em
+# corridor-02-000 reproduziam a assinatura inteira do exemplo. Um label ainda
+# em forma de placeholder é o caso detectável dessa falha, e precisa falhar
+# localmente em vez de entrar como claim.
+def test_a_label_that_echoes_the_prompt_placeholder_is_rejected() -> None:
+    """Um label em forma de placeholder é recusado em vez de virar claim."""
+    with pytest.raises(InvalidInterpretation, match="echoes the prompt placeholder"):
+        parse_region_interpretation({"label": "<one noun naming the subject>", "kind": "thing"})
+
+
+# A alternativa é evidência opcional: um placeholder ecoado nela é descartado,
+# e não derruba um label primário perfeitamente válido.
+def test_a_placeholder_alternative_is_dropped_without_losing_the_primary_label() -> None:
+    """Uma alternativa em forma de placeholder é descartada, preservando o primário."""
+    interpretation = parse_region_interpretation(
+        {
+            "label": "ceiling vent",
+            "kind": "thing",
+            "alternatives": [
+                {"label": "<competing noun>", "confidence": 0.2},
+                {"label": "ceiling fan", "confidence": 0.3},
+            ],
+        }
+    )
+    assert interpretation.label == "ceiling vent"
+    assert [hypothesis.value for hypothesis in interpretation.alternatives] == ["ceiling fan"]
+
+
+# A guarda reconhece o formato, não uma lista de textos: um label legítimo que
+# apenas contenha sinais de comparação continua aceito.
+def test_a_legitimate_label_containing_angle_brackets_is_still_accepted() -> None:
+    """Um label real não é confundido com placeholder por conter '<' no meio."""
+    interpretation = parse_region_interpretation({"label": "sign <exit>", "kind": "thing"})
+    assert interpretation.label == "sign <exit>"

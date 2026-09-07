@@ -66,6 +66,15 @@ class RealMultimodalReasoningAdapter:
     # VLM como imagens numeradas e rotuladas pelo seu papel, seguidas do
     # contexto de cena estruturado como texto.
     #
+    # O exemplo de formato usa placeholders, e não valores plausíveis. Medido:
+    # com o exemplo concreto anterior (`"label": "door"`, category `opening`,
+    # alternativa `panel`, material `wood`), 26 das 27 regiões rotuladas
+    # "door" em `corridor-02-000` reproduziam essa assinatura inteira,
+    # inclusive a região de frame cheio. A taxa de eco saltou de 1/54 para
+    # 27/54 quando a entrada passou a ser multi-imagem: um exemplo plausível
+    # vira a resposta padrão quando a entrada fica mais difícil, e "door" num
+    # corredor é plausível o bastante para não parecer erro.
+    #
     # Mandar foreground e contexto como imagens *separadas* é o ponto da #203:
     # um recorte único pelo bounding box mistura objeto e fundo, e o modelo
     # descrevia o que ocupava mais pixels. A cena entra como claims tipadas
@@ -80,31 +89,8 @@ class RealMultimodalReasoningAdapter:
         self, request: RegionReasoningRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para uma região da imagem."""
-        prompt = (
-            f"{_describe_views(request)}"
-            "Identify the SUBJECT REGION itself. Base the answer on the foreground "
-            "image(s); use the context image(s) only to disambiguate what the subject is, "
-            "never to describe the surroundings instead. Even if the subject is small, "
-            "blurry, or a plain surface (wall, floor, ceiling), that is a valid and "
-            "specific answer. Respond with EXACTLY ONE JSON object (never a list/array, "
-            "never markdown fences) with exactly these keys: "
-            '"label" (non-empty short string, singular — the single best description), '
-            '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
-            'uncountable surface or material, "part" for a component of a larger object, or '
-            '"unknown"), "category" (short coarse category string, optional), "confidence" '
-            "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
-            'cannot estimate it, never guess 1.0), "alternatives" (list of '
-            '{"label", "confidence"} objects for competing hypotheses, may be empty), '
-            '"description" (string, optional), "attributes" (list of strings, optional), '
-            '"condition" (string, optional), "material" (string, optional). '
-            "Example of the exact shape required:\n"
-            '{"label": "door", "kind": "thing", "category": "opening", "confidence": 0.71, '
-            '"alternatives": [{"label": "panel", "confidence": 0.2}], "description": "...", '
-            '"attributes": ["closed"], "condition": "worn", "material": "wood"}'
-            f"{_describe_scene_claims(request)}"
-        )
         return self._generate_json(
-            tuple(view.payload for view in request.views), prompt, config
+            tuple(view.payload for view in request.views), _region_prompt(request), config
         )
 
     # Executa a conversa multimodal e converte sua resposta textual em objeto
@@ -184,6 +170,42 @@ class RealMultimodalReasoningAdapter:
         processor, model = self._lifecycle.get_or_load(key, factory)
         self._device = device
         return torch, processor, model, device
+
+
+# Monta o prompt de região a partir do request. É uma função pura: não toca
+# em modelo, device nem checkpoint, o que permite testar o contrato textual do
+# prompt sem GPU — o mesmo motivo pelo qual _describe_views e
+# _describe_scene_claims vivem separados. Chamada por
+# RealMultimodalReasoningAdapter.analyze_region.
+def _region_prompt(request: RegionReasoningRequest) -> str:
+    """Retorna o prompt de região correspondente a ``request``."""
+    return (
+        f"{_describe_views(request)}"
+        "Identify the SUBJECT REGION itself. Base the answer on the foreground "
+        "image(s); use the context image(s) only to disambiguate what the subject is, "
+        "never to describe the surroundings instead. Even if the subject is small, "
+        "blurry, or a plain surface (wall, floor, ceiling), that is a valid and "
+        "specific answer. Respond with EXACTLY ONE JSON object (never a list/array, "
+        "never markdown fences) with exactly these keys: "
+        '"label" (non-empty short string, singular — the single best description), '
+        '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
+        'uncountable surface or material, "part" for a component of a larger object, or '
+        '"unknown"), "category" (short coarse category string, optional), "confidence" '
+        "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
+        'cannot estimate it, never guess 1.0), "alternatives" (list of '
+        '{"label", "confidence"} objects for competing hypotheses, may be empty), '
+        '"description" (string, optional), "attributes" (list of strings, optional), '
+        '"condition" (string, optional), "material" (string, optional). '
+        "The SHAPE below is the required format. Every value in it is a placeholder "
+        "describing what to write there — never copy a placeholder or the example "
+        "values into your answer:\n"
+        '{"label": "<one noun naming the subject>", "kind": "thing", '
+        '"category": "<coarse category>", "confidence": 0.71, '
+        '"alternatives": [{"label": "<competing noun>", "confidence": 0.2}], '
+        '"description": "<one short sentence>", "attributes": ["<adjective>"], '
+        '"condition": "<state>", "material": "<material>"}'
+        f"{_describe_scene_claims(request)}"
+    )
 
 
 #: Como cada slot de evidência é apresentado ao VLM. O texto diz ao modelo o

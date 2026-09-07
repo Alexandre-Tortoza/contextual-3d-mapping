@@ -248,7 +248,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v3"
+    prompt_version: str = "v4"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
@@ -264,11 +264,14 @@ class MultimodalReasoningConfig:
     )
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar. ``v3`` introduz o request
-    # multi-view com contexto de cena estruturado (#202/#203); ``v2`` havia
-    # introduzido o contract label/kind/category/confidence/alternatives e a
-    # confiança opcional. A versão entra em ModelProvenance e no fingerprint()
-    # de cache, então o bump é o que invalida resultados do prompt anterior.
+    # qual template estruturado o backend deve usar. ``v4`` troca o exemplo de
+    # formato por placeholders, depois de o exemplo concreto de ``v3`` ser
+    # medido como a resposta padrão do modelo em 27/54 regiões de um frame;
+    # ``v3`` introduziu o request multi-view com contexto de cena estruturado
+    # (#202/#203); ``v2`` havia introduzido o contract
+    # label/kind/category/confidence/alternatives e a confiança opcional. A
+    # versão entra em ModelProvenance e no fingerprint() de cache, então o bump
+    # é o que invalida resultados do prompt anterior.
     #
     # ``region_views`` é validado contra o vocabulário fechado de
     # EvidenceSlot e precisa conter ao menos uma view de foreground: sem
