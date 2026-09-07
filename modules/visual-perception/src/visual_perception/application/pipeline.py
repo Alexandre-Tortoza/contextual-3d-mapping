@@ -1,12 +1,19 @@
 """Pipeline canônico de percepção visual.
 
 Issues: #169 (pipeline canônico), #194 (evidência multi-contexto),
-#196 (calibração e abstenção).
+#196 (calibração e abstenção), #202/#203 (raciocínio de região mask-aware
+com contexto de cena estruturado).
 
 Este é o único ponto de entrada de aplicação primário do módulo: region
 discovery -> merge multi-scale -> evidência multi-contexto (features
 visuais de foreground + crops alinhados a linguagem) -> scene context ->
 semântica de região -> calibração -> relações -> audit.
+
+A evidência multi-contexto produz, além dos slots persistidos, as views em
+pixels do frame. Elas atravessam daqui para a semântica de região, que é o
+que faz o custo daquela etapa se converter em interpretação: antes da #203
+os slots eram calculados e descartados, e o perfil ``full`` produzia
+exatamente o mesmo resultado que o ``baseline``.
 
 Falhas isoladas não abortam a execução, e cada tipo é reportado
 separadamente: interpretação de região (#165), extração de um slot de
@@ -16,6 +23,7 @@ mantidas com sua geometria e com tudo que os outros stages já anexaram.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from visual_perception.application.multi_context import (
@@ -39,6 +47,7 @@ from visual_perception.domain.audit import AuditResult
 from visual_perception.domain.errors import RegionInterpretationFailure
 from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.region_reasoning import RegionView
 from visual_perception.domain.regions import RegionProposal
 from visual_perception.domain.visual_observation import VisualObservation
 from visual_perception.ports.feature_extraction import DenseFeatureExtractor
@@ -73,6 +82,9 @@ class PipelineResult:
     evidence_failures: tuple[EvidenceExtractionFailure, ...] = ()
     calibration_failures: tuple[CalibrationFailure, ...] = ()
     evidence_metrics: tuple[EvidenceSlotMetrics, ...] = ()
+    #: Preenchido apenas quando o extractor denso caiu para um backend de
+    #: fallback; ``None`` significa que o backend configurado executou.
+    feature_fallback_reason: str | None = None
 
 
 # Ponto de entrada principal do módulo: conduz uma observação de imagem
@@ -92,18 +104,26 @@ def run_canonical_pipeline(
 
     evidence_failures: tuple[EvidenceExtractionFailure, ...] = ()
     evidence_metrics: tuple[EvidenceSlotMetrics, ...] = ()
+    feature_fallback_reason: str | None = None
+    views: Mapping[str, tuple[RegionView, ...]] = {}
     if regions:
         feature_map = ports.feature_extractor.extract(payload, config.feature_extraction)
+        # Um fallback de backend denso é uma execução legítima, mas não é a
+        # execução pedida. O motivo sobe até aqui para que o consumidor e o
+        # manifest de validação (#190) o registrem, em vez de o run parecer
+        # ter usado o backend configurado.
+        feature_fallback_reason = feature_map.fallback_reason
         evidence = extract_region_evidence(
             regions, payload, config, ports.language_encoder, feature_map=feature_map
         )
         regions = evidence.regions
         evidence_failures = evidence.failures
         evidence_metrics = evidence.metrics
+        views = evidence.views
 
     scene_context = analyze_scene(payload, ports.multimodal_reasoner, config.multimodal_reasoning)
     regions, failures = interpret_regions(
-        regions, payload, scene_context, ports.multimodal_reasoner, config.multimodal_reasoning
+        regions, payload, views, scene_context, ports.multimodal_reasoner, config.multimodal_reasoning
     )
 
     calibrator = build_calibrator(config.calibration)
@@ -128,6 +148,7 @@ def run_canonical_pipeline(
         evidence_failures=evidence_failures,
         calibration_failures=calibration_failures,
         evidence_metrics=evidence_metrics,
+        feature_fallback_reason=feature_fallback_reason,
     )
 
 

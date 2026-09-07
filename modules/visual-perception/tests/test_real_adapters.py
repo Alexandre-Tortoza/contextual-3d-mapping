@@ -8,10 +8,19 @@ import pytest
 from fixtures import payload_with_blobs
 from visual_perception.config import LanguageEmbeddingConfig, RegionDiscoveryConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
+from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
+from visual_perception.domain.references import ModelProvenance
+from visual_perception.domain.region_evidence import EvidenceSlot
+from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionView
+from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.infrastructure.adapters._runtime import require_checkpoint
 from visual_perception.infrastructure.adapters.factory import create_perception_ports
 from visual_perception.infrastructure.adapters.language_embedding_backend import _to_vector
-from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import _parse_json_object
+from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
+    _describe_scene_claims,
+    _describe_views,
+    _parse_json_object,
+)
 from visual_perception.infrastructure.adapters.region_discovery_backend import _proposal_from_mask
 
 
@@ -132,3 +141,79 @@ def test_port_factory_keeps_fake_defaults_gpu_free() -> None:
     assert isinstance(ports.feature_extractor, FakeDenseFeatureExtractor)
     assert isinstance(ports.language_encoder, FakeLanguageAlignedEncoder)
     assert isinstance(ports.multimodal_reasoner, FakeMultimodalReasoner)
+
+
+# Constrói um RegionReasoningRequest mínimo para os testes de tradução de
+# prompt, sem passar pelo pipeline nem carregar checkpoint.
+def _reasoning_request(
+    slots: tuple[EvidenceSlot, ...], scene_claims: tuple[SemanticClaim, ...] = ()
+) -> RegionReasoningRequest:
+    box = BoundingBox(0.0, 0.0, 4.0, 4.0)
+    views = tuple(
+        RegionView(
+            slot=slot,
+            payload=payload_with_blobs(width=4, height=4),
+            crop_box=box,
+            transform=CoordinateTransform(1.0, 1.0, 0.0, 0.0),
+            masked=slot is EvidenceSlot.FOREGROUND_DENSE,
+        )
+        for slot in slots
+    )
+    return RegionReasoningRequest(
+        region_id="region-a",
+        region_box=box,
+        image_width=32,
+        image_height=32,
+        views=views,
+        scene_claims=scene_claims,
+    )
+
+
+# Verifica a metade textual da evidência distinguível da #203: o prompt numera
+# as imagens e diz qual delas é o sujeito. Sem esse rótulo, um VLM que recebe
+# várias imagens não tem como saber qual região deve descrever.
+def test_region_prompt_numbers_and_labels_each_view() -> None:
+    """O preâmbulo identifica cada imagem enviada e marca o contexto como contexto."""
+    request = _reasoning_request(
+        (EvidenceSlot.FOREGROUND_DENSE, EvidenceSlot.TIGHT_CROP, EvidenceSlot.CONTEXTUAL_CROP)
+    )
+
+    described = _describe_views(request)
+
+    assert "3 image(s)" in described
+    assert described.index("Image 1") < described.index("Image 2") < described.index("Image 3")
+    assert "isolated on a black background" in described
+    assert "CONTEXT ONLY" in described
+
+
+# Protege o critério da #202 de que nenhuma propriedade de cena vira verdade da
+# região: o bloco de contexto preserva kind e confiança de cada claim e instrui
+# explicitamente que ele descreve a cena, não o sujeito.
+def test_scene_claims_reach_the_prompt_typed_and_marked_as_scene_level() -> None:
+    """O contexto de cena entra no prompt por kind, com score, e marcado como da cena."""
+    provenance = ModelProvenance(stage="scene_context", producer="fake", config_fingerprint="fp")
+    claims = (
+        SemanticClaim(
+            ClaimKind.SCENE_TYPE,
+            "corridor",
+            ConfidenceScore(0.82, "fake"),
+            (Evidence(description="raw"),),
+            provenance,
+        ),
+        SemanticClaim(ClaimKind.HAZARD, "wet floor", None, (Evidence(description="raw"),), provenance),
+    )
+    request = _reasoning_request((EvidenceSlot.FOREGROUND_DENSE,), scene_claims=claims)
+
+    described = _describe_scene_claims(request)
+
+    assert "scene_type: corridor (confidence 0.82)" in described
+    assert "hazard: wet floor" in described
+    assert "never of the subject region" in described
+
+
+# Sem claims de cena o bloco desaparece por inteiro, em vez de virar um rótulo
+# vazio que o modelo trataria como informação.
+def test_absent_scene_context_adds_nothing_to_the_prompt() -> None:
+    """Um request sem claims de cena não acrescenta bloco de contexto ao prompt."""
+    request = _reasoning_request((EvidenceSlot.FOREGROUND_DENSE,))
+    assert _describe_scene_claims(request) == ""

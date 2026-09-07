@@ -113,9 +113,9 @@ def counting_ports(ports: PerceptionPorts, counter: PortCallCounter) -> Percepti
             counter.multimodal_reasoning += 1
             return ports.multimodal_reasoner.analyze_scene(image, config)
 
-        def analyze_region(self, image: Any, crop: Any, summary: Any, config: Any) -> Any:
+        def analyze_region(self, request: Any, config: Any) -> Any:
             counter.multimodal_reasoning += 1
-            return ports.multimodal_reasoner.analyze_region(image, crop, summary, config)
+            return ports.multimodal_reasoner.analyze_region(request, config)
 
     return PerceptionPorts(_Discoverer(), _Extractor(), _Encoder(), _Reasoner())
 

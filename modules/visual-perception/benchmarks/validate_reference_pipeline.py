@@ -330,6 +330,12 @@ def run_validation(options: ValidationOptions) -> Path:
                 "interpretation_failure_count": len(result.region_interpretation_failures),
                 "evidence_failure_count": len(result.evidence_failures),
                 "calibration_failure_count": len(result.calibration_failures),
+                # ``None`` significa que o backend denso configurado executou.
+                # Um valor aqui é a única forma de o manifest distinguir um run
+                # que usou o backend pedido de um que caiu para o fallback —
+                # sem isso, o checklist "ausência de fallback silencioso" do
+                # handoff não teria como ser verificado.
+                "feature_fallback_reason": result.feature_fallback_reason,
                 "evidence_slots": evidence_state_counts(canonical_observation),
                 "evidence_slot_metrics": [asdict(metric) for metric in result.evidence_metrics],
                 "model_calls": model_call_counts(payload, config, result),

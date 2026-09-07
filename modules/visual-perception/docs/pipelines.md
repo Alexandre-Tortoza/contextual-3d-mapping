@@ -146,6 +146,9 @@ Esta tabela é o índice operacional do módulo. Use-a antes de procurar pelo c�
 | Como uma região recebe embedding alinhado à linguagem | [`application/language_embedding.py`](../src/visual_perception/application/language_embedding.py) | [`ports/language_embedding.py`](../src/visual_perception/ports/language_embedding.py), [`infrastructure/adapters/language_embedding_backend.py`](../src/visual_perception/infrastructure/adapters/language_embedding_backend.py) |
 | Como o contexto global da cena é produzido | [`application/scene_context.py`](../src/visual_perception/application/scene_context.py) | [`ports/multimodal_reasoning.py`](../src/visual_perception/ports/multimodal_reasoning.py), [`infrastructure/adapters/multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py), [`tests/test_scene_context.py`](../tests/test_scene_context.py) |
 | Labels, descrições, atributos, material ou condição de uma região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py), [`ports/multimodal_reasoning.py`](../src/visual_perception/ports/multimodal_reasoning.py), [`infrastructure/adapters/multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py), [`tests/test_region_semantics.py`](../tests/test_region_semantics.py) |
+| Quais views (foreground, crop justo, contexto, cena) o reasoner recebe | [`config.py`](../src/visual_perception/config.py) (`MultimodalReasoningConfig.region_views`) | [`application/region_views.py`](../src/visual_perception/application/region_views.py), [`tests/test_config.py`](../tests/test_config.py) |
+| Como cada view de região é recortada | [`application/region_views.py`](../src/visual_perception/application/region_views.py) | [`application/multi_context.py`](../src/visual_perception/application/multi_context.py), [`tests/test_multi_context_evidence.py`](../tests/test_multi_context_evidence.py) |
+| Contract de entrada do raciocínio de região, ou quais claims de cena o alcançam | [`domain/region_reasoning.py`](../src/visual_perception/domain/region_reasoning.py) | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py), [`tests/test_region_semantics.py`](../tests/test_region_semantics.py) |
 | Formato da resposta do VLM ou prompts de cena/região | [`infrastructure/adapters/multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py) | [`ports/multimodal_reasoning.py`](../src/visual_perception/ports/multimodal_reasoning.py), [`application/scene_context.py`](../src/visual_perception/application/scene_context.py), [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
 | Validação da resposta de região do VLM, ou a política de confiança ausente | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) (`parse_region_interpretation`) | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py) (`RegionKind`, `most_confident_claim`), [`tests/test_region_semantics_parser.py`](../tests/test_region_semantics_parser.py) |
 | Relações 2D entre regiões | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py), [`tests/test_relation_generation.py`](../tests/test_relation_generation.py) |
@@ -195,16 +198,18 @@ flowchart TD
     Tiling --> Discovery[Region discovery]
     Discovery --> Merge[Cross-scale merge]
     Merge --> Features[Dense features]
-    Features --> Pooling[Mask-aware pooling]
-    Merge --> Language[Language embedding]
+    Features --> Evidence[Evidência multi-contexto]
+    Merge --> Evidence
+    Evidence --> Slots[Slots persistidos + embeddings]
+    Evidence --> Views[Views em pixels do frame]
     Merge --> Scene[Scene context]
-    Scene --> Semantics[Region semantics]
-    Merge --> Semantics
-    Semantics --> Relations[Candidate relations]
-    Pooling --> Output[VisualObservation]
-    Language --> Output
+    Views --> Semantics[Region semantics]
+    Scene --> Semantics
+    Semantics --> Calibration[Calibração de suporte]
+    Calibration --> Relations[Candidate relations]
+    Slots --> Output[VisualObservation]
     Relations --> Output
-    Scene --> Output
+    Calibration --> Output
     Output --> Audit[AuditResult]
 ```
 
@@ -215,10 +220,16 @@ A execução concreta segue esta ordem:
 3. `remap_to_global` converte a geometria local de cada tile para as coordenadas da imagem original.
 4. `merge_regions` consolida propostas sobrepostas em `ObservedRegion`.
 5. Se existirem regiões, o `DenseFeatureExtractor` produz o feature map da imagem.
-6. `pool_regions` usa as masks para obter um embedding visual por região.
-7. `encode_regions` produz embeddings alinhados à linguagem e anexa suas referências às regiões.
-8. `analyze_scene` interpreta o contexto global da imagem.
-9. `interpret_regions` interpreta cada região individualmente usando a imagem, o crop pelo bounding box e o contexto da cena.
+   Um `fallback_reason` gravado pelo adapter sobe até `PipelineResult`, para que um
+   fallback de backend nunca pareça a execução configurada.
+6. `extract_region_evidence` produz os quatro slots de evidência da região (foreground
+   denso mask-aware, crop justo, crop contextual e cena), mais as `RegionView` em pixels
+   do frame — o mesmo recorte que gerou cada slot.
+7. `analyze_scene` interpreta o contexto global da imagem como claims tipadas.
+8. `interpret_regions` interpreta cada região a partir de um `RegionReasoningRequest`:
+   as views selecionadas por `multimodal_reasoning.region_views` e as claims de cena
+   estruturadas, sem achatar nenhuma das duas.
+9. `calibrate_observation_claims` anexa `SemanticSupport` a cada claim.
 10. `generate_relations` produz relações 2D candidatas entre as regiões resultantes.
 11. O pipeline monta a `VisualObservation` canônica.
 12. `audit_observation` verifica consistência e contradições sem modificar a observação.
@@ -232,10 +243,10 @@ A execução concreta segue esta ordem:
 | Remapeamento | proposta local + tile | `RegionProposal` em coordenadas globais | [`application/tiling.py`](../src/visual_perception/application/tiling.py) |
 | Cross-scale merge | propostas globais | `ObservedRegion` | [`application/region_merge.py`](../src/visual_perception/application/region_merge.py) |
 | Dense features | imagem RGB | `FeatureMap` | [`ports/feature_extraction.py`](../src/visual_perception/ports/feature_extraction.py), [`infrastructure/adapters/feature_extraction_backend.py`](../src/visual_perception/infrastructure/adapters/feature_extraction_backend.py) |
-| Mask-aware pooling | regiões + feature map | embedding visual por região | [`application/pooling.py`](../src/visual_perception/application/pooling.py) |
-| Language embedding | regiões + imagem | embedding alinhado à linguagem por região | [`application/language_embedding.py`](../src/visual_perception/application/language_embedding.py) |
+| Evidência multi-contexto | regiões + imagem + feature map | slots de evidência, embeddings e views em pixels | [`application/multi_context.py`](../src/visual_perception/application/multi_context.py), [`application/region_views.py`](../src/visual_perception/application/region_views.py) |
 | Scene context | imagem completa | `SceneContext` | [`application/scene_context.py`](../src/visual_perception/application/scene_context.py) |
-| Region semantics | região + imagem + scene context | `SemanticClaim` anexado à região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
+| Region semantics | `RegionReasoningRequest` (views + claims de cena) | `SemanticClaim` anexado à região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
+| Calibração | claims + evidência de suporte | `SemanticSupport` por claim | [`application/semantic_calibration.py`](../src/visual_perception/application/semantic_calibration.py) |
 | Relations | regiões interpretadas | relações 2D candidatas | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) |
 | Observação final | todos os resultados anteriores | `VisualObservation` | [`application/pipeline.py`](../src/visual_perception/application/pipeline.py), [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py) |
 | Auditoria | `VisualObservation` | `AuditResult` | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py) |

@@ -27,11 +27,11 @@ from __future__ import annotations
 
 import dataclasses
 import time
-from dataclasses import dataclass
-
-import numpy as np
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from visual_perception.application.pooling import PooledRegion, pool_region_evidence, pooling_method_for
+from visual_perception.application.region_views import build_region_views
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.embeddings import (
     EmbeddingModality,
@@ -47,6 +47,7 @@ from visual_perception.domain.region_evidence import (
     EvidenceState,
     RegionEvidenceSlot,
 )
+from visual_perception.domain.region_reasoning import RegionView
 from visual_perception.domain.regions import ObservedRegion
 from visual_perception.ports.language_embedding import LanguageAlignedEncoder
 
@@ -89,13 +90,21 @@ class EvidenceSlotMetrics:
 # o pipeline receba um único objeto em vez de quatro retornos posicionais.
 @dataclass(frozen=True)
 class MultiContextResult:
-    """As regiões com evidência anexada, os embeddings produzidos e as falhas isoladas."""
+    """As regiões com evidência anexada, os embeddings produzidos e as falhas isoladas.
+
+    ``views`` é um canal em memória, válido apenas durante o frame: são os
+    mesmos recortes que geraram os slots, repassados ao raciocínio semântico
+    (#203) para que o reasoner veja exatamente a geometria que o embedding
+    descreveu. Ele nunca é serializado — o que persiste é a ``crop_box`` de
+    cada :class:`RegionEvidenceSlot`.
+    """
 
     regions: tuple[ObservedRegion, ...]
     visual_embeddings: tuple[VisualEmbedding, ...]
     language_embeddings: tuple[LanguageEmbedding, ...]
     failures: tuple[EvidenceExtractionFailure, ...]
     metrics: tuple[EvidenceSlotMetrics, ...] = ()
+    views: Mapping[str, tuple[RegionView, ...]] = field(default_factory=dict)
 
 
 # Ponto de entrada público da etapa: produz todos os slots de evidência
@@ -128,6 +137,7 @@ def extract_region_evidence(
     updated: list[ObservedRegion] = []
     latency = dict.fromkeys(EvidenceSlot, 0.0)
     model_calls = dict.fromkeys(EvidenceSlot, 0)
+    views = build_region_views(regions, image, config)
 
     scene_slot_template = None
     if settings.scene_conditioned_enabled and regions:
@@ -162,7 +172,9 @@ def extract_region_evidence(
                 slots.append(_missing(region, slot_kind, "slot disabled by configuration"))
                 continue
             started = time.monotonic()
-            crop_slot, language = _crop_evidence(region, image, config, encoder, slot_kind, failures)
+            crop_slot, language = _crop_evidence(
+                region, _view_for(views, region.region_id, slot_kind), config, encoder, slot_kind, failures
+            )
             latency[slot_kind] += time.monotonic() - started
             model_calls[slot_kind] += 1
             slots.append(crop_slot)
@@ -211,7 +223,22 @@ def extract_region_evidence(
         language_embeddings=tuple(language_embeddings),
         failures=tuple(failures),
         metrics=metrics,
+        views=views,
     )
+
+
+# Localiza a view de um slot específico de uma região entre as views já
+# construídas. Existe para que _crop_evidence codifique exatamente o recorte
+# que o reasoner também vai ver, em vez de recortar por conta própria;
+# devolve ``None`` quando a caixa daquela view era degenerada.
+def _view_for(
+    views: Mapping[str, tuple[RegionView, ...]], region_id: str, slot: EvidenceSlot
+) -> RegionView | None:
+    """Retorna a view de ``slot`` da região, ou ``None`` se ela não pôde ser recortada."""
+    for view in views.get(region_id, ()):
+        if view.slot is slot:
+            return view
+    return None
 
 
 # Produz o slot de foreground denso: pooling mask-aware sobre o mapa denso,
@@ -250,25 +277,27 @@ def _foreground_evidence(
 
 
 # Produz um slot de crop alinhado a linguagem (justo ou com contexto),
-# recortando a imagem e chamando o encoder. Helper de
+# codificando a view já recortada e chamando o encoder. Helper de
 # extract_region_evidence, compartilhado pelos dois slots de crop porque
 # eles só diferem na caixa recortada.
 def _crop_evidence(
     region: ObservedRegion,
-    image: ImagePayload,
+    view: RegionView | None,
     config: ModuleConfig,
     encoder: LanguageAlignedEncoder,
     slot_kind: EvidenceSlot,
     failures: list[EvidenceExtractionFailure],
 ) -> tuple[RegionEvidenceSlot, LanguageEmbedding | None]:
-    """Codifica o crop pedido da região no espaço alinhado a linguagem."""
+    """Codifica a view já recortada da região no espaço alinhado a linguagem."""
     settings = config.multi_context
     expansion = settings.context_expansion if slot_kind is EvidenceSlot.CONTEXTUAL_CROP else 0.0
-    masked = settings.masked_tight_crop and slot_kind is EvidenceSlot.TIGHT_CROP
+    if view is None:
+        reason = f"Region {region.region_id!r} has a degenerate crop box after clipping."
+        failures.append(EvidenceExtractionFailure(region.region_id, slot_kind, reason))
+        return _failed(region, slot_kind, reason), None
+    box, masked = view.crop_box, view.masked
     try:
-        box = _expanded_box(region.box, expansion, image.width, image.height)
-        crop = _crop_payload(image, region, box, masked=masked)
-        vector = encoder.encode_image(crop, config.language_embedding)
+        vector = encoder.encode_image(view.payload, config.language_embedding)
         embedding = LanguageEmbedding(
             embedding_id=_language_ref(slot_kind, region.region_id),
             region_id=region.region_id,
@@ -388,42 +417,6 @@ def _language_space(config: ModuleConfig) -> EmbeddingSpace:
         normalized=config.language_embedding.normalize,
     )
 
-
-# Expande a caixa de uma região por uma fração das suas próprias dimensões,
-# recortando aos limites da imagem. Existe para que o crop contextual seja
-# proporcional ao objeto (uma margem fixa em pixels engoliria um objeto
-# pequeno e mal tocaria um grande).
-def _expanded_box(box: BoundingBox, expansion: float, width: int, height: int) -> BoundingBox:
-    """Retorna ``box`` expandida por ``expansion`` e recortada à imagem."""
-    if expansion <= 0.0:
-        return box.clipped_to(width=width, height=height)
-    margin_x = box.width * expansion / 2.0
-    margin_y = box.height * expansion / 2.0
-    return BoundingBox(
-        x_min=box.x_min - margin_x,
-        y_min=box.y_min - margin_y,
-        x_max=box.x_max + margin_x,
-        y_max=box.y_max + margin_y,
-    ).clipped_to(width=width, height=height)
-
-
-# Recorta os pixels da caixa pedida, opcionalmente zerando tudo que está
-# fora da máscara da região. Existe para que o crop mascarado seja uma
-# opção de configuração e não uma variante duplicada desta etapa.
-def _crop_payload(
-    image: ImagePayload, region: ObservedRegion, box: BoundingBox, *, masked: bool
-) -> ImagePayload:
-    """Recorta ``box`` da imagem, zerando o fundo quando ``masked``."""
-    x_min, y_min = int(box.x_min), int(box.y_min)
-    x_max, y_max = int(box.x_max), int(box.y_max)
-    if x_max <= x_min or y_max <= y_min:
-        raise ValueError(f"Region {region.region_id!r} has a degenerate crop box after clipping.")
-    crop = image.crop(x_min, y_min, x_max, y_max)
-    if not masked:
-        return crop
-    window = region.mask.data[y_min:y_max, x_min:x_max]
-    pixels = np.where(window[:, :, None], crop.pixels, 0).astype(crop.pixels.dtype)
-    return ImagePayload(pixels, width=crop.width, height=crop.height)
 
 
 # Nomeia o artifact de embedding de cada slot de crop, mantendo o id

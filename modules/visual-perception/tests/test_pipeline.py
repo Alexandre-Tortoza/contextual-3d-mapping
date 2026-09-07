@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from fixtures import blank_payload, default_config, image_observation, payload_with_blobs
 from fixtures_ports import default_ports
 from visual_perception.application.pipeline import run_canonical_pipeline
+from visual_perception.config import FeatureExtractionConfig
+from visual_perception.domain.feature_map import FeatureMap
+from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
 
 
 # Verifica o caso degenerado: uma imagem sem nenhuma região descoberta ainda produz uma
@@ -53,3 +59,38 @@ def test_canonical_pipeline_output_passes_the_quality_auditor() -> None:
     result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
 
     assert result.audit.errors == ()
+
+
+# Um fallback de backend denso é uma execução legítima, mas não é a execução
+# pedida. Sem o motivo subindo até PipelineResult, o manifest de validação
+# registraria o backend configurado e o run pareceria tê-lo usado — que é
+# exatamente o "fallback silencioso" que o checklist de #190 proíbe.
+def test_a_dense_feature_fallback_is_reported_instead_of_passing_as_the_configured_backend() -> None:
+    """O motivo do fallback do extractor denso chega ao PipelineResult."""
+
+    class _FallenBackExtractor:
+        """Envolve o fake e carimba o motivo de fallback que o adapter real gravaria."""
+
+        def extract(self, image: ImagePayload, config: FeatureExtractionConfig) -> FeatureMap:
+            feature_map = FakeDenseFeatureExtractor().extract(image, config)
+            return dataclasses.replace(
+                feature_map, fallback_reason="BackendUnavailableError: featup checkpoint missing"
+            )
+
+    payload = payload_with_blobs(blobs=((4, 4, 12, 12, (200, 30, 30)),))
+    ports = dataclasses.replace(default_ports(), feature_extractor=_FallenBackExtractor())
+
+    result = run_canonical_pipeline(image_observation(), payload, default_config(), ports)
+
+    assert result.feature_fallback_reason == "BackendUnavailableError: featup checkpoint missing"
+    assert result.audit.passed
+
+
+# O outro lado da mesma garantia: uma execução sem fallback não inventa um
+# motivo, para que a presença do campo signifique sempre um desvio real.
+def test_a_run_without_fallback_reports_no_reason() -> None:
+    """Sem fallback, ``feature_fallback_reason`` permanece ``None``."""
+    payload = payload_with_blobs(blobs=((4, 4, 12, 12, (200, 30, 30)),))
+    result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
+
+    assert result.feature_fallback_reason is None

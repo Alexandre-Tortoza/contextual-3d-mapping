@@ -14,6 +14,7 @@ region ainda precisa de refinamento, e nunca executa mais que
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from visual_perception.application.quality_audit import audit_observation
@@ -21,6 +22,7 @@ from visual_perception.application.region_semantics import interpret_regions
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import RegionInterpretationFailure
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.region_reasoning import RegionView
 from visual_perception.domain.visual_observation import VisualObservation
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 
@@ -99,11 +101,25 @@ def select_refinement_targets(observation: VisualObservation, config: Refinement
 def refine_observation(
     observation: VisualObservation,
     image: ImagePayload,
+    views: Mapping[str, tuple[RegionView, ...]],
     reasoner: MultimodalReasoner,
     multimodal_config: MultimodalReasoningConfig,
     refinement_config: RefinementConfig,
 ) -> tuple[VisualObservation, tuple[RefinementStep, ...]]:
-    """Reprocessa seletivamente as regions incertas até o loop convergir ou parar."""
+    """Reprocessa seletivamente as regions incertas até o loop convergir ou parar.
+
+    Argumentos:
+        observation: a observação canônica a refinar.
+        image: o payload da imagem completa, que define o frame das views.
+        views: as views em pixels por ``region_id``, produzidas pela etapa de
+            evidência multi-contexto (#203) e reusadas aqui para que o
+            refinamento veja a mesma geometria da interpretação original.
+        reasoner: o backend multimodal consultado nos passes de refinamento.
+        multimodal_config: a configuração de raciocínio.
+        refinement_config: os limiares que decidem o que reprocessar.
+    Retorna:
+        a observação refinada e o histórico append-only de cada iteração.
+    """
     current = observation
     history: list[RefinementStep] = []
 
@@ -117,7 +133,7 @@ def refine_observation(
         others = tuple(region for region in current.regions if region.region_id not in target_ids)
 
         refined_targets, failures = interpret_regions(
-            targets, image, current.scene_context, reasoner, multimodal_config
+            targets, image, views, current.scene_context, reasoner, multimodal_config
         )
         updated_regions = tuple(
             sorted(others + refined_targets, key=lambda region: order[region.region_id])

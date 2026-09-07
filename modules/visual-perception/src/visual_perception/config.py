@@ -19,6 +19,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
+
 
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
 # módulo precisa escolher entre priorizar qualidade científica ou custo
@@ -246,17 +248,31 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v2"
+    prompt_version: str = "v3"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
     load_in_4bit: bool = False
+    #: Quais views de região o reasoner recebe, na ordem dos slots (#203).
+    #: Uma view listada aqui mas cujo slot está desabilitado em
+    #: ``multi_context`` simplesmente não é produzida, então este campo
+    #: descreve o teto de evidência, não uma exigência.
+    region_views: tuple[str, ...] = (
+        EvidenceSlot.FOREGROUND_DENSE.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar. ``v2`` introduz o contract
-    # label/kind/category/confidence/alternatives e a confiança opcional; ela
-    # entra em ModelProvenance e no fingerprint() de cache, então o bump é o que
-    # invalida resultados produzidos pelo prompt anterior.
+    # qual template estruturado o backend deve usar. ``v3`` introduz o request
+    # multi-view com contexto de cena estruturado (#202/#203); ``v2`` havia
+    # introduzido o contract label/kind/category/confidence/alternatives e a
+    # confiança opcional. A versão entra em ModelProvenance e no fingerprint()
+    # de cache, então o bump é o que invalida resultados do prompt anterior.
+    #
+    # ``region_views`` é validado contra o vocabulário fechado de
+    # EvidenceSlot e precisa conter ao menos uma view de foreground: sem
+    # evidência local, a interpretação descreveria o entorno da região.
     def __post_init__(self) -> None:
         if not self.prompt_version:
             raise ValueError("multimodal_reasoning.prompt_version must not be empty.")
@@ -266,6 +282,19 @@ class MultimodalReasoningConfig:
             raise ValueError("multimodal_reasoning.max_new_tokens must be positive.")
         if self.temperature < 0.0:
             raise ValueError("multimodal_reasoning.temperature must not be negative.")
+        known = {slot.value for slot in EvidenceSlot}
+        unknown = [name for name in self.region_views if name not in known]
+        if unknown:
+            raise ValueError(
+                f"multimodal_reasoning.region_views has unknown evidence slots: {unknown}."
+            )
+        if len(set(self.region_views)) != len(self.region_views):
+            raise ValueError("multimodal_reasoning.region_views must not repeat an evidence slot.")
+        if not any(EvidenceSlot(name) in FOREGROUND_SLOTS for name in self.region_views):
+            raise ValueError(
+                "multimodal_reasoning.region_views must include at least one foreground slot: "
+                "interpreting a region from context alone would describe its surroundings."
+            )
 
 
 # Configuração raiz do módulo: agrega todas as sub-configs acima em um único

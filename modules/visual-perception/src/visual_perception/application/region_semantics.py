@@ -1,11 +1,19 @@
 """Etapa de interpretação semântica em nível de region.
 
-Issue: #165.
+Issues: #165 (etapa), #202 (contexto de cena estruturado), #203 (evidência
+mask-aware multi-contexto).
 
 Interpreta cada region de forma independente. A geometria de uma region
 (id, mask, box, geometric confidence, proposals contribuintes) nunca é
 modificada aqui: apenas ``claims`` é populado. Uma falha ao interpretar
 uma region é isolada e reportada, e nunca invalida as demais regions.
+
+A entrada do reasoner é um :class:`RegionReasoningRequest`, não mais o par
+``(crop pelo bounding box, primeira string de scene_description)``. Aquele
+par era duplamente redutor: o recorte retangular mostrava sobretudo fundo em
+regions finas ou diagonais, e o resumo de cena descartava scene type,
+atributos, hazards, support e proveniência. Agora foreground e contexto
+chegam como views distinguíveis, e a cena chega como claims inteiras.
 
 O parsing da resposta bruta do reasoner vive em
 :func:`parse_region_interpretation`, uma fronteira pura e sem I/O. Ela
@@ -19,6 +27,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,6 +36,12 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import RegionInterpretationFailure
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.references import ModelProvenance
+from visual_perception.domain.region_evidence import EvidenceSlot
+from visual_perception.domain.region_reasoning import (
+    RegionReasoningRequest,
+    RegionView,
+    select_region_scene_claims,
+)
 from visual_perception.domain.regions import ObservedRegion
 from visual_perception.domain.semantics import (
     ClaimKind,
@@ -216,6 +231,7 @@ def _parse_alternatives(raw: Any, source: str) -> tuple[LabelHypothesis, ...]:
 def interpret_regions(
     regions: tuple[ObservedRegion, ...],
     image: ImagePayload,
+    views: Mapping[str, tuple[RegionView, ...]],
     scene_context: SceneContext | None,
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
@@ -225,14 +241,27 @@ def interpret_regions(
     Uma resposta que viole o contract (:class:`InvalidInterpretation`, subclasse
     de ``ValueError``) derruba apenas a region afetada: ela é preservada com a
     geometria e os claims que outros stages já anexaram, e a falha é reportada.
+    O mesmo vale para uma region sem evidência de foreground utilizável: ela
+    falha localmente, e as demais continuam.
+
+    Argumentos:
+        regions: as regions canônicas a interpretar.
+        image: o payload da imagem completa, que define o frame das views.
+        views: as views em pixels por ``region_id`` (#203).
+        scene_context: o contexto de cena estruturado, ou ``None``.
+        reasoner: o backend multimodal que responde a cada region.
+        config: a configuração de raciocínio, incluindo quais views enviar.
+    Retorna:
+        as regions com os claims anexados, e as falhas isoladas.
     """
-    scene_summary = _summarize_scene(scene_context)
+    scene_claims = select_region_scene_claims(scene_context)
     updated: list[ObservedRegion] = []
     failures: list[RegionInterpretationFailure] = []
 
     for region in regions:
         try:
-            claims = _interpret_one_region(region, image, scene_summary, reasoner, config)
+            request = _build_request(region, image, views.get(region.region_id, ()), scene_claims, config)
+            claims = _interpret_one_region(request, reasoner, config)
         except (KeyError, ValueError, TypeError) as error:
             failures.append(RegionInterpretationFailure(region.region_id, str(error)))
             updated.append(region)
@@ -242,21 +271,60 @@ def interpret_regions(
     return tuple(updated), tuple(failures)
 
 
-# Interpreta uma única region: recorta a imagem pelo box, consulta o
-# multimodal reasoner, valida a resposta e converte os campos retornados
-# (labels, description, attributes, condition, material) em SemanticClaim
-# com proveniência (ModelProvenance). Chamada por interpret_regions para
-# cada region, dentro do try/except que isola falhas.
-def _interpret_one_region(
+# Monta o request de uma region a partir das views disponíveis e do contexto
+# de cena estruturado, na ordem declarada por ``config.region_views``. Existe
+# para que a seleção de evidência seja uma decisão de configuração explícita
+# e auditável, e não uma consequência da ordem em que as views foram
+# construídas. Chamada por interpret_regions para cada region.
+def _build_request(
     region: ObservedRegion,
     image: ImagePayload,
-    scene_summary: str | None,
+    available: tuple[RegionView, ...],
+    scene_claims: tuple[SemanticClaim, ...],
+    config: MultimodalReasoningConfig,
+) -> RegionReasoningRequest:
+    """Seleciona as views configuradas da region e as empacota com o contexto de cena.
+
+    Uma view configurada mas ausente é simplesmente pulada: contexto opcional
+    que não pôde ser produzido nunca descarta a evidência de foreground válida
+    (critério de aceitação da #203).
+
+    Argumentos:
+        region: a region canônica sendo interpretada.
+        image: o payload da imagem completa, usado para o frame do request.
+        available: as views efetivamente construídas para esta region.
+        scene_claims: as claims de cena elegíveis, já selecionadas.
+        config: a configuração de raciocínio, que declara quais views enviar.
+    Retorna:
+        o :class:`RegionReasoningRequest` desta region.
+    Levanta:
+        ValueError: se nenhuma view de foreground configurada existir.
+    """
+    by_slot = {view.slot: view for view in available}
+    selected = tuple(
+        by_slot[slot] for name in config.region_views if (slot := EvidenceSlot(name)) in by_slot
+    )
+    return RegionReasoningRequest(
+        region_id=region.region_id,
+        region_box=region.box,
+        image_width=image.width,
+        image_height=image.height,
+        views=selected,
+        scene_claims=scene_claims,
+    )
+
+
+# Interpreta uma única region: consulta o multimodal reasoner com o request
+# multi-view, valida a resposta e converte os campos retornados (labels,
+# description, attributes, condition, material) em SemanticClaim com
+# proveniência (ModelProvenance). Chamada por interpret_regions para cada
+# region, dentro do try/except que isola falhas.
+def _interpret_one_region(
+    request: RegionReasoningRequest,
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
 ) -> tuple[SemanticClaim, ...]:
-    box = region.box
-    crop = image.crop(int(box.x_min), int(box.y_min), int(box.x_max), int(box.y_max))
-    response = reasoner.analyze_region(image, crop, scene_summary, config)
+    response = reasoner.analyze_region(request, config)
     interpretation = parse_region_interpretation(response, source=config.backend)
 
     provenance = ModelProvenance(
@@ -268,10 +336,13 @@ def _interpret_one_region(
     )
     # A resposta literal do modelo acompanha a claim para que a calibração
     # (#196) e a auditoria (#199) possam voltar do score até o texto que o
-    # originou, sem depender de logs externos.
+    # originou, sem depender de logs externos. Os slots de evidência que
+    # produziram a resposta ficam registrados junto, para que a #204 possa
+    # decidir refinamento a partir do caminho de evidência já usado.
+    slots = ", ".join(view.slot.value for view in request.views)
     evidence = (
         Evidence(
-            description=f"raw multimodal region response for {region.region_id}",
+            description=f"raw multimodal region response for {request.region_id} from [{slots}]",
             raw_response_json=_raw_response_json(response),
         ),
     )
@@ -328,15 +399,3 @@ def _descriptive_claims(
             SemanticClaim(ClaimKind.MATERIAL, str(response["material"]), None, evidence, provenance)
         )
     return tuple(claims)
-
-
-# Extrai a primeira claim de descrição de cena ('scene_description') do
-# SceneContext, se existir, para usar como resumo textual passado ao
-# reasoner. Existe porque o reasoner de region se beneficia de contexto de
-# cena, mas só precisa de um resumo curto, não do SceneContext inteiro.
-# Chamada por interpret_regions.
-def _summarize_scene(scene_context: SceneContext | None) -> str | None:
-    if scene_context is None:
-        return None
-    descriptions = [claim.value for claim in scene_context.claims if claim.kind.value == "scene_description"]
-    return descriptions[0] if descriptions else None

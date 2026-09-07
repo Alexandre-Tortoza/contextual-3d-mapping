@@ -10,9 +10,10 @@ import numpy as np
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import BackendExecutionError
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.region_reasoning import RegionReasoningRequest
 
 SceneResponseFn = Callable[[ImagePayload], dict[str, Any]]
-RegionResponseFn = Callable[[ImagePayload, "str | None"], dict[str, Any]]
+RegionResponseFn = Callable[[RegionReasoningRequest], dict[str, Any]]
 
 
 # Implementação fake do port MultimodalReasoner. Existe para permitir testar
@@ -55,21 +56,22 @@ class FakeMultimodalReasoner:
             "confidence": 0.95,
         }
 
-    # Gera a análise fake de uma região/recorte: usa o hook injetado se
-    # houver, senão deriva um label determinístico a partir da cor
-    # dominante do recorte. Emite o mesmo contract que o adapter real
+    # Gera a análise fake de uma região: usa o hook injetado se houver, senão
+    # deriva um label determinístico a partir da cor dominante da view de
+    # foreground. Emite o mesmo contract que o adapter real
     # (category/label/kind/confidence/alternatives), para que a suíte exercite
     # o schema de produção e não um formato que só o fake fala.
+    #
+    # O fake lê deliberadamente a view de foreground, e não a de contexto: é
+    # assim que a suíte detecta uma regressão em que o raciocínio volte a
+    # descrever o entorno em vez da região (#203).
     def analyze_region(
-        self,
-        image: ImagePayload,
-        mask_crop: ImagePayload,
-        scene_summary: str | None,
-        config: MultimodalReasoningConfig,
+        self, request: RegionReasoningRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         if self._region_response_fn is not None:
-            return self._region_response_fn(mask_crop, scene_summary)
-        mean_rgb = mask_crop.pixels.astype(np.float64).mean(axis=(0, 1))
+            return self._region_response_fn(request)
+        foreground = request.foreground_views[0]
+        mean_rgb = foreground.payload.pixels.astype(np.float64).mean(axis=(0, 1))
         label = _bucket_label(mean_rgb)
         return {
             "category": "object",

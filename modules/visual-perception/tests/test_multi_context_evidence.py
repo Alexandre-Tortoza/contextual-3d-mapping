@@ -422,3 +422,58 @@ def test_enabling_all_context_slots_preserves_canonical_geometry_and_ids() -> No
     assert tuple(region.box for region in full.regions) == tuple(
         region.box for region in baseline.regions
     )
+
+
+# Protege a garantia que faz a #203 valer: a view em pixels entregue ao
+# raciocínio semântico é exatamente o recorte que gerou o slot persistido. Se
+# as duas geometrias divergirem, o reasoner passa a olhar uma área e a
+# evidência serializada a descrever outra, sem nada acusar.
+def test_each_view_matches_the_geometry_of_the_slot_it_produced() -> None:
+    """Cada view compartilha crop_box e transform com o slot correspondente."""
+    payload = payload_with_blobs()
+    feature_map = FakeDenseFeatureExtractor().extract(payload, default_config().feature_extraction)
+    config = dataclasses.replace(
+        default_config(),
+        multi_context=MultiContextConfig(contextual_crop_enabled=True, scene_conditioned_enabled=True),
+    )
+    regions = (_region("region-a"), _region("region-b", box=(16, 16, 28, 28)))
+
+    result = extract_region_evidence(
+        regions, payload, config, FakeLanguageAlignedEncoder(), feature_map=feature_map
+    )
+
+    for region in result.regions:
+        by_slot = {view.slot: view for view in result.views[region.region_id]}
+        for evidence in region.evidence:
+            if evidence.state is not EvidenceState.AVAILABLE:
+                continue
+            if evidence.slot is EvidenceSlot.FOREGROUND_DENSE:
+                # O slot denso guarda o transform da grade de features, não o
+                # do recorte: só a caixa é comparável entre os dois.
+                assert by_slot[evidence.slot].crop_box == evidence.crop_box
+                continue
+            view = by_slot[evidence.slot]
+            assert view.crop_box == evidence.crop_box
+            assert view.transform == evidence.transform
+
+
+# Garante que um slot desabilitado por configuração não gera view: sem isso, o
+# perfil de ablation continuaria alimentando o reasoner com a evidência que ele
+# diz estar medindo a ausência.
+def test_a_disabled_slot_produces_no_view_for_the_reasoner() -> None:
+    """O perfil baseline não entrega ao reasoner as views que desligou."""
+    payload = payload_with_blobs()
+    feature_map = FakeDenseFeatureExtractor().extract(payload, default_config().feature_extraction)
+    baseline = dataclasses.replace(
+        default_config(),
+        multi_context=MultiContextConfig(contextual_crop_enabled=False, scene_conditioned_enabled=False),
+    )
+
+    result = extract_region_evidence(
+        (_region(),), payload, baseline, FakeLanguageAlignedEncoder(), feature_map=feature_map
+    )
+
+    slots = {view.slot for view in result.views["region-a"]}
+    assert EvidenceSlot.CONTEXTUAL_CROP not in slots
+    assert EvidenceSlot.SCENE_CONDITIONED not in slots
+    assert EvidenceSlot.FOREGROUND_DENSE in slots

@@ -12,6 +12,7 @@ from typing import Any, Protocol
 
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.region_reasoning import RegionReasoningRequest
 
 
 # Port que desacopla o pipeline do VLM (vision-language model) concreto usado
@@ -35,16 +36,26 @@ class MultimodalReasoner(Protocol):
         """
         ...
 
-    # Roda um prompt estruturado sobre uma região específica, opcionalmente
-    # usando o resumo de cena já produzido por ``analyze_scene`` como
-    # contexto adicional. Chamado pelo estágio de region semantics (#165)
-    # uma vez por região descoberta.
+    # Roda um prompt estruturado sobre uma região específica, a partir das
+    # views mask-aware daquela região e do contexto de cena estruturado.
+    # Chamado pelo estágio de region semantics (#165) uma vez por região
+    # descoberta.
+    #
+    # A assinatura anterior recebia ``(image, mask_crop, scene_summary)``.
+    # Ela foi substituída, e não duplicada, porque manter as duas formas
+    # criaria um ponto de variação falso: existe um único consumidor de
+    # produção, e duas entradas concorrentes tornariam impossível saber qual
+    # evidência produziu um claim.
     def analyze_region(
-        self,
-        image: ImagePayload,
-        mask_crop: ImagePayload,
-        scene_summary: str | None,
-        config: MultimodalReasoningConfig,
+        self, request: RegionReasoningRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
-        """Retorna uma resposta estruturada bruta descrevendo uma região (#165)."""
+        """Retorna uma resposta estruturada bruta descrevendo uma região (#165, #203).
+
+        O implementador recebe as views já recortadas e distinguíveis por
+        slot (``request.foreground_views`` e ``request.contextual_views``) e
+        as claims de cena estruturadas. Ele não deve recortar a imagem por
+        conta própria nem promover uma propriedade de cena a propriedade da
+        região: essa é uma decisão de application, validada em
+        ``parse_region_interpretation``.
+        """
         ...

@@ -13,6 +13,8 @@ from visual_perception.application.lifecycle import ModelLifecycleManager
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.region_evidence import EvidenceSlot
+from visual_perception.domain.region_reasoning import RegionReasoningRequest
 from visual_perception.infrastructure.adapters._runtime import (
     payload_to_pil,
     raise_backend_execution_error,
@@ -58,29 +60,34 @@ class RealMultimodalReasoningAdapter:
             '{"scene_type": "corridor", "description": "...", "attributes": ["..."], '
             '"hazards": [], "confidence": 0.9}'
         )
-        return self._generate_json(image, prompt, config)
+        return self._generate_json((image,), prompt, config)
 
-    # Analisa um crop de região e usa o resumo de cena como contexto textual
-    # opcional. A imagem completa não é reenviada para evitar custo duplicado.
+    # Analisa uma região a partir das suas views mask-aware, apresentadas ao
+    # VLM como imagens numeradas e rotuladas pelo seu papel, seguidas do
+    # contexto de cena estruturado como texto.
+    #
+    # Mandar foreground e contexto como imagens *separadas* é o ponto da #203:
+    # um recorte único pelo bounding box mistura objeto e fundo, e o modelo
+    # descrevia o que ocupava mais pixels. A cena entra como claims tipadas
+    # (#202) e o prompt proíbe explicitamente promovê-las a propriedade da
+    # região.
     #
     # O prompt pede explicitamente que o modelo OMITA "confidence" quando não
     # souber estimá-la, em vez de chutar: a ausência é representável no contract
     # (ver parse_region_interpretation) e um score inventado destruiria a
     # capacidade de medir qualquer mudança downstream.
     def analyze_region(
-        self,
-        image: ImagePayload,
-        mask_crop: ImagePayload,
-        scene_summary: str | None,
-        config: MultimodalReasoningConfig,
+        self, request: RegionReasoningRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para uma região da imagem."""
-        context = f" Broader scene context (do not just repeat it): {scene_summary}" if scene_summary else ""
         prompt = (
-            "Describe ONLY what is visible in THIS cropped image, even if the crop is small "
-            "or blurry — a plain surface (wall, floor, ceiling) is a valid, specific answer; "
-            "do not just restate the whole-scene description. Respond with EXACTLY ONE JSON "
-            "object (never a list/array, never markdown fences) with exactly these keys: "
+            f"{_describe_views(request)}"
+            "Identify the SUBJECT REGION itself. Base the answer on the foreground "
+            "image(s); use the context image(s) only to disambiguate what the subject is, "
+            "never to describe the surroundings instead. Even if the subject is small, "
+            "blurry, or a plain surface (wall, floor, ceiling), that is a valid and "
+            "specific answer. Respond with EXACTLY ONE JSON object (never a list/array, "
+            "never markdown fences) with exactly these keys: "
             '"label" (non-empty short string, singular — the single best description), '
             '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
             'uncountable surface or material, "part" for a component of a larger object, or '
@@ -93,28 +100,28 @@ class RealMultimodalReasoningAdapter:
             "Example of the exact shape required:\n"
             '{"label": "door", "kind": "thing", "category": "opening", "confidence": 0.71, '
             '"alternatives": [{"label": "panel", "confidence": 0.2}], "description": "...", '
-            f'"attributes": ["closed"], "condition": "worn", "material": "wood"}}{context}'
+            '"attributes": ["closed"], "condition": "worn", "material": "wood"}'
+            f"{_describe_scene_claims(request)}"
         )
-        return self._generate_json(mask_crop, prompt, config)
+        return self._generate_json(
+            tuple(view.payload for view in request.views), prompt, config
+        )
 
     # Executa a conversa multimodal e converte sua resposta textual em objeto
     # JSON. Um JSON inválido vira objeto vazio para a camada application emitir
     # o diagnóstico de schema estável que já possui.
     def _generate_json(
-        self, image: ImagePayload, prompt: str, config: MultimodalReasoningConfig
+        self, images: tuple[ImagePayload, ...], prompt: str, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Gera e extrai um objeto JSON de uma consulta multimodal ao VLM."""
         torch, processor, model, device = self._get_runtime(config)
         try:
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "image": payload_to_pil(image, config.backend)},
-                        {"type": "text", "text": prompt},
-                    ],
-                }
+            content: list[dict[str, Any]] = [
+                {"type": "image", "image": payload_to_pil(image, config.backend)}
+                for image in images
             ]
+            content.append({"type": "text", "text": prompt})
+            messages = [{"role": "user", "content": content}]
             inputs = processor.apply_chat_template(
                 messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt"
             )
@@ -177,6 +184,55 @@ class RealMultimodalReasoningAdapter:
         processor, model = self._lifecycle.get_or_load(key, factory)
         self._device = device
         return torch, processor, model, device
+
+
+#: Como cada slot de evidência é apresentado ao VLM. O texto diz ao modelo o
+#: que ele está olhando e, para os slots de contexto, que aquilo NÃO é o
+#: sujeito — sem isso o modelo tende a descrever o objeto mais saliente da
+#: imagem de contexto em vez da região pedida.
+_VIEW_ROLES = {
+    EvidenceSlot.FOREGROUND_DENSE: (
+        "the SUBJECT REGION isolated on a black background (black pixels are not part of it)"
+    ),
+    EvidenceSlot.TIGHT_CROP: "the SUBJECT REGION's bounding box, background included",
+    EvidenceSlot.CONTEXTUAL_CROP: "CONTEXT ONLY: the subject plus its surroundings",
+    EvidenceSlot.SCENE_CONDITIONED: "CONTEXT ONLY: the whole scene the subject belongs to",
+}
+
+
+# Descreve, em texto, o que cada imagem enviada representa. Existe porque um
+# VLM que recebe várias imagens sem rótulo não sabe qual delas é o sujeito;
+# esta é a metade textual da evidência distinguível exigida pela #203.
+# Chamada por analyze_region ao montar o prompt.
+def _describe_views(request: RegionReasoningRequest) -> str:
+    """Retorna o preâmbulo que numera e rotula cada view enviada ao modelo."""
+    lines = [
+        f"Image {index}: {_VIEW_ROLES[view.slot]}."
+        for index, view in enumerate(request.views, start=1)
+    ]
+    return "You are given {count} image(s) of the same subject region.\n{lines}\n".format(
+        count=len(request.views), lines="\n".join(lines)
+    )
+
+
+# Converte as claims de cena estruturadas em texto agrupado por kind,
+# preservando a confiança quando ela existe. Existe para que o contexto de
+# cena chegue ao modelo inteiro (#202) em vez de achatado em uma única
+# descrição, e para instruir explicitamente que ele não é verdade sobre a
+# região. Chamada por analyze_region ao montar o prompt.
+def _describe_scene_claims(request: RegionReasoningRequest) -> str:
+    """Retorna o bloco de contexto de cena, ou string vazia se não houver claims."""
+    if not request.scene_claims:
+        return ""
+    grouped: dict[str, list[str]] = {}
+    for claim in request.scene_claims:
+        score = "" if claim.confidence is None else f" (confidence {claim.confidence.value:.2f})"
+        grouped.setdefault(claim.kind.value, []).append(f"{claim.value}{score}")
+    rendered = "; ".join(f"{kind}: {', '.join(values)}" for kind, values in sorted(grouped.items()))
+    return (
+        "\nScene context, for disambiguation only — these are properties of the SCENE, "
+        f"never of the subject region, and must not be repeated as the label: {rendered}"
+    )
 
 
 # Extrai um único objeto JSON de uma resposta textual, tolerando fences de

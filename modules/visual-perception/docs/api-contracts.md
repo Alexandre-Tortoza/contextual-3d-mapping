@@ -356,6 +356,18 @@ Uma implementação alternativa deve satisfazer um `Protocol` em
 | `DenseFeatureExtractor` | produzir `FeatureMap` espacial |
 | `LanguageAlignedEncoder` | produzir embeddings alinhados a texto/imagem |
 | `MultimodalReasoner` | produzir respostas estruturadas para cena e regiões |
+| `ClaimCalibrator` | converter evidência de suporte em `SemanticSupport` |
+
+`MultimodalReasoner.analyze_region` recebe um `RegionReasoningRequest`
+([`domain/region_reasoning.py`](../src/visual_perception/domain/region_reasoning.py)), não um
+recorte solto. O request carrega as `RegionView` já recortadas e distinguíveis por slot
+(`foreground_views` e `contextual_views`) e as claims de cena estruturadas, cada uma com a
+sua confiança, support e proveniência.
+
+Um implementador **não** deve recortar a imagem por conta própria nem promover uma
+propriedade de cena a propriedade da região: a primeira é geometria de posse de
+[`application/region_views.py`](../src/visual_perception/application/region_views.py), e a
+segunda é uma decisão de application validada em `parse_region_interpretation`.
 
 Uma implementação concreta deve devolver apenas contracts do módulo. Não exponha tensors,
 classes de framework ou exceptions específicas de biblioteca.
@@ -378,6 +390,7 @@ Consulte [model-backends.md](model-backends.md) para as implementações reais d
 | política de auditoria | `domain/audit.py`, `application/quality_audit.py` | consumidores de `audit.passed` |
 | proveniência de modelo | `domain/references.py` | adapters, fingerprints e serialização |
 | port de ML | `ports/` | fake, adapter real, factory, configuração e benchmark |
+| entrada do raciocínio de região | `domain/region_reasoning.py` | `application/region_views.py`, `application/region_semantics.py`, port e adapters do VLM |
 
 Mudanças em contracts públicos devem ser tratadas como alterações de interface. Se o
 payload persistido deixar de ser retrocompatível, avalie o versionamento de schema em

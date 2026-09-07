@@ -12,6 +12,7 @@ from visual_perception.application.refinement import (
     refine_observation,
     select_refinement_targets,
 )
+from visual_perception.application.region_views import build_region_views
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
@@ -41,6 +42,7 @@ def test_refinement_loop_terminates_and_preserves_previous_evidence() -> None:
     refined, history = refine_observation(
         result.observation,
         payload,
+        build_region_views(result.observation.regions, payload, default_config()),
         FakeMultimodalReasoner(),
         MultimodalReasoningConfig(),
         RefinementConfig(low_confidence_threshold=1.0, max_iterations=2),
@@ -59,6 +61,7 @@ def test_no_targets_means_no_refinement_needed() -> None:
     refined, history = refine_observation(
         result.observation,
         payload,
+        build_region_views(result.observation.regions, payload, default_config()),
         FakeMultimodalReasoner(),
         MultimodalReasoningConfig(),
         RefinementConfig(low_confidence_threshold=0.0, small_region_area_px=0, max_iterations=2),

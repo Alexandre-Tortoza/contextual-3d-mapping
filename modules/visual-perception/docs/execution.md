@@ -332,6 +332,14 @@ Nos três frames, o perfil full produziu os quatro slots em 126/126 regiões, se
 preservou exatamente a geometria canônica e adicionou 5,489 s (+1,09%) ao wall-clock,
 sem aumentar o pico observado de 4,57 GiB.
 
+Naquela revisão (`ebe211f`), porém, os dois perfis produziram saída **byte-idêntica**:
+mesmo SHA-256 dos três overlays e os mesmos 126 pares `(region_id, label primário)`. A
+evidência era extraída e descartada, porque a interpretação de região ainda recortava a
+imagem pelo bounding box e achatava a cena em uma string. A #202 e a #203 corrigiram
+isso: as views agora atravessam para o raciocínio semântico, e `region_views` decide
+quais delas o reasoner recebe. Comparações de perfil anteriores a essa mudança medem
+cobertura e custo de slot, não efeito semântico.
+
 ## Quero diagnosticar X: onde olhar?
 
 | Sintoma | Primeiro local | Depois verificar |
