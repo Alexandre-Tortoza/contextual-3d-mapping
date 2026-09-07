@@ -248,7 +248,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v4"
+    prompt_version: str = "v5"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0

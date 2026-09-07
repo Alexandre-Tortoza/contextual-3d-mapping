@@ -181,11 +181,13 @@ def _region_prompt(request: RegionReasoningRequest) -> str:
     """Retorna o prompt de região correspondente a ``request``."""
     return (
         f"{_describe_views(request)}"
-        "Identify the SUBJECT REGION itself. Base the answer on the foreground "
-        "image(s); use the context image(s) only to disambiguate what the subject is, "
-        "never to describe the surroundings instead. Even if the subject is small, "
-        "blurry, or a plain surface (wall, floor, ceiling), that is a valid and "
-        "specific answer. Respond with EXACTLY ONE JSON object (never a list/array, "
+        "Describe ONLY what is actually visible in the subject region shown above, "
+        "even if it is small or blurry — a plain surface (wall, floor, ceiling) is a "
+        "valid, specific answer. Do not restate the whole-scene description, and do "
+        "NOT name an object merely because this kind of scene usually contains one: "
+        "if the pixels show a blank wall, the answer is a wall. Use the context "
+        "image(s) only to disambiguate the subject, never to describe the surroundings "
+        "instead. Respond with EXACTLY ONE JSON object (never a list/array, "
         "never markdown fences) with exactly these keys: "
         '"label" (non-empty short string, singular — the single best description), '
         '"kind" (exactly one of "thing" for a countable object, "stuff" for an '

@@ -1,0 +1,228 @@
+{
+  "run_id": "20260907T012616Z",
+  "region_views_override": [
+    "tight_crop"
+  ],
+  "git_revision": "78e6504",
+  "gpu_memory_budget_gb": 8.0,
+  "config": {
+    "quality_profile": "research_quality",
+    "gpu_memory_budget_gb": 8.0,
+    "region_discovery": {
+      "backend": "sam",
+      "checkpoint": "facebook/sam-vit-huge",
+      "score_threshold": 0.5,
+      "device": "auto",
+      "model_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+      "max_regions": 100,
+      "min_mask_area": 500
+    },
+    "tiling": {
+      "multi_scale_enabled": false,
+      "tile_grid": "2x2",
+      "overlap_ratio": 0.2
+    },
+    "merge": {
+      "iou_merge_threshold": 0.85,
+      "containment_merge_threshold": 0.9
+    },
+    "feature_extraction": {
+      "backend": "dinov2",
+      "checkpoint": "facebook/dinov2-base",
+      "feature_resolution": 16,
+      "device": "auto",
+      "upsampling": "nearest",
+      "input_resolution": 448,
+      "max_feature_map_mb": 384,
+      "upsampler_repository": "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d",
+      "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+      "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+      "fallback_backend": null,
+      "fallback_checkpoint": null
+    },
+    "language_embedding": {
+      "backend": "clip",
+      "checkpoint": "openai/clip-vit-large-patch14",
+      "dimension": 768,
+      "device": "auto",
+      "model_name": "ViT-B-32",
+      "normalize": true
+    },
+    "multimodal_reasoning": {
+      "backend": "qwen_vl",
+      "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_version": "v4",
+      "device": "auto",
+      "max_new_tokens": 256,
+      "temperature": 0.0,
+      "load_in_4bit": true,
+      "region_views": [
+        "tight_crop"
+      ]
+    },
+    "multi_context": {
+      "foreground_enabled": true,
+      "tight_crop_enabled": true,
+      "contextual_crop_enabled": true,
+      "scene_conditioned_enabled": true,
+      "context_expansion": 0.25,
+      "masked_tight_crop": false
+    },
+    "calibration": {
+      "enabled": false,
+      "method": "reliability_table",
+      "version": "calibration/1",
+      "artifact_path": null,
+      "min_visual_support": 0.2,
+      "min_region_quality": 0.0,
+      "domain": "unspecified"
+    }
+  },
+  "config_fingerprint": "0dd1fd9c5fcc19a28f55763a83d4e6f8ced95502941f2332db359867de648a22",
+  "frame_count": 1,
+  "ordered_frame_ids": [
+    "corridor-02-000"
+  ],
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "selection": {
+    "frame_ids": [
+      "corridor-02-000"
+    ],
+    "limit": null
+  },
+  "canonical_output": "canonical",
+  "postprocessing": [],
+  "context_profile": "full",
+  "lifecycle_metrics": [
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 4.503882359000272,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4904929792,
+      "peak_cpu_rss_bytes": 3507929088
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.9122651360012242,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 390011904,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 390011904,
+      "peak_cpu_rss_bytes": 3507929088
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.6467324850018485,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 1741476864,
+      "peak_cpu_rss_bytes": 3552968704
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 6.794747758001904,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2737450496,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 2737450496,
+      "peak_cpu_rss_bytes": 9507811328
+    }
+  ],
+  "frames": [
+    {
+      "frame_id": "corridor-02-000",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-000.png",
+        "sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+        "width": 640,
+        "height": 480
+      },
+      "failed": false,
+      "canonical_region_count": 54,
+      "postprocessed_region_count": null,
+      "relation_count": 339,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 54,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 54,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 54,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 54,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 54,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.343506887977128
+        },
+        {
+          "slot": "tight_crop",
+          "available": 54,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 54,
+          "latency_s": 2.7775818400332355
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 54,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 54,
+          "latency_s": 2.7591074019946973
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 54,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 3.8539818029967137
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 1,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 109,
+        "scene_reasoning": 1,
+        "region_reasoning": 54,
+        "total": 166
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 106,
+      "latency_s": 238.8645603190016,
+      "model_lifecycle_events": 4,
+      "peak_vram_bytes": 4904929792,
+      "artifacts": {
+        "canonical_json": "canonical/corridor-02-000.json",
+        "canonical_overlay": "canonical/corridor-02-000.overlay.png",
+        "semantic_merge": null
+      }
+    }
+  ]
+}

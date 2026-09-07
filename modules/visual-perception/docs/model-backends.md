@@ -231,8 +231,8 @@ invalidar toda a observação.
 
 ## Contract de resposta de região
 
-A versão atual é `prompt_version = v4`. O schema da resposta é o mesmo desde `v2`; o que
-mudou foi a entrada e o exemplo.
+A versão atual é `prompt_version = v5`. O schema da resposta é o mesmo desde `v2`; o que
+mudou foi a entrada, o exemplo e o enquadramento da tarefa.
 
 `v3` passou a receber um `RegionReasoningRequest` e a enviar ao VLM as views da região
 como imagens numeradas e rotuladas pelo seu papel (foreground isolado, crop justo,
@@ -256,6 +256,28 @@ alternativa é evidência opcional e não deve custar um label primário válido
 
 Ao comparar runs, a assinatura do eco (`category == "opening"` com alternativa `panel`) é
 um diagnóstico barato, e vale medi-la junto com os labels.
+
+`v5` restaurou o enquadramento da tarefa que o `v3` havia perdido, e é a correção que
+importou. Medido em `corridor-02-000`, com os **mesmos pixels** (`--region-view
+tight_crop` produz exatamente o crop do baseline), as mesmas claims de cena e o mesmo
+exemplo:
+
+| enquadramento da tarefa | `door` | labels distintos |
+| --- | ---: | ---: |
+| `v2` "Describe ONLY what is visible in THIS cropped image" | 1/54 | 7 |
+| `v4` "Identify the SUBJECT REGION itself" | 45/54 | 8 |
+| `v5` "Describe ONLY what is actually visible … do NOT name an object merely because este tipo de cena costuma conter um" | 3/54 | 9 |
+
+Pedir para **identificar** o sujeito faz o modelo nomear um objeto discreto; num corredor,
+o objeto default é uma porta. Pedir para **descrever o que está visível** mantém a
+resposta presa aos pixels. A cláusula que permite explicitamente uma superfície lisa
+("a plain surface is a valid, specific answer") precisa ficar junto da instrução da
+tarefa: no `v3`/`v4` ela existia, mas depois de "Identify the SUBJECT REGION itself", e
+não bastou.
+
+O texto do prompt é, portanto, uma variável de primeira ordem do resultado — maior, nestes
+frames, que a escolha de views. Comparações de evidência que não fixem o prompt não medem
+o que dizem medir.
 
 O adapter pede um único objeto JSON por região:
 

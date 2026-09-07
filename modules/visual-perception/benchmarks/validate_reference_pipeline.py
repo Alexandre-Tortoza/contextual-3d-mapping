@@ -81,6 +81,8 @@ class ValidationOptions:
         frame_ids: IDs explícitos, na ordem pedida, ou tupla vazia para todos.
         limit: limite aplicado depois da seleção ordenada.
         semantic_merge: habilita o pós-processamento externo ao pipeline canônico.
+        context_profile: quais slots de evidência multi-contexto são extraídos.
+        region_views: quais dessas views o reasoner recebe; ``None`` usa o default.
     """
 
     frames_dir: Path = FRAMES_DIR
@@ -89,6 +91,10 @@ class ValidationOptions:
     limit: int | None = None
     semantic_merge: bool = False
     context_profile: str = "full"
+    #: Sobrescreve quais views o reasoner recebe (#203). ``None`` mantém o
+    #: default da configuração. Existe para que a ablation de views seja
+    #: reproduzível pela linha de comando, e não por edição de código.
+    region_views: tuple[str, ...] | None = None
 
     # Rejeita perfis livres para que um typo não produza uma ablation diferente.
     def __post_init__(self) -> None:
@@ -237,6 +243,13 @@ def run_validation(options: ValidationOptions) -> Path:
                 scene_conditioned_enabled=False,
             ),
         )
+    if options.region_views is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, region_views=options.region_views
+            ),
+        )
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
 
@@ -374,6 +387,7 @@ def run_validation(options: ValidationOptions) -> Path:
 
     manifest = {
         "run_id": run_id,
+        "region_views_override": list(options.region_views) if options.region_views else None,
         "git_revision": _git_revision(),
         "gpu_memory_budget_gb": config.gpu_memory_budget_gb,
         "config": config.to_dict(),
@@ -421,6 +435,13 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="baseline desliga contexto/cena; full exercita os quatro slots",
     )
     parser.add_argument(
+        "--region-view",
+        action="append",
+        default=[],
+        dest="region_views",
+        help="view de região enviada ao reasoner; repita para compor a ablation (#203)",
+    )
+    parser.add_argument(
         "--semantic-merge",
         action="store_true",
         help="persiste uma variante pós-processada separada da saída canônica",
@@ -441,6 +462,7 @@ def main(argv: list[str] | None = None) -> None:
             limit=arguments.limit,
             semantic_merge=arguments.semantic_merge,
             context_profile=arguments.context_profile,
+            region_views=tuple(arguments.region_views) or None,
         )
     )
 
