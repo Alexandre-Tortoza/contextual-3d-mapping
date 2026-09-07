@@ -33,6 +33,7 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 | serialização, embeddings e persistência | [artifacts.md](artifacts.md) |
 | relação entre papers, decisões e implementação | [research-traceability.md](research-traceability.md) |
 | significado preciso dos termos | [glossary.md](glossary.md) |
+| o que ainda falha, medido em run real | [known-limitations.md](known-limitations.md) |
 
 ## Rotas de leitura
 
@@ -73,6 +74,7 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 | diagnosticar OOM/cache/runtime | [execution.md](execution.md) | `Quero diagnosticar X` |
 | entender o que é persistido | [artifacts.md](artifacts.md) | tipos de artifact + ciclo de vida |
 | saber se uma ideia veio de paper ou é decisão própria | [research-traceability.md](research-traceability.md) | mapa de influência + decisões próprias |
+| saber se um comportamento estranho já é conhecido | [known-limitations.md](known-limitations.md) | item correspondente + issue dona |
 
 ## Mapa da documentação
 
@@ -87,6 +89,8 @@ flowchart TD
     C --> T[artifacts.md]
     A --> Q[research-traceability.md]
     R --> G[glossary.md]
+    R --> L[known-limitations.md]
+    B --> L
 ```
 
 ## Estado atual do módulo
@@ -121,7 +125,9 @@ Quando uma mudança relevante for feita:
 - mudança de backend/checkpoint, atualize `model-backends.md`;
 - mudança de lifecycle/cache/fingerprint, atualize `execution.md`;
 - mudança de serialização/persistência, atualize `artifacts.md`;
-- mudança motivada por pesquisa ou benchmark, atualize `research-traceability.md`.
+- mudança motivada por pesquisa ou benchmark, atualize `research-traceability.md`;
+- falha observada em run real que continue aberta, registre em `known-limitations.md`,
+  e só a remova de lá quando outro run real mostrar que ela deixou de ocorrer.
 
 A documentação deve descrever o código atual. Não preserve instruções antigas apenas
 porque já foram verdadeiras em uma versão anterior.
