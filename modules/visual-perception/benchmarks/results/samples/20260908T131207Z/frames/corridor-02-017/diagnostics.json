@@ -1,0 +1,183 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-017",
+  "input_sha256": "f7ea622db269c79244af5dfc5ae66bd5d1fbe2b5babee60cb51d71acccd5a20a",
+  "latency_s": 175.10369413100125,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 38,
+  "proposal_count": 76,
+  "merged_proposal_count": 49,
+  "regions_with_multiple_proposals": 8,
+  "label_counts": [
+    [
+      "ceiling",
+      13
+    ],
+    [
+      "wall",
+      13
+    ],
+    [
+      "plain wall",
+      3
+    ],
+    [
+      "ceiling tiles",
+      2
+    ],
+    [
+      "floor",
+      2
+    ],
+    [
+      "ceiling light fixture",
+      1
+    ],
+    [
+      "ceiling panel",
+      1
+    ],
+    [
+      "door",
+      1
+    ],
+    [
+      "flooring",
+      1
+    ],
+    [
+      "headlight",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "indoor ceiling",
+      12
+    ],
+    [
+      "wall",
+      9
+    ],
+    [
+      "building interior",
+      5
+    ],
+    [
+      "ceilings",
+      2
+    ],
+    [
+      "flooring",
+      2
+    ],
+    [
+      "car part",
+      1
+    ],
+    [
+      "ceiling",
+      1
+    ],
+    [
+      "ceiling fixture",
+      1
+    ],
+    [
+      "door",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "indoor lighting",
+      1
+    ],
+    [
+      "indoor wall",
+      1
+    ],
+    [
+      "interior wall",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      30
+    ],
+    [
+      "stuff",
+      8
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 38,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 38,
+    "missing": 0,
+    "minimum": 0.9166166186332703,
+    "maximum": 1.0,
+    "mean": 0.9754580855369568,
+    "median": 0.9814505875110626,
+    "distinct_values": 33,
+    "stddev": 0.021172070727203417,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "ceiling",
+    "dominant_fraction": 0.34210526315789475,
+    "distinct_labels": 10,
+    "dominant_category": "indoor ceiling",
+    "dominant_category_fraction": 0.3157894736842105,
+    "distinct_categories": 13
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 11,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 7,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      11
+    ],
+    [
+      "below_min_relative_area",
+      9
+    ],
+    [
+      "outside_valid_area",
+      7
+    ]
+  ]
+}

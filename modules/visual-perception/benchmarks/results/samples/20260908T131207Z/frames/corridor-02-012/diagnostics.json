@@ -1,0 +1,139 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-012",
+  "input_sha256": "696f7de9c8032596ff4b1c7566e3c6f16c6fa0fd439ed8583fb3e22a1d605e1e",
+  "latency_s": 155.6162227050081,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 33,
+  "proposal_count": 65,
+  "merged_proposal_count": 39,
+  "regions_with_multiple_proposals": 5,
+  "label_counts": [
+    [
+      "wall",
+      13
+    ],
+    [
+      "ceiling",
+      8
+    ],
+    [
+      "plain wall",
+      6
+    ],
+    [
+      "floor",
+      4
+    ],
+    [
+      "ceiling tiles",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "wall",
+      16
+    ],
+    [
+      "ceilings",
+      5
+    ],
+    [
+      "flooring",
+      4
+    ],
+    [
+      "indoor ceiling",
+      4
+    ],
+    [
+      "building interior",
+      3
+    ],
+    [
+      "floor",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      30
+    ],
+    [
+      "stuff",
+      3
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 33,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 33,
+    "missing": 0,
+    "minimum": 0.888762354850769,
+    "maximum": 1.0,
+    "mean": 0.9708482334108064,
+    "median": 0.974507749080658,
+    "distinct_values": 29,
+    "stddev": 0.026752004980782573,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.3939393939393939,
+    "distinct_labels": 6,
+    "dominant_category": "wall",
+    "dominant_category_fraction": 0.48484848484848486,
+    "distinct_categories": 6
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 12,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 7,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      12
+    ],
+    [
+      "below_min_relative_area",
+      7
+    ],
+    [
+      "outside_valid_area",
+      7
+    ]
+  ]
+}

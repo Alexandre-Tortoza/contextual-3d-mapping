@@ -1,0 +1,143 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-008",
+  "input_sha256": "2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b",
+  "latency_s": 92.00797871399845,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 16,
+  "proposal_count": 46,
+  "merged_proposal_count": 19,
+  "regions_with_multiple_proposals": 3,
+  "label_counts": [
+    [
+      "plain surface",
+      3
+    ],
+    [
+      "row of crops",
+      3
+    ],
+    [
+      "tree",
+      3
+    ],
+    [
+      "purple flower",
+      2
+    ],
+    [
+      "wall",
+      2
+    ],
+    [
+      "field of crops",
+      1
+    ],
+    [
+      "pink flowers",
+      1
+    ],
+    [
+      "rows of crops",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "agricultural field",
+      5
+    ],
+    [
+      "floor",
+      3
+    ],
+    [
+      "plant",
+      3
+    ],
+    [
+      "vegetation",
+      3
+    ],
+    [
+      "building",
+      2
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      13
+    ],
+    [
+      "stuff",
+      3
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.916330099105835,
+    "maximum": 1.0,
+    "mean": 0.9666594229638577,
+    "median": 0.9664942920207977,
+    "distinct_values": 15,
+    "stddev": 0.024994126631302533,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "plain surface",
+    "dominant_fraction": 0.1875,
+    "distinct_labels": 8,
+    "dominant_category": "agricultural field",
+    "dominant_category_fraction": 0.3125,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 1,
+  "ego": {
+    "proposals_rejected": 17,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      17
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "below_min_relative_area",
+      4
+    ]
+  ]
+}
