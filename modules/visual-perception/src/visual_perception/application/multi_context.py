@@ -31,7 +31,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from visual_perception.application.pooling import PooledRegion, pool_region_evidence, pooling_method_for
-from visual_perception.application.region_views import build_region_views
+from visual_perception.application.region_views import build_region_views, mask_fill_ratio
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.embeddings import (
     EmbeddingModality,
@@ -46,6 +46,7 @@ from visual_perception.domain.region_evidence import (
     EvidenceSlot,
     EvidenceState,
     RegionEvidenceSlot,
+    SubjectEmphasis,
 )
 from visual_perception.domain.region_reasoning import RegionView
 from visual_perception.domain.regions import ObservedRegion
@@ -165,6 +166,7 @@ def extract_region_evidence(
                 visual_ref = visual.embedding_id
 
         for slot_kind, enabled in (
+            (EvidenceSlot.MASKED_SUBJECT, settings.masked_subject_enabled),
             (EvidenceSlot.TIGHT_CROP, settings.tight_crop_enabled),
             (EvidenceSlot.CONTEXTUAL_CROP, settings.contextual_crop_enabled),
         ):
@@ -272,6 +274,7 @@ def _foreground_evidence(
         space=_visual_space(feature_map, config, pooled),
         mask_ref=f"mask-{region.region_id}",
         support_ratio=pooled.support_ratio,
+        mask_fill_ratio=mask_fill_ratio(region, region.box),
     )
     return slot, embedding
 
@@ -295,7 +298,7 @@ def _crop_evidence(
         reason = f"Region {region.region_id!r} has a degenerate crop box after clipping."
         failures.append(EvidenceExtractionFailure(region.region_id, slot_kind, reason))
         return _failed(region, slot_kind, reason), None
-    box, masked = view.crop_box, view.masked
+    box, emphasis = view.crop_box, view.emphasis
     try:
         vector = encoder.encode_image(view.payload, config.language_embedding)
         embedding = LanguageEmbedding(
@@ -311,17 +314,22 @@ def _crop_evidence(
         failures.append(EvidenceExtractionFailure(region.region_id, slot_kind, str(error)))
         return _failed(region, slot_kind, str(error)), None
 
-    preprocessing = "masked_crop" if masked else "crop"
+    # ``preprocessing`` nomeia o tratamento exato que produziu estes pixels, e
+    # ``mask_ref`` acompanha todo slot que usou a máscara — inclusive o
+    # contextual, que a usa para desenhar o contorno do sujeito sem suprimir o
+    # entorno. Até a #202 os dois crops textuais saíam com ``mask_ref: null``, e
+    # o reasoner não tinha como saber qual pixel era o sujeito.
     slot = RegionEvidenceSlot(
         slot=slot_kind,
         region_id=region.region_id,
         state=EvidenceState.AVAILABLE,
         crop_box=box,
         transform=CoordinateTransform(1.0, 1.0, box.x_min, box.y_min),
-        preprocessing=f"{preprocessing}:expansion={expansion}",
+        preprocessing=f"{emphasis.preprocessing_label}:expansion={expansion}",
         artifact_ref=embedding.embedding_id,
         space=_language_space(config),
-        mask_ref=f"mask-{region.region_id}" if masked else None,
+        mask_ref=None if emphasis is SubjectEmphasis.NONE else f"mask-{region.region_id}",
+        mask_fill_ratio=mask_fill_ratio(region, box),
     )
     return slot, embedding
 
@@ -425,6 +433,8 @@ def _language_ref(slot_kind: EvidenceSlot, region_id: str) -> str:
     """Retorna o identificador de artifact do embedding de ``slot_kind``."""
     if slot_kind is EvidenceSlot.TIGHT_CROP:
         return f"language-{region_id}"
+    if slot_kind is EvidenceSlot.MASKED_SUBJECT:
+        return f"language-subject-{region_id}"
     return f"language-context-{region_id}"
 
 

@@ -17,7 +17,7 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.semantics import ClaimKind, Evidence, SemanticClaim
+from visual_perception.domain.semantics import ClaimKind, Evidence, HypothesisRole, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
@@ -101,6 +101,7 @@ def _label_claim(value: str, confidence: float | None) -> SemanticClaim:
         score,
         (Evidence("e"),),
         ModelProvenance(stage="t", producer="fake", config_fingerprint="abc"),
+        role=HypothesisRole.PRIMARY,
     )
 
 

@@ -1,99 +1,71 @@
-"""Renderiza uma VisualObservation sobre a imagem original para revisão visual.
+"""Mapeia os tipos de domínio para formas desenháveis e compõe os overlays.
 
-Usado por ``validate_reference_pipeline.py`` (#190) para gerar as amostras
-(overlay + JSON + resumo) que acompanham a validação do pipeline real. Não é
-parte do contract público do módulo — é uma ferramenta de inspeção local.
+Usado por ``validate_reference_pipeline.py`` (#190) para gerar as amostras que
+acompanham a validação do pipeline real. Não é parte do contract público do
+módulo — é uma ferramenta de inspeção local.
+
+A separação em relação a ``render_layers.py`` é deliberada: lá ficam as
+primitivas que só entendem geometria; aqui fica o conhecimento de
+``ObservedRegion`` e ``RegionProposal``. É o que permite desenhar os dois
+estágios com o mesmo código sem que as primitivas conheçam o domínio.
 """
 
 from __future__ import annotations
 
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from collections.abc import Sequence
 
+from PIL import Image
+
+from render_layers import DrawableShape, blend_masks, draw_boxes, draw_labels
+from visual_perception.domain.regions import ObservedRegion, RegionProposal, primary_label_claim
 from visual_perception.domain.visual_observation import VisualObservation
 
-#: Número máximo de regiões que recebem rótulo de texto no overlay. Com
-#: dezenas de regiões (comum com SAM automático), rotular todas empilha
-#: texto ilegível; rotula-se só as maiores/mais visíveis, mas a máscara
-#: colorida continua desenhada para todas as regiões.
-_MAX_LABELED_REGIONS = 20
 
-try:
-    _FONT = ImageFont.truetype("DejaVuSans-Bold.ttf", 13)
-except OSError:
-    _FONT = ImageFont.load_default()
-
-_PALETTE = [
-    (230, 25, 75),
-    (60, 180, 75),
-    (255, 225, 25),
-    (0, 130, 200),
-    (245, 130, 48),
-    (145, 30, 180),
-    (70, 240, 240),
-    (240, 50, 230),
-    (210, 245, 60),
-    (250, 190, 212),
-    (0, 128, 128),
-    (170, 110, 40),
-]
+# Converte regiões observadas em formas desenháveis, carregando os dois eixos
+# de confiança separadamente. A confiança semântica vem do claim de label
+# primário — a mesma política que o diagnóstico usa, via primary_label_claim,
+# para que overlay e diagnostics.json nunca contem labels diferentes.
+def region_shapes(regions: Sequence[ObservedRegion]) -> tuple[DrawableShape, ...]:
+    """Retorna as formas desenháveis das regiões, com label e confianças."""
+    shapes: list[DrawableShape] = []
+    for region in regions:
+        claim = primary_label_claim(region)
+        confidence = None if claim is None or claim.confidence is None else claim.confidence.value
+        shapes.append(
+            DrawableShape(
+                shape_id=region.region_id,
+                mask=region.mask,
+                box=region.box,
+                label=None if claim is None else claim.value,
+                semantic_confidence=confidence,
+                geometric_confidence=region.geometric_confidence,
+            )
+        )
+    return tuple(shapes)
 
 
-# Extrai o primeiro claim do kind "label" de uma região, se houver, para
-# rotular a máscara no overlay sem precisar reimplementar a lógica de
-# desambiguação de labels da camada application.
-def _first_label(region) -> str | None:  # noqa: ANN001
-    for claim in region.claims:
-        if claim.kind.value == "label":
-            return claim.value
-    return None
+# Converte proposals de discovery em formas desenháveis. Label e confiança
+# semântica ficam em None de propósito: proposals são geometria pura, anteriores
+# a qualquer interpretação, e o artifact precisa mostrar essa ausência em vez de
+# sugerir uma semântica que aquele estágio não produziu.
+def proposal_shapes(proposals: Sequence[RegionProposal]) -> tuple[DrawableShape, ...]:
+    """Retorna as formas desenháveis das proposals, sem semântica."""
+    return tuple(
+        DrawableShape(
+            shape_id=proposal.proposal_id,
+            mask=proposal.mask,
+            box=proposal.box,
+            geometric_confidence=proposal.geometric_confidence,
+        )
+        for proposal in proposals
+    )
 
 
-# Desenha máscaras semitransparentes coloridas, contorno da box e um rótulo
-# curto (region_id + label + geometric_confidence) para cada região da
-# observação, sobre uma cópia da imagem original.
+# Desenha máscaras, caixas e rótulos de uma observação sobre a imagem original.
+# Mantida com a assinatura de sempre para os consumidores existentes, mas agora
+# composta das primitivas — o artifact completo é uma composição das camadas,
+# não uma implementação paralela a elas.
 def render_overlay(image: Image.Image, observation: VisualObservation) -> Image.Image:
     """Retorna uma cópia de ``image`` com as regiões da observação desenhadas por cima."""
-    base = image.convert("RGBA")
-
-    # Composição vetorizada das máscaras: alpha-blend direto em um buffer RGB
-    # numpy, sem alocar uma camada PIL por região (proibitivo com dezenas de
-    # regiões em imagens de centenas de milhares de pixels).
-    canvas = np.array(base.convert("RGB"), dtype=np.float64)
-    for index, region in enumerate(observation.regions):
-        color = np.array(_PALETTE[index % len(_PALETTE)], dtype=np.float64)
-        mask = region.mask.data
-        alpha = 90 / 255
-        canvas[mask] = canvas[mask] * (1 - alpha) + color * alpha
-    overlay = Image.fromarray(canvas.astype(np.uint8), mode="RGB").convert("RGBA")
-    draw = ImageDraw.Draw(overlay)
-
-    # Contorno fino em todas as regiões (mostra a segmentação inteira), mas
-    # rótulo de texto só nas _MAX_LABELED_REGIONS maiores (por área de
-    # máscara) — evita empilhar dezenas de textos ilegíveis uns sobre os
-    # outros quando o SAM produz muitas regiões pequenas.
-    largest_first = sorted(observation.regions, key=lambda r: r.mask.area(), reverse=True)
-    labeled_ids = {region.region_id for region in largest_first[:_MAX_LABELED_REGIONS]}
-
-    for index, region in enumerate(observation.regions):
-        color = _PALETTE[index % len(_PALETTE)]
-        box = region.box
-        width = 2 if region.region_id in labeled_ids else 1
-        draw.rectangle(
-            [box.x_min, box.y_min, box.x_max - 1, box.y_max - 1], outline=(*color, 255), width=width
-        )
-        if region.region_id not in labeled_ids:
-            continue
-        label = _first_label(region)
-        confidence = f"{region.geometric_confidence:.2f}"
-        text = f"{label or '?'} ({confidence})"
-        text_box = draw.textbbox((0, 0), text, font=_FONT)
-        text_width, text_height = text_box[2] - text_box[0], text_box[3] - text_box[1]
-        text_y = max(0, box.y_min - text_height - 4)
-        draw.rectangle(
-            [box.x_min, text_y, box.x_min + text_width + 4, text_y + text_height + 4],
-            fill=(0, 0, 0, 230),
-        )
-        draw.text((box.x_min + 2, text_y + 1), text, fill=(255, 255, 255, 255), font=_FONT)
-
-    return overlay.convert("RGB")
+    shapes = region_shapes(observation.regions)
+    return draw_labels(draw_boxes(blend_masks(image, shapes), shapes), shapes)

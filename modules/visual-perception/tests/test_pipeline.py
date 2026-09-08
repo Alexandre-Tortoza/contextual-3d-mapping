@@ -94,3 +94,50 @@ def test_a_run_without_fallback_reports_no_reason() -> None:
     result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
 
     assert result.feature_fallback_reason is None
+
+
+# As proposals cruas de discovery precisam sobreviver ao pipeline: elas são o
+# único registro do estágio pré-merge, e recomputá-las depois não serve porque
+# discovery não é determinística — uma segunda passada produziria proposals que
+# não são as que geraram estas regiões.
+def test_pipeline_exposes_the_raw_discovery_proposals() -> None:
+    """O resultado carrega as proposals anteriores ao merge geométrico."""
+    result = run_canonical_pipeline(
+        image_observation(), payload_with_blobs(), default_config(), default_ports()
+    )
+    assert result.proposals != ()
+    assert all(proposal.proposal_id for proposal in result.proposals)
+
+
+# Amarra os dois estágios: toda proposal descoberta precisa aparecer em
+# exatamente uma região. Se um dia divergirem, alguma proposal terá sido
+# descartada em silêncio entre discovery e merge — e é justamente essa
+# divergência que o diagnóstico do frame existe para tornar visível.
+def test_every_proposal_is_accounted_for_by_exactly_one_region() -> None:
+    """A soma das proposals contribuintes das regiões bate com as descobertas."""
+    result = run_canonical_pipeline(
+        image_observation(),
+        payload_with_blobs(blobs=((4, 4, 10, 10, (200, 30, 30)), (20, 20, 28, 28, (30, 30, 200)))),
+        default_config(),
+        default_ports(),
+    )
+    contributing = [
+        proposal_id
+        for region in result.observation.regions
+        for proposal_id in region.contributing_proposal_ids
+    ]
+    assert sorted(contributing) == sorted(p.proposal_id for p in result.proposals)
+
+
+# Um consumidor que não pede diagnóstico não deve ser obrigado a preencher o
+# campo: ele é aditivo e tem default vazio.
+def test_proposals_default_to_empty_when_not_provided() -> None:
+    """PipelineResult pode ser construído sem proposals."""
+    from visual_perception.domain.audit import AuditResult
+
+    result = run_canonical_pipeline(
+        image_observation(), blank_payload(), default_config(), default_ports()
+    )
+    replaced = dataclasses.replace(result, proposals=())
+    assert replaced.proposals == ()
+    assert isinstance(result.audit, AuditResult)

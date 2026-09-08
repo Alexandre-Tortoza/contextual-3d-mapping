@@ -40,6 +40,7 @@ from visual_perception.domain.region_evidence import EvidenceSlot
 from visual_perception.domain.region_reasoning import (
     RegionReasoningRequest,
     RegionView,
+    SceneContextMode,
     select_region_scene_claims,
 )
 from visual_perception.domain.regions import ObservedRegion
@@ -47,8 +48,10 @@ from visual_perception.domain.semantics import (
     ClaimKind,
     ConfidenceScore,
     Evidence,
+    HypothesisRole,
     RegionKind,
     SemanticClaim,
+    normalize_claim_value,
 )
 from visual_perception.domain.visual_observation import SceneContext
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
@@ -161,12 +164,47 @@ def parse_region_interpretation(
             f"Malformed region response: 'category' must be a string or absent, got {category!r}."
         )
 
+    primary = LabelHypothesis(label, _parse_confidence(response.get("confidence"), source))
     return RegionInterpretation(
         category=category or None,
-        primary=LabelHypothesis(label, _parse_confidence(response.get("confidence"), source)),
+        primary=primary,
         kind=_parse_kind(response.get("kind")),
-        alternatives=_parse_alternatives(response.get("alternatives"), source),
+        alternatives=_deduplicate_hypotheses(
+            primary, _parse_alternatives(response.get("alternatives"), source)
+        ),
     )
+
+
+# Remove hipóteses alternativas que repetem o primary ou umas às outras. Existe
+# porque o run real de ``corridor-02-002`` mostrou o Qwen devolvendo o próprio
+# primary dentro de ``alternatives`` (``carpet`` três vezes na mesma região):
+# uma hipótese repetida não é evidência concorrente, e persistir claims LABEL
+# equivalentes tornaria a contradição e o diagnóstico ruído. Chamada por
+# parse_region_interpretation.
+def _deduplicate_hypotheses(
+    primary: LabelHypothesis, alternatives: tuple[LabelHypothesis, ...]
+) -> tuple[LabelHypothesis, ...]:
+    """Descarta alternativas cujo label repita o primary ou uma alternativa anterior.
+
+    A comparação usa :func:`normalize_claim_value` — só caixa e espaçamento —
+    e nunca reordena: uma alternativa com score maior continua alternativa,
+    porque a escolha do primary é do produtor.
+
+    Argumentos:
+        primary: a hipótese que o produtor elegeu como principal.
+        alternatives: as hipóteses concorrentes, na ordem em que ele as listou.
+    Retorna:
+        as alternativas distintas, preservando a primeira ocorrência de cada.
+    """
+    seen = {normalize_claim_value(primary.value)}
+    unique: list[LabelHypothesis] = []
+    for hypothesis in alternatives:
+        normalized = normalize_claim_value(hypothesis.value)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(hypothesis)
+    return tuple(unique)
 
 
 # Reconhece um label que apenas repete o placeholder do prompt (``<...>``) em
@@ -275,7 +313,9 @@ def interpret_regions(
     Retorna:
         as regions com os claims anexados, e as falhas isoladas.
     """
-    scene_claims = select_region_scene_claims(scene_context)
+    scene_claims = select_region_scene_claims(
+        scene_context, mode=SceneContextMode(config.scene_context_mode)
+    )
     updated: list[ObservedRegion] = []
     failures: list[RegionInterpretationFailure] = []
 
@@ -370,11 +410,33 @@ def _interpret_one_region(
 
     # A hipótese primária e as alternativas viram claims de label irmãos: hipóteses
     # concorrentes coexistem, conforme o design "claims, não labels" (#156). Cada
-    # uma carrega a confiança que o produtor informou — ou nenhuma.
+    # uma carrega a confiança que o produtor informou — ou nenhuma. O papel é
+    # explícito (#202) para que primary e alternative não dependam de posição, e
+    # ``category``/``region_kind`` acompanham a hipótese primária, que é a
+    # interpretação a que o produtor os atribuiu.
     claims: list[SemanticClaim] = [
-        SemanticClaim(ClaimKind.LABEL, hypothesis.value, hypothesis.confidence, evidence, provenance)
-        for hypothesis in (interpretation.primary, *interpretation.alternatives)
+        SemanticClaim(
+            ClaimKind.LABEL,
+            interpretation.primary.value,
+            interpretation.primary.confidence,
+            evidence,
+            provenance,
+            role=HypothesisRole.PRIMARY,
+            category=interpretation.category,
+            region_kind=interpretation.kind,
+        )
     ]
+    claims.extend(
+        SemanticClaim(
+            ClaimKind.LABEL,
+            hypothesis.value,
+            hypothesis.confidence,
+            evidence,
+            provenance,
+            role=HypothesisRole.ALTERNATIVE,
+        )
+        for hypothesis in interpretation.alternatives
+    )
     claims.extend(_descriptive_claims(response, evidence, provenance))
     return tuple(claims)
 

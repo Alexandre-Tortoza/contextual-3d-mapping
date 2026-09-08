@@ -1,0 +1,65 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-002",
+  "input_sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+  "latency_s": 209.0640735980005,
+  "ego_vehicle_mask_applied": true,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": false,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 45,
+  "proposal_count": 47,
+  "merged_proposal_count": 47,
+  "regions_with_multiple_proposals": 2,
+  "labels": [
+    [
+      "curved wall",
+      45
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      90
+    ],
+    [
+      "label",
+      90
+    ],
+    [
+      "condition",
+      45
+    ],
+    [
+      "material",
+      45
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 45,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9
+  },
+  "geometric_confidence": {
+    "count": 45,
+    "missing": 0,
+    "minimum": 0.9102752208709717,
+    "maximum": 1.0,
+    "mean": 0.9737319178051419,
+    "median": 0.9758660793304443
+  },
+  "mode_collapse": {
+    "dominant_label": "curved wall",
+    "dominant_fraction": 1.0,
+    "distinct_labels": 1
+  },
+  "scene_echo_label_count": 45
+}

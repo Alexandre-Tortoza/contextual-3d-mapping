@@ -1,17 +1,30 @@
 """Etapa de análise contextual em nível de cena.
 
-Issues: #164 (contexto de cena), #195 (proibição de confiança inventada).
+Issues: #164 (contexto de cena), #195 (proibição de confiança inventada),
+#202 (contexto ambiental e isolamento do ego-veículo).
 
-Analisa a imagem completa para scene type, description, atributos globais
-e hazards. Nunca toca na geometria de region: a enumeração de regions
-permanece de posse de region discovery/merge.
+Descreve o **ambiente**: tipo de cena, se é interno ou externo, o arranjo
+espacial, a iluminação, a visibilidade e a navegabilidade. Nunca toca na
+geometria de region, e desde a #202 não produz mais inventário de objetos.
+
+O motivo é medido. Em ``corridor-02-002``, o contract anterior — prosa livre
+mais uma lista ``attributes`` — devolveu ``["fisheye lens", "carpeted floor",
+"suitcase"]`` e "there is a suitcase on the ground in the foreground". A
+"mala" era o próprio quad que carrega a câmera, e aquele texto ia inteiro para
+o prompt de **cada** região, condicionando a interpretação local com um objeto
+inexistente. Um objeto inferido globalmente não pode induzir a identidade de
+uma região local.
+
+A outra metade da correção é visual: quando a sequência declara geometria de
+área, a cena é analisada sobre a área válida **menos** a área do ego. É um
+recorte, nunca uma pintura: os pixels de origem permanecem intactos, conforme
+a regra que a #212 estabeleceu depois de medir o custo de violá-la.
 
 Esta etapa atribuía ``ConfidenceScore(1.0)`` a *todo* claim de cena sempre
-que o modelo omitia o score — inclusive a descrições livres e hazards, que
-são exatamente os claims que a #195 proíbe de carregar confiança bruta.
-Agora só ``scene_type`` recebe o score que o modelo de fato informou, e a
-resposta bruta é preservada em ``Evidence.raw_response_json`` para que a
-calibração (#196) possa pontuar os demais a partir de evidência.
+que o modelo omitia o score. Agora só ``scene_type`` recebe o score que o
+modelo de fato informou, e a resposta bruta é preservada em
+``Evidence.raw_response_json`` para que a calibração (#196) possa pontuar os
+demais a partir de evidência.
 """
 
 from __future__ import annotations
@@ -21,13 +34,30 @@ from typing import Any
 
 from visual_perception.application.support import fingerprint_of
 from visual_perception.config import MultimodalReasoningConfig
+from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 
-_REQUIRED_FIELDS = ("scene_type", "description")
+#: Campos ambientais obrigatórios: sem eles não há contexto a propagar.
+_REQUIRED_FIELDS = ("scene_type", "environment")
+
+#: Campos ambientais opcionais e o kind de claim de cada um. São opcionais
+#: porque o modelo pode legitimamente não saber avaliá-los num frame; a
+#: ausência vira ausência de claim, nunca string vazia.
+_ENVIRONMENTAL_FIELDS: tuple[tuple[str, ClaimKind], ...] = (
+    ("environment", ClaimKind.ENVIRONMENT),
+    ("layout", ClaimKind.LAYOUT),
+    ("lighting", ClaimKind.LIGHTING),
+    ("visibility", ClaimKind.VISIBILITY),
+    ("navigability", ClaimKind.NAVIGABILITY),
+)
+
+#: Campos do contract anterior que agora são recusados. Aceitá-los em silêncio
+#: reabriria o canal pelo qual um objeto alucinado entrava no contexto global.
+_REJECTED_FIELDS = ("attributes", "hazards", "description")
 
 
 # Ponto de entrada público: analisa a cena inteira via multimodal reasoner
@@ -38,9 +68,22 @@ def analyze_scene(
     image: ImagePayload,
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
+    *,
+    area_masks: ImageAreaMasks | None = None,
 ) -> SceneContext:
-    """Produz um :class:`SceneContext` validado a partir de uma resposta multimodal bruta."""
-    response = reasoner.analyze_scene(image, config)
+    """Produz um :class:`SceneContext` validado a partir de uma resposta multimodal bruta.
+
+    Argumentos:
+        image: o frame completo, que permanece inalterado.
+        reasoner: o backend multimodal que descreve o ambiente.
+        config: a configuração de raciocínio multimodal.
+        area_masks: as áreas declaradas do frame. Quando presentes, a cena é
+            analisada sobre a área válida menos a área do ego, para que o rig
+            não entre no inventário do ambiente.
+    Retorna:
+        o contexto de cena validado.
+    """
+    response = reasoner.analyze_scene(_scene_view(image, area_masks), config)
     _validate_scene_response(response)
 
     provenance = ModelProvenance(
@@ -61,15 +104,32 @@ def analyze_scene(
     claims = [
         SemanticClaim(
             ClaimKind.SCENE_TYPE, str(response["scene_type"]), scene_type_confidence, evidence, provenance
-        ),
-        SemanticClaim(ClaimKind.SCENE_DESCRIPTION, str(response["description"]), None, evidence, provenance),
+        )
     ]
-    for attribute in response.get("attributes", []):
-        claims.append(SemanticClaim(ClaimKind.ATTRIBUTE, str(attribute), None, evidence, provenance))
-    for hazard in response.get("hazards", []):
-        claims.append(SemanticClaim(ClaimKind.HAZARD, str(hazard), None, evidence, provenance))
+    for field, kind in _ENVIRONMENTAL_FIELDS:
+        value = response.get(field)
+        if value:
+            claims.append(SemanticClaim(kind, str(value), None, evidence, provenance))
 
     return SceneContext(claims=tuple(claims))
+
+
+# Recorta a imagem à parte que é cena analisável: dentro do sensor e fora do
+# rig. Existe para que o rig deixe de ser inventariado como objeto do ambiente
+# sem que nenhum pixel seja alterado — recortar preserva a evidência restante,
+# pintar destruiria a que ficasse. Chamada por analyze_scene.
+def _scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> ImagePayload:
+    """Retorna a view de cena, recortada às áreas declaradas quando existirem."""
+    if area_masks is None:
+        return image
+    box = area_masks.scene_box()
+    if box is None:
+        return image
+    x_min, y_min = int(box.x_min), int(box.y_min)
+    x_max, y_max = int(box.x_max), int(box.y_max)
+    if x_max - x_min <= 0 or y_max - y_min <= 0:
+        return image
+    return image.crop(x_min, y_min, x_max, y_max)
 
 
 # Converte o score de cena bruto em ConfidenceScore, mantendo ausência como
@@ -93,9 +153,9 @@ def _parse_scene_confidence(raw: Any, source: str) -> ConfidenceScore | None:
     return ConfidenceScore(float(raw), source=source)
 
 
-# Valida a forma mínima da resposta bruta de cena (campos obrigatórios
-# scene_type/description como strings não vazias, listas opcionais bem
-# tipadas) antes de convertê-la em claims. Chamada por analyze_scene.
+# Valida a forma da resposta bruta de cena antes de convertê-la em claims:
+# campos ambientais obrigatórios presentes, opcionais bem tipados, e campos do
+# contract antigo recusados em vez de ignorados. Chamada por analyze_scene.
 def _validate_scene_response(response: dict[str, Any]) -> None:
     if not isinstance(response, dict):
         raise ValueError(f"Malformed scene response: expected an object, got {type(response)!r}.")
@@ -105,6 +165,16 @@ def _validate_scene_response(response: dict[str, Any]) -> None:
             raise ValueError(
                 f"Malformed scene response: field {required!r} must be a non-empty string."
             )
-    for list_field in ("attributes", "hazards"):
-        if list_field in response and not isinstance(response[list_field], list):
-            raise ValueError(f"Malformed scene response: field {list_field!r} must be a list.")
+    for rejected in _REJECTED_FIELDS:
+        if rejected in response:
+            raise ValueError(
+                f"Malformed scene response: field {rejected!r} is no longer part of the scene "
+                "contract. Scene context describes the environment, never an inventory of objects "
+                "(see issue #202)."
+            )
+    for field, _ in _ENVIRONMENTAL_FIELDS:
+        value = response.get(field)
+        if value is not None and not isinstance(value, str):
+            raise ValueError(
+                f"Malformed scene response: field {field!r} must be a string or absent, got {value!r}."
+            )

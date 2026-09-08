@@ -53,7 +53,12 @@ class RealRegionDiscoveryAdapter:
         """Retorna propostas locais do SAM preservando máscaras e confiança geométrica."""
         generator = self._get_generator(config)
         try:
-            output = generator(payload_to_pil(image, config.backend), points_per_batch=64)
+            output = generator(
+            payload_to_pil(image, config.backend),
+            points_per_batch=64,
+            pred_iou_thresh=config.pred_iou_threshold,
+            stability_score_thresh=config.stability_score_threshold,
+        )
         except BackendExecutionError:
             raise
         except Exception as error:

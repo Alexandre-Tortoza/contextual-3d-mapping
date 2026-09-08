@@ -231,8 +231,12 @@ invalidar toda a observação.
 
 ## Contract de resposta de região
 
-A versão atual é `prompt_version = v5`. O schema da resposta é o mesmo desde `v2`; o que
-mudou foi a entrada, o exemplo e o enquadramento da tarefa.
+A versão atual é `prompt_version = v6`. O schema da resposta **de região** é o mesmo desde
+`v2`; o que mudou até o `v5` foi a entrada, o exemplo e o enquadramento da tarefa. O `v6`
+mudou o schema da resposta **de cena** (ver "Contract de resposta de cena", abaixo) e as
+views que acompanham a região, e por isso quebra a comparabilidade direta com os runs
+anteriores: `prompt_version` participa do fingerprint, então o cache dependente da
+resposta antiga é invalidado.
 
 `v3` passou a receber um `RegionReasoningRequest` e a enviar ao VLM as views da região
 como imagens numeradas e rotuladas pelo seu papel (foreground isolado, crop justo,
@@ -312,6 +316,83 @@ O formato legado `{"labels": [...]}` é rejeitado com `InvalidInterpretation`.
 
 `prompt_version` participa de `ModelProvenance` e do fingerprint de configuração, então
 uma mudança de versão invalida cache dependente da resposta anterior.
+
+As três views enviadas por região no `v6` são `masked_subject`, `tight_crop` e
+`contextual_crop`:
+
+- `masked_subject` isola o sujeito sobre **cinza médio**. O fundo não é preto de
+  propósito: nos frames do `corridor-02` o preto é exatamente a cor da vinheta do fisheye,
+  e usá-lo tornaria "fora da máscara" indistinguível de "fora da lente" para o modelo;
+- `contextual_crop` mantém o entorno íntegro e desenha o **contorno** da máscara sobre ele.
+  Até a #202 os dois crops textuais chegavam com `mask_ref: null`, isto é, sem nenhuma
+  indicação de qual pixel era o sujeito — numa região cuja máscara ocupa parte pequena do
+  bounding box, o que o modelo interpretava era a caixa. `mask_fill_ratio` no slot de
+  evidência torna esse caso contável.
+
+`foreground_dense` continua existindo como o slot do embedding denso do DINOv2, com fundo
+zerado, e não é mais enviado ao VLM: usar o mesmo recorte para os dois confundia a
+evidência do reasoner com a do extractor.
+
+## Contract de resposta de cena
+
+O `v6` substituiu o contract anterior — `scene_type`, `description` em prosa,
+`attributes` e `hazards` — por um **ambiental**:
+
+```json
+{
+  "scene_type": "corridor",
+  "environment": "indoor",
+  "layout": "a narrow corridor running away from the camera",
+  "lighting": "dim artificial light",
+  "visibility": "clear",
+  "navigability": "open path ahead",
+  "confidence": 0.85
+}
+```
+
+**Medido em `corridor-02-002`** com o contract anterior: o modelo devolveu
+`attributes: ["fisheye lens", "carpeted floor", "suitcase"]` e "there is a suitcase on the
+ground in the foreground". A "mala" era o próprio quad que carrega a câmera, e aquele
+texto ia inteiro para o prompt de **cada uma** das 60 regiões.
+
+Não há frase de prompt que conserte isso de forma confiável — a #212 já mediu que
+instrução textual não é mecanismo de garantia. Duas mudanças estruturais foram
+necessárias:
+
+1. o campo que pedia um inventário de objetos saiu do contract, e uma resposta que ainda
+   traga `attributes`, `hazards` ou `description` é recusada como malformada;
+2. a cena passou a ser analisada sobre a **área válida menos a área do ego**. É um
+   recorte, nunca uma pintura: os pixels de origem permanecem intactos, e o modelo não
+   pode inventariar um objeto que não recebeu.
+
+Só `scene_type` carrega o score informado pelo produtor; os campos ambientais são
+descritivos e não podem carregar confiança bruta (#195). Um campo ambiental ausente vira
+ausência de claim, nunca string vazia.
+
+`REGION_SCENE_CLAIM_KINDS` passou a ser exatamente o conjunto ambiental, de modo que
+nenhum objeto inferido globalmente possa induzir a identidade de uma região local.
+
+## Exclusão de prompts no SAM: limitação medida
+
+A barreira ideal contra o rig teria duas camadas: remover os pontos de prompt que caem
+sobre o ego-veículo **antes** da inferência, e rejeitar as propostas que ainda vazassem.
+Só a segunda foi implementada, e a razão é uma limitação concreta da integração.
+
+O adapter usa `transformers.pipeline("mask-generation")`. Verificado em `transformers`
+5.16.1, `MaskGenerationPipeline._sanitize_parameters` aceita `points_per_batch`,
+`points_per_crop`, `crops_n_layers`, `crop_overlap_ratio`,
+`crop_n_points_downscale_factor`, `pred_iou_thresh`, `stability_score_thresh` e
+`crops_nms_thresh` — e **não** aceita `point_grids`. A grade de pontos é gerada
+internamente por `image_processor.generate_crop_boxes`, sem ponto de injeção.
+
+`point_grids` existe no `SamAutomaticMaskGenerator` do pacote `segment-anything`, que não
+é dependência deste módulo. Trocar a integração por ele é uma mudança de backend com
+benchmark próprio, e não foi feita nesta rodada.
+
+**Consequência prática:** o SAM continua propondo máscaras sobre o rig, e elas são
+rejeitadas na filtragem por sobreposição (`ego_vehicle_overlap`). O gate — nenhuma região
+final representando chassi, pneus ou estrutura do robô — é atingido pela segunda barreira
+sozinha; o custo é computação desperdiçada em propostas que serão descartadas.
 
 ## Política de confiança
 
@@ -405,13 +486,12 @@ python benchmarks/validate_reference_pipeline.py \
   --frame-id corridor-02-017
 ```
 
-Por frame, a validação produz:
-
-- `VisualObservation` canônica serializada em `canonical/`;
-- overlay de masks/labels canônicas;
-- manifest com IDs ordenados, hashes de entrada, git revision, configuração e fingerprint;
-- latência, VRAM, falhas, audit e cobertura por estado de cada slot;
-- variante em `postprocessed/semantic-merge/` somente quando solicitada explicitamente.
+Por frame, a validação produz a `VisualObservation` canônica, um diagnóstico estatístico e
+as camadas de inspeção separadas por estágio (proposals, masks, boxes, labels, overlay). O
+layout exato está descrito em [artifacts.md](artifacts.md#artifacts-de-benchmark-e-validação),
+que é a fonte única dessa árvore. O manifest guarda IDs ordenados, hashes de entrada, git
+revision, configuração, fingerprint, latência, VRAM, falhas, audit e cobertura por estado
+de cada slot. Não há mais variante de pós-processamento: o merge semântico saiu na #202.
 
 Saída:
 

@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any
 
 from visual_perception.config import CalibrationConfig
+from visual_perception.domain.claim_exclusivity import competing_claims
 from visual_perception.domain.confidence import ConfidenceScore
 from visual_perception.domain.region_evidence import EvidenceState
 from visual_perception.domain.regions import ObservedRegion
@@ -515,7 +516,11 @@ def derive_support_inputs(
                     slot=slot.slot.value,
                 )
             )
-    disagreeing = tuple(other for other in siblings if other.value != claim.value)
+    # Só sobem a contradição as claims que disputam o mesmo slot exclusivo
+    # (``domain/claim_exclusivity.py``). Comparar ``value`` diretamente, como
+    # esta função fazia até a #202, marcava ``smooth`` como contraditório com a
+    # ``description`` da mesma região e inflava o sinal em todo o frame.
+    disagreeing = competing_claims(claim, siblings)
     contradiction = len(disagreeing) / len(siblings) if siblings else 0.0
     for other in disagreeing:
         evidence.append(

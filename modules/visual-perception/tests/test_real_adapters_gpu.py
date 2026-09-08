@@ -110,8 +110,11 @@ def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
     lifecycle.release_active()
 
     assert isinstance(response, dict)
+    # O contract de cena é ambiental desde a #202: sem prosa livre e sem
+    # inventário de objetos, que era por onde o próprio rig entrava na cena.
     assert "scene_type" in response
-    assert "description" in response
+    assert "environment" in response
+    assert "description" not in response
 
 
 @requires_gpu

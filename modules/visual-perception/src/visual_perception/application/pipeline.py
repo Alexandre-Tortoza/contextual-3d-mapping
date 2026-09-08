@@ -31,6 +31,7 @@ from visual_perception.application.multi_context import (
     EvidenceSlotMetrics,
     extract_region_evidence,
 )
+from visual_perception.application.proposal_filtering import filter_proposals
 from visual_perception.application.quality_audit import audit_observation
 from visual_perception.application.region_merge import merge_regions
 from visual_perception.application.region_semantics import interpret_regions
@@ -45,10 +46,11 @@ from visual_perception.application.tiling import build_tiles, remap_to_global
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.audit import AuditResult
 from visual_perception.domain.errors import RegionInterpretationFailure
+from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_reasoning import RegionView
-from visual_perception.domain.regions import RegionProposal
+from visual_perception.domain.regions import RegionProposal, RejectedProposal
 from visual_perception.domain.visual_observation import VisualObservation
 from visual_perception.ports.feature_extraction import DenseFeatureExtractor
 from visual_perception.ports.language_embedding import LanguageAlignedEncoder
@@ -85,6 +87,24 @@ class PipelineResult:
     #: Preenchido apenas quando o extractor denso caiu para um backend de
     #: fallback; ``None`` significa que o backend configurado executou.
     feature_fallback_reason: str | None = None
+    #: As proposals cruas de discovery, antes do merge geométrico. Existem
+    #: aqui porque discovery não é determinística: recomputá-las depois
+    #: produziria proposals diferentes das que geraram estas regiões, e a
+    #: ligação com ``ObservedRegion.contributing_proposal_ids`` deixaria de
+    #: ser verdadeira. Consumidas por ferramentas de diagnóstico que
+    #: precisam comparar o estágio pré-merge com o pós-merge.
+    #:
+    #: WARNING: carrega as masks em resolução plena de todas as proposals.
+    #: Não retenha um ``PipelineResult`` entre frames.
+    proposals: tuple[RegionProposal, ...] = ()
+    #: As proposals descartadas pela filtragem, com motivo e medida. Existem
+    #: aqui para que o descarte seja auditável: ``proposals`` e estas somam
+    #: exatamente o que discovery produziu, e o diagnóstico as usa para afirmar
+    #: que nenhuma proposta sobrou fora da área válida ou sobre o rig.
+    rejected_proposals: tuple[RejectedProposal, ...] = ()
+    #: As áreas declaradas deste frame, já rasterizadas. ``None`` quando a
+    #: composição não declarou nenhuma.
+    area_masks: ImageAreaMasks | None = None
 
 
 # Ponto de entrada principal do módulo: conduz uma observação de imagem
@@ -99,7 +119,15 @@ def run_canonical_pipeline(
     ports: PerceptionPorts,
 ) -> PipelineResult:
     """Transforma uma observação de imagem validada em uma observação visual canônica."""
-    proposals = _discover_regions(payload, config, ports.region_discoverer)
+    area_masks = config.image_area.rasterize(payload.width, payload.height)
+    discovered = _discover_regions(payload, config, ports.region_discoverer)
+    # A exclusão do rig e da área fora da lente acontece aqui, sobre as
+    # máscaras, e nunca pintando os pixels de entrada: a #212 mediu que zerar a
+    # faixa do rig antes do SAM corrompia a análise de cena e colapsava 45 de 45
+    # regiões em ``curved wall``.
+    proposals, rejected_proposals = filter_proposals(
+        discovered, area_masks=area_masks, config=config.proposal_filter
+    )
     regions = merge_regions(image.observation_id, proposals, config.merge)
 
     evidence_failures: tuple[EvidenceExtractionFailure, ...] = ()
@@ -121,7 +149,11 @@ def run_canonical_pipeline(
         evidence_metrics = evidence.metrics
         views = evidence.views
 
-    scene_context = analyze_scene(payload, ports.multimodal_reasoner, config.multimodal_reasoning)
+    # A cena é analisada sobre a área válida menos a área do ego: o rig não
+    # pode entrar no inventário do ambiente que depois condiciona cada região.
+    scene_context = analyze_scene(
+        payload, ports.multimodal_reasoner, config.multimodal_reasoning, area_masks=area_masks
+    )
     regions, failures = interpret_regions(
         regions, payload, views, scene_context, ports.multimodal_reasoner, config.multimodal_reasoning
     )
@@ -149,6 +181,9 @@ def run_canonical_pipeline(
         calibration_failures=calibration_failures,
         evidence_metrics=evidence_metrics,
         feature_fallback_reason=feature_fallback_reason,
+        proposals=proposals,
+        rejected_proposals=rejected_proposals,
+        area_masks=area_masks,
     )
 
 

@@ -6,15 +6,26 @@ import dataclasses
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from fixtures import default_config, image_observation, payload_with_blobs
 from fixtures_ports import default_ports
 from visual_perception.application.pipeline import run_canonical_pipeline
 from visual_perception.config import CalibrationConfig, MultiContextConfig
+from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.region_evidence import EvidenceSlot
-from visual_perception.domain.semantics import ClaimKind, Evidence, SemanticClaim
+from visual_perception.domain.regions import ObservedRegion
+from visual_perception.domain.semantics import (
+    ClaimKind,
+    ConfidenceScore,
+    Evidence,
+    HypothesisRole,
+    RegionKind,
+    SemanticClaim,
+)
+from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 from visual_perception.infrastructure.serialization import (
     SUPPORTED_SCHEMA_VERSION,
     UnsupportedSchemaVersionError,
@@ -61,6 +72,7 @@ def _unscored_claim() -> SemanticClaim:
         None,
         (Evidence("e"),),
         ModelProvenance(stage="region_semantics", producer="qwen_vl", config_fingerprint="abc"),
+        role=HypothesisRole.PRIMARY,
     )
 
 
@@ -144,3 +156,76 @@ def test_a_corrupt_mask_encoding_is_rejected_at_the_boundary() -> None:
 
     with pytest.raises(ValueError, match="covering the complete image"):
         deserialize_observation(payload)
+
+
+# O contract da #202 só vale se atravessar a serialização: papel, category e
+# RegionKind precisam voltar iguais, e não apenas existir em memória.
+def test_identity_fields_survive_the_round_trip() -> None:
+    """``role``, ``category`` e ``region_kind`` sobrevivem à serialização."""
+    provenance = ModelProvenance(
+        stage="region_semantics", producer="qwen_vl", config_fingerprint="abc"
+    )
+    primary = SemanticClaim(
+        ClaimKind.LABEL,
+        "plain wall",
+        ConfidenceScore(0.9, source="qwen_vl"),
+        (Evidence("e"),),
+        provenance,
+        role=HypothesisRole.PRIMARY,
+        category="wall",
+        region_kind=RegionKind.STUFF,
+    )
+    alternative = SemanticClaim(
+        ClaimKind.LABEL, "panel", None, (Evidence("e"),), provenance, role=HypothesisRole.ALTERNATIVE
+    )
+    mask = Mask(np.ones((4, 4), dtype=np.bool_), 4, 4)
+    region = ObservedRegion(
+        "region-a", mask, mask.bounding_box(), 0.9, ("p-1",), (primary, alternative)
+    )
+    observation = VisualObservation(
+        source=image_observation(width=4, height=4).source,
+        image_width=4,
+        image_height=4,
+        scene_context=SceneContext(),
+        regions=(region,),
+        relations=(),
+    )
+
+    restored = deserialize_observation(serialize_observation(observation))
+
+    assert restored == observation
+    restored_primary, restored_alternative = restored.regions[0].claims
+    assert restored_primary.role is HypothesisRole.PRIMARY
+    assert restored_primary.category == "wall"
+    assert restored_primary.region_kind is RegionKind.STUFF
+    assert restored_alternative.role is HypothesisRole.ALTERNATIVE
+    assert restored_alternative.category is None
+
+
+# Um payload gravado antes da #202 não tem papel registrado. Rejeitá-lo seria
+# perder observações válidas; assumir "primary" é a única leitura que aquele
+# formato admitia, já que ele não distinguia hipóteses.
+def test_a_payload_without_roles_is_read_as_primary_instead_of_being_rejected() -> None:
+    """Um claim de label sem papel gravado é migrado para ``PRIMARY``."""
+    provenance = ModelProvenance(
+        stage="region_semantics", producer="qwen_vl", config_fingerprint="abc"
+    )
+    claim = SemanticClaim(
+        ClaimKind.LABEL, "wall", None, (Evidence("e"),), provenance, role=HypothesisRole.PRIMARY
+    )
+    mask = Mask(np.ones((4, 4), dtype=np.bool_), 4, 4)
+    observation = VisualObservation(
+        source=image_observation(width=4, height=4).source,
+        image_width=4,
+        image_height=4,
+        scene_context=SceneContext(),
+        regions=(ObservedRegion("region-a", mask, mask.bounding_box(), 0.9, ("p-1",), (claim,)),),
+        relations=(),
+    )
+    payload = serialize_observation(observation)
+    for serialized in payload["regions"][0]["claims"]:
+        del serialized["role"]
+
+    restored = deserialize_observation(payload)
+
+    assert restored.regions[0].claims[0].role is HypothesisRole.PRIMARY

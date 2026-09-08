@@ -20,6 +20,7 @@ from visual_perception.domain.semantics import (
     ClaimKind,
     ConfidenceScore,
     Evidence,
+    HypothesisRole,
     SemanticClaim,
     calibrated_confidence_of,
     most_confident_claim,
@@ -34,7 +35,15 @@ _EVIDENCE = (Evidence(description="raw region response"),)
 # variem apenas o que estão medindo.
 def _claim(value: str, raw: float | None = None, support: SemanticSupport | None = None) -> SemanticClaim:
     confidence = None if raw is None else ConfidenceScore(raw, source="vlm")
-    return SemanticClaim(ClaimKind.LABEL, value, confidence, _EVIDENCE, _PROVENANCE, support=support)
+    return SemanticClaim(
+        ClaimKind.LABEL,
+        value,
+        confidence,
+        _EVIDENCE,
+        _PROVENANCE,
+        support=support,
+        role=HypothesisRole.PRIMARY,
+    )
 
 
 # Constrói um suporte calibrado válido com o valor pedido.

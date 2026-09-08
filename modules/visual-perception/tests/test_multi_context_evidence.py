@@ -267,7 +267,12 @@ def test_a_masked_tight_crop_zeroes_the_background_it_was_configured_to_drop() -
         (_region(),), payload, default_config(), encoder, feature_map=feature_map
     )
 
-    assert masked.regions[0].evidence_for(EvidenceSlot.TIGHT_CROP).preprocessing.startswith("masked_crop")
+    # O fundo é neutralizado em cinza, não em preto: nos frames do corridor-02
+    # o preto é a cor da vinheta do fisheye, e usá-lo tornaria "fora da máscara"
+    # indistinguível de "fora da lente" para o modelo (#202).
+    assert masked.regions[0].evidence_for(EvidenceSlot.TIGHT_CROP).preprocessing.startswith(
+        "neutral_masked_crop"
+    )
     assert plain.regions[0].evidence_for(EvidenceSlot.TIGHT_CROP).preprocessing.startswith("crop")
     assert masked.regions[0].evidence_for(EvidenceSlot.TIGHT_CROP).mask_ref == "mask-region-a"
 

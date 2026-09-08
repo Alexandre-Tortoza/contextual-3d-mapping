@@ -52,13 +52,24 @@ class RealMultimodalReasoningAdapter:
     # permanece bruta para que scene_context faça sua própria validação.
     def analyze_scene(self, image: ImagePayload, config: MultimodalReasoningConfig) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para o contexto da cena."""
+        # O prompt descreve o **ambiente**, e nunca pede um inventário de
+        # objetos. Medido em corridor-02-002 com o contract anterior: o modelo
+        # devolveu ``attributes: ["fisheye lens", "carpeted floor", "suitcase"]``,
+        # onde a "mala" era o próprio quad que carrega a câmera — e aquele texto
+        # ia para o prompt de cada uma das 60 regiões. Não há frase que conserte
+        # isso: o campo que pedia objetos precisou sair (#202).
         prompt = (
-            "Analyze the whole image. Respond with EXACTLY ONE JSON object (never a list/array, "
-            "never markdown fences) with exactly these keys: scene_type (string), description "
-            "(string), attributes (list of strings, may be empty), hazards (list of strings, may "
-            "be empty), confidence (float between 0 and 1). Example of the exact shape required:\n"
-            '{"scene_type": "corridor", "description": "...", "attributes": ["..."], '
-            '"hazards": [], "confidence": 0.9}'
+            "Describe the ENVIRONMENT shown in this image. Do NOT list or name individual "
+            "objects. Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
+            "fences) with exactly these keys: scene_type (string), environment (string), layout "
+            "(string), lighting (string), visibility (string), navigability (string), confidence "
+            "(float between 0 and 1). Example of the exact shape required:\n"
+            '{"scene_type": "<one noun naming the kind of place>", '
+            '"environment": "<indoor or outdoor>", '
+            '"layout": "<how the space is arranged, in one clause>", '
+            '"lighting": "<how the space is lit>", '
+            '"visibility": "<how far and how clearly one can see>", '
+            '"navigability": "<how traversable the space is>", "confidence": 0.9}'
         )
         return self._generate_json((image,), prompt, config)
 
@@ -218,8 +229,17 @@ _VIEW_ROLES = {
     EvidenceSlot.FOREGROUND_DENSE: (
         "the SUBJECT REGION isolated on a black background (black pixels are not part of it)"
     ),
+    # Cinza, e não preto: nestes frames o preto é a cor da vinheta do fisheye, e
+    # dizer "black is not part of it" faria o modelo tratar a borda da lente
+    # como fundo removido em vez de conteúdo ausente (#202).
+    EvidenceSlot.MASKED_SUBJECT: (
+        "the SUBJECT REGION isolated on a flat grey background (grey pixels are not part of it)"
+    ),
     EvidenceSlot.TIGHT_CROP: "the SUBJECT REGION's bounding box, background included",
-    EvidenceSlot.CONTEXTUAL_CROP: "CONTEXT ONLY: the subject plus its surroundings",
+    EvidenceSlot.CONTEXTUAL_CROP: (
+        "the subject plus its surroundings, with the subject outlined in green; "
+        "the surroundings are CONTEXT ONLY"
+    ),
     EvidenceSlot.SCENE_CONDITIONED: "CONTEXT ONLY: the whole scene the subject belongs to",
 }
 

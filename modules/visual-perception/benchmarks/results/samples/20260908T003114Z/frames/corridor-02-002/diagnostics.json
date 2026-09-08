@@ -1,0 +1,179 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-002",
+  "input_sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+  "latency_s": 181.33204003600258,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 38,
+  "proposal_count": 64,
+  "merged_proposal_count": 40,
+  "regions_with_multiple_proposals": 2,
+  "label_counts": [
+    [
+      "plain wall",
+      14
+    ],
+    [
+      "wall",
+      11
+    ],
+    [
+      "ceiling",
+      4
+    ],
+    [
+      "carpet",
+      2
+    ],
+    [
+      "black cushioned surface",
+      1
+    ],
+    [
+      "black rectangular object",
+      1
+    ],
+    [
+      "car bumper",
+      1
+    ],
+    [
+      "ceiling tiles",
+      1
+    ],
+    [
+      "curved edge",
+      1
+    ],
+    [
+      "flat surface",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "wall",
+      15
+    ],
+    [
+      "building interior",
+      9
+    ],
+    [
+      "indoor ceiling",
+      3
+    ],
+    [
+      "ceilings",
+      2
+    ],
+    [
+      "floor",
+      2
+    ],
+    [
+      "flooring",
+      2
+    ],
+    [
+      "automobile part",
+      1
+    ],
+    [
+      "edge",
+      1
+    ],
+    [
+      "furniture",
+      1
+    ],
+    [
+      "indoor",
+      1
+    ],
+    [
+      "unknown",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      34
+    ],
+    [
+      "stuff",
+      4
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 38,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 38,
+    "missing": 0,
+    "minimum": 0.9112460017204285,
+    "maximum": 1.0,
+    "mean": 0.972467861677471,
+    "median": 0.9763511419296265,
+    "distinct_values": 31,
+    "stddev": 0.024207856083201952,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.3684210526315789,
+    "distinct_labels": 11,
+    "dominant_category": "wall",
+    "dominant_category_fraction": 0.39473684210526316,
+    "distinct_categories": 11
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 13,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 8,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      13
+    ],
+    [
+      "outside_valid_area",
+      8
+    ],
+    [
+      "below_min_relative_area",
+      3
+    ]
+  ]
+}

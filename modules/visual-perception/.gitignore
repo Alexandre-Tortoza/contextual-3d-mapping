@@ -9,3 +9,7 @@ runs/
 # Local benchmark input frames extracted from datasets/raw/ (large, not source).
 benchmarks/.local/
 *.pt
+# Views por região materializadas sob demanda por benchmarks/inspect_region.py.
+# São função pura da observação, dos pixels e da config — todos versionados —
+# então reconstruí-las custa nada e versioná-las custaria milhares de arquivos.
+benchmarks/results/samples/*/frames/*/by-region/

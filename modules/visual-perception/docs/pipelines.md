@@ -162,7 +162,11 @@ Esta tabela é o índice operacional do módulo. Use-a antes de procurar pelo c�
 | Integrar a execução ao mapping runtime | [`infrastructure/integration/mapping_runtime_integration.py`](../src/visual_perception/infrastructure/integration/mapping_runtime_integration.py) | [`tests/test_integration_boundaries.py`](../tests/test_integration_boundaries.py) |
 | Contrato de saída para `sensor-association` | [`infrastructure/integration/sensor_association_contract.py`](../src/visual_perception/infrastructure/integration/sensor_association_contract.py) | [`docs/integration.md`](integration.md) |
 | Persistir ou serializar a observação | [`infrastructure/integration/persistence_integration.py`](../src/visual_perception/infrastructure/integration/persistence_integration.py) | [`infrastructure/serialization.py`](../src/visual_perception/infrastructure/serialization.py), [`tests/test_serialization.py`](../tests/test_serialization.py) |
-| Rodar a pipeline real sobre frames de referência | [`benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py) | [`benchmarks/render_overlay.py`](../benchmarks/render_overlay.py) |
+| Rodar a pipeline real sobre frames de referência | [`benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py) | [`benchmarks/frame_artifacts.py`](../benchmarks/frame_artifacts.py), [`benchmarks/render_overlay.py`](../benchmarks/render_overlay.py), [`docs/artifacts.md`](artifacts.md) |
+| Camadas de inspeção desenhadas sobre um frame | [`benchmarks/render_layers.py`](../benchmarks/render_layers.py) | [`benchmarks/render_overlay.py`](../benchmarks/render_overlay.py), [`benchmarks/test_render_overlay.py`](../benchmarks/test_render_overlay.py) |
+| Investigar a evidência que uma região entregou ao VLM | [`benchmarks/inspect_region.py`](../benchmarks/inspect_region.py) | [`application/region_views.py`](../src/visual_perception/application/region_views.py), [`docs/artifacts.md`](artifacts.md) |
+| Estatística de colapso de labels e confiança de um frame | [`application/observation_diagnostics.py`](../src/visual_perception/application/observation_diagnostics.py) | [`tests/test_observation_diagnostics.py`](../tests/test_observation_diagnostics.py) |
+| Se o contexto de cena alcança o raciocínio de região | [`config.py`](../src/visual_perception/config.py) (`MultimodalReasoningConfig.scene_context_mode`) | [`domain/region_reasoning.py`](../src/visual_perception/domain/region_reasoning.py) (`SceneContextMode`), [`tests/test_scene_context_modes.py`](../tests/test_scene_context_modes.py) |
 | Comparar candidatos de backend | [`benchmarks/run_backend_benchmark.py`](../benchmarks/run_backend_benchmark.py) | [`benchmarks/backend_benchmark.py`](../benchmarks/backend_benchmark.py), [`benchmarks/candidates/`](../benchmarks/candidates/) |
 
 ## Backends usados pelo pipeline
@@ -196,7 +200,8 @@ em [api-contracts.md](api-contracts.md).
 flowchart TD
     Input[ImageObservation + ImagePayload] --> Tiling[Tiling]
     Tiling --> Discovery[Region discovery]
-    Discovery --> Merge[Cross-scale merge]
+    Discovery --> Filter[Filtragem de proposals]
+    Filter --> Merge[Cross-scale merge]
     Merge --> Features[Dense features]
     Features --> Evidence[Evidência multi-contexto]
     Merge --> Evidence
@@ -218,21 +223,29 @@ A execução concreta segue esta ordem:
 1. `build_tiles` divide a imagem conforme a configuração de tiling.
 2. `RegionDiscoverer.discover` produz `RegionProposal` para cada tile.
 3. `remap_to_global` converte a geometria local de cada tile para as coordenadas da imagem original.
-4. `merge_regions` consolida propostas sobrepostas em `ObservedRegion`.
-5. Se existirem regiões, o `DenseFeatureExtractor` produz o feature map da imagem.
+4. `filter_proposals` descarta as propostas que não são evidência válida: fora da área
+   útil do sensor, sobre o ego-veículo, ou com área implausível. Roda em coordenadas
+   globais, sobre máscaras, e **nunca** altera os pixels de entrada. Cada descarte vira um
+   `RejectedProposal` com motivo e medida, de modo que `proposal_count` e
+   `merged_proposal_count` sempre fechem. Redundância geométrica **não** é decidida aqui:
+   ela continua com `merge_regions`, que une duplicatas preservando os dois
+   `contributing_proposal_ids` em vez de descartar uma delas.
+5. `merge_regions` consolida propostas sobrepostas em `ObservedRegion`.
+6. Se existirem regiões, o `DenseFeatureExtractor` produz o feature map da imagem.
    Um `fallback_reason` gravado pelo adapter sobe até `PipelineResult`, para que um
    fallback de backend nunca pareça a execução configurada.
-6. `extract_region_evidence` produz os quatro slots de evidência da região (foreground
+7. `extract_region_evidence` produz os slots de evidência da região (foreground
    denso mask-aware, crop justo, crop contextual e cena), mais as `RegionView` em pixels
    do frame — o mesmo recorte que gerou cada slot.
-7. `analyze_scene` interpreta o contexto global da imagem como claims tipadas.
-8. `interpret_regions` interpreta cada região a partir de um `RegionReasoningRequest`:
+8. `analyze_scene` descreve o **ambiente** como claims tipadas, sobre a área válida
+   menos a área do ego — um recorte, nunca uma pintura.
+9. `interpret_regions` interpreta cada região a partir de um `RegionReasoningRequest`:
    as views selecionadas por `multimodal_reasoning.region_views` e as claims de cena
    estruturadas, sem achatar nenhuma das duas.
-9. `calibrate_observation_claims` anexa `SemanticSupport` a cada claim.
-10. `generate_relations` produz relações 2D candidatas entre as regiões resultantes.
-11. O pipeline monta a `VisualObservation` canônica.
-12. `audit_observation` verifica consistência e contradições sem modificar a observação.
+10. `calibrate_observation_claims` anexa `SemanticSupport` a cada claim.
+11. `generate_relations` produz relações 2D candidatas entre as regiões resultantes.
+12. O pipeline monta a `VisualObservation` canônica.
+13. `audit_observation` verifica consistência e contradições sem modificar a observação.
 
 ## Estágios
 
@@ -241,6 +254,7 @@ A execução concreta segue esta ordem:
 | Tiling | `ImagePayload` | tiles com origem conhecida | [`application/tiling.py`](../src/visual_perception/application/tiling.py) |
 | Region discovery | tile RGB | `RegionProposal` local | [`ports/region_discovery.py`](../src/visual_perception/ports/region_discovery.py), [`infrastructure/adapters/region_discovery_backend.py`](../src/visual_perception/infrastructure/adapters/region_discovery_backend.py) |
 | Remapeamento | proposta local + tile | `RegionProposal` em coordenadas globais | [`application/tiling.py`](../src/visual_perception/application/tiling.py) |
+| Filtragem de proposals | propostas globais + áreas declaradas | propostas válidas + `RejectedProposal` | [`application/proposal_filtering.py`](../src/visual_perception/application/proposal_filtering.py), [`domain/image_area.py`](../src/visual_perception/domain/image_area.py) |
 | Cross-scale merge | propostas globais | `ObservedRegion` | [`application/region_merge.py`](../src/visual_perception/application/region_merge.py) |
 | Dense features | imagem RGB | `FeatureMap` | [`ports/feature_extraction.py`](../src/visual_perception/ports/feature_extraction.py), [`infrastructure/adapters/feature_extraction_backend.py`](../src/visual_perception/infrastructure/adapters/feature_extraction_backend.py) |
 | Evidência multi-contexto | regiões + imagem + feature map | slots de evidência, embeddings e views em pixels | [`application/multi_context.py`](../src/visual_perception/application/multi_context.py), [`application/region_views.py`](../src/visual_perception/application/region_views.py) |

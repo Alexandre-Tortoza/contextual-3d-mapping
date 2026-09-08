@@ -30,8 +30,15 @@ from visual_perception.domain.region_evidence import (
     RegionEvidenceSlot,
 )
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.semantic_support import SupportState
-from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
+from visual_perception.domain.semantic_support import SupportPolarity, SupportState
+from visual_perception.domain.semantics import (
+    IDENTITY_CLAIM_KINDS,
+    ClaimKind,
+    ConfidenceScore,
+    Evidence,
+    HypothesisRole,
+    SemanticClaim,
+)
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
 _PROVENANCE = ModelProvenance(stage="region_semantics", producer="vlm", config_fingerprint="abc123")
@@ -105,7 +112,8 @@ def _region(support_ratio: float | None = 0.9, claims: tuple[SemanticClaim, ...]
 # Constrói uma claim de label pontuada com o valor bruto pedido.
 def _claim(value: str, raw: float | None = 0.9, kind: ClaimKind = ClaimKind.LABEL) -> SemanticClaim:
     confidence = None if raw is None else ConfidenceScore(raw, source="vlm")
-    return SemanticClaim(kind, value, confidence, _EVIDENCE, _PROVENANCE)
+    role = HypothesisRole.PRIMARY if kind in IDENTITY_CLAIM_KINDS else None
+    return SemanticClaim(kind, value, confidence, _EVIDENCE, _PROVENANCE, role=role)
 
 
 def test_a_calibrated_score_is_emitted_only_when_the_rule_declares_it_valid(tmp_path: Path) -> None:
@@ -349,3 +357,48 @@ def test_a_reliability_table_calibrator_reports_its_own_provenance(tmp_path: Pat
     assert isinstance(calibrator, ReliabilityTableCalibrator)
     assert calibrator.version == "calibration/1"
     assert calibrator.artifact_id is not None
+
+
+# Regressão da #202 no sinal que a calibração consome: até então
+# ``derive_support_inputs`` contava como contradição toda irmã de mesmo kind com
+# ``value`` diferente. Medido em ``corridor-02-002``, isso deixava
+# contradiction_support = 1.0 nos atributos de todas as 60 regiões.
+def test_coexisting_attributes_do_not_raise_contradiction_support() -> None:
+    """Atributos que coexistem não são medidos como contradição."""
+    attributes = (
+        _claim("smooth", raw=None, kind=ClaimKind.ATTRIBUTE),
+        _claim("white", raw=None, kind=ClaimKind.ATTRIBUTE),
+        _claim("damaged", raw=None, kind=ClaimKind.ATTRIBUTE),
+    )
+    inputs = derive_support_inputs(
+        attributes[0],
+        region=_region(claims=attributes),
+        siblings=attributes[1:],
+        domain="unspecified",
+    )
+
+    assert inputs.contradiction_support == pytest.approx(0.0)
+    assert not [
+        item for item in inputs.evidence if item.polarity is SupportPolarity.CONTRADICTORY
+    ]
+
+
+# A contrapartida: hipóteses de identidade concorrentes continuam elevando o
+# sinal, e a evidência contraditória continua nomeando quem discordou.
+def test_a_competing_identity_hypothesis_still_raises_contradiction_support() -> None:
+    """Uma alternativa de identidade continua contando como contradição."""
+    primary = _claim("wall", 0.9)
+    alternative = _claim("door", 0.2)
+    inputs = derive_support_inputs(
+        primary,
+        region=_region(claims=(primary, alternative)),
+        siblings=(alternative,),
+        domain="unspecified",
+    )
+
+    assert inputs.contradiction_support == pytest.approx(1.0)
+    assert [
+        item.artifact_uri
+        for item in inputs.evidence
+        if item.polarity is SupportPolarity.CONTRADICTORY
+    ] == ["claim:label:door"]

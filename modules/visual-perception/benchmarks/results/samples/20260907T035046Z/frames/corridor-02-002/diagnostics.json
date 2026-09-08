@@ -1,0 +1,108 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-002",
+  "input_sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+  "latency_s": 263.22460314599994,
+  "ego_vehicle_mask_applied": false,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 60,
+  "proposal_count": 64,
+  "merged_proposal_count": 64,
+  "regions_with_multiple_proposals": 4,
+  "labels": [
+    [
+      "plain wall",
+      30
+    ],
+    [
+      "carpet",
+      6
+    ],
+    [
+      "plain surface",
+      6
+    ],
+    [
+      "ceiling",
+      4
+    ],
+    [
+      "wall",
+      4
+    ],
+    [
+      "blank wall",
+      3
+    ],
+    [
+      "carpeted floor",
+      2
+    ],
+    [
+      "carved stone relief",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "metallic surface",
+      1
+    ],
+    [
+      "textured surface",
+      1
+    ],
+    [
+      "white plastic structure",
+      1
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      124
+    ],
+    [
+      "label",
+      124
+    ],
+    [
+      "condition",
+      60
+    ],
+    [
+      "material",
+      60
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 60,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9
+  },
+  "geometric_confidence": {
+    "count": 60,
+    "missing": 0,
+    "minimum": 0.9112460017204285,
+    "maximum": 1.0,
+    "mean": 0.9678116361300151,
+    "median": 0.9704989492893219
+  },
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.5,
+    "distinct_labels": 12
+  },
+  "scene_echo_label_count": 2
+}

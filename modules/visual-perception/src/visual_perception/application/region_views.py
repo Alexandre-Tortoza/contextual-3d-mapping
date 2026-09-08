@@ -25,9 +25,21 @@ import numpy as np
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_evidence import EvidenceSlot
+from visual_perception.domain.region_evidence import EvidenceSlot, SubjectEmphasis
 from visual_perception.domain.region_reasoning import RegionView
 from visual_perception.domain.regions import ObservedRegion
+
+#: Cinza médio usado para neutralizar o fundo do recorte isolado. **Não** é
+#: preto de propósito: nos frames do ``corridor-02`` o preto é exatamente a cor
+#: da vinheta do fisheye, e usá-lo tornaria "fora da máscara" indistinguível de
+#: "fora da lente" para o modelo.
+_NEUTRAL_FILL = 128
+
+#: Cor do contorno desenhado sobre o crop contextual. Saturada o bastante para
+#: não ser confundida com conteúdo destes frames, que têm cast magenta.
+_CONTOUR_COLOR = np.array([0, 255, 0], dtype=np.uint8)
+
+
 
 
 # Constrói as views em pixels de cada região, na ordem canônica dos slots.
@@ -61,10 +73,26 @@ def build_region_views(
         # O foreground suprime tudo fora da máscara, independente de
         # ``masked_tight_crop``: aquele flag governa o slot de embedding, e
         # confundir os dois faria a evidência primária do reasoner incluir
-        # fundo — exatamente o que a #203 proíbe.
+        # fundo — exatamente o que a #203 proíbe. Ele zera o fundo porque
+        # alimenta o pooling mask-aware do extractor denso, onde a cor de
+        # preenchimento não é lida como conteúdo.
         _append_crop_view(
-            built, region, image, EvidenceSlot.FOREGROUND_DENSE, expansion=0.0, masked=True
+            built,
+            region,
+            image,
+            EvidenceSlot.FOREGROUND_DENSE,
+            expansion=0.0,
+            emphasis=SubjectEmphasis.ZERO_FILL,
         )
+        if settings.masked_subject_enabled:
+            _append_crop_view(
+                built,
+                region,
+                image,
+                EvidenceSlot.MASKED_SUBJECT,
+                expansion=0.0,
+                emphasis=SubjectEmphasis.NEUTRAL_FILL,
+            )
         if settings.tight_crop_enabled:
             _append_crop_view(
                 built,
@@ -72,16 +100,24 @@ def build_region_views(
                 image,
                 EvidenceSlot.TIGHT_CROP,
                 expansion=0.0,
-                masked=settings.masked_tight_crop,
+                emphasis=(
+                    SubjectEmphasis.NEUTRAL_FILL
+                    if settings.masked_tight_crop
+                    else SubjectEmphasis.NONE
+                ),
             )
         if settings.contextual_crop_enabled:
+            # O contexto continua íntegro — mascará-lo apagaria justamente o
+            # entorno que serve para desambiguar. O sujeito é demarcado pelo
+            # contorno da máscara, para que o reasoner saiba de qual região está
+            # falando sem perder o que está em volta.
             _append_crop_view(
                 built,
                 region,
                 image,
                 EvidenceSlot.CONTEXTUAL_CROP,
                 expansion=settings.context_expansion,
-                masked=False,
+                emphasis=SubjectEmphasis.CONTOUR,
             )
         if scene_view is not None:
             built.append(scene_view)
@@ -101,12 +137,12 @@ def _append_crop_view(
     slot: EvidenceSlot,
     *,
     expansion: float,
-    masked: bool,
+    emphasis: SubjectEmphasis,
 ) -> None:
     """Recorta a view de ``slot`` e a acrescenta, ou a omite se a caixa for degenerada."""
     try:
         box = expanded_box(region.box, expansion, image.width, image.height)
-        payload = crop_payload(image, region, box, masked=masked)
+        payload = crop_payload(image, region, box, emphasis=emphasis)
     except ValueError:
         return
     built.append(
@@ -115,7 +151,7 @@ def _append_crop_view(
             payload=payload,
             crop_box=box,
             transform=CoordinateTransform(1.0, 1.0, box.x_min, box.y_min),
-            masked=masked,
+            emphasis=emphasis,
         )
     )
 
@@ -131,7 +167,7 @@ def _scene_view(image: ImagePayload) -> RegionView:
         payload=image,
         crop_box=box,
         transform=CoordinateTransform.identity(),
-        masked=False,
+        emphasis=SubjectEmphasis.NONE,
     )
 
 
@@ -153,21 +189,54 @@ def expanded_box(box: BoundingBox, expansion: float, width: int, height: int) ->
     ).clipped_to(width=width, height=height)
 
 
-# Recorta os pixels da caixa pedida, opcionalmente zerando tudo que está fora
-# da máscara da região. Existe para que o crop mascarado seja uma opção de
-# geometria e não uma variante duplicada; usada por _append_crop_view e por
-# application/multi_context.py.
+# Recorta os pixels da caixa pedida, aplicando o realce de sujeito pedido.
+# Existe para que cada tratamento seja uma opção do mesmo recorte e não uma
+# variante duplicada; usada por _append_crop_view e por
+# application/multi_context.py. Nunca escreve na imagem de origem: todo
+# tratamento produz um array novo.
 def crop_payload(
-    image: ImagePayload, region: ObservedRegion, box: BoundingBox, *, masked: bool
+    image: ImagePayload, region: ObservedRegion, box: BoundingBox, *, emphasis: SubjectEmphasis
 ) -> ImagePayload:
-    """Recorta ``box`` da imagem, zerando o fundo quando ``masked``."""
+    """Recorta ``box`` da imagem e realça o sujeito conforme ``emphasis``."""
     x_min, y_min = int(box.x_min), int(box.y_min)
     x_max, y_max = int(box.x_max), int(box.y_max)
     if x_max <= x_min or y_max <= y_min:
         raise ValueError(f"Region {region.region_id!r} has a degenerate crop box after clipping.")
     crop = image.crop(x_min, y_min, x_max, y_max)
-    if not masked:
+    if emphasis is SubjectEmphasis.NONE:
         return crop
     window = region.mask.data[y_min:y_max, x_min:x_max]
-    pixels = np.where(window[:, :, None], crop.pixels, 0).astype(crop.pixels.dtype)
+    if emphasis is SubjectEmphasis.CONTOUR:
+        pixels = crop.pixels.copy()
+        pixels[_boundary(window)] = _CONTOUR_COLOR
+    else:
+        fill = 0 if emphasis is SubjectEmphasis.ZERO_FILL else _NEUTRAL_FILL
+        pixels = np.where(window[:, :, None], crop.pixels, fill).astype(crop.pixels.dtype)
     return ImagePayload(pixels, width=crop.width, height=crop.height)
+
+
+# Calcula a borda de uma máscara: os pixels do sujeito que tocam o fundo.
+# Implementada com deslocamentos de numpy para não introduzir uma dependência
+# de morfologia só para desenhar uma linha de um pixel.
+def _boundary(window: np.ndarray) -> np.ndarray:
+    """Retorna os pixels da máscara que fazem fronteira com o fundo."""
+    interior = np.ones_like(window)
+    for axis, shift in ((0, 1), (0, -1), (1, 1), (1, -1)):
+        interior &= np.roll(window, shift, axis=axis)
+    # np.roll é circular: as bordas do recorte contam como fronteira, que é o
+    # comportamento desejado — um sujeito cortado pela caixa tem borda ali.
+    boundary: np.ndarray = window & ~interior
+    return boundary
+
+
+# Calcula a fração do recorte ocupada pela máscara. Existe para que o consumidor
+# saiba quando o bounding box domina a região, sem reimplementar a conta; usada
+# por application/multi_context.py ao montar o slot de evidência.
+def mask_fill_ratio(region: ObservedRegion, box: BoundingBox) -> float | None:
+    """Retorna a fração de ``box`` coberta pela máscara da região, ou ``None``."""
+    x_min, y_min = int(box.x_min), int(box.y_min)
+    x_max, y_max = int(box.x_max), int(box.y_max)
+    area = (x_max - x_min) * (y_max - y_min)
+    if area <= 0:
+        return None
+    return float(region.mask.data[y_min:y_max, x_min:x_max].sum()) / area

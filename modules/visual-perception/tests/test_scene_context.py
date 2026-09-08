@@ -10,13 +10,15 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
 
-# Verifica que a saída de analyze_scene sempre inclui os claims canônicos
-# obrigatórios de cena: "scene_type" e "scene_description".
+# Verifica que a saída de analyze_scene inclui os claims canônicos de cena.
+# Desde a #202 o contract é ambiental: "scene_type" e "environment" são
+# obrigatórios, e não há mais prosa livre nem inventário de objetos.
 def test_scene_output_follows_canonical_claim_contracts() -> None:
     scene = analyze_scene(payload_with_blobs(), FakeMultimodalReasoner(), MultimodalReasoningConfig())
     kinds = {claim.kind.value for claim in scene.claims}
     assert "scene_type" in kinds
-    assert "scene_description" in kinds
+    assert "environment" in kinds
+    assert "scene_description" not in kinds
 
 
 # Uma resposta de reasoner que omite o campo obrigatório scene_type deve ser

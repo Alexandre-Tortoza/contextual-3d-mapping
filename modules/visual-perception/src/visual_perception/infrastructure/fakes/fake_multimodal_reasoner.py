@@ -48,11 +48,16 @@ class FakeMultimodalReasoner:
         if self._scene_response_fn is not None:
             return self._scene_response_fn(image)
         brightness = float(image.pixels.mean())
+        # Emite o mesmo contract ambiental do adapter real (#202): sem prosa
+        # livre e sem inventário de objetos, para que a suíte exercite o schema
+        # de produção e não um formato que só o fake fala.
         return {
             "scene_type": "well_lit" if brightness > 127 else "dim",
-            "description": f"Synthetic scene with mean brightness {brightness:.1f}.",
-            "attributes": ["indoor"],
-            "hazards": [],
+            "environment": "indoor",
+            "layout": f"synthetic frame with mean brightness {brightness:.1f}",
+            "lighting": "bright" if brightness > 127 else "dim",
+            "visibility": "clear",
+            "navigability": "unobstructed",
             "confidence": 0.95,
         }
 

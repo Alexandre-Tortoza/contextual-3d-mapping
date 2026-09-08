@@ -1,0 +1,386 @@
+{
+  "run_id": "20260907T115208Z",
+  "region_views_override": null,
+  "git_revision": "abb755b",
+  "gpu_memory_budget_gb": 8.0,
+  "config": {
+    "quality_profile": "research_quality",
+    "gpu_memory_budget_gb": 8.0,
+    "region_discovery": {
+      "backend": "sam",
+      "checkpoint": "facebook/sam-vit-huge",
+      "score_threshold": 0.5,
+      "device": "auto",
+      "model_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+      "max_regions": 100,
+      "min_mask_area": 500
+    },
+    "tiling": {
+      "multi_scale_enabled": false,
+      "tile_grid": "2x2",
+      "overlap_ratio": 0.2
+    },
+    "merge": {
+      "iou_merge_threshold": 0.85,
+      "containment_merge_threshold": 0.9
+    },
+    "feature_extraction": {
+      "backend": "dinov2",
+      "checkpoint": "facebook/dinov2-base",
+      "feature_resolution": 16,
+      "device": "auto",
+      "upsampling": "nearest",
+      "input_resolution": 448,
+      "max_feature_map_mb": 384,
+      "upsampler_repository": "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d",
+      "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+      "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+      "fallback_backend": null,
+      "fallback_checkpoint": null
+    },
+    "language_embedding": {
+      "backend": "clip",
+      "checkpoint": "openai/clip-vit-large-patch14",
+      "dimension": 768,
+      "device": "auto",
+      "model_name": "ViT-B-32",
+      "normalize": true
+    },
+    "multimodal_reasoning": {
+      "backend": "qwen_vl",
+      "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_version": "v5",
+      "device": "auto",
+      "max_new_tokens": 256,
+      "temperature": 0.0,
+      "load_in_4bit": true,
+      "region_views": [
+        "foreground_dense",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "scene_context_mode": "context_assisted"
+    },
+    "multi_context": {
+      "foreground_enabled": true,
+      "tight_crop_enabled": true,
+      "contextual_crop_enabled": true,
+      "scene_conditioned_enabled": true,
+      "context_expansion": 0.25,
+      "masked_tight_crop": false
+    },
+    "calibration": {
+      "enabled": false,
+      "method": "reliability_table",
+      "version": "calibration/1",
+      "artifact_path": null,
+      "min_visual_support": 0.2,
+      "min_region_quality": 0.0,
+      "domain": "unspecified"
+    }
+  },
+  "config_fingerprint": "d6a4e0a37f577618c1795a1654fbaf92848d8dd0e91b84b96158711ccca9ce6e",
+  "frame_count": 2,
+  "ordered_frame_ids": [
+    "corridor-02-000",
+    "corridor-02-002"
+  ],
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "selection": {
+    "frame_ids": [
+      "corridor-02-000",
+      "corridor-02-002"
+    ],
+    "limit": null
+  },
+  "canonical_output": "frames",
+  "frame_artifact_layout": "frames/1",
+  "postprocessing": [],
+  "context_profile": "full",
+  "scene_context_mode": "context_assisted",
+  "ego_vehicle_mask_applied": false,
+  "lifecycle_metrics": [
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 4.449392185000761,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4904929792,
+      "peak_cpu_rss_bytes": 3508768768
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 1.0449582250003004,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 390011904,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 390011904,
+      "peak_cpu_rss_bytes": 3508768768
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.760046161005448,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 1741476864,
+      "peak_cpu_rss_bytes": 3555639296
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 6.975524313995265,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2760718336,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 2760718336,
+      "peak_cpu_rss_bytes": 9510125568
+    },
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 1.8851332179983729,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4904929792,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4904929792,
+      "peak_cpu_rss_bytes": 9510125568
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 0.8664633219959796,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 390011904,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 390011904,
+      "peak_cpu_rss_bytes": 9510125568
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.5059081409999635,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1741476864,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 1741476864,
+      "peak_cpu_rss_bytes": 9510125568
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 5.994208659998549,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2754131968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 2754131968,
+      "peak_cpu_rss_bytes": 10401644544
+    }
+  ],
+  "frames": [
+    {
+      "frame_id": "corridor-02-000",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-000.png",
+        "sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+        "width": 640,
+        "height": 480
+      },
+      "failed": false,
+      "canonical_region_count": 66,
+      "postprocessed_region_count": null,
+      "relation_count": 337,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 66,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 66,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 66,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 66,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 66,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 0.8968261499830987
+        },
+        {
+          "slot": "tight_crop",
+          "available": 66,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 66,
+          "latency_s": 3.2045124100113753
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 66,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 66,
+          "latency_s": 3.1891909030164243
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 66,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 3.953529908998462
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 1,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 133,
+        "scene_reasoning": 1,
+        "region_reasoning": 66,
+        "total": 202
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 129,
+      "latency_s": 295.2603818409989,
+      "model_lifecycle_events": 4,
+      "peak_vram_bytes": 4904929792,
+      "proposal_count": 75,
+      "dominant_label": "plain wall",
+      "dominant_label_fraction": 0.21212121212121213,
+      "distinct_labels": 21,
+      "scene_echo_label_count": 0,
+      "artifacts": {
+        "observation": "frames/corridor-02-000/observation.json",
+        "raw": "frames/corridor-02-000/raw.png",
+        "ego_mask": "frames/corridor-02-000/ego-mask.png",
+        "proposals": "frames/corridor-02-000/proposals.png",
+        "regions_masks": "frames/corridor-02-000/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-000/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-000/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-000/regions-overlay.png",
+        "diagnostics": "frames/corridor-02-000/diagnostics.json",
+        "semantic_merge": null
+      }
+    },
+    {
+      "frame_id": "corridor-02-002",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-002.png",
+        "sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+        "width": 640,
+        "height": 480
+      },
+      "failed": false,
+      "canonical_region_count": 60,
+      "postprocessed_region_count": null,
+      "relation_count": 291,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 60,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 60,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 60,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 60,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 60,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.2988909900086583
+        },
+        {
+          "slot": "tight_crop",
+          "available": 60,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 60,
+          "latency_s": 2.9324459230338107
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 60,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 60,
+          "latency_s": 2.9043812089876155
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 60,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 3.737804076001339
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 1,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 121,
+        "scene_reasoning": 1,
+        "region_reasoning": 60,
+        "total": 184
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 114,
+      "latency_s": 271.47857393899903,
+      "model_lifecycle_events": 4,
+      "peak_vram_bytes": 4904929792,
+      "proposal_count": 64,
+      "dominant_label": "plain wall",
+      "dominant_label_fraction": 0.3,
+      "distinct_labels": 14,
+      "scene_echo_label_count": 2,
+      "artifacts": {
+        "observation": "frames/corridor-02-002/observation.json",
+        "raw": "frames/corridor-02-002/raw.png",
+        "ego_mask": "frames/corridor-02-002/ego-mask.png",
+        "proposals": "frames/corridor-02-002/proposals.png",
+        "regions_masks": "frames/corridor-02-002/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-002/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-002/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-002/regions-overlay.png",
+        "diagnostics": "frames/corridor-02-002/diagnostics.json",
+        "semantic_merge": null
+      }
+    }
+  ]
+}

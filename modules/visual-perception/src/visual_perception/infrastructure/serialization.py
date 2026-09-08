@@ -29,7 +29,15 @@ from visual_perception.domain.semantic_support import (
     semantic_support_from_dict,
     semantic_support_to_dict,
 )
-from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
+from visual_perception.domain.semantics import (
+    IDENTITY_CLAIM_KINDS,
+    ClaimKind,
+    ConfidenceScore,
+    Evidence,
+    HypothesisRole,
+    RegionKind,
+    SemanticClaim,
+)
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
 #: Escrita canônica v2; a leitura v1 é migrada explicitamente preservando scores brutos.
@@ -215,6 +223,9 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
         "evidence": [_evidence_to_dict(item) for item in claim.evidence],
         "provenance": _provenance_to_dict(claim.provenance),
         "support": semantic_support_to_dict(claim.support),
+        "role": None if claim.role is None else claim.role.value,
+        "category": claim.category,
+        "region_kind": None if claim.region_kind is None else claim.region_kind.value,
     }
 
 
@@ -222,13 +233,25 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
 # _claim_to_dict.
 def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
     confidence = payload["confidence"]
+    kind = ClaimKind(payload["kind"])
+    # ``role``/``category``/``region_kind`` chegaram com a #202 e são lidos com
+    # ``.get`` pelo mesmo motivo que ``support``: um payload anterior a eles
+    # continua desserializável. Um claim de identidade sem papel gravado é
+    # tratado como primary, que era a única leitura possível daquele formato.
+    role = payload.get("role")
+    region_kind = payload.get("region_kind")
+    if role is None and kind in IDENTITY_CLAIM_KINDS:
+        role = HypothesisRole.PRIMARY.value
     return SemanticClaim(
-        kind=ClaimKind(payload["kind"]),
+        kind=kind,
         value=payload["value"],
         confidence=None if confidence is None else ConfidenceScore(**confidence),
         evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
         provenance=_provenance_from_dict(payload["provenance"]),
         support=semantic_support_from_dict(payload.get("support")),
+        role=None if role is None else HypothesisRole(role),
+        category=payload.get("category"),
+        region_kind=None if region_kind is None else RegionKind(region_kind),
     )
 
 

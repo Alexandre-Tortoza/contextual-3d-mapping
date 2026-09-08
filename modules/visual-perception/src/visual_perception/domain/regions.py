@@ -7,11 +7,12 @@ canônica), #193 (evidência multi-contexto por região).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.region_evidence import EvidenceSlot, RegionEvidenceSlot
-from visual_perception.domain.semantics import SemanticClaim
+from visual_perception.domain.semantics import ClaimKind, HypothesisRole, SemanticClaim
 
 
 # Registra qual escala/tile de uma passada (possivelmente tiled,
@@ -98,6 +99,52 @@ class RegionProposal:
             raise ValueError(f"RegionProposal({self.proposal_id!r}) has an empty mask.")
 
 
+# Enumera por que uma proposta foi descartada antes de virar região. Existe
+# como vocabulário fechado para que o motivo do descarte seja contável no
+# diagnóstico, e não uma string livre por chamador: a #202 exige poder afirmar
+# "nenhuma proposta sobrou fora da área válida", o que só é verificável se o
+# motivo tiver identidade estável.
+class ProposalRejectionReason(StrEnum):
+    """Por que uma proposta foi descartada entre discovery e merge."""
+
+    OUTSIDE_VALID_AREA = "outside_valid_area"
+    EGO_VEHICLE_OVERLAP = "ego_vehicle_overlap"
+    BELOW_MIN_RELATIVE_AREA = "below_min_relative_area"
+    ABOVE_MAX_RELATIVE_AREA = "above_max_relative_area"
+
+
+# Preserva a proveniência de uma proposta descartada. Existe porque descartar
+# em silêncio destruiria a auditoria que este módulo promete: o artifact
+# precisa poder responder *o que* foi removido, *por quê*, e *com que medida*.
+@dataclass(frozen=True)
+class RejectedProposal:
+    """Uma proposta descartada, com o motivo e a medida que o justificou.
+
+    Argumentos:
+        proposal_id: identidade da proposta descartada.
+        reason: motivo do descarte.
+        value: a medida que disparou a regra (fração de sobreposição ou área
+            relativa), preservada para que o limiar seja auditável.
+        superseded_by: reservado para descartes que substituem uma proposta por
+            outra; ``None`` para as regras de validade, que não têm substituta.
+    """
+
+    proposal_id: str
+    reason: ProposalRejectionReason
+    value: float
+    superseded_by: str | None = None
+
+    # Valida a identidade e a medida, para que um registro de descarte nunca
+    # seja menos auditável que a proposta que ele substitui.
+    def __post_init__(self) -> None:
+        """Valida identidade, medida e a referência de redundância."""
+        validate_identifier(self.proposal_id, field="proposal_id")
+        if self.value < 0.0:
+            raise ValueError(f"RejectedProposal.value must not be negative, got {self.value}.")
+        if self.superseded_by is not None:
+            validate_identifier(self.superseded_by, field="superseded_by")
+
+
 # Representa uma região canônica e final dentro de uma VisualObservation, já
 # depois de merge/refinamento. Existe como a unidade estável de região que o
 # restante do sistema (sensor-association, semantic-fusion) consome.
@@ -164,3 +211,43 @@ class ObservedRegion:
             if item.slot is slot and item.view_id == view_id:
                 return item
         return None
+
+
+# Retorna o claim de label primário de uma região: o primeiro claim de kind
+# LABEL cujo papel é ``PRIMARY``. Existe para que overlay, diagnóstico e
+# qualquer outro leitor contem exatamente o mesmo label — duas implementações
+# da mesma política divergem em silêncio, e era exatamente o que acontecia
+# quando esta função escolhia por posição e ``semantic_merge`` por score.
+# Devolve o claim inteiro, e não só o texto, porque o consumidor quase sempre
+# precisa também da confiança semântica, que é distinta da geométrica.
+def primary_label_claim(region: ObservedRegion) -> SemanticClaim | None:
+    """Retorna o claim de label primário da região, ou ``None`` se não houver.
+
+    Argumentos:
+        region: região observada cujos claims serão inspecionados.
+    Retorna:
+        o ``SemanticClaim`` de kind ``LABEL`` e papel ``PRIMARY``, ou ``None``
+        quando a região não recebeu interpretação semântica.
+    """
+    for claim in region.claims:
+        if claim.kind is ClaimKind.LABEL and claim.role is HypothesisRole.PRIMARY:
+            return claim
+    return None
+
+
+# Lista as hipóteses de identidade concorrentes que o produtor registrou junto
+# do primary. Existe para que o diagnóstico consiga medir hipóteses duplicadas
+# e competição de identidade sem reimplementar o filtro por papel.
+def alternative_label_claims(region: ObservedRegion) -> tuple[SemanticClaim, ...]:
+    """Retorna os claims de label com papel ``ALTERNATIVE``, na ordem original.
+
+    Argumentos:
+        region: região observada cujos claims serão inspecionados.
+    Retorna:
+        as hipóteses concorrentes, ou uma tupla vazia quando não há nenhuma.
+    """
+    return tuple(
+        claim
+        for claim in region.claims
+        if claim.kind is ClaimKind.LABEL and claim.role is HypothesisRole.ALTERNATIVE
+    )

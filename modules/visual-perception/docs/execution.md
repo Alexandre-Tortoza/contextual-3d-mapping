@@ -307,19 +307,22 @@ python benchmarks/validate_reference_pipeline.py \
   --frame-id corridor-02-017
 ```
 
-A execução gera samples em:
-
-```text
-benchmarks/results/samples/<run-id>/
-```
+A execução gera samples em `benchmarks/results/samples/<run-id>/`. O layout completo por
+frame é descrito, em um lugar só, em [artifacts.md](artifacts.md#artifacts-de-benchmark-e-validação).
 
 `manifest.json` preserva IDs na ordem solicitada, SHA-256 de cada entrada, revisão Git,
 configuração e fingerprint, latência, VRAM, falhas, audit e estados dos slots por frame.
-As observações e overlays emitidos diretamente pelo pipeline ficam em `canonical/`.
-O merge semântico externo só roda com `--semantic-merge` e fica separado em
-`postprocessed/semantic-merge/`; portanto ele nunca substitui silenciosamente o artifact
-canônico. Esses artifacts são úteis para inspeção qualitativa e diagnóstico, mas não
+O merge semântico externo foi **removido** na #202: ele agrupava regiões por
+`mesmo label + IoU > 0` com fecho transitivo, o que funde superfícies distintas sempre que
+elas compartilham um label genérico como `plain wall`. A canonicalização proposal→entidade
+que ocupará esse lugar é uma etapa posterior, com verificação semântica. Esses artifacts são úteis para inspeção qualitativa e diagnóstico, mas não
 substituem protocolos de avaliação quantitativa específicos.
+
+Dois flags controlam de onde vem o contexto, e são deliberadamente independentes:
+`--scene-context-mode` governa o canal **textual** (se as claims de cena acompanham cada
+região no prompt) e `--region-view` governa o **visual** (quais imagens o reasoner
+recebe). Como o bloco de cena é anexado ao final do prompt, `local_first` produz um
+prompt que é prefixo exato do de `context_assisted`: a ablation varia uma coisa só.
 
 Para a ablation operacional da #209, execute os mesmos IDs com
 `--context-profile baseline` e `--context-profile full`. O manifest registra o perfil,

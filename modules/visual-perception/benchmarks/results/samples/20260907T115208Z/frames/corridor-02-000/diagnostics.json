@@ -1,0 +1,145 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-000",
+  "input_sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+  "latency_s": 295.2603818409989,
+  "ego_vehicle_mask_applied": false,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 66,
+  "proposal_count": 75,
+  "merged_proposal_count": 75,
+  "regions_with_multiple_proposals": 7,
+  "labels": [
+    [
+      "plain wall",
+      14
+    ],
+    [
+      "wall",
+      11
+    ],
+    [
+      "plain surface",
+      10
+    ],
+    [
+      "ceiling",
+      6
+    ],
+    [
+      "wooden floor",
+      4
+    ],
+    [
+      "ceiling tiles",
+      2
+    ],
+    [
+      "closed door",
+      2
+    ],
+    [
+      "floor",
+      2
+    ],
+    [
+      "wooden door",
+      2
+    ],
+    [
+      "wooden panel",
+      2
+    ],
+    [
+      "a metal suitcase",
+      1
+    ],
+    [
+      "beige carpet",
+      1
+    ],
+    [
+      "carpet",
+      1
+    ],
+    [
+      "crocodile skin",
+      1
+    ],
+    [
+      "green light",
+      1
+    ],
+    [
+      "metallic suitcase",
+      1
+    ],
+    [
+      "metallic surface",
+      1
+    ],
+    [
+      "suitcase",
+      1
+    ],
+    [
+      "textured surface",
+      1
+    ],
+    [
+      "wooden plank",
+      1
+    ],
+    [
+      "wooden table",
+      1
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      150
+    ],
+    [
+      "label",
+      133
+    ],
+    [
+      "condition",
+      66
+    ],
+    [
+      "material",
+      66
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9
+  },
+  "geometric_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9156474471092224,
+    "maximum": 1.0,
+    "mean": 0.9711824682625857,
+    "median": 0.9778611361980438
+  },
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.21212121212121213,
+    "distinct_labels": 21
+  },
+  "scene_echo_label_count": 0
+}

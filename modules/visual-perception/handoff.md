@@ -195,7 +195,7 @@ A partir de `modules/visual-perception/`, com `.venv` contendo os extras reais:
   --frame-id corridor-02-017
 ```
 
-Use `--semantic-merge` somente para gerar uma variante adicional. A comparação principal
+O `--semantic-merge` foi removido na #202. A comparação principal
 deve usar `canonical/`, pois esse diretório preserva exatamente a saída de
 `run_canonical_pipeline`. Nunca substitua os artifacts canônicos pelos pós-processados.
 

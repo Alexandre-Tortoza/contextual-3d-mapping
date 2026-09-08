@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import pytest
 
+from visual_perception.domain.claim_exclusivity import contradicting_claims
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.semantics import (
+    IDENTITY_CLAIM_KINDS,
     ClaimKind,
     ConfidenceScore,
     Evidence,
+    HypothesisRole,
     RegionKind,
     SemanticClaim,
-    contradicting_claims,
     most_confident_claim,
 )
 
@@ -26,7 +28,12 @@ def _provenance() -> ModelProvenance:
 # usado como bloco básico pelos testes de contradicting_claims.
 def _claim(kind: ClaimKind, value: str, confidence: float = 0.9) -> SemanticClaim:
     return SemanticClaim(
-        kind, value, ConfidenceScore(confidence, source="fake"), (Evidence("evidence"),), _provenance()
+        kind,
+        value,
+        ConfidenceScore(confidence, source="fake"),
+        (Evidence("evidence"),),
+        _provenance(),
+        role=HypothesisRole.PRIMARY if kind in IDENTITY_CLAIM_KINDS else None,
     )
 
 
@@ -41,7 +48,14 @@ def test_confidence_score_rejects_out_of_range_value() -> None:
 # onde veio o claim) e deve ser rejeitado na construção.
 def test_claim_requires_at_least_one_evidence() -> None:
     with pytest.raises(ValueError):
-        SemanticClaim(ClaimKind.LABEL, "box", ConfidenceScore(0.9, source="fake"), (), _provenance())
+        SemanticClaim(
+            ClaimKind.LABEL,
+            "box",
+            ConfidenceScore(0.9, source="fake"),
+            (),
+            _provenance(),
+            role=HypothesisRole.PRIMARY,
+        )
 
 
 # Um único claim nunca pode contradizer a si mesmo — contradicting_claims deve
@@ -85,7 +99,9 @@ def test_region_kind_value_matches_the_vlm_contract_string() -> None:
 # Caso central do passo: um claim pode legitimamente não ter score. None significa
 # "o produtor não forneceu", e é diferente de 0.0 (score baixo informado).
 def test_claim_accepts_absent_confidence() -> None:
-    claim = SemanticClaim(ClaimKind.LABEL, "floor", None, (Evidence("e"),), _provenance())
+    claim = SemanticClaim(
+        ClaimKind.LABEL, "floor", None, (Evidence("e"),), _provenance(), role=HypothesisRole.PRIMARY
+    )
     assert claim.confidence is None
 
 
@@ -93,7 +109,12 @@ def test_claim_accepts_absent_confidence() -> None:
 # que o passo inteiro existe para preservar.
 def test_zero_confidence_is_a_score_not_an_absence() -> None:
     claim = SemanticClaim(
-        ClaimKind.LABEL, "floor", ConfidenceScore(0.0, source="fake"), (Evidence("e"),), _provenance()
+        ClaimKind.LABEL,
+        "floor",
+        ConfidenceScore(0.0, source="fake"),
+        (Evidence("e"),),
+        _provenance(),
+        role=HypothesisRole.PRIMARY,
     )
     assert claim.confidence is not None
     assert claim.confidence.value == 0.0
@@ -101,7 +122,9 @@ def test_zero_confidence_is_a_score_not_an_absence() -> None:
 
 # Constrói um claim de label sem score; a hipótese que o VLM devolveu mas não pontuou.
 def _unscored(value: str) -> SemanticClaim:
-    return SemanticClaim(ClaimKind.LABEL, value, None, (Evidence("e"),), _provenance())
+    return SemanticClaim(
+        ClaimKind.LABEL, value, None, (Evidence("e"),), _provenance(), role=HypothesisRole.PRIMARY
+    )
 
 
 # Caso central da política §6: uma claim pontuada sempre vence uma não pontuada.

@@ -25,10 +25,16 @@ diferentes de quem lê o relatório:
 from __future__ import annotations
 
 from visual_perception.domain.audit import AuditIssue, AuditResult, AuditSeverity
+from visual_perception.domain.claim_exclusivity import contradicting_claims
 from visual_perception.domain.region_evidence import EvidenceState
-from visual_perception.domain.regions import ObservedRegion
+from visual_perception.domain.regions import ObservedRegion, primary_label_claim
 from visual_perception.domain.semantic_support import SupportState
-from visual_perception.domain.semantics import ClaimKind, SemanticClaim, contradicting_claims
+from visual_perception.domain.semantics import (
+    ClaimKind,
+    RegionKind,
+    SemanticClaim,
+    normalize_claim_value,
+)
 from visual_perception.domain.visual_observation import VisualObservation
 
 
@@ -83,6 +89,7 @@ def audit_observation(observation: VisualObservation) -> AuditResult:
                     )
                 )
         issues.extend(_calibration_issues(region.claims, region_id=region.region_id))
+        issues.extend(_region_kind_issues(region))
         issues.extend(_evidence_issues(region))
 
     for relation in observation.relations:
@@ -152,4 +159,40 @@ def _evidence_issues(region: ObservedRegion) -> list[AuditIssue]:
         )
         for slot in region.evidence
         if slot.state is EvidenceState.FAILED
+    ]
+
+
+#: Categorias cuja natureza é inequívoca: uma parede, um piso ou um teto são
+#: *stuff* — matéria contínua e não contável — em qualquer cena. A lista é
+#: deliberadamente curta. Uma tabela completa de ``label -> kind`` corrigiria a
+#: saída do reasoner em vez de expor o erro dele, e é exatamente o que a #202
+#: proíbe nesta etapa: primeiro melhora-se a evidência visual, depois se mede se
+#: o modelo passou a acertar.
+_INHERENTLY_STUFF_CATEGORIES = frozenset(
+    {"wall", "floor", "flooring", "ceiling", "ground", "sky"}
+)
+
+
+# Sinaliza incoerências óbvias entre a categoria e a natureza declaradas para
+# uma região. **Nunca reescreve** a saída do modelo: o audit reporta, e a
+# decisão de corrigir pertence a quem lê o relatório. Chamada por
+# audit_observation uma vez por região.
+def _region_kind_issues(region: ObservedRegion) -> list[AuditIssue]:
+    """Reporta regiões cuja ``RegionKind`` contradiz uma categoria inequívoca."""
+    claim = primary_label_claim(region)
+    if claim is None or claim.category is None or claim.region_kind is None:
+        return []
+    category = normalize_claim_value(claim.category)
+    if category not in _INHERENTLY_STUFF_CATEGORIES:
+        return []
+    if claim.region_kind is RegionKind.STUFF:
+        return []
+    return [
+        AuditIssue(
+            AuditSeverity.WARNING,
+            "region_kind_inconsistent_with_category",
+            f"Region {region.region_id!r} reports category {claim.category!r} with kind "
+            f"{claim.region_kind.value!r}; that category is inherently 'stuff'.",
+            region_id=region.region_id,
+        )
     ]

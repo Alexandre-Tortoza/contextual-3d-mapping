@@ -130,7 +130,16 @@ result = run_canonical_pipeline(image, payload, config, ports)
 
 - `observation: VisualObservation`;
 - `region_interpretation_failures`, falhas locais e recuperáveis de interpretação;
-- `audit: AuditResult`.
+- `audit: AuditResult`;
+- `proposals: tuple[RegionProposal, ...]`, as propostas cruas de discovery, antes do merge
+  geométrico.
+
+`proposals` é canal de diagnóstico, não produto: o contract de dados que atravessa
+capacidades continua sendo `VisualObservation`. Ele existe porque discovery **não é
+determinística** — recomputar as proposals depois produziria proposals diferentes das que
+geraram aquelas regiões, e a ligação com `ObservedRegion.contributing_proposal_ids`
+deixaria de ser verdadeira. Como carrega masks em resolução plena, um consumidor não deve
+reter um `PipelineResult` entre frames.
 
 Uma falha de backend ou configuração não deve ser representada como claim semântico.
 Essas falhas usam a hierarquia definida em
@@ -213,10 +222,51 @@ Um claim preserva:
 - valor;
 - confiança opcional;
 - evidência;
-- proveniência de modelo.
+- proveniência de modelo;
+- papel da hipótese, `category` e `RegionKind`, quando o claim é de identidade.
 
 Claims conflitantes podem coexistir. A estrutura não exige que o módulo reduza todas as
 hipóteses a um único vencedor.
+
+### Campos de identidade
+
+`ClaimKind.LABEL` é o único kind em `IDENTITY_CLAIM_KINDS`: ele expressa o que a região
+**é**, e por isso carrega três campos que os demais kinds não podem carregar.
+
+```text
+role         HypothesisRole   primary | alternative     obrigatório em LABEL
+category     str | None       categoria mais estável    opcional
+region_kind  RegionKind|None  thing|stuff|part|unknown  opcional
+```
+
+Um claim que não seja de identidade e declare qualquer um dos três é rejeitado na
+construção: um atributo não tem papel de hipótese nem categoria própria.
+
+`label` e `category` são informações diferentes e ambas sobrevivem à serialização:
+
+```text
+label    = "plain wall"      descrição open-vocabulary
+category = "wall"            categoria semântica mais estável
+```
+
+### Primary e alternative
+
+O papel é explícito porque recuperá-lo por posição na tupla fazia duas políticas
+divergirem em silêncio — `primary_label_claim` escolhia a primeira e o antigo `semantic_merge`
+escolhia a de maior score.
+
+Regras do contract:
+
+- uma alternativa **nunca** substitui o primary por ter score maior: quem elegeu foi o
+  produtor, e o papel preserva essa decisão;
+- hipóteses cujo label normalizado coincide são deduplicadas no parsing, de modo que
+  `carpet 0.9 / carpet 0.9 / carpet 0.1` vira uma única hipótese `carpet`;
+- a normalização usada no dedupe é `normalize_claim_value` — apenas caixa e espaçamento.
+  Ela **não** é uma ontologia: `ceiling light` e `ceiling light fixture` continuam
+  distintos.
+
+Leitura: `primary_label_claim(region)` e `alternative_label_claims(region)`, ambos em
+[`domain/regions.py`](../src/visual_perception/domain/regions.py).
 
 ### Confiança ausente
 
@@ -244,6 +294,38 @@ Não converta `None` em `0`, `1.0` ou outro número arbitrário.
 
 Essa regra evita a regressão histórica em que ausência de score era transformada em
 confiança máxima artificial.
+
+## Contradição entre claims
+
+Código dono:
+[`domain/claim_exclusivity.py`](../src/visual_perception/domain/claim_exclusivity.py)
+
+Dois claims se contradizem quando disputam o **mesmo slot mutuamente exclusivo** e
+afirmam valores diferentes. Valores diferentes, por si só, não são contradição.
+
+```text
+identidade      wall vs door        -> contradizem
+tipo de cena    corridor vs field   -> contradizem
+estado          open vs closed      -> contradizem (grupo declarado)
+
+atributos       white, smooth, damaged  -> coexistem
+materiais       wood, glass             -> coexistem (objeto composto)
+descrição + atributo                    -> coexistem
+condições fora de um grupo declarado    -> coexistem
+```
+
+A política anterior tratava como contraditório qualquer par do mesmo `ClaimKind` com
+texto diferente. Medido em `corridor-02-002`, isso fazia `smooth` contradizer a
+`description` da mesma região e marcava `contradiction_support` nas 60 regiões do frame,
+além de gerar um warning de auditoria por região.
+
+Os grupos de estados mutuamente exclusivos são declarados explicitamente e são
+deliberadamente poucos. `condition` é texto aberto: derivar exclusividade de "os valores
+são diferentes" transformaria cada condição nova em contradição.
+
+A mesma política serve os dois consumidores — `contradiction_support` na calibração e
+`contradicting_claims` na auditoria. Antes eram duas implementações separadas, erradas do
+mesmo jeito.
 
 ## `RegionKind`
 
@@ -273,6 +355,10 @@ kind = part
 ```
 
 A ausência de `kind` em uma resposta do VLM vira `unknown`, não `thing`.
+
+`RegionKind` viaja em `SemanticClaim.region_kind` do claim de identidade primário, e
+sobrevive até a serialização. Ele descreve a natureza da região independentemente do
+label aberto que o modelo escreveu.
 
 ## `CandidateRelation`
 

@@ -14,7 +14,14 @@ from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.region_evidence import EvidenceSlot
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
+from visual_perception.domain.semantics import (
+    IDENTITY_CLAIM_KINDS,
+    ClaimKind,
+    ConfidenceScore,
+    Evidence,
+    HypothesisRole,
+    SemanticClaim,
+)
 from visual_perception.domain.visual_observation import SceneContext
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
@@ -46,6 +53,22 @@ def _config_with_context() -> ModuleConfig:
     )
 
 
+# Pede explicitamente o canal visual de contexto. Existe porque o default do
+# reasoner é local-first: um teste que exercita a view contextual precisa dizer
+# isso, em vez de depender de um default que mudou de propósito.
+def _reasoning_with_contextual_view() -> MultimodalReasoningConfig:
+    return MultimodalReasoningConfig(
+        region_views=("foreground_dense", "tight_crop", "contextual_crop")
+    )
+
+
+# Pede explicitamente o canal textual de contexto de cena. É o default hoje, mas
+# um teste que exercita o contexto não deve depender disso: o default já mudou
+# uma vez em função de medição e pode mudar de novo.
+def _context_assisted() -> MultimodalReasoningConfig:
+    return MultimodalReasoningConfig(scene_context_mode="context_assisted")
+
+
 # Constrói uma claim de cena com proveniência completa; usada pelos testes da
 # #202, que verificam que a claim atravessa a fronteira inteira e não achatada.
 def _scene_claim(kind: ClaimKind, value: str, confidence: float | None = None) -> SemanticClaim:
@@ -55,6 +78,7 @@ def _scene_claim(kind: ClaimKind, value: str, confidence: float | None = None) -
         None if confidence is None else ConfidenceScore(confidence, "fake"),
         (Evidence(description="raw multimodal scene response"),),
         ModelProvenance(stage="scene_context", producer="fake", config_fingerprint="scene-fp"),
+        role=HypothesisRole.PRIMARY if kind in IDENTITY_CLAIM_KINDS else None,
     )
 
 
@@ -153,7 +177,9 @@ def test_request_carries_foreground_and_context_as_distinguishable_views() -> No
     image = payload_with_blobs()
     views = build_region_views((region,), image, _config_with_context())
 
-    interpret_regions((region,), image, views, None, reasoner, MultimodalReasoningConfig())
+    interpret_regions(
+        (region,), image, views, None, reasoner, _reasoning_with_contextual_view()
+    )
 
     request = seen[0]
     assert {view.slot for view in request.foreground_views} == {  # type: ignore[attr-defined]
@@ -281,8 +307,14 @@ def test_scene_claims_reach_the_reasoner_structured_with_their_provenance() -> N
     scene = SceneContext(
         claims=(
             _scene_claim(ClaimKind.SCENE_TYPE, "corridor", 0.82),
-            _scene_claim(ClaimKind.SCENE_DESCRIPTION, "A narrow indoor corridor."),
-            _scene_claim(ClaimKind.ATTRIBUTE, "indoor"),
+            _scene_claim(ClaimKind.ENVIRONMENT, "indoor"),
+            _scene_claim(ClaimKind.LAYOUT, "a narrow corridor running away from the camera"),
+            _scene_claim(ClaimKind.NAVIGABILITY, "open path ahead"),
+            # Inventário de objetos não é contexto ambiental e não atravessa a
+            # fronteira desde a #202: era por ali que uma "suitcase" alucinada,
+            # que era o próprio rig, condicionava a interpretação de cada região.
+            _scene_claim(ClaimKind.SCENE_DESCRIPTION, "There is a suitcase in the foreground."),
+            _scene_claim(ClaimKind.ATTRIBUTE, "suitcase"),
             _scene_claim(ClaimKind.HAZARD, "wet floor"),
             # Uma claim de região no nível de cena não é contexto de cena e não
             # pode atravessar: promovê-la seria dar à região um label que
@@ -294,14 +326,14 @@ def test_scene_claims_reach_the_reasoner_structured_with_their_provenance() -> N
     image = payload_with_blobs()
     views = build_region_views((region,), image, default_config())
 
-    interpret_regions((region,), image, views, scene, reasoner, MultimodalReasoningConfig())
+    interpret_regions((region,), image, views, scene, reasoner, _context_assisted())
 
     claims = seen[0].scene_claims  # type: ignore[attr-defined]
     assert [claim.kind for claim in claims] == [
         ClaimKind.SCENE_TYPE,
-        ClaimKind.SCENE_DESCRIPTION,
-        ClaimKind.ATTRIBUTE,
-        ClaimKind.HAZARD,
+        ClaimKind.ENVIRONMENT,
+        ClaimKind.LAYOUT,
+        ClaimKind.NAVIGABILITY,
     ]
     scene_type = claims[0]
     assert scene_type.confidence is not None and scene_type.confidence.value == 0.82
@@ -328,7 +360,7 @@ def test_contradictory_scene_claims_remain_distinguishable() -> None:
     image = payload_with_blobs()
     views = build_region_views((region,), image, default_config())
 
-    interpret_regions((region,), image, views, scene, reasoner, MultimodalReasoningConfig())
+    interpret_regions((region,), image, views, scene, reasoner, _context_assisted())
 
     values = [claim.value for claim in seen[0].scene_claims]  # type: ignore[attr-defined]
     assert values == ["corridor", "field"]

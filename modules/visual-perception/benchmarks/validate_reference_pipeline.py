@@ -24,9 +24,11 @@ import json
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,35 +40,53 @@ import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from fixtures import image_observation  # noqa: E402
-from render_overlay import render_overlay  # noqa: E402
+from frame_artifacts import (  # noqa: E402
+    FRAME_ARTIFACT_LAYOUT_VERSION,
+    FrameInputs,
+    write_frame_artifacts,
+)
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
 from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
-from visual_perception.application.pipeline import PipelineResult, run_canonical_pipeline  # noqa: E402
-from visual_perception.application.relation_generation import generate_relations  # noqa: E402
-from visual_perception.application.semantic_merge import merge_same_label_regions  # noqa: E402
+from visual_perception.application.observation_diagnostics import diagnose_observation  # noqa: E402
+from visual_perception.application.pipeline import (  # noqa: E402
+    PerceptionPorts,
+    PipelineResult,
+    run_canonical_pipeline,
+)
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.config import (  # noqa: E402
+    ImageAreaConfig,
     ModuleConfig,
     MultiContextConfig,
 )
 from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
+from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.domain.region_evidence import EvidenceSlot, EvidenceState  # noqa: E402
+from visual_perception.domain.region_reasoning import SceneContextMode  # noqa: E402
 from visual_perception.domain.visual_observation import VisualObservation  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
-from visual_perception.infrastructure.serialization import serialize_observation  # noqa: E402
 
 FRAMES_DIR = Path(__file__).resolve().parent / ".local" / "corridor-02-frames"
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
-#: Faixa inferior da imagem ocupada pelo chassi/rodas do robô que carrega a
-#: câmera fisheye do corridor-02 — fixa em todo frame porque a câmera está
-#: montada no próprio robô (não é um objeto da cena, é o "ego-veículo").
-#: Específico deste dataset/rig, por isso vive aqui e não em
-#: visual_perception (que não deve conhecer qual robô gerou os dados; ver
-#: AGENTS.md "Configuration ownership"). Confirmado visualmente em 3 frames
-#: (000, 012, 017): chassi+rodas sempre abaixo de y=340.
-_EGO_VEHICLE_ROW_START = 340
+#: Como run_validation obtém seus backends. Existe para que um teste injete
+#: fakes e exercite o layout de artifacts de ponta a ponta sem GPU. É uma
+#: factory, e não um PerceptionPorts pronto, porque run_validation constrói a
+#: config internamente e é dona do ModelLifecycleManager: a factory preserva
+#: essa posse e tem exatamente a assinatura de create_perception_ports, então o
+#: default é a própria função, sem wrapper.
+PortsFactory = Callable[[ModuleConfig, ModelLifecycleManager], PerceptionPorts]
+
+#: Onde vive a geometria de área declarada por sequência. É específica de
+#: dataset e rig, por isso o *arquivo* mora aqui e não em ``visual_perception``,
+#: que não deve conhecer qual robô gerou os dados (ver AGENTS.md,
+#: "Configuração"). O módulo define o contract (``ImageAreaConfig``) e a aplica;
+#: o harness escolhe qual geometria carregar.
+SEQUENCE_MASKS_DIR = Path(__file__).resolve().parent / "sequence-masks"
+
+#: Sequência cuja geometria é carregada para os frames de referência.
+_SEQUENCE_ID = "corridor-02"
 
 
 # Representa a seleção determinística e as opções de persistência de uma
@@ -80,7 +100,7 @@ class ValidationOptions:
         results_dir: raiz em que o run versionado será persistido.
         frame_ids: IDs explícitos, na ordem pedida, ou tupla vazia para todos.
         limit: limite aplicado depois da seleção ordenada.
-        semantic_merge: habilita o pós-processamento externo ao pipeline canônico.
+        sequence_masks: arquivo de geometria de área da sequência.
         context_profile: quais slots de evidência multi-contexto são extraídos.
         region_views: quais dessas views o reasoner recebe; ``None`` usa o default.
     """
@@ -89,29 +109,93 @@ class ValidationOptions:
     results_dir: Path = RESULTS_DIR
     frame_ids: tuple[str, ...] = ()
     limit: int | None = None
-    semantic_merge: bool = False
     context_profile: str = "full"
     #: Sobrescreve quais views o reasoner recebe (#203). ``None`` mantém o
     #: default da configuração. Existe para que a ablation de views seja
     #: reproduzível pela linha de comando, e não por edição de código.
     region_views: tuple[str, ...] | None = None
+    #: Se as claims de cena acompanham cada região no prompt. ``None`` mantém o
+    #: default da configuração (local-first). É o par textual de
+    #: ``region_views``: os dois canais de contexto são ablatáveis
+    #: separadamente, com o resto do prompt inalterado.
+    scene_context_mode: str | None = None
+    #: Geometria de área da sequência (círculo útil da lente e silhueta do
+    #: rig). A exclusão acontece dentro do pipeline, na filtragem de proposals,
+    #: e nunca pintando pixels: até a #202 este harness tinha um
+    #: ``--mask-ego-vehicle`` que zerava a faixa inferior antes do SAM, e a #212
+    #: mediu que aquilo corrompia a análise de cena e colapsava 45 de 45 regiões
+    #: em ``curved wall``. Passar ``None`` roda sem geometria declarada.
+    sequence_masks: Path | None = SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json"
 
     # Rejeita perfis livres para que um typo não produza uma ablation diferente.
     def __post_init__(self) -> None:
         """Valida o perfil de evidência multi-contexto selecionado."""
         if self.context_profile not in {"baseline", "full"}:
             raise ValueError("context_profile must be 'baseline' or 'full'.")
+        if self.scene_context_mode is not None and self.scene_context_mode not in {
+            mode.value for mode in SceneContextMode
+        }:
+            raise ValueError(
+                "scene_context_mode must be "
+                f"{sorted(mode.value for mode in SceneContextMode)} or None."
+            )
 
 
-# Preenche a faixa do chassi/rodas do robô com preto (mesma cor do vinheta
-# do fisheye) para que SAM/VLM não a tratem como conteúdo de cena — sem
-# isso, o carrinho aparece rotulado em todo frame, sempre a mesma
-# distração não relacionada ao ambiente sendo mapeado.
-def _mask_ego_vehicle(pixels: np.ndarray) -> np.ndarray:
-    """Retorna os pixels com a área fixa do ego-veículo mascarada."""
-    masked = pixels.copy()
-    masked[_EGO_VEHICLE_ROW_START:, :, :] = 0
-    return masked
+# Lê a geometria de área versionada de uma sequência e a converte na
+# configuração que o módulo consome. Existe no harness porque a geometria é
+# específica de rig e dataset: o módulo define o contract e aplica a exclusão,
+# a composição escolhe qual geometria entra.
+def load_image_area_config(path: Path | None) -> ImageAreaConfig:
+    """Carrega a geometria declarada da sequência, ou a configuração vazia.
+
+    Argumentos:
+        path: arquivo de geometria da sequência, ou ``None`` para rodar sem
+            nenhuma exclusão declarada.
+    Retorna:
+        a configuração de área correspondente.
+    """
+    if path is None:
+        return ImageAreaConfig()
+    payload = json.loads(path.read_text())
+    return ImageAreaConfig(
+        valid_area=_geometry_from_dict(payload.get("valid_area")),
+        ego_vehicle=_geometry_from_dict(payload.get("ego_vehicle")),
+    )
+
+
+# Lê a resolução para a qual a geometria foi medida. Existe porque aplicar uma
+# geometria de 640x480 a um frame de outro tamanho rejeitaria o frame inteiro
+# sem que nada no artifact explicasse a causa — exatamente o modo de falha
+# silenciosa que esta rodada existe para eliminar.
+def sequence_masks_resolution(path: Path | None) -> tuple[int, int] | None:
+    """Retorna a resolução declarada no artifact de geometria, ou ``None``."""
+    if path is None:
+        return None
+    payload = json.loads(path.read_text())
+    width, height = payload.get("image_width"), payload.get("image_height")
+    if width is None or height is None:
+        return None
+    return int(width), int(height)
+
+
+# Converte uma entrada do artifact de sequência em ImageAreaGeometry. Isolada
+# porque as duas áreas usam o mesmo formato e uma segunda leitura divergiria.
+def _geometry_from_dict(payload: dict[str, Any] | None) -> ImageAreaGeometry | None:
+    """Converte um bloco de geometria do artifact, ou ``None`` se vazio."""
+    if not payload:
+        return None
+    circle = payload.get("circle")
+    polygons = tuple(
+        tuple((float(x), float(y)) for x, y in polygon) for polygon in payload.get("polygons", [])
+    )
+    if circle is None and not polygons:
+        return None
+    return ImageAreaGeometry(
+        circle=None
+        if circle is None
+        else CircleArea(float(circle["cx"]), float(circle["cy"]), float(circle["r"])),
+        polygons=polygons,
+    )
 
 
 # Retorna o hash curto do commit atual, ou "unknown" fora de um git worktree;
@@ -204,25 +288,22 @@ def model_call_counts(
     return {**counts, "total": sum(counts.values())}
 
 
-# Aplica o merge semântico apenas à cópia pós-processada, preservando os
-# IDs e a geometria emitidos pelo pipeline canônico em seu próprio artifact.
-def _semantic_merge_observation(
-    observation: VisualObservation, config: ModuleConfig
-) -> VisualObservation:
-    """Retorna uma observação pós-processada sem alterar a saída canônica."""
-    merged_regions = merge_same_label_regions(observation.regions)
-    return dataclasses.replace(
-        observation,
-        regions=merged_regions,
-        relations=generate_relations(merged_regions, config.merge),
-    )
-
-
 # Executa a validação real e persiste artifacts canônicos e opcionais em
 # diretórios distintos. Esta função existe para tornar seleção e provenance
 # testáveis sem acoplar o contract ao argparse.
-def run_validation(options: ValidationOptions) -> Path:
-    """Executa o pipeline real nos frames selecionados e retorna o diretório do run."""
+def run_validation(
+    options: ValidationOptions, ports_factory: PortsFactory | None = None
+) -> Path:
+    """Executa o pipeline real nos frames selecionados e retorna o diretório do run.
+
+    Argumentos:
+        options: seleção de frames e opções de persistência do run.
+        ports_factory: como obter os backends. ``None`` usa os reais, que é o
+            que produção faz; um teste injeta fakes por aqui para exercitar o
+            layout de artifacts sem GPU.
+    Retorna:
+        o diretório versionado em que o run foi persistido.
+    """
     try:
         frames = select_frame_paths(options.frames_dir, options.frame_ids, options.limit)
     except ValueError as error:
@@ -233,6 +314,13 @@ def run_validation(options: ValidationOptions) -> Path:
         )
 
     config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    # A geometria de área da sequência entra na configuração do módulo, e não
+    # num passo do harness: assim ela participa do fingerprint e do manifest, e
+    # a exclusão acontece dentro do pipeline em vez de sobre os pixels.
+    config = dataclasses.replace(
+        config, image_area=load_image_area_config(options.sequence_masks)
+    )
+    masks_resolution = sequence_masks_resolution(options.sequence_masks)
     if options.context_profile == "baseline":
         config = dataclasses.replace(
             config,
@@ -250,16 +338,20 @@ def run_validation(options: ValidationOptions) -> Path:
                 config.multimodal_reasoning, region_views=options.region_views
             ),
         )
+    if options.scene_context_mode is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, scene_context_mode=options.scene_context_mode
+            ),
+        )
     lifecycle = ModelLifecycleManager()
-    ports = create_perception_ports(config, lifecycle)
+    ports = (ports_factory or create_perception_ports)(config, lifecycle)
 
     run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out_dir = options.results_dir / "samples" / run_id
-    canonical_dir = out_dir / "canonical"
-    canonical_dir.mkdir(parents=True, exist_ok=True)
-    postprocessed_dir = out_dir / "postprocessed" / "semantic-merge"
-    if options.semantic_merge:
-        postprocessed_dir.mkdir(parents=True, exist_ok=True)
+    frames_out_dir = out_dir / "frames"
+    frames_out_dir.mkdir(parents=True, exist_ok=True)
 
     summary_rows: list[str] = []
     frame_reports: list[dict[str, object]] = []
@@ -269,13 +361,24 @@ def run_validation(options: ValidationOptions) -> Path:
         print(f"\n=== {name} ===")
         frame_start = time.monotonic()
         metric_start = len(lifecycle.metrics)
-        image = Image.open(frame_path).convert("RGB")
-        pixels = _mask_ego_vehicle(np.array(image))
-        image = Image.fromarray(pixels)  # keep the overlay/render in sync with what the pipeline saw
-        payload = ImagePayload(pixels, width=pixels.shape[1], height=pixels.shape[0])
-        observation_input = image_observation(
-            observation_id=name, width=pixels.shape[1], height=pixels.shape[0]
-        )
+        raw_pixels = np.array(Image.open(frame_path).convert("RGB"))
+        height, width = raw_pixels.shape[0], raw_pixels.shape[1]
+        # Os pixels de origem são imutáveis, sem exceção. A exclusão do rig e
+        # da área fora da lente acontece dentro do pipeline, sobre máscaras
+        # (ver application/proposal_filtering.py); este harness não tem mais
+        # como pintar a entrada.
+        if masks_resolution is not None and masks_resolution != (width, height):
+            raise SystemExit(
+                f"{name}: frame is {width}x{height} but {options.sequence_masks} declares "
+                f"{masks_resolution[0]}x{masks_resolution[1]}. Applying the geometry anyway would "
+                "silently reject the whole frame."
+            )
+        area_masks = config.image_area.rasterize(width, height)
+        ego_mask = None if area_masks.ego_vehicle is None else area_masks.ego_vehicle.data
+        valid_mask = None if area_masks.valid_area is None else area_masks.valid_area.data
+        payload = ImagePayload(raw_pixels, width=width, height=height)
+        raw_payload = ImagePayload(raw_pixels, width=width, height=height)
+        observation_input = image_observation(observation_id=name, width=width, height=height)
 
         try:
             result = run_canonical_pipeline(observation_input, payload, config, ports)
@@ -287,8 +390,8 @@ def run_validation(options: ValidationOptions) -> Path:
                     "input": {
                         "path": str(frame_path.resolve()),
                         "sha256": _sha256(frame_path),
-                        "width": pixels.shape[1],
-                        "height": pixels.shape[0],
+                        "width": width,
+                        "height": height,
                     },
                     "failed": True,
                     "reason": repr(error),
@@ -299,20 +402,37 @@ def run_validation(options: ValidationOptions) -> Path:
             continue
 
         canonical_observation = result.observation
-        json_path = canonical_dir / f"{name}.json"
-        json_path.write_text(json.dumps(serialize_observation(result.observation), indent=2))
+        frame_latency_s = time.monotonic() - frame_start
+        diagnostics = diagnose_observation(
+            canonical_observation,
+            discovered_proposals=len(result.proposals) + len(result.rejected_proposals),
+            kept_proposals=result.proposals,
+            proposal_rejections=result.rejected_proposals,
+            area_masks=result.area_masks,
+            ego_overlap_threshold=config.proposal_filter.max_ego_overlap,
+            valid_area_threshold=config.proposal_filter.min_valid_overlap,
+        )
+        frame_dir = frames_out_dir / name
+        artifacts = write_frame_artifacts(
+            frame_dir,
+            inputs=FrameInputs(
+                raw=raw_payload,
+                pipeline_input=payload,
+                ego_mask=ego_mask,
+                valid_area_mask=valid_mask,
+            ),
+            result=result,
+            diagnostics=diagnostics,
+            extra_diagnostics={
+                "frame_id": name,
+                "input_sha256": _sha256(frame_path),
+                "latency_s": frame_latency_s,
+                "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+                "region_views": list(config.multimodal_reasoning.region_views),
+            },
+        )
+        overlay_path = frame_dir / artifacts["regions_overlay"]
 
-        overlay_path = canonical_dir / f"{name}.overlay.png"
-        render_overlay(image, result.observation).save(overlay_path)
-
-        postprocessed_count: int | None = None
-        if options.semantic_merge:
-            postprocessed = _semantic_merge_observation(canonical_observation, config)
-            postprocessed_count = len(postprocessed.regions)
-            (postprocessed_dir / f"{name}.json").write_text(
-                json.dumps(serialize_observation(postprocessed), indent=2)
-            )
-            render_overlay(image, postprocessed).save(postprocessed_dir / f"{name}.overlay.png")
 
         scene_type = next(
             (c.value for c in result.observation.scene_context.claims if c.kind.value == "scene_type"),
@@ -325,20 +445,24 @@ def run_validation(options: ValidationOptions) -> Path:
             f"interpretation_failures={len(result.region_interpretation_failures)} "
             f"audit={audit_status} warnings={len(result.audit.warnings)}"
         )
+        print(
+            f"  proposals={diagnostics.proposal_count} "
+            f"dominant_label={diagnostics.mode_collapse.dominant_label!r} "
+            f"dominant_fraction={diagnostics.mode_collapse.dominant_fraction:.2f} "
+            f"scene_echo={diagnostics.scene_echo_label_count}"
+        )
         frame_metrics = lifecycle.metrics[metric_start:]
-        frame_latency_s = time.monotonic() - frame_start
         frame_reports.append(
             {
                 "frame_id": name,
                 "input": {
                     "path": str(frame_path.resolve()),
                     "sha256": _sha256(frame_path),
-                    "width": pixels.shape[1],
-                    "height": pixels.shape[0],
+                    "width": width,
+                    "height": height,
                 },
                 "failed": False,
                 "canonical_region_count": len(canonical_observation.regions),
-                "postprocessed_region_count": postprocessed_count,
                 "relation_count": len(result.observation.relations),
                 "interpretation_failure_count": len(result.region_interpretation_failures),
                 "evidence_failure_count": len(result.evidence_failures),
@@ -360,14 +484,16 @@ def run_validation(options: ValidationOptions) -> Path:
                 "peak_vram_bytes": max(
                     (metric.peak_vram_bytes or 0 for metric in frame_metrics), default=0
                 ),
+                "proposal_count": diagnostics.proposal_count,
+                "dominant_label": diagnostics.mode_collapse.dominant_label,
+                "dominant_label_fraction": diagnostics.mode_collapse.dominant_fraction,
+                "distinct_labels": diagnostics.mode_collapse.distinct_labels,
+                "scene_echo_label_count": diagnostics.scene_echo_label_count,
                 "artifacts": {
-                    "canonical_json": str(json_path.relative_to(out_dir)),
-                    "canonical_overlay": str(overlay_path.relative_to(out_dir)),
-                    "semantic_merge": (
-                        str((postprocessed_dir / f"{name}.json").relative_to(out_dir))
-                        if options.semantic_merge
-                        else None
-                    ),
+                    artifact: str((frame_dir / relative).relative_to(out_dir))
+                    for artifact, relative in artifacts.items()
+                }
+                | {
                 },
             }
         )
@@ -376,7 +502,6 @@ def run_validation(options: ValidationOptions) -> Path:
             f"![{name}]({overlay_path.relative_to(out_dir)})\n\n"
             f"**scene_type:** {scene_type} · "
             f"**regiões canônicas:** {len(canonical_observation.regions)} · "
-            f"**regiões pós-processadas:** {postprocessed_count if postprocessed_count is not None else 'desabilitado'} · "
             f"**relações:** {len(result.observation.relations)} · "
             f"**falhas de interpretação:** {len(result.region_interpretation_failures)} · "
             f"**audit:** {'✅ pass' if result.audit.passed else '❌ FAIL'} "
@@ -396,9 +521,11 @@ def run_validation(options: ValidationOptions) -> Path:
         "ordered_frame_ids": [frame.stem for frame in frames],
         "frames_dir": str(options.frames_dir.resolve()),
         "selection": {"frame_ids": list(options.frame_ids), "limit": options.limit},
-        "canonical_output": "canonical",
-        "postprocessing": ["semantic_merge"] if options.semantic_merge else [],
+        "canonical_output": "frames",
+        "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
         "context_profile": options.context_profile,
+        "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+        "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
         "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
         "frames": frame_reports,
     }
@@ -442,9 +569,22 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="view de região enviada ao reasoner; repita para compor a ablation (#203)",
     )
     parser.add_argument(
-        "--semantic-merge",
-        action="store_true",
-        help="persiste uma variante pós-processada separada da saída canônica",
+        "--scene-context-mode",
+        choices=tuple(mode.value for mode in SceneContextMode),
+        default=None,
+        help=(
+            "local_first não envia claims de cena ao reasoner; context_assisted envia. "
+            "O resto do prompt é idêntico nos dois, então a ablation isola uma variável"
+        ),
+    )
+    parser.add_argument(
+        "--sequence-masks",
+        type=Path,
+        default=SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json",
+        help=(
+            "geometria de área da sequência (círculo útil da lente e silhueta do rig); "
+            "passe um caminho inexistente para rodar sem exclusão declarada"
+        ),
     )
     return parser
 
@@ -460,9 +600,10 @@ def main(argv: list[str] | None = None) -> None:
             results_dir=arguments.results_dir,
             frame_ids=tuple(arguments.frame_id),
             limit=arguments.limit,
-            semantic_merge=arguments.semantic_merge,
             context_profile=arguments.context_profile,
             region_views=tuple(arguments.region_views) or None,
+            scene_context_mode=arguments.scene_context_mode,
+            sequence_masks=arguments.sequence_masks if arguments.sequence_masks.is_file() else None,
         )
     )
 

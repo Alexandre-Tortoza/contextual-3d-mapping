@@ -1,0 +1,124 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-000",
+  "input_sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+  "latency_s": 289.79002485,
+  "ego_vehicle_mask_applied": false,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 66,
+  "proposal_count": 75,
+  "merged_proposal_count": 75,
+  "regions_with_multiple_proposals": 7,
+  "labels": [
+    [
+      "plain wall",
+      28
+    ],
+    [
+      "plain surface",
+      8
+    ],
+    [
+      "wall",
+      7
+    ],
+    [
+      "ceiling",
+      5
+    ],
+    [
+      "carpet",
+      4
+    ],
+    [
+      "wooden floor",
+      3
+    ],
+    [
+      "ceiling tiles",
+      2
+    ],
+    [
+      "concrete pavement",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "metallic suitcase",
+      1
+    ],
+    [
+      "metallic surface",
+      1
+    ],
+    [
+      "smooth surface",
+      1
+    ],
+    [
+      "textured surface",
+      1
+    ],
+    [
+      "wooden beam",
+      1
+    ],
+    [
+      "wooden plank",
+      1
+    ],
+    [
+      "wooden table",
+      1
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      138
+    ],
+    [
+      "label",
+      132
+    ],
+    [
+      "condition",
+      66
+    ],
+    [
+      "material",
+      66
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9
+  },
+  "geometric_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9156474471092224,
+    "maximum": 1.0,
+    "mean": 0.9711824682625857,
+    "median": 0.9778611361980438
+  },
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.42424242424242425,
+    "distinct_labels": 16
+  },
+  "scene_echo_label_count": 0
+}

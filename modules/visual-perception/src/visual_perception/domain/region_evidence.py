@@ -41,6 +41,7 @@ class EvidenceSlot(StrEnum):
     """Os slots complementares de evidência que uma região pode reter."""
 
     FOREGROUND_DENSE = "foreground_dense"
+    MASKED_SUBJECT = "masked_subject"
     TIGHT_CROP = "tight_crop"
     CONTEXTUAL_CROP = "contextual_crop"
     SCENE_CONDITIONED = "scene_conditioned"
@@ -57,10 +58,46 @@ class EvidenceState(StrEnum):
     FAILED = "failed"
 
 
+# Enumera como o sujeito é tornado identificável em uma view. Existe porque a
+# evidência que o reasoner recebe tem três tratamentos genuinamente distintos —
+# recorte cru, sujeito isolado sobre fundo neutro, e sujeito demarcado dentro do
+# contexto — e um booleano ``masked`` não conseguia expressar o terceiro, que é
+# justamente o que faltava para o crop contextual deixar de ser ambíguo.
+class SubjectEmphasis(StrEnum):
+    """Como uma view torna o sujeito da região identificável."""
+
+    NONE = "none"
+    ZERO_FILL = "zero_fill"
+    NEUTRAL_FILL = "neutral_fill"
+    CONTOUR = "contour"
+
+    # Indica se o tratamento suprime o fundo, informação que o RegionView
+    # carrega para o reasoner saber se o que ele vê inclui entorno.
+    @property
+    def is_masked(self) -> bool:
+        """Indica que o tratamento suprimiu tudo fora da máscara."""
+        return self in {SubjectEmphasis.ZERO_FILL, SubjectEmphasis.NEUTRAL_FILL}
+
+    # Nomeia o tratamento no campo ``preprocessing`` do slot persistido. Existe
+    # para que o artifact diga exatamente que preprocessamento produziu aqueles
+    # pixels, com um vocabulário estável que o leitor reconhece.
+    @property
+    def preprocessing_label(self) -> str:
+        """Retorna o nome do tratamento usado em ``RegionEvidenceSlot.preprocessing``."""
+        return {
+            SubjectEmphasis.NONE: "crop",
+            SubjectEmphasis.ZERO_FILL: "masked_crop",
+            SubjectEmphasis.NEUTRAL_FILL: "neutral_masked_crop",
+            SubjectEmphasis.CONTOUR: "contour_crop",
+        }[self]
+
+
 #: Slots cuja evidência descreve apenas o objeto, sem entorno. Usada por
 #: consumidores que precisam separar foreground de contexto sem reimplementar
 #: a classificação (critério de aceitação da #194).
-FOREGROUND_SLOTS = frozenset({EvidenceSlot.FOREGROUND_DENSE, EvidenceSlot.TIGHT_CROP})
+FOREGROUND_SLOTS = frozenset(
+    {EvidenceSlot.FOREGROUND_DENSE, EvidenceSlot.MASKED_SUBJECT, EvidenceSlot.TIGHT_CROP}
+)
 
 #: Slots cuja evidência inclui entorno ou cena, complementares aos de foreground.
 CONTEXTUAL_SLOTS = frozenset({EvidenceSlot.CONTEXTUAL_CROP, EvidenceSlot.SCENE_CONDITIONED})
@@ -89,6 +126,11 @@ class RegionEvidenceSlot:
     space: EmbeddingSpace | None = None
     mask_ref: str | None = None
     support_ratio: float | None = None
+    #: Fração do bounding box que a máscara ocupa. Existe para tornar auditável
+    #: o caso em que a caixa domina semanticamente a região: uma máscara fina e
+    #: diagonal preenche pouco do seu box, e uma interpretação feita sobre o box
+    #: estaria descrevendo o fundo. ``None`` quando o slot não recorta nada.
+    mask_fill_ratio: float | None = None
     reason: str | None = None
     view_id: str | None = None
     source_artifact_refs: tuple[SourceArtifactReference, ...] = field(default_factory=tuple)
@@ -103,6 +145,10 @@ class RegionEvidenceSlot:
             validate_identifier(self.view_id, field="view_id")
         if self.support_ratio is not None and not 0.0 <= self.support_ratio <= 1.0:
             raise ValueError(f"RegionEvidenceSlot.support_ratio must be in [0, 1], got {self.support_ratio}.")
+        if self.mask_fill_ratio is not None and not 0.0 <= self.mask_fill_ratio <= 1.0:
+            raise ValueError(
+                f"RegionEvidenceSlot.mask_fill_ratio must be in [0, 1], got {self.mask_fill_ratio}."
+            )
         if self.state is EvidenceState.AVAILABLE:
             if self.artifact_ref is None or self.space is None:
                 raise ValueError(
@@ -178,6 +224,7 @@ def evidence_to_dict(slot: RegionEvidenceSlot) -> dict[str, Any]:
         "space": None if slot.space is None else _space_to_dict(slot.space),
         "mask_ref": slot.mask_ref,
         "support_ratio": slot.support_ratio,
+        "mask_fill_ratio": slot.mask_fill_ratio,
         "reason": slot.reason,
         "view_id": slot.view_id,
         "source_artifact_refs": [vars(reference) for reference in slot.source_artifact_refs],
@@ -203,6 +250,7 @@ def evidence_from_dict(payload: dict[str, Any]) -> RegionEvidenceSlot:
         space=None if space is None else _space_from_dict(space),
         mask_ref=payload.get("mask_ref"),
         support_ratio=payload.get("support_ratio"),
+        mask_fill_ratio=payload.get("mask_fill_ratio"),
         reason=payload.get("reason"),
         view_id=payload.get("view_id"),
         source_artifact_refs=tuple(

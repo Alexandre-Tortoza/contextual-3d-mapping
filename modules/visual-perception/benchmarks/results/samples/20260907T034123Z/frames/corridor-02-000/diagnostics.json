@@ -1,0 +1,128 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-000",
+  "input_sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+  "latency_s": 290.7082805580003,
+  "ego_vehicle_mask_applied": false,
+  "scene_context_mode": "local_first",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 66,
+  "proposal_count": 75,
+  "merged_proposal_count": 75,
+  "regions_with_multiple_proposals": 7,
+  "labels": [
+    [
+      "plain wall",
+      34
+    ],
+    [
+      "ceiling",
+      6
+    ],
+    [
+      "wall",
+      5
+    ],
+    [
+      "floor",
+      4
+    ],
+    [
+      "wooden surface",
+      3
+    ],
+    [
+      "plain surface",
+      2
+    ],
+    [
+      "wooden plank",
+      2
+    ],
+    [
+      "brick",
+      1
+    ],
+    [
+      "car dashboard",
+      1
+    ],
+    [
+      "ceiling tiles",
+      1
+    ],
+    [
+      "crocodile scales",
+      1
+    ],
+    [
+      "curved wall",
+      1
+    ],
+    [
+      "metallic suitcase",
+      1
+    ],
+    [
+      "metallic surface",
+      1
+    ],
+    [
+      "smooth surface",
+      1
+    ],
+    [
+      "textured surface",
+      1
+    ],
+    [
+      "wooden beam",
+      1
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      143
+    ],
+    [
+      "label",
+      133
+    ],
+    [
+      "condition",
+      66
+    ],
+    [
+      "material",
+      66
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.95,
+    "mean": 0.9242424242424242,
+    "median": 0.9
+  },
+  "geometric_confidence": {
+    "count": 66,
+    "missing": 0,
+    "minimum": 0.9156474471092224,
+    "maximum": 1.0,
+    "mean": 0.9711824682625857,
+    "median": 0.9778611361980438
+  },
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.5151515151515151,
+    "distinct_labels": 17
+  },
+  "scene_echo_label_count": 0
+}

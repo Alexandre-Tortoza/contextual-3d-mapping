@@ -93,10 +93,44 @@ def test_region_views_rejects_a_repeated_slot() -> None:
         MultimodalReasoningConfig(region_views=("foreground_dense", "foreground_dense"))
 
 
-# O default precisa incluir foreground e contexto: é essa combinação que faz o
-# perfil full custar mais que o baseline e, agora, produzir algo diferente dele.
+# O default cobre foreground e contexto. A #212 chegou a removê-lo por hipótese
+# e a medição reprovou: com os pixels de origem íntegros, o contextual_crop
+# reduz o colapso de labels em corridor-02-002 de 0,50 para 0,30
+# (docs/known-limitations.md, limitação 1).
 def test_default_region_views_span_foreground_and_context() -> None:
     """A seleção default cobre foreground e contexto."""
     views = MultimodalReasoningConfig().region_views
-    assert "foreground_dense" in views
+    # O sujeito isolado que vai ao VLM é ``masked_subject``, e não
+    # ``foreground_dense``: aquele é o slot do embedding denso, e usar o mesmo
+    # recorte para os dois confundia a evidência do reasoner com a do DINO
+    # (#202). O fundo dele é cinza, porque preto é a cor da vinheta do fisheye.
+    assert "masked_subject" in views
+    assert "tight_crop" in views
     assert "contextual_crop" in views
+
+
+# O canal textual permanece ligado por default: medido em corridor-02-002,
+# desligá-lo não foi o que corrigiu o colapso de labels (o canal visual foi), e
+# custou um dominant_fraction levemente pior. O default só muda com medição a
+# favor.
+def test_default_scene_context_mode_is_context_assisted() -> None:
+    """As claims de cena acompanham a região por default."""
+    assert MultimodalReasoningConfig().scene_context_mode == "context_assisted"
+
+
+# Garante que o modo local-first continua construível: ele é a única garantia
+# estrutural de que nenhuma claim de cena vira label de região, e permanece
+# disponível para a ablation mesmo não sendo o default.
+def test_local_first_mode_is_configurable() -> None:
+    """O modo local-first continua disponível por configuração."""
+    config = MultimodalReasoningConfig(scene_context_mode="local_first")
+    assert config.scene_context_mode == "local_first"
+
+
+# Rejeita um modo desconhecido na fronteira de configuração: um typo precisa
+# falhar na construção, e não produzir silenciosamente uma ablation diferente
+# da que o experimento pensa estar rodando.
+def test_unknown_scene_context_mode_is_rejected() -> None:
+    """Um modo de contexto de cena desconhecido é recusado na construção."""
+    with pytest.raises(ValueError, match="scene_context_mode"):
+        MultimodalReasoningConfig(scene_context_mode="somewhat_local")

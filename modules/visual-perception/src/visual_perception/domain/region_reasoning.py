@@ -28,25 +28,57 @@ região.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_evidence import CONTEXTUAL_SLOTS, FOREGROUND_SLOTS, EvidenceSlot
+from visual_perception.domain.region_evidence import (
+    CONTEXTUAL_SLOTS,
+    FOREGROUND_SLOTS,
+    EvidenceSlot,
+    SubjectEmphasis,
+)
 from visual_perception.domain.semantics import ClaimKind, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext
+
 
 #: As kinds de claim de cena que podem informar a interpretação de uma
 #: região. É o subconjunto canônico exigido pela #202: descreve a cena, não
 #: uma região dela. Kinds de região (``LABEL``, ``CONDITION``, ``MATERIAL``)
 #: ficam de fora por construção, para que nenhuma propriedade global entre no
 #: raciocínio de região disfarçada de propriedade local.
+# Enumera se o raciocínio de uma região enxerga o contexto de cena. Existe
+# porque proibir textualmente a repetição da cena foi tentado e medido, e
+# falhou: o prompt já afirma que as claims descrevem a cena e "must not be
+# repeated as the label", e ainda assim regiões saem rotuladas com a cena
+# inteira (docs/known-limitations.md, limitação 1). A única garantia estrutural
+# é o contexto não entrar no request. Selecionado por
+# MultimodalReasoningConfig.scene_context_mode e aplicado em
+# select_region_scene_claims.
+class SceneContextMode(StrEnum):
+    """Se as claims de cena atravessam a fronteira do raciocínio de região."""
+
+    #: A região é interpretada apenas pela sua própria evidência local.
+    LOCAL_FIRST = "local_first"
+    #: As claims de cena acompanham a região, para desambiguação.
+    CONTEXT_ASSISTED = "context_assisted"
+
+
+#: As claims de cena que podem acompanhar uma região no prompt: **apenas** as
+#: ambientais. ``SCENE_DESCRIPTION``, ``ATTRIBUTE`` e ``HAZARD`` saíram na #202
+#: porque descrevem um inventário de objetos, e um objeto inferido globalmente
+#: não pode induzir a identidade de uma região local — em ``corridor-02-002``
+#: era por ali que "there is a suitcase in the foreground", que era o próprio
+#: rig, alcançava o prompt de cada uma das 60 regiões.
 REGION_SCENE_CLAIM_KINDS = frozenset(
     {
         ClaimKind.SCENE_TYPE,
-        ClaimKind.SCENE_DESCRIPTION,
-        ClaimKind.ATTRIBUTE,
-        ClaimKind.HAZARD,
+        ClaimKind.ENVIRONMENT,
+        ClaimKind.LAYOUT,
+        ClaimKind.LIGHTING,
+        ClaimKind.VISIBILITY,
+        ClaimKind.NAVIGABILITY,
     }
 )
 
@@ -64,7 +96,10 @@ class RegionView:
     payload: ImagePayload
     crop_box: BoundingBox
     transform: CoordinateTransform
-    masked: bool
+    #: Como esta view torna o sujeito identificável. Substituiu um booleano
+    #: ``masked`` na #202: ele não conseguia expressar o crop contextual, que
+    #: demarca o sujeito pelo contorno sem suprimir o entorno.
+    emphasis: SubjectEmphasis = SubjectEmphasis.NONE
 
     # Impõe que a view descreva exatamente a caixa que diz descrever. Sem
     # isso, um recorte fora de sincronia com a sua caixa faria o reasoner
@@ -78,6 +113,14 @@ class RegionView:
                 f"RegionView {self.slot.value!r} has a {self.payload.width}x{self.payload.height} "
                 f"payload but a {expected_width}x{expected_height} crop_box."
             )
+
+    # Responde se o tratamento suprimiu tudo fora da máscara. Existe como
+    # propriedade derivada para que os consumidores anteriores à #202
+    # continuem lendo a mesma informação sem conhecer SubjectEmphasis.
+    @property
+    def masked(self) -> bool:
+        """Indica que a view suprimiu os pixels fora da máscara da região."""
+        return self.emphasis.is_masked
 
     # Responde se a view mostra apenas o objeto, sem entorno. Reusa a
     # classificação de slots da #194 para que consumidores não reimplementem
@@ -147,7 +190,11 @@ class RegionReasoningRequest:
 # evidência e proveniência de cada claim continuam individualmente legíveis
 # e auditáveis. Chamada por application/region_semantics.py ao montar cada
 # RegionReasoningRequest.
-def select_region_scene_claims(scene_context: SceneContext | None) -> tuple[SemanticClaim, ...]:
+def select_region_scene_claims(
+    scene_context: SceneContext | None,
+    *,
+    mode: SceneContextMode = SceneContextMode.CONTEXT_ASSISTED,
+) -> tuple[SemanticClaim, ...]:
     """Retorna o subconjunto canônico de claims de cena visível ao raciocínio de região.
 
     Claims contraditórias são preservadas lado a lado: a seleção não escolhe
@@ -155,11 +202,18 @@ def select_region_scene_claims(scene_context: SceneContext | None) -> tuple[Sema
     fronteira. Contexto ausente devolve uma tupla vazia, que é uma entrada
     válida — a região é interpretada apenas pela sua própria evidência.
 
+    Em ``LOCAL_FIRST`` a tupla é vazia por decisão de modo, e não por ausência
+    de cena: a cena continua sendo analisada e permanece na observação, apenas
+    não atravessa esta fronteira.
+
     Argumentos:
         scene_context: o contexto de cena da observação, ou ``None``.
+        mode: se o contexto de cena acompanha a região.
     Retorna:
         as claims de cena elegíveis, na ordem em que a cena as produziu.
     """
+    if mode is SceneContextMode.LOCAL_FIRST:
+        return ()
     if scene_context is None:
         return ()
     return tuple(claim for claim in scene_context.claims if claim.kind in REGION_SCENE_CLAIM_KINDS)

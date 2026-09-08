@@ -19,7 +19,9 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from visual_perception.domain.image_area import ImageAreaGeometry, ImageAreaMasks
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
+from visual_perception.domain.region_reasoning import SceneContextMode
 
 
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
@@ -50,6 +52,15 @@ class RegionDiscoveryConfig:
     model_config: str = "configs/sam2.1/sam2.1_hiera_s.yaml"
     max_regions: int = 100
     min_mask_area: int = 64
+    #: Qualidade mínima que o SAM exige da máscara predita, e estabilidade
+    #: mínima sob perturbação do limiar de binarização. Os dois já existiam no
+    #: backend e nunca eram passados: o adapter chamava o pipeline só com
+    #: ``points_per_batch``, de modo que "estabilidade" não era um controle
+    #: disponível ao módulo. Os defaults são os do próprio backend, então
+    #: declará-los não muda a execução — muda o fato de poderem ser ajustados
+    #: e registrados no fingerprint.
+    pred_iou_threshold: float = 0.88
+    stability_score_threshold: float = 0.95
 
     # Valida o invariante de fronteira desta config logo após a construção,
     # falhando cedo com um erro acionável em vez de deixar um threshold
@@ -61,6 +72,10 @@ class RegionDiscoveryConfig:
             raise ValueError("region_discovery.device must be 'auto', 'cpu', or 'cuda'.")
         if not self.model_config:
             raise ValueError("region_discovery.model_config must not be empty.")
+        for name in ("pred_iou_threshold", "stability_score_threshold"):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"region_discovery.{name} must be in [0, 1], got {value}.")
         if self.max_regions <= 0:
             raise ValueError("region_discovery.max_regions must be positive.")
         if self.min_mask_area <= 0:
@@ -107,6 +122,100 @@ class RegionMergeConfig:
 
 
 # Configuração do backend de extração de features densas (DenseFeatureExtractor).
+# Declara as áreas de imagem que limitam a evidência utilizável de um frame.
+# A *geometria* é específica de rig e dataset, então quem a preenche é a
+# aplicação ou o experimento que compõe a execução — o módulo só define o
+# contract e a aplica. Existe aqui, e não no harness, porque a exclusão
+# acontece dentro do pipeline: até a #202 ela era uma flag de linha de comando
+# que pintava pixels, e pintar pixels foi o que colapsou 45 de 45 regiões em
+# ``curved wall`` (ver docs/known-limitations.md).
+@dataclass(frozen=True)
+class ImageAreaConfig:
+    """As áreas declaradas do frame que limitam a evidência utilizável.
+
+    Os limiares que decidem exclusão vivem em :class:`ProposalFilterConfig`:
+    aqui fica só a geometria, que é a parte específica de rig e dataset.
+
+    Argumentos:
+        valid_area: área utilizável do sensor; ``None`` desliga a exclusão.
+        ego_vehicle: área ocupada pelo rig; ``None`` desliga a exclusão.
+    """
+
+    valid_area: ImageAreaGeometry | None = None
+    ego_vehicle: ImageAreaGeometry | None = None
+
+    # Rasteriza as geometrias declaradas na resolução do frame. Chamada uma vez
+    # por frame pelo pipeline, para que a filtragem compare máscaras já prontas
+    # em vez de recalcular a geometria por proposal.
+    def rasterize(self, width: int, height: int) -> ImageAreaMasks:
+        """Converte as geometrias declaradas nas máscaras daquele frame.
+
+        Argumentos:
+            width: largura do frame em pixels.
+            height: altura do frame em pixels.
+        Retorna:
+            as máscaras correspondentes; ausentes quando nada foi declarado.
+        """
+        return ImageAreaMasks(
+            valid_area=None if self.valid_area is None else self.valid_area.rasterize(width, height),
+            ego_vehicle=(
+                None if self.ego_vehicle is None else self.ego_vehicle.rasterize(width, height)
+            ),
+        )
+
+
+# Define os limiares geométricos que separam evidência redundante de evidência
+# nova entre discovery e merge. Existe separada de RegionMergeConfig porque
+# merge *une* propostas que descrevem a mesma região, enquanto esta filtragem
+# *descarta* propostas que não acrescentam evidência — as duas evoluem por
+# razões diferentes.
+@dataclass(frozen=True)
+class ProposalFilterConfig:
+    """Limiares de área e redundância aplicados às proposals de discovery.
+
+    Este estágio decide **validade**, não redundância. Duplicatas geométricas
+    continuam sendo problema de ``merge_regions`` (:class:`RegionMergeConfig`),
+    que as une preservando os dois ``contributing_proposal_ids`` em vez de
+    descartar uma delas — descartar aqui perderia essa proveniência e tornaria
+    o caminho de IoU do merge inalcançável.
+
+    Nenhum destes campos é um limite de contagem: um ``top-N`` cego atingiria
+    qualquer meta de número descartando evidência útil junto com a redundante.
+
+    Argumentos:
+        min_relative_area: área mínima de uma proposal, como fração do frame.
+        max_relative_area: área máxima; acima disso a proposal descreve a cena.
+        min_valid_overlap: fração mínima de uma proposal dentro da área válida
+            do sensor para que ela seja aceita.
+        max_ego_overlap: fração máxima de uma proposal sobre o rig antes de ela
+            ser descartada.
+    """
+
+    min_relative_area: float = 0.002
+    max_relative_area: float = 0.6
+    min_valid_overlap: float = 0.5
+    max_ego_overlap: float = 0.3
+
+    # Valida as frações e a coerência entre área mínima e máxima, para que uma
+    # configuração impossível falhe na construção e não como frame vazio.
+    def __post_init__(self) -> None:
+        """Valida as frações e a ordem entre área mínima e máxima."""
+        for name in (
+            "min_relative_area",
+            "max_relative_area",
+            "min_valid_overlap",
+            "max_ego_overlap",
+        ):
+            value = getattr(self, name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"proposal_filter.{name} must be in [0, 1], got {value}.")
+        if self.min_relative_area >= self.max_relative_area:
+            raise ValueError(
+                "proposal_filter.min_relative_area must be smaller than max_relative_area, got "
+                f"{self.min_relative_area} and {self.max_relative_area}."
+            )
+
+
 @dataclass(frozen=True)
 class FeatureExtractionConfig:
     """Seleciona o backbone e a produção de evidência densa (#191/#192/#208)."""
@@ -166,6 +275,11 @@ class MultiContextConfig:
     """Quais slots de evidência de região o pipeline extrai, e com que geometria."""
 
     foreground_enabled: bool = True
+    #: Se o reasoner recebe o sujeito isolado sobre fundo neutro. Ligado por
+    #: default: até a #202 as únicas views textuais eram recortes de bounding
+    #: box sem indicação de máscara, e numa região cuja máscara ocupa parte
+    #: pequena da caixa o modelo interpretava a caixa.
+    masked_subject_enabled: bool = True
     tight_crop_enabled: bool = True
     contextual_crop_enabled: bool = False
     scene_conditioned_enabled: bool = False
@@ -248,7 +362,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v5"
+    prompt_version: str = "v6"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
@@ -258,10 +372,19 @@ class MultimodalReasoningConfig:
     #: ``multi_context`` simplesmente não é produzida, então este campo
     #: descreve o teto de evidência, não uma exigência.
     region_views: tuple[str, ...] = (
-        EvidenceSlot.FOREGROUND_DENSE.value,
+        EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
         EvidenceSlot.CONTEXTUAL_CROP.value,
     )
+    #: Se as claims de cena acompanham cada região no prompt. Governa o canal
+    #: *textual* de contexto; ``region_views`` governa o *visual*. Os dois são
+    #: ablatáveis de forma independente, e foi essa separação que permitiu
+    #: medir de qual deles vinha o vazamento: em ``corridor-02-002``, desligar
+    #: só o canal visual derrubou o eco de cena de 45/45 regiões para 2/60,
+    #: com as claims de cena ainda no prompt. O default segue
+    #: ``context_assisted`` porque o modo local-first mediu levemente pior no
+    #: colapso de labels, e o eco que ele elimina é residual.
+    scene_context_mode: str = SceneContextMode.CONTEXT_ASSISTED.value
 
     # Garante que a versão do prompt está definida, já que ela identifica
     # qual template estruturado o backend deve usar. ``v4`` troca o exemplo de
@@ -298,6 +421,11 @@ class MultimodalReasoningConfig:
                 "multimodal_reasoning.region_views must include at least one foreground slot: "
                 "interpreting a region from context alone would describe its surroundings."
             )
+        if self.scene_context_mode not in {mode.value for mode in SceneContextMode}:
+            raise ValueError(
+                "multimodal_reasoning.scene_context_mode must be "
+                f"{sorted(mode.value for mode in SceneContextMode)}."
+            )
 
 
 # Configuração raiz do módulo: agrega todas as sub-configs acima em um único
@@ -320,6 +448,8 @@ class ModuleConfig:
     )
     multi_context: MultiContextConfig = field(default_factory=MultiContextConfig)
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
+    image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
+    proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
 
     # Valida invariantes que dependem de mais de um campo ao mesmo tempo
     # (o que os ``__post_init__`` das sub-configs não conseguem verificar
@@ -363,6 +493,8 @@ class ModuleConfig:
             ("multimodal_reasoning", MultimodalReasoningConfig),
             ("multi_context", MultiContextConfig),
             ("calibration", CalibrationConfig),
+            ("image_area", ImageAreaConfig),
+            ("proposal_filter", ProposalFilterConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
                 payload[key] = config_type(**payload[key])

@@ -9,7 +9,13 @@ from visual_perception.config import RegionMergeConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, TileProvenance
-from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
+from visual_perception.domain.semantics import (
+    ClaimKind,
+    ConfidenceScore,
+    Evidence,
+    HypothesisRole,
+    SemanticClaim,
+)
 
 
 # Constrói uma RegionProposal sintética a partir de uma box retangular; helper usado
@@ -60,6 +66,7 @@ def _claim(value: str, producer: str, confidence: float) -> SemanticClaim:
         ConfidenceScore(confidence, source=producer),
         (Evidence("e"),),
         ModelProvenance(stage="t", producer=producer, config_fingerprint="abc"),
+        role=HypothesisRole.PRIMARY,
     )
 
 
@@ -99,6 +106,7 @@ def _unscored_claim(value: str, producer: str) -> SemanticClaim:
         None,
         (Evidence("e"),),
         ModelProvenance(stage="t", producer=producer, config_fingerprint="abc"),
+        role=HypothesisRole.PRIMARY,
     )
 
 

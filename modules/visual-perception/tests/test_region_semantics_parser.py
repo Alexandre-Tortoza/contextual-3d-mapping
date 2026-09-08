@@ -226,3 +226,55 @@ def test_a_legitimate_label_containing_angle_brackets_is_still_accepted() -> Non
     """Um label real não é confundido com placeholder por conter '<' no meio."""
     interpretation = parse_region_interpretation({"label": "sign <exit>", "kind": "thing"})
     assert interpretation.label == "sign <exit>"
+
+
+# O run real de ``corridor-02-002`` mostrou o VLM repetindo o próprio primary
+# dentro de ``alternatives`` (``carpet 0.9`` primary, ``carpet 0.9`` e
+# ``carpet 0.1`` como alternativas), produzindo três claims LABEL equivalentes
+# para a mesma região. Uma hipótese repetida não é evidência nova.
+def test_alternative_that_repeats_the_primary_is_deduplicated() -> None:
+    result = parse_region_interpretation(
+        response(
+            label="carpet",
+            confidence=0.9,
+            alternatives=[{"label": "carpet", "confidence": 0.9}, {"label": "carpet", "confidence": 0.1}],
+        )
+    )
+    assert result.label == "carpet"
+    assert result.alternatives == ()
+
+
+# Duas alternativas idênticas entre si colapsam para uma só, mantendo a
+# primeira ocorrência — a que o produtor listou com mais prioridade.
+def test_repeated_alternatives_collapse_to_the_first_occurrence() -> None:
+    result = parse_region_interpretation(
+        response(
+            label="wall",
+            alternatives=[
+                {"label": "panel", "confidence": 0.3},
+                {"label": "panel", "confidence": 0.1},
+            ],
+        )
+    )
+    assert [(item.value, item.confidence.value) for item in result.alternatives] == [("panel", 0.3)]
+
+
+# A deduplicação é comparação trivial de texto, não ontologia: só caixa e
+# espaçamento são normalizados, e nada além disso colapsa.
+def test_deduplication_normalizes_only_case_and_whitespace() -> None:
+    result = parse_region_interpretation(
+        response(label="Plain  Wall", alternatives=[{"label": "plain wall"}, {"label": "plain walls"}])
+    )
+    assert [item.value for item in result.alternatives] == ["plain walls"]
+
+
+# Uma alternativa com score maior que o primary continua sendo alternativa: o
+# produtor decidiu qual hipótese é a principal, e o parser não reordena.
+def test_alternative_never_replaces_the_primary_by_score() -> None:
+    result = parse_region_interpretation(
+        response(label="wall", confidence=0.2, alternatives=[{"label": "door", "confidence": 0.95}])
+    )
+    assert result.label == "wall"
+    assert result.confidence is not None
+    assert result.confidence.value == pytest.approx(0.2)
+    assert [item.value for item in result.alternatives] == ["door"]

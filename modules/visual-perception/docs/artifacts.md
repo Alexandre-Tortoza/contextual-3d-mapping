@@ -205,14 +205,69 @@ A validação end-to-end gera samples em:
 benchmarks/results/samples/<run-id>/
 ```
 
-O conjunto de referência pode conter:
+Este documento é a **fonte única** do layout: `execution.md` e `model-backends.md` linkam
+para cá em vez de repetir a árvore.
 
-- `VisualObservation` serializada;
-- overlay das masks/labels;
-- `manifest.json`;
-- configuração completa;
-- git revision;
-- métricas do `ModelLifecycleManager`.
+```text
+benchmarks/results/samples/<run-id>/
+├── manifest.json
+└── frames/<frame-id>/
+    ├── observation.json      VisualObservation serializada
+    ├── diagnostics.json      resumo estatístico do frame
+    ├── raw.png               pixels de origem, nunca modificados
+    ├── proposals.png         masks + boxes antes do merge, sem semântica
+    ├── regions-masks.png     só as masks finais
+    ├── regions-boxes.png     só as boxes finais
+    ├── regions-labels.png    labels no centróide, sem caixas
+    ├── regions-overlay.png   masks + boxes + labels
+    ├── ego-mask.png          silhueta do rig, quando a sequência a declara
+    ├── valid-area-mask.png   área útil do sensor, quando declarada
+    └── pipeline-input.png    só quando difere de raw.png
+```
+
+Uma camada por pergunta. Um overlay único com dezenas de caixas não distingue "o SAM
+propôs errado" de "o merge deveria ter unido" de "a máscara está certa e só a caixa parece
+larga"; camadas separadas distinguem.
+
+Duas regras que o layout codifica:
+
+- **os pixels de origem são imutáveis.** `raw.png` é o frame como veio do dataset.
+  `pipeline-input.png` só existe quando algum pré-processamento alterou a entrada, e
+  `diagnostics.json` afirma explicitamente se os dois são idênticos. Desde a #202 nenhuma
+  opção altera os pixels: as máscaras de exclusão são geometria declarada em
+  `benchmarks/sequence-masks/<sequence>.json`, aplicadas na filtragem de proposals e
+  persistidas como artifacts;
+- **os dois eixos de confiança são nomeados.** O overlay escreve `sem=0.90 geom=0.97`, com
+  `sem=?` quando o produtor não pontuou. Um número solto ao lado de um label era lido como
+  certeza semântica quando descrevia a qualidade da máscara.
+
+As views por região (foreground mask-aware, tight crop, contextual crop) **não** são
+persistidas pelo run: são função pura da observação, dos pixels e da config, todos já
+salvos. [`benchmarks/inspect_region.py`](../benchmarks/inspect_region.py) as materializa
+sob demanda para a região investigada, sem GPU e sem re-executar o SAM — portanto sem o
+jitter dele. Persistir as três para cada uma de dezenas de regiões por frame produziria
+milhares de arquivos versionados que quase nunca seriam abertos.
+
+`manifest.json` grava `frame_artifact_layout`, de modo que um leitor que espere outro
+layout falhe explicitamente em vez de ler o diretório errado em silêncio.
+
+### Campos de `diagnostics.json`
+
+`diagnostics.json` responde, sem abrir imagem nenhuma, o que aconteceu entre as proposals
+e os labels finais. Os campos que exigem leitura cuidadosa:
+
+| campo | o que afirma |
+| --- | --- |
+| `region_kinds` | histograma de `RegionKind` (`thing`/`stuff`/`part`/`unknown`) por região. **Não** confundir com `ClaimKind`: até a #202 este campo contava o tipo do *claim* e reportava `[["attribute",130],["label",126]]`, um número sobre a forma da resposta e não sobre a natureza das regiões |
+| `label_counts` | histograma do label primário aberto, uma contagem por região |
+| `category_counts` | histograma da `category` — a categoria mais estável, distinta do label |
+| `semantic_confidence.degenerate` | a distribuição tem mais de um valor a comparar e nenhuma variância. É o caso de `corridor-02-002`, onde o backend informou `0,9` exato nas 60 regiões: o número é preservado como veio, e este campo torna legível que ele não carrega informação |
+| `duplicate_label_hypotheses` | regiões que persistem hipóteses de label equivalentes entre si |
+| `ego.regions_overlapping_ego` | regiões finais que ainda sobrepõem o rig; o gate exige zero |
+| `fisheye.proposals_outside_valid_area` | proposals descartadas por caírem fora da lente; o gate exige zero após a filtragem |
+| `rejected_proposals` | histograma dos motivos de descarte, para que `proposal_count - merged_proposal_count` seja explicável |
+| `ego_vehicle_mask_applied` | se havia geometria de ego declarada. Significa *filtragem aplicada*, nunca pixels pintados |
+| `valid_fisheye_mask` | `applied` quando a sequência declara área válida, `unavailable` quando não |
 
 Esses artifacts têm finalidade diferente da persistência operacional. Eles existem para
 inspeção, reprodução e comparação experimental.

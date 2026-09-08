@@ -28,13 +28,15 @@ __all__ = [
     "ClaimKind",
     "ConfidenceScore",
     "Evidence",
+    "HypothesisRole",
+    "IDENTITY_CLAIM_KINDS",
     "RegionKind",
     "SemanticClaim",
     "UNSCORED_CLAIM_KINDS",
     "calibrated_confidence_of",
-    "contradicting_claims",
     "most_confident_claim",
     "most_supported_claim",
+    "normalize_claim_value",
 ]
 
 
@@ -57,7 +59,16 @@ class ClaimKind(StrEnum):
     MATERIAL = "material"
     HAZARD = "hazard"
     SCENE_TYPE = "scene_type"
+    #: Preservado para desserializar observações anteriores à #202. O contract
+    #: de cena não produz mais prosa livre: ela era o canal por onde um objeto
+    #: alucinado ("there is a suitcase in the foreground", que era o próprio
+    #: rig) alcançava o prompt de cada região.
     SCENE_DESCRIPTION = "scene_description"
+    ENVIRONMENT = "environment"
+    LAYOUT = "layout"
+    LIGHTING = "lighting"
+    VISIBILITY = "visibility"
+    NAVIGABILITY = "navigability"
 
 
 #: Kinds gerados livremente por um modelo, para os quais a #195 proíbe
@@ -73,6 +84,11 @@ UNSCORED_CLAIM_KINDS = frozenset(
         ClaimKind.MATERIAL,
         ClaimKind.HAZARD,
         ClaimKind.SCENE_DESCRIPTION,
+        ClaimKind.ENVIRONMENT,
+        ClaimKind.LAYOUT,
+        ClaimKind.LIGHTING,
+        ClaimKind.VISIBILITY,
+        ClaimKind.NAVIGABILITY,
     }
 )
 
@@ -94,6 +110,45 @@ class RegionKind(StrEnum):
     STUFF = "stuff"
     PART = "part"
     UNKNOWN = "unknown"
+
+
+# Distingue a hipótese que o produtor elegeu como principal das concorrentes
+# que ele registrou junto. Existe porque, até a #202, primary e alternative
+# viravam claims LABEL irmãos indistinguíveis: "quem é o primary" era
+# recuperado por posição na tupla em ``domain/regions.py`` e por score em
+# ``semantic_merge``, e as duas políticas discordavam.
+class HypothesisRole(StrEnum):
+    """O papel de uma hipótese de identidade dentro de uma região.
+
+    ``PRIMARY`` é a interpretação que o produtor elegeu; ``ALTERNATIVE`` é
+    uma hipótese concorrente que ele quis registrar. Uma alternative nunca
+    substitui o primary por ter score maior: quem decide é o produtor, e o
+    papel preserva essa decisão de forma auditável.
+    """
+
+    PRIMARY = "primary"
+    ALTERNATIVE = "alternative"
+
+
+#: Kinds que expressam a *identidade* do sujeito, e por isso carregam papel de
+#: hipótese, ``category`` e ``RegionKind``. Os demais kinds descrevem
+#: propriedades que coexistem com a identidade, não competem com ela.
+IDENTITY_CLAIM_KINDS = frozenset({ClaimKind.LABEL})
+
+
+# Normaliza o texto de um claim apenas o suficiente para deduplicação trivial.
+# Existe para que o dedupe de hipóteses e a contagem de labels no diagnóstico
+# usem exatamente a mesma regra; deliberadamente **não** é uma ontologia:
+# ``ceiling light`` e ``ceiling light fixture`` continuam distintos.
+def normalize_claim_value(value: str) -> str:
+    """Devolve ``value`` em caixa baixa e com espaços colapsados.
+
+    Argumentos:
+        value: o texto do claim, como o produtor o escreveu.
+    Retorna:
+        a forma normalizada usada só para comparar igualdade trivial.
+    """
+    return " ".join(value.split()).lower()
 
 
 # Aponta para a evidência bruta que sustenta um claim (crop, prompt/resposta,
@@ -150,6 +205,12 @@ class SemanticClaim:
     ``support`` é o registro estruturado de calibração (#195). Ele nunca
     substitui ``confidence``: os dois coexistem para que bruto e calibrado
     permaneçam distinguíveis na saída pública.
+
+    ``role``, ``category`` e ``region_kind`` só existem em claims de
+    identidade (:data:`IDENTITY_CLAIM_KINDS`) e completam o contract que a
+    #202 exige que sobreviva até a serialização: qual hipótese o produtor
+    elegeu, qual categoria mais estável ele atribuiu, e qual a natureza da
+    região independentemente do label aberto.
     """
 
     kind: ClaimKind
@@ -158,6 +219,9 @@ class SemanticClaim:
     evidence: tuple[Evidence, ...]
     provenance: ModelProvenance
     support: SemanticSupport | None = None
+    role: HypothesisRole | None = None
+    category: str | None = None
+    region_kind: RegionKind | None = None
 
     # Exige um valor não vazio e ao menos uma Evidence, para que todo claim
     # seja auditável até sua origem, e proíbe confiança bruta nos kinds
@@ -175,20 +239,28 @@ class SemanticClaim:
                 f"SemanticClaim({self.kind.value!r}) must not carry a raw confidence: freely generated "
                 "claims are scored only through a calibrated SemanticSupport (see issue #195)."
             )
+        self._validate_identity_fields()
 
-
-# Retorna os claims de um dado kind que discordam entre si (mais de um valor
-# distinto). Existe para que o auditor de qualidade (#168) sinalize
-# contradições em vez de resolvê-las silenciosamente.
-def contradicting_claims(claims: tuple[SemanticClaim, ...], kind: ClaimKind) -> tuple[SemanticClaim, ...]:
-    """Retorna os claims de ``kind`` que discordam entre si (mais de um valor distinto).
-
-    Usada pelo auditor de qualidade (#168) para sinalizar, e não resolver
-    silenciosamente, contradições.
-    """
-    matching = tuple(claim for claim in claims if claim.kind is kind)
-    distinct_values = {claim.value for claim in matching}
-    return matching if len(distinct_values) > 1 else ()
+    # Separa a validação dos campos de identidade porque ela é condicional ao
+    # kind: um claim de identidade precisa declarar seu papel, e um claim
+    # descritivo não pode fingir carregar identidade.
+    def _validate_identity_fields(self) -> None:
+        """Valida ``role``, ``category`` e ``region_kind`` contra o kind do claim."""
+        if self.kind in IDENTITY_CLAIM_KINDS:
+            if self.role is None:
+                raise ValueError(
+                    f"SemanticClaim({self.kind.value!r}) must declare a role: primary and alternative "
+                    "hypotheses stay distinguishable by contract, never by tuple position (see issue #202)."
+                )
+        else:
+            for field_name in ("role", "category", "region_kind"):
+                if getattr(self, field_name) is not None:
+                    raise ValueError(
+                        f"SemanticClaim({self.kind.value!r}) must not carry {field_name}: identity fields "
+                        f"belong only to {sorted(kind.value for kind in IDENTITY_CLAIM_KINDS)}."
+                    )
+        if self.category is not None and not self.category.strip():
+            raise ValueError("SemanticClaim.category must be a non-empty string or None.")
 
 
 # Aplica a política de ordenação de claims não pontuadas: uma claim com score

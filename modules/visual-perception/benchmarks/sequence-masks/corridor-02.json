@@ -1,0 +1,113 @@
+{
+  "sequence_id": "corridor-02",
+  "image_width": 640,
+  "image_height": 480,
+  "valid_area": {
+    "circle": {
+      "cx": 326.0,
+      "cy": 244.0,
+      "r": 324.0
+    }
+  },
+  "ego_vehicle": {
+    "polygons": [
+      [
+        [
+          58,
+          480
+        ],
+        [
+          58,
+          455
+        ],
+        [
+          92,
+          428
+        ],
+        [
+          148,
+          414
+        ],
+        [
+          210,
+          409
+        ],
+        [
+          218,
+          391
+        ],
+        [
+          252,
+          387
+        ],
+        [
+          286,
+          364
+        ],
+        [
+          452,
+          364
+        ],
+        [
+          458,
+          396
+        ],
+        [
+          474,
+          414
+        ],
+        [
+          496,
+          424
+        ],
+        [
+          536,
+          416
+        ],
+        [
+          578,
+          420
+        ],
+        [
+          606,
+          446
+        ],
+        [
+          606,
+          480
+        ]
+      ]
+    ],
+    "provenance": {
+      "method": "silhouette traced by hand over corridor-02-002 and checked against corridor-02-000 and corridor-02-017; the rig is rigidly mounted, so the outline is constant across the sequence",
+      "note": "replaces the row_start=340 band used by the validation harness until #202, which covered 29% of the frame and swallowed valid floor along with the chassis"
+    }
+  },
+  "provenance": {
+    "method": "least-misclassified circle over the per-pixel mean luminance of the whole sequence; vignette below 35.0, scene above 60.0",
+    "derived_by": "benchmarks/derive_sequence_masks.py",
+    "source_frame_count": 18,
+    "source_frames_sha256": [
+      "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+      "e5be0232fb4566b1a935a5eade9ff43486a65925240be865eae8589de14ed7b2",
+      "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+      "3714a41ad795d5c609f2f2629291bea1d022905c606e87b5b0f2cf4745f6e4ca",
+      "e463b7b68dc5d56b69834c69fbd09a87cd5725d070175832280d7c229bc3037c",
+      "8c61634c7db741f0f3bab93e1721ebfb074c86ccb128ee9584e33cdf20f3ac81",
+      "65f8bd2c64b4cb00adfe52a2f53bf68de6288b40d2ce03387b2c157e4f962b16",
+      "9298955e67000433801b24090e4c34821ada9a55297f0c5d4fcbc164bf38063a",
+      "2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b",
+      "154a57b973ac8bcb044e11a5742bf2d677a3e05079490200c51adfd8c635f53a",
+      "b6bf9526ab2ebea63acc77b2408f6eada5042d151fd702019efa7c05dbc32701",
+      "97d1f823afe3aa33181be8f3a11040da7b4cd5ff2b562c937ad5d21e6c789696",
+      "696f7de9c8032596ff4b1c7566e3c6f16c6fa0fd439ed8583fb3e22a1d605e1e",
+      "33082b6314162ae4727a09ca2219348e6ad1e415e2004af8faf5364e193f9eb2",
+      "4b024f127cf06667e3790651c295b7f2fb7a8e13feb136b4eb0827aaff328c93",
+      "6370adaac38e7c568f8868a1bfd7695050f44fd72ed613ecbb395f6adbd512f5",
+      "a1086f43ee7a3855d4b8dc6839535c774799b47b03706cbfe849b07a7004c1d7",
+      "f7ea622db269c79244af5dfc5ae66bd5d1fbe2b5babee60cb51d71acccd5a20a"
+    ],
+    "fit_dark_pixels_inside": 4216,
+    "fit_lit_pixels_outside": 984
+  }
+}

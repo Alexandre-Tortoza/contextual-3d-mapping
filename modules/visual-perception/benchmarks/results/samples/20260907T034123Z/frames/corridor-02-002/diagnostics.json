@@ -1,0 +1,132 @@
+{
+  "layout_version": "frames/1",
+  "frame_id": "corridor-02-002",
+  "input_sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+  "latency_s": 260.8820144480005,
+  "ego_vehicle_mask_applied": false,
+  "scene_context_mode": "local_first",
+  "region_views": [
+    "foreground_dense",
+    "tight_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "valid_fisheye_mask": "unavailable",
+  "region_count": 60,
+  "proposal_count": 64,
+  "merged_proposal_count": 64,
+  "regions_with_multiple_proposals": 4,
+  "labels": [
+    [
+      "plain wall",
+      32
+    ],
+    [
+      "ceiling",
+      4
+    ],
+    [
+      "wall",
+      4
+    ],
+    [
+      "plain surface",
+      3
+    ],
+    [
+      "blank wall",
+      2
+    ],
+    [
+      "carpet",
+      2
+    ],
+    [
+      "floor",
+      2
+    ],
+    [
+      "car door",
+      1
+    ],
+    [
+      "car seat",
+      1
+    ],
+    [
+      "car trunk",
+      1
+    ],
+    [
+      "metallic surface",
+      1
+    ],
+    [
+      "plain white surface",
+      1
+    ],
+    [
+      "red light",
+      1
+    ],
+    [
+      "smooth surface",
+      1
+    ],
+    [
+      "smooth wooden surface",
+      1
+    ],
+    [
+      "tire tread",
+      1
+    ],
+    [
+      "white plastic structure",
+      1
+    ],
+    [
+      "wooden surface",
+      1
+    ]
+  ],
+  "kinds": [
+    [
+      "attribute",
+      125
+    ],
+    [
+      "label",
+      120
+    ],
+    [
+      "condition",
+      60
+    ],
+    [
+      "material",
+      60
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 60,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.95,
+    "mean": 0.9291666666666667,
+    "median": 0.95
+  },
+  "geometric_confidence": {
+    "count": 60,
+    "missing": 0,
+    "minimum": 0.9112460017204285,
+    "maximum": 1.0,
+    "mean": 0.9678116361300151,
+    "median": 0.9704989492893219
+  },
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.5333333333333333,
+    "distinct_labels": 18
+  },
+  "scene_echo_label_count": 0
+}

@@ -10,7 +10,7 @@ from visual_perception.config import LanguageEmbeddingConfig, RegionDiscoveryCon
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
 from visual_perception.domain.references import ModelProvenance
-from visual_perception.domain.region_evidence import EvidenceSlot
+from visual_perception.domain.region_evidence import EvidenceSlot, SubjectEmphasis
 from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionView
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.infrastructure.adapters._runtime import require_checkpoint
@@ -156,7 +156,11 @@ def _reasoning_request(
             payload=payload_with_blobs(width=4, height=4),
             crop_box=box,
             transform=CoordinateTransform(1.0, 1.0, 0.0, 0.0),
-            masked=slot is EvidenceSlot.FOREGROUND_DENSE,
+            emphasis=(
+                SubjectEmphasis.ZERO_FILL
+                if slot is EvidenceSlot.FOREGROUND_DENSE
+                else SubjectEmphasis.NONE
+            ),
         )
         for slot in slots
     )

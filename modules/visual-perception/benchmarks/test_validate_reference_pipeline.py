@@ -15,12 +15,9 @@ sys.path.insert(0, str(_THIS_DIR.parent / "src"))
 sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 
 from validate_reference_pipeline import (  # noqa: E402
-    ValidationOptions,
-    _semantic_merge_observation,
     evidence_state_counts,
     select_frame_paths,
 )
-from visual_perception.config import ModuleConfig  # noqa: E402
 from visual_perception.domain.geometry import BoundingBox, Mask  # noqa: E402
 from visual_perception.domain.region_evidence import (  # noqa: E402
     EvidenceSlot,
@@ -101,12 +98,6 @@ def test_invalid_selection_fails_before_model_loading(
         select_frame_paths(tmp_path, frame_ids)
 
 
-# Confirma que a observação canônica é o produto padrão do validador.
-def test_validation_options_keep_semantic_merge_disabled_by_default() -> None:
-    """Garante que pós-processamento externo não contamine a saída canônica."""
-    assert not ValidationOptions().semantic_merge
-
-
 # Monta uma observação mínima com os quatro estados/slots necessários para
 # testar o resumo operacional sem executar modelos.
 def _observation() -> VisualObservation:
@@ -154,12 +145,3 @@ def test_manifest_summary_distinguishes_missing_from_failed_slots() -> None:
     assert counts[EvidenceSlot.CONTEXTUAL_CROP.value][EvidenceState.FAILED.value] == 1
 
 
-# Confirma que o pós-processamento devolve um novo artifact de observação.
-def test_semantic_merge_returns_a_copy_instead_of_mutating_canonical_output() -> None:
-    """Protege a separação entre artifact canônico e pós-processado."""
-    canonical = _observation()
-
-    postprocessed = _semantic_merge_observation(canonical, ModuleConfig())
-
-    assert postprocessed is not canonical
-    assert canonical.regions[0].region_id == "region-a"
