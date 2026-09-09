@@ -10,12 +10,13 @@ htmlcov/
 
 .venv/
 .venv-*/
+node_modules/
 *.egg-info/
 dist/
 build/
+/artifacts/
 
 # Dados brutos e artefatos locais permanecem fora do histórico Git.
 datasets/raw/
 modules/*/benchmarks/.local/
 modules/*/benchmarks/runs/
-

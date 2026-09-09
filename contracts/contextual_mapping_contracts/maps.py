@@ -17,10 +17,13 @@ class MapId:
 
     value: str
 
+    # Impede identidades vazias de alcançarem persistência ou composição.
     def __post_init__(self) -> None:
+        """Valida que a identidade possui conteúdo não vazio."""
         if not self.value.strip():
             raise ValueError("map id must not be empty.")
 
+    # Fornece a forma textual usada em paths, logs e artifacts públicos.
     def __str__(self) -> str:
         """Retorna a representação textual estável do mapa."""
         return self.value

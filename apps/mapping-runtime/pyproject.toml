@@ -10,5 +10,21 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+mapping-runtime = "mapping_runtime.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/mapping_runtime"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "src",
+    "../../contracts",
+    "../../modules/state-estimation/src",
+    "../../modules/geometric-map/src",
+    "../../modules/sensor-association/src",
+]

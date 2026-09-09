@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from math import isfinite, sqrt
 from typing import TypeAlias
 
-
 Vector3: TypeAlias = tuple[float, float, float]
 Quaternion: TypeAlias = tuple[float, float, float, float]
 
@@ -21,11 +20,15 @@ class FrameId:
 
     value: str
 
+    # Rejeita frames sem identidade antes que componham transforms.
     def __post_init__(self) -> None:
+        """Valida que o nome do frame não está vazio."""
         if not self.value.strip():
             raise ValueError("frame id must not be empty.")
 
+    # Produz a representação textual usada em serialização e diagnóstico.
     def __str__(self) -> str:
+        """Retorna o nome estável do frame."""
         return self.value
 
 
@@ -68,7 +71,9 @@ class RigidTransform:
     translation_m: Vector3
     rotation_xyzw: Quaternion
 
+    # Valida direção, dimensão, finitude e norma antes do uso geométrico.
     def __post_init__(self) -> None:
+        """Valida os invariantes do transform rígido."""
         if self.source_frame == self.target_frame:
             raise ValueError("source_frame and target_frame must differ.")
         object.__setattr__(self, "translation_m", _vector3(self.translation_m, "translation_m"))
@@ -97,7 +102,9 @@ class Pose:
     transform: RigidTransform
     timestamp_ns: int
 
+    # Mantém o timestamp inteiro e não negativo para replay determinístico.
     def __post_init__(self) -> None:
+        """Valida o timestamp associado ao transform."""
         if isinstance(self.timestamp_ns, bool) or not isinstance(self.timestamp_ns, int):
             raise TypeError("timestamp_ns must be an integer.")
         if self.timestamp_ns < 0:

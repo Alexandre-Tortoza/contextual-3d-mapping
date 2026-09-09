@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
+
+from geometric_map import GeometryReference
 
 from contextual_mapping_contracts import ObservationReference, RigidTransform, SourceArtifactReference
-from geometric_map import GeometryReference
 
 
 # Enumera modelos de projeção suportados sem deixar cada caller inferir a
@@ -41,9 +43,15 @@ class CameraLidarCalibration:
     cy: float
     lidar_to_camera: RigidTransform
 
+    # Rejeita calibrações sem identidade ou intrínsecos não físicos antes da
+    # projeção, onde o erro seria mais difícil de diagnosticar.
     def __post_init__(self) -> None:
+        """Valida identidade e parâmetros intrínsecos da calibração."""
         if not self.calibration_id.strip():
             raise ValueError("calibration_id must not be empty.")
+        intrinsics = (self.fx, self.fy, self.cx, self.cy)
+        if not all(isfinite(float(value)) for value in intrinsics):
+            raise ValueError("camera intrinsics must be finite.")
         if self.fx <= 0 or self.fy <= 0:
             raise ValueError("fx and fy must be positive.")
 
@@ -67,11 +75,22 @@ class RgbFrame:
     pixels: tuple[tuple[int, int, int], ...]
     valid_pixels: frozenset[tuple[int, int]]
 
+    # Confirma que resolução, canais e suporte válido pertencem ao mesmo frame.
     def __post_init__(self) -> None:
+        """Valida resolução, pixels RGB e suporte geométrico."""
         if self.width <= 0 or self.height <= 0 or len(self.pixels) != self.width * self.height:
             raise ValueError("RGB dimensions and pixel count must agree.")
-        if any(any(channel < 0 or channel > 255 for channel in pixel) for pixel in self.pixels):
+        if any(
+            len(pixel) != 3
+            or any(
+                isinstance(channel, bool) or not isinstance(channel, int) or channel < 0 or channel > 255
+                for channel in pixel
+            )
+            for pixel in self.pixels
+        ):
             raise ValueError("RGB channels must be in [0, 255].")
+        if any(not (0 <= x < self.width and 0 <= y < self.height) for x, y in self.valid_pixels):
+            raise ValueError("valid_pixels must stay inside the RGB frame.")
 
     # Lê uma cor usando a convenção top-left de visual-perception. Existe
     # para centralizar a conversão de coordenada 2D para índice linear.
@@ -99,9 +118,14 @@ class VisualRegionEvidence:
     label: str | None = None
     feature_reference: str | None = None
 
+    # Mantém a região identificável e evita coordenadas negativas que nunca
+    # poderiam pertencer ao suporte de uma imagem.
     def __post_init__(self) -> None:
+        """Valida identidade e coordenadas básicas da região visual."""
         if not self.region_id.strip():
             raise ValueError("region_id must not be empty.")
+        if any(x < 0 or y < 0 for x, y in self.pixels):
+            raise ValueError("region pixels must be non-negative.")
 
 
 # Explicita o resultado de toda tentativa de associação, inclusive rejeições.
@@ -146,6 +170,20 @@ class PointVisualAssociation:
     label: str | None = None
     feature_reference: str | None = None
 
+    # Mantém o payload coerente com o status para que rejeições não carreguem
+    # evidência visual residual e associações sempre tenham pixel e cor.
     def __post_init__(self) -> None:
+        """Valida a coerência entre status e evidência associada."""
         if self.status is AssociationStatus.ASSOCIATED and (self.pixel is None or self.color_rgb is None):
             raise ValueError("associated points require pixel and color_rgb.")
+        if self.status is not AssociationStatus.ASSOCIATED and any(
+            value is not None
+            for value in (
+                self.pixel,
+                self.color_rgb,
+                self.region_id,
+                self.label,
+                self.feature_reference,
+            )
+        ):
+            raise ValueError("rejected points must not carry visual evidence.")

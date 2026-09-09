@@ -1,7 +1,7 @@
 """Contracts estáveis de nível de repositório, usados por múltiplas capacidades."""
 
-from .observations import ObservationReference, Provenance, SourceArtifactReference
 from .maps import MapId
+from .observations import ObservationReference, Provenance, SourceArtifactReference
 from .spatial import FrameId, Pose, RigidTransform
 from .temporal import Timestamp
 

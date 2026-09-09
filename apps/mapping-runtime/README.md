@@ -14,3 +14,32 @@ mapping-runtime/
 ```
 
 O runtime deve consumir contracts públicos e pontos de entrada de módulo, para que o mesmo pipeline downstream possa operar com sensores ao vivo, dados gravados, datasets, saída de simulador ou fixtures de teste.
+
+## Slice executável do M1
+
+O comando `demo` compõe os contracts públicos de state-estimation, o mapa
+geométrico, a associação calibrada RGB–LiDAR e a exportação atômica. Ele usa
+uma fixture sintética pequena para validar o caminho completo sem mascarar a
+ausência de dados reais:
+
+```bash
+make m1-demo
+```
+
+Por default, o resultado fica em `artifacts/m1-demo.json`. Para escolher outro
+caminho:
+
+```bash
+make m1-demo M1_ARTIFACT=/tmp/meu-slice.json
+```
+
+O entry point Python equivalente é:
+
+```bash
+PYTHONPATH="contracts:modules/state-estimation/src:modules/geometric-map/src:modules/sensor-association/src:apps/mapping-runtime/src" \
+  python -m mapping_runtime demo --output artifacts/m1-demo.json
+```
+
+O demo não substitui validação com rosbag. Sua função é provar que composição,
+frames, sincronização, oclusão, cor, região e proveniência chegam a um artifact
+que o viewer consegue abrir.

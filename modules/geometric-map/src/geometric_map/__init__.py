@@ -1,4 +1,3 @@
-"""Capacidade de mapeamento geométrico persistente."""
 """Fronteira pública do módulo geometric-map."""
 
 from .in_memory import InMemoryGeometricMap

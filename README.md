@@ -54,6 +54,20 @@ benchmarks), o lint do repositório inteiro e o `mypy` estrito da API pública d
 `visual-perception`. Testes que exigem GPU fazem `skip` explícito quando o hardware ou
 o backend opcional não está disponível.
 
+O primeiro slice RGB–LiDAR também possui um smoke test executável sem ROS,
+GPU ou dataset externo:
+
+```bash
+make m1-test
+make m1-demo
+make map-explorer-install map-explorer-build
+cd apps/map-explorer/web && npm run dev
+```
+
+O artifact gerado em `artifacts/m1-demo.json` pode ser aberto diretamente no
+seletor do `map-explorer`. O workflow com dados reais permanece dependente da
+rosbag, da calibração e da configuração FAST-LIO do sensor usado.
+
 ## Documentação
 
 A documentação de arquitetura e integração de nível de repositório está disponível em [`docs/README.md`](./docs/README.md).

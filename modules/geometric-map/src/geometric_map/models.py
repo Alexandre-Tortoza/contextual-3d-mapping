@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 from contextual_mapping_contracts import FrameId, MapId, ObservationReference, Provenance
 
@@ -21,7 +22,9 @@ class GeometryReference:
     map_id: MapId
     geometry_id: str
 
+    # Evita chaves vazias no índice interno e nos artifacts persistidos.
     def __post_init__(self) -> None:
+        """Valida a identidade local da geometria."""
         if not self.geometry_id.strip():
             raise ValueError("geometry_id must not be empty.")
 
@@ -45,9 +48,21 @@ class GeometryPoint:
     source_observation: ObservationReference
     provenance: Provenance
 
+    # Garante que coordenadas persistidas e de origem sejam interpretáveis e
+    # que a cadeia de proveniência contenha a observação LiDAR declarada.
     def __post_init__(self) -> None:
+        """Valida coordenadas e proveniência do ponto persistido."""
         if len(self.coordinates_m) != 3 or len(self.source_coordinates_m) != 3:
             raise ValueError("coordinates_m and source_coordinates_m must contain xyz triples.")
+        if not all(
+            isfinite(float(value))
+            for point in (self.coordinates_m, self.source_coordinates_m)
+            for value in point
+        ):
+            raise ValueError("coordinates_m and source_coordinates_m must be finite.")
+        source_ids = {item.observation_id for item in self.provenance.observations}
+        if self.source_observation.observation_id not in source_ids:
+            raise ValueError("provenance must include source_observation.")
 
 
 # Representa bounds explícitos de busca para não vazar estruturas de índice.
@@ -65,9 +80,13 @@ class Bounds3D:
     minimum_m: tuple[float, float, float]
     maximum_m: tuple[float, float, float]
 
+    # Valida dimensão, finitude e ordenação para manter lookup determinístico.
     def __post_init__(self) -> None:
+        """Valida os cantos mínimo e máximo dos bounds."""
         if len(self.minimum_m) != 3 or len(self.maximum_m) != 3:
             raise ValueError("bounds must contain xyz triples.")
+        if not all(isfinite(float(value)) for corner in (self.minimum_m, self.maximum_m) for value in corner):
+            raise ValueError("bounds must contain only finite values.")
         if any(low > high for low, high in zip(self.minimum_m, self.maximum_m, strict=True)):
             raise ValueError("minimum_m must not exceed maximum_m.")
 
@@ -75,4 +94,7 @@ class Bounds3D:
     # em memória e mantém a regra de borda inclusiva em um único local.
     def contains(self, coordinates_m: tuple[float, float, float]) -> bool:
         """Retorna se coordenadas pertencem aos bounds inclusivos."""
-        return all(low <= value <= high for value, low, high in zip(coordinates_m, self.minimum_m, self.maximum_m, strict=True))
+        return all(
+            low <= value <= high
+            for value, low, high in zip(coordinates_m, self.minimum_m, self.maximum_m, strict=True)
+        )

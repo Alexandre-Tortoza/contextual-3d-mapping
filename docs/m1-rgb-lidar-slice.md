@@ -4,6 +4,21 @@ Este workflow produz um artifact JSON que o `map-explorer` abre localmente.
 Dados de origem não entram no Git: coloque a rosbag e seus arquivos de
 calibração em `datasets/raw/<nome-do-dataset>/`, preservando o layout original.
 
+## Smoke test offline
+
+Antes de preparar ROS ou dados reais, valide toda a composição Python e o
+contrato entregue ao viewer:
+
+```bash
+make m1-test
+make m1-demo
+make map-explorer-install map-explorer-build
+```
+
+Isso cria `artifacts/m1-demo.json` com pontos associados, um ponto ocluído,
+cores, região e proveniência. O comando não afirma validar FAST-LIO: ele isola
+e testa o restante do slice enquanto rosbag e calibração reais não existem.
+
 ## Ambiente reproduzível
 
 Os perfis Docker isolam ROS e FAST-LIO do ambiente do host:
@@ -15,6 +30,23 @@ docker compose --profile ros2 build fastlio-ros2
 docker compose --profile ros2 run --rm fastlio-ros2
 ```
 
+ROS 2/Humble é o perfil principal para sensores suportados por
+`livox_ros_driver2` e usa `Livox-SDK2`. O perfil ROS 1 mantém compatibilidade
+com o FAST-LIO upstream original; por isso compila `livox_ros_driver` e o
+`Livox-SDK` legado dentro da imagem, sem expor essas bibliotecas aos módulos
+Python.
+
+As revisões de FAST-LIO, drivers e SDKs são pinadas nos Dockerfiles. Dentro do
+container, carregue o workspace correspondente antes de executar launch files:
+
+```bash
+# ROS 1
+source /opt/fast-lio/devel/setup.bash
+
+# ROS 2
+source /opt/fast-lio/install/setup.bash
+```
+
 O perfil `gpu` é opcional e só é necessário para os backends reais de
 `visual-perception`:
 
@@ -22,10 +54,12 @@ O perfil `gpu` é opcional e só é necessário para os backends reais de
 docker compose --profile gpu run --rm visual-gpu
 ```
 
-Cada ambiente ROS deve receber a rosbag, a configuração FAST-LIO e a ponte
-JSON-lines configurada para `FastLioProcessAdapter`. A ponte traduz as
-mensagens ROS para o contract público; nenhuma mensagem ROS atravessa a
-fronteira de `state-estimation`.
+Cada ambiente ROS deve receber a rosbag e a configuração FAST-LIO específica
+do sensor. `FastLioProcessAdapter` define o protocolo JSON de integração para
+uma ponte externa: envia pontos LiDAR, todas as amostras IMU e metadados, e
+exige pose mais pontos deskewed na resposta. A implementação ROS dessa ponte
+ainda depende dos tópicos e tipos de mensagem do dataset escolhido; nenhuma
+mensagem ROS atravessa a fronteira pública de `state-estimation`.
 
 ## Verificação do artifact
 
@@ -33,7 +67,7 @@ Depois que `mapping-runtime` exportar o slice, execute o cliente web:
 
 ```bash
 cd apps/map-explorer/web
-npm install
+npm ci
 npm run dev
 ```
 

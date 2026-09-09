@@ -22,3 +22,18 @@ map-explorer/
 ```
 
 A API e o frontend são camadas de entrega. Não devem depender diretamente de implementações privadas de módulo nem de schemas específicos de armazenamento.
+
+## Execução local
+
+Instale dependências de forma determinística, produza o bundle e inicie o
+servidor local:
+
+```bash
+make map-explorer-install map-explorer-build
+cd apps/map-explorer/web
+npm run dev
+```
+
+O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
+Para uma entrada conhecida, gere `artifacts/m1-demo.json` com `make m1-demo` e
+abra esse arquivo no seletor da página.

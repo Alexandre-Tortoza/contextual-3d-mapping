@@ -1,1 +1,52 @@
-body { margin: 0; background: #101218; color: #eef; font: 14px system-ui; } main { padding: 16px; } section { display: grid; grid-template-columns: 3fr 2fr; height: 70vh; gap: 16px; } canvas, aside { background: #181c25; border-radius: 8px; } aside { overflow: auto; padding: 12px; } pre { white-space: pre-wrap; } code { color: #8fd; }
+:root {
+  color-scheme: dark;
+  font: 14px/1.5 system-ui, sans-serif;
+  background: #101218;
+  color: #eef;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  padding: 16px;
+}
+
+section {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  height: 70vh;
+  gap: 16px;
+}
+
+canvas,
+aside {
+  background: #181c25;
+  border-radius: 8px;
+}
+
+aside {
+  overflow: auto;
+  padding: 12px;
+}
+
+pre {
+  white-space: pre-wrap;
+}
+
+code {
+  color: #8fd;
+}
+
+.error {
+  color: #ff9e9e;
+}
+
+@media (max-width: 720px) {
+  section {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(20rem, 2fr) minmax(12rem, 1fr);
+    height: 80vh;
+  }
+}

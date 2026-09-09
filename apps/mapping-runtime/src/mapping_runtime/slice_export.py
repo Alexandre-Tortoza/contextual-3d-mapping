@@ -19,6 +19,18 @@ def _record(point: GeometryPoint, association: PointVisualAssociation | None) ->
         "source_coordinates_m": point.source_coordinates_m,
         "lidar_observation_id": point.source_observation.observation_id,
         "lidar_timestamp_ns": point.source_observation.timestamp.nanoseconds,
+        "provenance": {
+            "producer": point.provenance.producer,
+            "observation_ids": [reference.observation_id for reference in point.provenance.observations],
+            "source_artifacts": [
+                {
+                    "uri": artifact.uri,
+                    "media_type": artifact.media_type,
+                    "digest": artifact.digest,
+                }
+                for artifact in point.provenance.source_artifacts
+            ],
+        },
     }
     if association is not None:
         record["association"] = {
@@ -56,7 +68,19 @@ def export_associated_slice(
     Retorna:
         caminho do artifact persistido.
     """
+    if not map_id.strip() or not map_frame.strip():
+        raise ValueError("map_id and map_frame must not be empty.")
+    geometry_ids = [point.reference.geometry_id for point in points]
+    if len(geometry_ids) != len(set(geometry_ids)):
+        raise ValueError("points must have unique geometry ids.")
+    if any(str(point.reference.map_id) != map_id for point in points):
+        raise ValueError("all points must belong to map_id.")
     by_geometry = {item.geometry.geometry_id: item for item in associations}
+    if len(by_geometry) != len(associations):
+        raise ValueError("associations must have unique geometry ids.")
+    unknown = set(by_geometry).difference(geometry_ids)
+    if unknown:
+        raise ValueError("associations must reference exported points.")
     payload = {
         "schema_version": 1,
         "map_id": map_id,
