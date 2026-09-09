@@ -299,6 +299,202 @@ class MultiContextConfig:
             )
 
 
+# Configuração do estágio de suporte de hipótese por alinhamento (#214).
+# Existe porque este estágio tem um input de modelo que é texto — o template
+# que envolve cada conceito antes de codificá-lo — e a lição de método deste
+# módulo é que **prompt é parte versionada do modelo**: uma frase diferente
+# produz vetores diferentes e, portanto, um sinal diferente. ``template_version``
+# entra no fingerprint junto com o template, de modo que uma mudança invalida o
+# cache dependente em vez de se misturar silenciosamente a resultados antigos.
+@dataclass(frozen=True)
+class HypothesisSupportConfig:
+    """Como o alinhamento language-aligned arbitra entre hipóteses de identidade.
+
+    Argumentos:
+        enabled: se o estágio roda. Desligado, nenhuma claim recebe sinal, e a
+            calibração volta a não ter suporte visual independente.
+        source: identidade do produtor do sinal, gravada em cada
+            :class:`HypothesisSupportSignal` e nos reports.
+        slots: quais slots de evidência são comparados, na ordem canônica. Os
+            três defaults são exatamente os que possuem embedding de linguagem
+            já calculado pelo estágio de evidência: o sinal custa apenas o
+            encoding do texto.
+        indistinguishable_margin: piso abaixo do qual a diferença entre duas
+            hipóteses não é reportada como vitória de nenhuma. Medido nos
+            frames de referência, a margem mediana entre primária e melhor
+            alternativa fica entre 0,019 e 0,027, de modo que um piso de 0,01
+            separa "decidiu" de "empatou" sem inventar vencedor.
+        prompt_template: como o conceito é escrito antes de ser codificado.
+        template_version: versão do template, para provenance e fingerprint.
+    """
+
+    enabled: bool = True
+    source: str = "clip_alignment"
+    slots: tuple[str, ...] = (
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
+    indistinguishable_margin: float = 0.01
+    prompt_template: str = "a photo of {concept}"
+    template_version: str = "align/v1"
+
+    # Valida o vocabulário de slots, o piso de margem e a presença do
+    # placeholder no template: um template sem ``{concept}`` codificaria a
+    # mesma frase para toda hipótese e produziria um sinal constante.
+    def __post_init__(self) -> None:
+        """Rejeita slots desconhecidos, margens inválidas e templates sem placeholder."""
+        known = {slot.value for slot in EvidenceSlot}
+        unknown = [name for name in self.slots if name not in known]
+        if unknown:
+            raise ValueError(f"hypothesis_support.slots has unknown evidence slots: {unknown}.")
+        if len(set(self.slots)) != len(self.slots):
+            raise ValueError("hypothesis_support.slots must not repeat an evidence slot.")
+        if self.enabled and not self.slots:
+            raise ValueError("hypothesis_support.enabled requires at least one evidence slot.")
+        if not 0.0 <= self.indistinguishable_margin <= 1.0:
+            raise ValueError("hypothesis_support.indistinguishable_margin must be in [0, 1].")
+        if "{concept}" not in self.prompt_template:
+            raise ValueError(
+                "hypothesis_support.prompt_template must contain '{concept}': a template without the "
+                "placeholder would encode the same sentence for every hypothesis."
+            )
+        if not self.source or not self.template_version:
+            raise ValueError("hypothesis_support.source and template_version must not be empty.")
+
+
+# Configuração do refinamento seletivo dirigido por suporte (#204). Existe
+# separada de ``RefinementConfig`` histórica (que vivia em application/) porque
+# o refinamento passou a ser um estágio canônico e a sua configuração precisa
+# participar do fingerprint como qualquer outro estágio.
+@dataclass(frozen=True)
+class RefinementConfig:
+    """Quando uma região é reinterpretada, e com qual evidência nova.
+
+    Argumentos:
+        enabled: se o estágio roda.
+        max_iterations: teto de passes. O loop também para sozinho assim que
+            nenhuma região tem razão **e** caminho de evidência novo.
+        max_regions_per_iteration: teto de regiões reprocessadas por passe.
+            Existe como orçamento de latência explícito, e a seleção dentro do
+            teto é determinística por prioridade de razão.
+        escalation_views: as views usadas no passe de refinamento. Precisa ser
+            diferente do conjunto do passe anterior: repetir a mesma chamada
+            com a mesma evidência e temperatura zero é pedir de novo esperando
+            outra resposta.
+        small_region_area_px: abaixo desta área, "região pequena" acompanha
+            outra razão. Nunca dispara sozinha: tamanho não é incerteza
+            semântica.
+        min_mask_fill_ratio: abaixo desta fração do bounding box ocupada pela
+            máscara, a evidência de foreground é considerada insuficiente e a
+            interpretação pode estar descrevendo o fundo.
+    """
+
+    enabled: bool = True
+    max_iterations: int = 1
+    max_regions_per_iteration: int = 24
+    escalation_views: tuple[str, ...] = (
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+        EvidenceSlot.SCENE_CONDITIONED.value,
+    )
+    small_region_area_px: int = 1024
+    min_mask_fill_ratio: float = 0.15
+
+    # Valida tetos, fração e o vocabulário de views de escalonamento.
+    def __post_init__(self) -> None:
+        """Rejeita tetos negativos, frações inválidas e views desconhecidas."""
+        if self.max_iterations < 0:
+            raise ValueError("refinement.max_iterations must not be negative.")
+        if self.max_regions_per_iteration <= 0:
+            raise ValueError("refinement.max_regions_per_iteration must be positive.")
+        if self.small_region_area_px < 0:
+            raise ValueError("refinement.small_region_area_px must not be negative.")
+        if not 0.0 <= self.min_mask_fill_ratio <= 1.0:
+            raise ValueError("refinement.min_mask_fill_ratio must be in [0, 1].")
+        known = {slot.value for slot in EvidenceSlot}
+        unknown = [name for name in self.escalation_views if name not in known]
+        if unknown:
+            raise ValueError(f"refinement.escalation_views has unknown evidence slots: {unknown}.")
+        if len(set(self.escalation_views)) != len(self.escalation_views):
+            raise ValueError("refinement.escalation_views must not repeat an evidence slot.")
+        if self.enabled and not any(
+            EvidenceSlot(name) in FOREGROUND_SLOTS for name in self.escalation_views
+        ):
+            raise ValueError(
+                "refinement.escalation_views must include at least one foreground slot: refining a "
+                "region from context alone would describe its surroundings."
+            )
+
+
+# Configuração da reconciliação contextual intra-frame (#205). Existe para que
+# os dois limiares que decidem *proposta* e *corroboração* sejam explícitos e
+# ablatáveis: a medição mostrou que a coerência densa sozinha não separa bem o
+# caso, então ela entra como corroboração e o seu limiar precisa ser visível.
+@dataclass(frozen=True)
+class ReconciliationConfig:
+    """Como regiões do mesmo frame são reconciliadas sem alterar geometria.
+
+    Argumentos:
+        enabled: se o estágio roda.
+        adjacency_margin_px: distância máxima entre bounding boxes para que
+            duas regiões sejam tratadas como em contato.
+        min_group_coherence: coerência densa média a partir da qual um grupo é
+            marcado ``supported``. Abaixo dela o grupo continua existindo, como
+            ``unresolved``: o contato e o conceito ainda são evidência.
+        canonicalize_labels: se a normalização lexical mínima produz um
+            conceito canônico ao lado do label cru.
+    """
+
+    enabled: bool = True
+    adjacency_margin_px: float = 5.0
+    min_group_coherence: float = 0.6
+    canonicalize_labels: bool = True
+
+    # Valida margem e limiar de coerência.
+    def __post_init__(self) -> None:
+        """Rejeita margem negativa e limiar de coerência fora de ``[-1, 1]``."""
+        if self.adjacency_margin_px < 0.0:
+            raise ValueError("reconciliation.adjacency_margin_px must not be negative.")
+        if not -1.0 <= self.min_group_coherence <= 1.0:
+            raise ValueError("reconciliation.min_group_coherence must be a cosine in [-1, 1].")
+
+
+# Configuração da inferência de relações semânticas (#206). O campo que mais
+# importa aqui é ``max_pairs``: sem um orçamento, este estágio é O(n²) chamadas
+# de VLM, e num frame de 40 regiões seriam 780.
+@dataclass(frozen=True)
+class SemanticRelationConfig:
+    """Quantos e quais pares de regiões o reasoner julga por frame.
+
+    Argumentos:
+        enabled: se o estágio roda.
+        max_pairs: teto de pares consultados por frame.
+        min_containment: containment mínimo para um par entrar como candidato
+            por contenção.
+        include_adjacent: se pares apenas encostados também são candidatos.
+        require_distinct_concepts: se um par cujos dois lados compartilham o
+            conceito reconciliado é descartado. Ligado por default porque
+            "parede encosta em parede" é fragmentação, e a reconciliação já a
+            descreve melhor do que uma relação descreveria.
+    """
+
+    enabled: bool = True
+    max_pairs: int = 16
+    min_containment: float = 0.6
+    include_adjacent: bool = True
+    require_distinct_concepts: bool = True
+
+    # Valida o orçamento de pares e o limiar de contenção.
+    def __post_init__(self) -> None:
+        """Rejeita orçamento negativo e containment fora de ``[0, 1]``."""
+        if self.max_pairs < 0:
+            raise ValueError("semantic_relations.max_pairs must not be negative.")
+        if not 0.0 <= self.min_containment <= 1.0:
+            raise ValueError("semantic_relations.min_containment must be in [0, 1].")
+
+
 # Configuração da fronteira de calibração semântica (#196). Existe para que
 # a regra de calibração seja selecionável e versionada por configuração, e
 # para que o artifact de calibração participe do fingerprint de cache: uma
@@ -362,7 +558,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v6"
+    prompt_version: str = "v7"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
@@ -387,7 +583,12 @@ class MultimodalReasoningConfig:
     scene_context_mode: str = SceneContextMode.CONTEXT_ASSISTED.value
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar. ``v4`` troca o exemplo de
+    # qual template estruturado o backend deve usar. ``v7`` acrescenta o prompt
+    # de **relação** (#206); os prompts de cena e de região são idênticos aos do
+    # ``v6``, byte a byte, de modo que labels e claims continuam comparáveis
+    # entre os dois — o que muda é que a versão passa a identificar três
+    # prompts, e não dois. ``v6`` mudou o contract de cena para ambiental e as
+    # views que acompanham a região. ``v4`` troca o exemplo de
     # formato por placeholders, depois de o exemplo concreto de ``v3`` ser
     # medido como a resposta padrão do modelo em 27/54 regiões de um frame;
     # ``v3`` introduziu o request multi-view com contexto de cena estruturado
@@ -447,6 +648,10 @@ class ModuleConfig:
         default_factory=MultimodalReasoningConfig
     )
     multi_context: MultiContextConfig = field(default_factory=MultiContextConfig)
+    hypothesis_support: HypothesisSupportConfig = field(default_factory=HypothesisSupportConfig)
+    refinement: RefinementConfig = field(default_factory=RefinementConfig)
+    reconciliation: ReconciliationConfig = field(default_factory=ReconciliationConfig)
+    semantic_relations: SemanticRelationConfig = field(default_factory=SemanticRelationConfig)
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
     proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
@@ -492,6 +697,10 @@ class ModuleConfig:
             ("language_embedding", LanguageEmbeddingConfig),
             ("multimodal_reasoning", MultimodalReasoningConfig),
             ("multi_context", MultiContextConfig),
+            ("hypothesis_support", HypothesisSupportConfig),
+            ("refinement", RefinementConfig),
+            ("reconciliation", ReconciliationConfig),
+            ("semantic_relations", SemanticRelationConfig),
             ("calibration", CalibrationConfig),
             ("image_area", ImageAreaConfig),
             ("proposal_filter", ProposalFilterConfig),

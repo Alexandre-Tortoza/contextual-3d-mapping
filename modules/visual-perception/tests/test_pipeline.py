@@ -7,9 +7,10 @@ import dataclasses
 from fixtures import blank_payload, default_config, image_observation, payload_with_blobs
 from fixtures_ports import default_ports
 from visual_perception.application.pipeline import run_canonical_pipeline
-from visual_perception.config import FeatureExtractionConfig
+from visual_perception.config import FeatureExtractionConfig, MultiContextConfig
 from visual_perception.domain.feature_map import FeatureMap
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.domain.semantics import HypothesisRole
 from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
 
 
@@ -141,3 +142,94 @@ def test_proposals_default_to_empty_when_not_provided() -> None:
     replaced = dataclasses.replace(result, proposals=())
     assert replaced.proposals == ()
     assert isinstance(result.audit, AuditResult)
+
+
+# A garantia central da #207: o ponto de entrada canônico executa **todos** os
+# estágios de contexto visual, em uma ordem determinística, sem que nenhum
+# chamador externo precise invocá-los à mão. Antes disso, refinamento e fusão
+# eram "extensões pós-pipeline" que ninguém chamava, e por isso não existiam na
+# prática.
+def test_the_canonical_pipeline_runs_every_context_stage() -> None:
+    """Uma execução canônica produz evidência, sinais, grupos e relações."""
+    config = dataclasses.replace(
+        default_config(),
+        multi_context=MultiContextConfig(
+            foreground_enabled=True,
+            masked_subject_enabled=True,
+            tight_crop_enabled=True,
+            contextual_crop_enabled=True,
+            scene_conditioned_enabled=True,
+        ),
+    )
+    payload = payload_with_blobs(
+        blobs=((2, 2, 12, 12, (200, 30, 30)), (14, 2, 24, 12, (30, 200, 30)))
+    )
+
+    result = run_canonical_pipeline(image_observation(), payload, config, default_ports())
+
+    assert result.observation.regions
+    assert result.visual_embeddings and result.language_embeddings
+    assert set(result.stage_model_calls) == {
+        "language_aligned_evidence",
+        "hypothesis_support_text",
+        "region_refinement",
+        "semantic_relations",
+    }
+    # O audit final observa o estado pós-refinamento, pós-reconciliação e
+    # pós-relações: ele é calculado depois de tudo que acrescenta claim ou
+    # aresta, e não no meio.
+    assert result.audit.observation_id == result.observation.observation_id
+    assert not result.audit.errors
+
+
+# A linha divisória do módulo: depois do merge, nenhum estágio semântico pode
+# alterar mask, box, identidade ou ordem de região. É a invariante que permite
+# ao downstream confiar na geometria que recebe.
+def test_semantic_stages_never_change_geometry() -> None:
+    """Refinamento, reconciliação e relações não tocam a geometria das regiões."""
+    payload = payload_with_blobs(
+        blobs=((2, 2, 12, 12, (200, 30, 30)), (14, 2, 24, 12, (30, 200, 30)))
+    )
+    config = default_config()
+
+    baseline = run_canonical_pipeline(image_observation(), payload, config, default_ports())
+    disabled = run_canonical_pipeline(
+        image_observation(),
+        payload,
+        dataclasses.replace(
+            config,
+            hypothesis_support=dataclasses.replace(config.hypothesis_support, enabled=False),
+            refinement=dataclasses.replace(config.refinement, enabled=False),
+            reconciliation=dataclasses.replace(config.reconciliation, enabled=False),
+            semantic_relations=dataclasses.replace(config.semantic_relations, enabled=False),
+        ),
+        default_ports(),
+    )
+
+    def geometry(observation: object) -> list[tuple[str, object, int]]:
+        return [
+            (region.region_id, region.box, int(region.mask.area()))
+            for region in observation.regions  # type: ignore[attr-defined]
+        ]
+
+    assert geometry(baseline.observation) == geometry(disabled.observation)
+
+
+# Cada estágio novo é ablatável de forma independente, para que uma comparação
+# possa atribuir um efeito a um estágio só.
+def test_each_new_stage_can_be_disabled_independently() -> None:
+    """Desligar um estágio remove a saída dele e preserva as demais."""
+    payload = payload_with_blobs(blobs=((2, 2, 12, 12, (200, 30, 30)),))
+    config = dataclasses.replace(
+        default_config(),
+        reconciliation=dataclasses.replace(default_config().reconciliation, enabled=False),
+    )
+
+    result = run_canonical_pipeline(image_observation(), payload, config, default_ports())
+
+    assert result.observation.entity_hypotheses == ()
+    assert result.reconciliation_records == ()
+    for region in result.observation.regions:
+        assert all(claim.role is not HypothesisRole.RECONCILED for claim in region.claims)
+    # E o suporte de hipótese, que não foi desligado, continua produzindo.
+    assert any(claim.signals for region in result.observation.regions for claim in region.claims)

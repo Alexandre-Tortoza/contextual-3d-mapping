@@ -32,6 +32,7 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 | lifecycle, cache, fingerprints e runtime | [execution.md](execution.md) |
 | serialização, embeddings e persistência | [artifacts.md](artifacts.md) |
 | relação entre papers, decisões e implementação | [research-traceability.md](research-traceability.md) |
+| a auditoria que motivou a arquitetura contextual atual | [visual-context-sota-review.md](visual-context-sota-review.md) |
 | significado preciso dos termos | [glossary.md](glossary.md) |
 | o que ainda falha, medido em run real | [known-limitations.md](known-limitations.md) |
 
@@ -75,6 +76,7 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 | entender o que é persistido | [artifacts.md](artifacts.md) | tipos de artifact + ciclo de vida |
 | saber se uma ideia veio de paper ou é decisão própria | [research-traceability.md](research-traceability.md) | mapa de influência + decisões próprias |
 | saber se um comportamento estranho já é conhecido | [known-limitations.md](known-limitations.md) | item correspondente + issue dona |
+| entender por que os estágios contextuais existem | [visual-context-sota-review.md](visual-context-sota-review.md) | o que foi medido antes de escrever código |
 
 ## Mapa da documentação
 
@@ -91,6 +93,8 @@ flowchart TD
     R --> G[glossary.md]
     R --> L[known-limitations.md]
     B --> L
+    Q --> S[visual-context-sota-review.md]
+    S --> L
 ```
 
 ## Estado atual do módulo

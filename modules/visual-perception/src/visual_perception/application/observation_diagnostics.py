@@ -33,7 +33,15 @@ from visual_perception.domain.regions import (
     alternative_label_claims,
     primary_label_claim,
 )
-from visual_perception.domain.semantics import RegionKind, normalize_claim_value
+from visual_perception.domain.relations import RelationSource
+from visual_perception.domain.semantic_support import SupportSignalStatus, SupportState
+from visual_perception.domain.semantics import (
+    HypothesisRole,
+    RegionKind,
+    SemanticClaim,
+    normalize_claim_value,
+)
+from visual_perception.domain.structural_consistency import StructuralVerdict, region_kind_verdict
 from visual_perception.domain.visual_observation import VisualObservation
 
 #: Acima desta fração de sobreposição com o rig, uma região final é contada
@@ -147,6 +155,59 @@ class ValidAreaStats:
     applied: bool = False
 
 
+# Resume o que a evidência independente e a reconciliação disseram sobre o
+# frame. Existe porque os números que este módulo já reportava — labels
+# distintos, colapso de modo, confiança — deixaram de bastar quando o pipeline
+# ganhou um segundo canal de evidência: sem estes campos, ligar ou desligar o
+# suporte de hipótese não mudaria nada de mensurável no artifact.
+@dataclass(frozen=True)
+class ContextualDiagnostics:
+    """O que os estágios de contexto produziram, contável entre runs.
+
+    Argumentos:
+        signal_statuses: histograma dos desfechos dos sinais independentes
+            sobre as hipóteses primárias. Um sinal ``indistinguishable`` conta
+            à parte de propósito: colapsá-lo em "sem suporte" inventaria um
+            veredito que a margem medida não sustenta.
+        regions_with_unsupported_primary: regiões cuja hipótese primária é
+            contradita por **todos** os sinais medidos.
+        regions_with_ambiguous_identity: regiões em que nenhum sinal medido
+            distingue a primária das concorrentes.
+        region_kind_contradictions: regiões cujo conceito e natureza declarados
+            são incompatíveis, pela política determinística do domínio.
+        reconciled_regions: regiões que receberam uma interpretação
+            reconciliada.
+        distinct_raw_labels: labels primários distintos, sem normalização. É a
+            métrica contaminada, preservada para comparabilidade histórica.
+        distinct_canonical_concepts: conceitos distintos depois da
+            canonicalização lexical mínima. É o número que responde "quantas
+            coisas diferentes este frame diz", sem contar variação de grafia.
+        entity_groups: grupos de mesma superfície propostos.
+        regions_in_entity_groups: regiões cobertas por algum grupo.
+        supported_entity_groups: grupos cuja coerência densa os corrobora.
+        semantic_relations: histograma ``(predicado, contagem)`` das relações
+            inferidas por modelo.
+        geometric_relations: quantas relações vieram do caminho geométrico.
+        abstained_claims: claims cuja calibração se absteve explicitamente.
+        unscored_claims: claims de identidade que o produtor não pontuou.
+    """
+
+    signal_statuses: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    regions_with_unsupported_primary: int = 0
+    regions_with_ambiguous_identity: int = 0
+    region_kind_contradictions: int = 0
+    reconciled_regions: int = 0
+    distinct_raw_labels: int = 0
+    distinct_canonical_concepts: int = 0
+    entity_groups: int = 0
+    regions_in_entity_groups: int = 0
+    supported_entity_groups: int = 0
+    semantic_relations: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    geometric_relations: int = 0
+    abstained_claims: int = 0
+    unscored_claims: int = 0
+
+
 # Agrega tudo que se pode afirmar sobre uma observação sem reexecutar modelo
 # nenhum. Consumido pelo harness de validação, que o serializa junto dos
 # artifacts do frame.
@@ -189,6 +250,7 @@ class ObservationDiagnostics:
     ego: EgoExclusionStats = field(default_factory=EgoExclusionStats)
     fisheye: ValidAreaStats = field(default_factory=ValidAreaStats)
     rejected_proposals: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    contextual: ContextualDiagnostics = field(default_factory=ContextualDiagnostics)
 
 
 # Resume uma lista de valores opcionais em ConfidenceStats. Recebe os ausentes
@@ -459,4 +521,83 @@ def diagnose_observation(
             applied=valid_mask is not None,
         ),
         rejected_proposals=_histogram(rejections),
+        contextual=_contextual_diagnostics(observation),
     )
+
+
+# Mede o que os estágios de contexto produziram neste frame. Chamada por
+# diagnose_observation; separada porque responde a uma pergunta diferente das
+# demais seções — não "o que a geometria encontrou", mas "quanto do que foi
+# afirmado tem suporte independente".
+def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnostics:
+    """Resume sinais, reconciliação, grupos e relações semânticas do frame."""
+    statuses: Counter[str] = Counter()
+    unsupported = ambiguous = contradictions = reconciled = abstained = unscored = 0
+    raw_labels: set[str] = set()
+    concepts: set[str] = set()
+
+    for region in observation.regions:
+        primary = primary_label_claim(region)
+        if primary is not None:
+            raw_labels.add(_normalized(primary.value))
+            if primary.confidence is None:
+                unscored += 1
+            if region_kind_verdict(primary) is StructuralVerdict.CONTRADICTS:
+                contradictions += 1
+            measured = [signal for signal in primary.signals if signal.is_measured]
+            for signal in primary.signals:
+                statuses[signal.status.value] += 1
+            if measured:
+                if all(item.status is SupportSignalStatus.CONTRADICTS for item in measured):
+                    unsupported += 1
+                elif all(item.status is SupportSignalStatus.INDISTINGUISHABLE for item in measured):
+                    ambiguous += 1
+        derived = _reconciled_claim(region)
+        if derived is not None:
+            reconciled += 1
+            concepts.add(_normalized(derived.value))
+        elif primary is not None:
+            concepts.add(_normalized(primary.value))
+        for claim in region.claims:
+            if claim.support is not None and claim.support.state is SupportState.ABSTAINED:
+                abstained += 1
+
+    inferred: Counter[str] = Counter()
+    geometric = 0
+    for relation in observation.relations:
+        if relation.source is RelationSource.MODEL_INFERRED:
+            inferred[relation.predicate] += 1
+        else:
+            geometric += 1
+
+    return ContextualDiagnostics(
+        signal_statuses=_histogram(statuses),
+        regions_with_unsupported_primary=unsupported,
+        regions_with_ambiguous_identity=ambiguous,
+        region_kind_contradictions=contradictions,
+        reconciled_regions=reconciled,
+        distinct_raw_labels=len(raw_labels),
+        distinct_canonical_concepts=len(concepts),
+        entity_groups=len(observation.entity_hypotheses),
+        regions_in_entity_groups=len(
+            {member for entity in observation.entity_hypotheses for member in entity.member_region_ids}
+        ),
+        supported_entity_groups=sum(
+            1 for entity in observation.entity_hypotheses if entity.status.value == "supported"
+        ),
+        semantic_relations=_histogram(inferred),
+        geometric_relations=geometric,
+        abstained_claims=abstained,
+        unscored_claims=unscored,
+    )
+
+
+# Localiza a claim de identidade reconciliada de uma região. Vive aqui, e não
+# importada da reconciliação, porque este módulo é puro e não deve depender de
+# um estágio de application só para ler um papel de claim.
+def _reconciled_claim(region: ObservedRegion) -> SemanticClaim | None:
+    """Retorna a claim reconciliada da região, ou ``None`` se não houver."""
+    for claim in region.claims:
+        if claim.role is HypothesisRole.RECONCILED:
+            return claim
+    return None

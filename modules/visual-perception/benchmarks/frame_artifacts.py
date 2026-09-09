@@ -11,6 +11,7 @@ máscara está certa e só a caixa parece larga":
 ```text
 frames/<frame-id>/
     observation.json      diagnostics.json
+    embeddings.npz        os vetores por região, referenciados por artifact_ref
     raw.png               os pixels de origem, nunca modificados
     proposals.png         masks + boxes antes do merge, sem semântica
     regions-masks.png     só as masks finais
@@ -45,8 +46,10 @@ from visual_perception.infrastructure.serialization import serialize_observation
 
 #: Versão do layout de artifacts por frame, gravada no manifest. Um leitor que
 #: espera outro layout falha explicitamente em vez de ler o diretório errado em
-#: silêncio.
-FRAME_ARTIFACT_LAYOUT_VERSION = "frames/1"
+#: silêncio. A ``frames/2`` acrescenta ``embeddings.npz``: até a #217 os vetores
+#: eram calculados e descartados dentro do pipeline, e o que ficava no artifact
+#: era só a string de ``artifact_ref``, apontando para nada.
+FRAME_ARTIFACT_LAYOUT_VERSION = "frames/2"
 
 
 # Agrupa os pixels distinguíveis de um frame e as máscaras de exclusão do rig.
@@ -120,6 +123,19 @@ def write_frame_artifacts(
     observation_path = frame_dir / "observation.json"
     observation_path.write_text(json.dumps(serialize_observation(result.observation), indent=2))
     _record("observation", observation_path)
+
+    # Os vetores viajam **por referência**: a observação guarda o
+    # ``artifact_ref`` de cada slot, e o arquivo abaixo é o artifact que aquela
+    # referência resolve. Embutí-los no JSON inflaria a observação canônica em
+    # duas ordens de grandeza sem tornar nada mais auditável.
+    embeddings = {
+        embedding.embedding_id: np.asarray(embedding.vector, dtype=np.float32)
+        for embedding in (*result.visual_embeddings, *result.language_embeddings)
+    }
+    if embeddings:
+        embeddings_path = frame_dir / "embeddings.npz"
+        np.savez_compressed(embeddings_path, **embeddings)
+        _record("embeddings", embeddings_path)
 
     raw_image = _to_image(inputs.raw)
     raw_path = frame_dir / "raw.png"

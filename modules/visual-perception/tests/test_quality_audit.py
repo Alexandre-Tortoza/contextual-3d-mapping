@@ -168,10 +168,12 @@ def test_multiple_materials_are_not_reported_as_contradictory() -> None:
     assert audit_observation(observation).issues == ()
 
 
-# A contrapartida: hipóteses de identidade concorrentes continuam sendo
-# sinalizadas. Corrigir o falso positivo não pode apagar a contradição real.
-def test_competing_identity_hypotheses_are_still_flagged() -> None:
-    """Duas hipóteses de identidade distintas continuam gerando warning."""
+# Uma alternativa registrada pelo produtor **não** é uma contradição: é a dúvida
+# que ele declarou na mesma resposta, sobre a mesma evidência. Contar as duas
+# coisas junto marcava 163 das 165 regiões do run de referência e tornava o
+# sinal inútil para dirigir refinamento (#215).
+def test_an_alternative_hypothesis_is_not_a_contradiction() -> None:
+    """Primary e alternative do mesmo produtor não geram warning de contradição."""
     region = _region(
         "region-a",
         (
@@ -183,6 +185,37 @@ def test_competing_identity_hypotheses_are_still_flagged() -> None:
                 (Evidence("e"),),
                 ModelProvenance(stage="t", producer="fake", config_fingerprint="abc"),
                 role=HypothesisRole.ALTERNATIVE,
+            ),
+        ),
+    )
+    observation = VisualObservation(
+        source=_source(),
+        image_width=8,
+        image_height=8,
+        scene_context=SceneContext(),
+        regions=(region,),
+        relations=(),
+    )
+
+    assert audit_observation(observation).issues == ()
+
+
+# A contrapartida: duas hipóteses **afirmadas** que discordam continuam sendo
+# sinalizadas. Estreitar a política não pode apagar a contradição real, que é
+# exatamente o que um passe de refinamento produz quando muda de ideia.
+def test_two_asserted_identity_hypotheses_are_flagged() -> None:
+    """Duas claims ``PRIMARY`` de valores distintos continuam gerando warning."""
+    region = _region(
+        "region-a",
+        (
+            _claim("wall"),
+            SemanticClaim(
+                ClaimKind.LABEL,
+                "door",
+                ConfidenceScore(0.2, source="fake"),
+                (Evidence("e"),),
+                ModelProvenance(stage="t", producer="refined", config_fingerprint="def"),
+                role=HypothesisRole.PRIMARY,
             ),
         ),
     )

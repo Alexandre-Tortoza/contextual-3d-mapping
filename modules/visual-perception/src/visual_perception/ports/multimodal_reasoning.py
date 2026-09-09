@@ -12,7 +12,7 @@ from typing import Any, Protocol
 
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_reasoning import RegionReasoningRequest
+from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionRelationRequest
 
 
 # Port que desacopla o pipeline do VLM (vision-language model) concreto usado
@@ -58,4 +58,20 @@ class MultimodalReasoner(Protocol):
         região: essa é uma decisão de application, validada em
         ``parse_region_interpretation``.
         """
+        ...
+
+    # Julga a relação entre duas regiões canônicas a partir de uma view que
+    # mostra as duas demarcadas. Chamado pelo estágio de relações semânticas
+    # (#206) apenas para os pares que a seleção geométrica priorizou: perguntar
+    # sobre todos os pares seria O(n²) chamadas de VLM, e num frame de 40
+    # regiões isso são 780 chamadas para produzir sobretudo "nenhuma relação".
+    #
+    # O implementador devolve a resposta bruta. Validar o predicado contra o
+    # vocabulário (``SEMANTIC_RELATION_PREDICATES``), tratar ``none`` como
+    # ausência de relação e recusar ids desconhecidos são decisões de
+    # application, pela mesma razão que valem para ``analyze_region``.
+    def analyze_relation(
+        self, request: RegionRelationRequest, config: MultimodalReasoningConfig
+    ) -> dict[str, Any]:
+        """Retorna uma resposta estruturada bruta sobre a relação entre duas regiões (#206)."""
         ...

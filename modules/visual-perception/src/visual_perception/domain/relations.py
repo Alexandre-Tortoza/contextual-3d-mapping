@@ -1,6 +1,6 @@
 """Contract de relação candidata estruturada.
 
-Issue: #166.
+Issues: #166 (contract), #206 (predicados semânticos).
 
 Relações são candidatas apenas em nível de imagem 2D. Elas nunca são
 tratadas como relações 3D verificadas: essa validação é de posse de módulos
@@ -11,6 +11,15 @@ A #195 tornou ``confidence`` opcional: uma relação inferida por modelo cujo
 produtor não pontuou permanece representável sem que o módulo invente um
 score. Relações geométricas continuam pontuadas, porque a medida que as
 gera (IoU, containment ratio) *é* a evidência.
+
+A #206 acrescenta :data:`SEMANTIC_RELATION_PREDICATES`, o vocabulário de
+predicados que uma relação inferida por modelo pode afirmar. Ele é fechado e
+versionado de propósito, e isso **não** contradiz a natureza open-vocabulary do
+módulo: os *conceitos* das regiões continuam abertos, e é o tipo de aresta que
+precisa ser estável para que um grafo downstream signifique alguma coisa. Cada
+predicado do conjunto satisfaz duas condições — é observável nos pixels de um
+único frame, e tem consumidor declarado em ``semantic-fusion``,
+``semantic-map`` ou ``scene-graph``.
 """
 
 from __future__ import annotations
@@ -24,6 +33,39 @@ from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.semantics import ConfidenceScore, Evidence
 
 _PREDICATE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
+
+#: Predicados que uma relação **semântica** inferida por modelo pode afirmar a
+#: partir de um único frame RGB. Cada entrada passou por duas perguntas:
+#:
+#: - *é observável em 2D?* — ``part_of``, ``attached_to``, ``supported_by``,
+#:   ``inside``, ``covers`` e ``occludes`` são todos legíveis na relação entre
+#:   duas máscaras e o que elas mostram, sem geometria métrica;
+#: - *tem consumidor?* — ``part_of``/``attached_to`` alimentam a composição de
+#:   objetos em ``semantic-fusion``; ``supported_by``/``inside`` alimentam o
+#:   grafo de ``scene-graph``; ``covers``/``occludes`` informam a associação
+#:   2D→3D sobre qual superfície um ponto realmente pertence.
+#:
+#: Ficaram **fora**, por exigirem geometria que este módulo não tem:
+#: ``above``/``below``, ``behind``/``in_front_of``, distância métrica,
+#: alcançabilidade, e qualquer relação entre frames. ``adjacent_to`` também
+#: ficou fora, mas por outro motivo: ele já é produzido, medido, pelo caminho
+#: geométrico (``near``), e duplicá-lo no canal semântico criaria duas respostas
+#: para a mesma pergunta.
+SEMANTIC_RELATION_PREDICATES = frozenset(
+    {
+        "part_of",
+        "attached_to",
+        "supported_by",
+        "inside",
+        "covers",
+        "occludes",
+    }
+)
+
+#: Resposta que declara que nenhum predicado do vocabulário é sustentado pela
+#: evidência do par. Existe para que "não há relação" seja uma resposta válida
+#: e contável, em vez de o modelo ser empurrado a escolher a menos ruim.
+NO_RELATION_PREDICATE = "none"
 
 
 # Distingue se uma relação foi derivada de geometria 2D ou inferida por um

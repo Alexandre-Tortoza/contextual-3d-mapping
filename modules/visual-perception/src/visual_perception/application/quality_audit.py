@@ -28,13 +28,9 @@ from visual_perception.domain.audit import AuditIssue, AuditResult, AuditSeverit
 from visual_perception.domain.claim_exclusivity import contradicting_claims
 from visual_perception.domain.region_evidence import EvidenceState
 from visual_perception.domain.regions import ObservedRegion, primary_label_claim
-from visual_perception.domain.semantic_support import SupportState
-from visual_perception.domain.semantics import (
-    ClaimKind,
-    RegionKind,
-    SemanticClaim,
-    normalize_claim_value,
-)
+from visual_perception.domain.semantic_support import SupportSignalStatus, SupportState
+from visual_perception.domain.semantics import ClaimKind, SemanticClaim, measured_signals
+from visual_perception.domain.structural_consistency import StructuralVerdict, region_kind_verdict
 from visual_perception.domain.visual_observation import VisualObservation
 
 
@@ -90,6 +86,7 @@ def audit_observation(observation: VisualObservation) -> AuditResult:
                 )
         issues.extend(_calibration_issues(region.claims, region_id=region.region_id))
         issues.extend(_region_kind_issues(region))
+        issues.extend(_hypothesis_signal_issues(region))
         issues.extend(_evidence_issues(region))
 
     for relation in observation.relations:
@@ -119,6 +116,17 @@ def audit_observation(observation: VisualObservation) -> AuditResult:
                 )
             )
     issues.extend(_calibration_issues(observation.scene_context.claims, region_id=None))
+
+    for entity in observation.entity_hypotheses:
+        dangling = sorted(set(entity.member_region_ids) - known_ids)
+        if dangling:
+            issues.append(
+                AuditIssue(
+                    AuditSeverity.ERROR,
+                    "dangling_entity_member",
+                    f"Contextual entity {entity.entity_id!r} references unknown regions {dangling}.",
+                )
+            )
 
     return AuditResult(observation_id=observation.observation_id, issues=tuple(issues))
 
@@ -162,37 +170,63 @@ def _evidence_issues(region: ObservedRegion) -> list[AuditIssue]:
     ]
 
 
-#: Categorias cuja natureza é inequívoca: uma parede, um piso ou um teto são
-#: *stuff* — matéria contínua e não contável — em qualquer cena. A lista é
-#: deliberadamente curta. Uma tabela completa de ``label -> kind`` corrigiria a
-#: saída do reasoner em vez de expor o erro dele, e é exatamente o que a #202
-#: proíbe nesta etapa: primeiro melhora-se a evidência visual, depois se mede se
-#: o modelo passou a acertar.
-_INHERENTLY_STUFF_CATEGORIES = frozenset(
-    {"wall", "floor", "flooring", "ceiling", "ground", "sky"}
-)
-
-
-# Sinaliza incoerências óbvias entre a categoria e a natureza declaradas para
-# uma região. **Nunca reescreve** a saída do modelo: o audit reporta, e a
-# decisão de corrigir pertence a quem lê o relatório. Chamada por
-# audit_observation uma vez por região.
+# Sinaliza incoerências entre o conceito e a natureza declarados para uma
+# região. **Nunca reescreve** a saída do modelo: o audit reporta, e a decisão de
+# registrar a interpretação corrigida pertence à reconciliação, que a acrescenta
+# ao lado da original. Chamada por audit_observation uma vez por região.
+#
+# A regra em si vive em ``domain/structural_consistency.py``, e não aqui, porque
+# três consumidores precisam concordar exatamente sobre ela: este audit, a
+# derivação de suporte e a reconciliação (#216). Até então o audit tinha a sua própria
+# cópia, casando apenas ``category`` contra seis strings exatas, e por isso via
+# 61 das 121 contradições que existiam nos frames de referência.
 def _region_kind_issues(region: ObservedRegion) -> list[AuditIssue]:
-    """Reporta regiões cuja ``RegionKind`` contradiz uma categoria inequívoca."""
+    """Reporta regiões cuja ``RegionKind`` contradiz um conceito inequívoco."""
     claim = primary_label_claim(region)
-    if claim is None or claim.category is None or claim.region_kind is None:
+    if claim is None or region_kind_verdict(claim) is not StructuralVerdict.CONTRADICTS:
         return []
-    category = normalize_claim_value(claim.category)
-    if category not in _INHERENTLY_STUFF_CATEGORIES:
-        return []
-    if claim.region_kind is RegionKind.STUFF:
-        return []
+    kind = claim.region_kind.value if claim.region_kind is not None else "unknown"
     return [
         AuditIssue(
             AuditSeverity.WARNING,
             "region_kind_inconsistent_with_category",
-            f"Region {region.region_id!r} reports category {claim.category!r} with kind "
-            f"{claim.region_kind.value!r}; that category is inherently 'stuff'.",
+            f"Region {region.region_id!r} reports {claim.value!r} with kind {kind!r}; that concept "
+            "is inherently 'stuff'.",
             region_id=region.region_id,
         )
     ]
+
+
+# Reporta o que os sinais independentes dizem sobre a hipótese primária.
+# Existe porque, antes da #214, uma discordância entre o reasoner e o canal
+# alinhado à linguagem simplesmente não tinha onde aparecer: o audit contava
+# contradições entre claims, e o único canal de evidência era o próprio VLM.
+def _hypothesis_signal_issues(region: ObservedRegion) -> list[AuditIssue]:
+    """Reporta hipóteses primárias sem suporte independente ou indistinguíveis."""
+    claim = primary_label_claim(region)
+    if claim is None:
+        return []
+    signals = measured_signals(claim)
+    if not signals:
+        return []
+    if all(signal.status is SupportSignalStatus.CONTRADICTS for signal in signals):
+        return [
+            AuditIssue(
+                AuditSeverity.WARNING,
+                "unsupported_primary_hypothesis",
+                f"Region {region.region_id!r} claims {claim.value!r}, but every independent signal "
+                f"({len(signals)}) scores a competing hypothesis higher.",
+                region_id=region.region_id,
+            )
+        ]
+    if all(signal.status is SupportSignalStatus.INDISTINGUISHABLE for signal in signals):
+        return [
+            AuditIssue(
+                AuditSeverity.WARNING,
+                "ambiguous_identity",
+                f"Region {region.region_id!r} claims {claim.value!r}, but no independent signal "
+                "distinguishes it from the competing hypotheses.",
+                region_id=region.region_id,
+            )
+        ]
+    return []

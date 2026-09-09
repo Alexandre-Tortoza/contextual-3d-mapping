@@ -13,10 +13,17 @@ from fixtures import default_config, image_observation, payload_with_blobs
 from fixtures_ports import default_ports
 from visual_perception.application.pipeline import run_canonical_pipeline
 from visual_perception.config import CalibrationConfig, MultiContextConfig
+from visual_perception.domain.contextual_entities import (
+    ContextualEntityHypothesis,
+    EntityHypothesisKind,
+    EntityHypothesisStatus,
+)
+from visual_perception.domain.embeddings import EmbeddingModality, EmbeddingSpace
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.region_evidence import EvidenceSlot
 from visual_perception.domain.regions import ObservedRegion
+from visual_perception.domain.semantic_support import HypothesisSupportSignal, SupportSignalStatus
 from visual_perception.domain.semantics import (
     ClaimKind,
     ConfidenceScore,
@@ -229,3 +236,100 @@ def test_a_payload_without_roles_is_read_as_primary_instead_of_being_rejected() 
     restored = deserialize_observation(payload)
 
     assert restored.regions[0].claims[0].role is HypothesisRole.PRIMARY
+
+
+# Os dois contracts que a #214/#205 acrescentaram precisam sobreviver ao disco
+# inteiros: um sinal que perdesse o espaço em que foi medido, ou um grupo que
+# perdesse os membros, voltariam como afirmações que ninguém pode auditar.
+def test_signals_and_entity_hypotheses_survive_the_round_trip() -> None:
+    """Sinais de suporte e hipóteses de entidade fazem round-trip sem perda."""
+    space = EmbeddingSpace(
+        "clip", "openai/clip-vit-large-patch14", 768, EmbeddingModality.LANGUAGE_ALIGNED
+    )
+    signals = (
+        HypothesisSupportSignal(
+            source="clip_alignment",
+            hypothesis="wall",
+            slot=EvidenceSlot.TIGHT_CROP,
+            status=SupportSignalStatus.SUPPORTS,
+            score=0.21,
+            margin=0.03,
+            space=space,
+        ),
+        HypothesisSupportSignal(
+            source="clip_alignment",
+            hypothesis="wall",
+            slot=EvidenceSlot.CONTEXTUAL_CROP,
+            status=SupportSignalStatus.UNAVAILABLE,
+            reason="no language-aligned embedding available",
+        ),
+    )
+    data = np.zeros((16, 16), dtype=np.bool_)
+    data[2:8, 2:8] = True
+    mask = Mask(data, 16, 16)
+    claim = SemanticClaim(
+        ClaimKind.LABEL,
+        "wall",
+        ConfidenceScore(0.9, source="qwen_vl"),
+        (Evidence("raw region response"),),
+        ModelProvenance(stage="region_semantics", producer="qwen_vl", config_fingerprint="fp"),
+        role=HypothesisRole.PRIMARY,
+        region_kind=RegionKind.STUFF,
+        signals=signals,
+    )
+    regions = (
+        ObservedRegion("region-a", mask, mask.bounding_box(), 0.9, ("p1",), claims=(claim,)),
+        ObservedRegion("region-b", mask, mask.bounding_box(), 0.8, ("p2",), claims=(claim,)),
+    )
+    entity = ContextualEntityHypothesis(
+        entity_id="entity-0123456789abcdef",
+        kind=EntityHypothesisKind.SAME_SURFACE,
+        canonical_concept="wall",
+        region_kind=RegionKind.STUFF,
+        member_region_ids=("region-a", "region-b"),
+        status=EntityHypothesisStatus.SUPPORTED,
+        evidence=(Evidence("2 touching regions share the reconciled concept 'wall'"),),
+        provenance=ModelProvenance(
+            stage="intra_frame_reconciliation",
+            producer="intra_frame_reconciliation",
+            config_fingerprint="fp",
+        ),
+        feature_coherence=0.81,
+        space=EmbeddingSpace("dinov2", "facebook/dinov2-base", 768, EmbeddingModality.VISUAL_DENSE),
+        member_raw_labels=("wall", "plain wall"),
+    )
+    observation = VisualObservation(
+        source=image_observation().source,
+        image_width=16,
+        image_height=16,
+        scene_context=SceneContext(),
+        regions=regions,
+        relations=(),
+        entity_hypotheses=(entity,),
+    )
+
+    round_tripped = deserialize_observation(serialize_observation(observation))
+
+    assert round_tripped == observation
+    assert round_tripped.entity_hypotheses[0].feature_coherence == 0.81
+    assert round_tripped.regions[0].claims[0].signals[1].reason
+
+
+# Um payload da v2 continua legível: ele simplesmente não tem sinais nem
+# grupos, e desserializa com os dois campos vazios em vez de ser recusado.
+def test_a_v2_payload_is_read_without_signals_or_entities() -> None:
+    """Um payload anterior à #214 desserializa com os campos novos vazios."""
+    payload = payload_with_blobs(blobs=((2, 2, 8, 8, (200, 30, 30)),))
+    result = run_canonical_pipeline(image_observation(), payload, default_config(), default_ports())
+    document = serialize_observation(result.observation)
+    document["schema_version"] = 2
+    document.pop("entity_hypotheses")
+    for region in document["regions"]:
+        for claim in region["claims"]:
+            claim.pop("signals")
+
+    migrated = deserialize_observation(document)
+
+    assert migrated.schema_version == SUPPORTED_SCHEMA_VERSION
+    assert migrated.entity_hypotheses == ()
+    assert all(claim.signals == () for region in migrated.regions for claim in region.claims)

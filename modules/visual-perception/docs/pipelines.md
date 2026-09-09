@@ -151,7 +151,12 @@ Esta tabela é o índice operacional do módulo. Use-a antes de procurar pelo c�
 | Contract de entrada do raciocínio de região, ou quais claims de cena o alcançam | [`domain/region_reasoning.py`](../src/visual_perception/domain/region_reasoning.py) | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py), [`tests/test_region_semantics.py`](../tests/test_region_semantics.py) |
 | Formato da resposta do VLM ou prompts de cena/região | [`infrastructure/adapters/multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py) | [`ports/multimodal_reasoning.py`](../src/visual_perception/ports/multimodal_reasoning.py), [`application/scene_context.py`](../src/visual_perception/application/scene_context.py), [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
 | Validação da resposta de região do VLM, ou a política de confiança ausente | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) (`parse_region_interpretation`) | [`domain/semantics.py`](../src/visual_perception/domain/semantics.py) (`RegionKind`, `most_confident_claim`), [`tests/test_region_semantics_parser.py`](../tests/test_region_semantics_parser.py) |
-| Relações 2D entre regiões | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py), [`tests/test_relation_generation.py`](../tests/test_relation_generation.py) |
+| Relações 2D geométricas entre regiões | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py), [`tests/test_relation_generation.py`](../tests/test_relation_generation.py) |
+| Como o alinhamento arbitra entre hipóteses, ou o template de texto | [`application/hypothesis_support.py`](../src/visual_perception/application/hypothesis_support.py) | [`config.py`](../src/visual_perception/config.py) (`HypothesisSupportConfig`), [`domain/semantic_support.py`](../src/visual_perception/domain/semantic_support.py), [`tests/test_hypothesis_support.py`](../tests/test_hypothesis_support.py) |
+| Quais razões disparam refinamento, ou a evidência de escalonamento | [`application/refinement.py`](../src/visual_perception/application/refinement.py) | [`config.py`](../src/visual_perception/config.py) (`RefinementConfig`), [`tests/test_refinement.py`](../tests/test_refinement.py) |
+| Canonicalização de conceito, ou formação de grupo de superfície | [`application/reconciliation.py`](../src/visual_perception/application/reconciliation.py) | [`domain/contextual_entities.py`](../src/visual_perception/domain/contextual_entities.py), [`domain/structural_consistency.py`](../src/visual_perception/domain/structural_consistency.py), [`tests/test_reconciliation.py`](../tests/test_reconciliation.py) |
+| Predicados semânticos, seleção de pares ou orçamento de relação | [`application/semantic_relations.py`](../src/visual_perception/application/semantic_relations.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py) (`SEMANTIC_RELATION_PREDICATES`), [`tests/test_semantic_relations.py`](../tests/test_semantic_relations.py) |
+| Regra de coerência entre conceito e `RegionKind` | [`domain/structural_consistency.py`](../src/visual_perception/domain/structural_consistency.py) | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py), [`tests/test_structural_consistency.py`](../tests/test_structural_consistency.py) |
 | Estrutura final de `VisualObservation` | [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py) | [`tests/test_visual_observation.py`](../tests/test_visual_observation.py), [`application/pipeline.py`](../src/visual_perception/application/pipeline.py) |
 | Regras de qualidade e inconsistências | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py) | [`domain/audit.py`](../src/visual_perception/domain/audit.py), [`tests/test_quality_audit.py`](../tests/test_quality_audit.py) |
 | Escolher entre backend fake e real | [`infrastructure/adapters/factory.py`](../src/visual_perception/infrastructure/adapters/factory.py) | [`config.py`](../src/visual_perception/config.py), [`tests/test_real_adapters.py`](../tests/test_real_adapters.py) |
@@ -202,50 +207,149 @@ flowchart TD
     Tiling --> Discovery[Region discovery]
     Discovery --> Filter[Filtragem de proposals]
     Filter --> Merge[Cross-scale merge]
-    Merge --> Features[Dense features]
+
+    Merge -->|geometria congelada| Features[Dense features]
     Features --> Evidence[Evidência multi-contexto]
     Merge --> Evidence
-    Evidence --> Slots[Slots persistidos + embeddings]
+    Evidence --> Slots[Slots + embeddings por região]
     Evidence --> Views[Views em pixels do frame]
-    Merge --> Scene[Scene context]
+
+    Merge --> Scene[Scene context ambiental]
     Views --> Semantics[Region semantics]
     Scene --> Semantics
-    Semantics --> Calibration[Calibração de suporte]
-    Calibration --> Relations[Candidate relations]
-    Slots --> Output[VisualObservation]
-    Relations --> Output
-    Calibration --> Output
-    Output --> Audit[AuditResult]
+
+    Semantics --> Support[Hypothesis support signals]
+    Slots --> Support
+    Support --> Calibration[Calibração / abstenção]
+
+    Calibration --> Refine{Alguma razão de refinamento?}
+    Refine -->|sim, e há evidência nova| Escalate[Reinterpretação com views escalonadas]
+    Escalate --> Support
+    Refine -->|não| GeoRel[Relações geométricas]
+
+    GeoRel --> Reconcile[Reconciliação intra-frame]
+    Slots --> Reconcile
+    Reconcile --> Entities[ContextualEntityHypothesis]
+    Reconcile --> SemRel[Relações semânticas candidatas]
+
+    Entities --> Output[VisualObservation]
+    SemRel --> Output
+    GeoRel --> Output
+    Reconcile --> Output
+    Output --> Audit[AuditResult final]
+    Output --> Downstream[sensor-association]
 ```
 
-A execução concreta segue esta ordem:
+A linha divisória do diagrama é o **merge**. Antes dele o pipeline decide *o que
+existe*; depois dele, apenas *o que aquilo significa*. Nenhum estágio à direita
+do merge altera `mask`, `box`, `region_id` ou a ordem das regiões — eles só
+acrescentam claims, sinais, grupos e relações, e é essa invariante que permite
+ao downstream confiar na geometria que recebe.
+
+O que continua sendo 2D, explicitamente:
+
+| o que o módulo afirma | o que ele **não** afirma |
+| --- | --- |
+| esta máscara existe neste frame | onde ela está no mundo |
+| o produtor a chamou de `plain wall` | que ela é uma parede |
+| o canal independente concorda, discorda ou não distingue | qual dos dois está certo |
+| estas três regiões se tocam e compartilham o conceito | que são o mesmo objeto 3D |
+| esta relação é candidata a `part_of` | que a relação é verdadeira em 3D |
+
+### Fluxo de evidência
+
+Cada estágio semântico consome evidência produzida antes dele e **nunca**
+recomputa a que já existe. É isso que torna o custo dos estágios novos quase
+nulo: o suporte de hipótese reusa os embeddings de crop do estágio de
+evidência, e a reconciliação reusa os embeddings densos do pooling.
+
+```mermaid
+flowchart LR
+    subgraph produz["produzido uma vez por frame"]
+        FM[FeatureMap denso]
+        LE[Embeddings de crop<br/>masked / tight / contextual]
+        VE[Embeddings densos por região]
+    end
+
+    subgraph consome["consumido, nunca recomputado"]
+        SIG[HypothesisSupportSignal<br/>score + margem + status]
+        GRP[Coerência de grupo]
+    end
+
+    LE --> SIG
+    TXT[Embedding de texto<br/>por conceito distinto] --> SIG
+    FM --> VE
+    VE --> GRP
+
+    SIG --> CAL[SemanticSupport<br/>calibrado ou abstido]
+    SIG --> RSN[Razão de refinamento]
+    GRP --> ENT[Status do grupo<br/>supported / unresolved]
+```
+
+O único custo novo de modelo por frame é o encoding de texto de cada **conceito
+distinto** do frame — algumas dezenas de chamadas curtas, memoizadas — mais as
+chamadas de VLM que o refinamento e as relações semânticas gastarem dentro do
+seu orçamento configurado.
+
+### Ordem canônica
 
 1. `build_tiles` divide a imagem conforme a configuração de tiling.
 2. `RegionDiscoverer.discover` produz `RegionProposal` para cada tile.
-3. `remap_to_global` converte a geometria local de cada tile para as coordenadas da imagem original.
+3. `remap_to_global` converte a geometria local de cada tile para as coordenadas da
+   imagem original.
 4. `filter_proposals` descarta as propostas que não são evidência válida: fora da área
    útil do sensor, sobre o ego-veículo, ou com área implausível. Roda em coordenadas
-   globais, sobre máscaras, e **nunca** altera os pixels de entrada. Cada descarte vira um
-   `RejectedProposal` com motivo e medida, de modo que `proposal_count` e
+   globais, sobre máscaras, e **nunca** altera os pixels de entrada. Cada descarte vira
+   um `RejectedProposal` com motivo e medida, de modo que `proposal_count` e
    `merged_proposal_count` sempre fechem. Redundância geométrica **não** é decidida aqui:
    ela continua com `merge_regions`, que une duplicatas preservando os dois
    `contributing_proposal_ids` em vez de descartar uma delas.
-5. `merge_regions` consolida propostas sobrepostas em `ObservedRegion`.
-6. Se existirem regiões, o `DenseFeatureExtractor` produz o feature map da imagem.
-   Um `fallback_reason` gravado pelo adapter sobe até `PipelineResult`, para que um
-   fallback de backend nunca pareça a execução configurada.
-7. `extract_region_evidence` produz os slots de evidência da região (foreground
-   denso mask-aware, crop justo, crop contextual e cena), mais as `RegionView` em pixels
-   do frame — o mesmo recorte que gerou cada slot.
-8. `analyze_scene` descreve o **ambiente** como claims tipadas, sobre a área válida
-   menos a área do ego — um recorte, nunca uma pintura.
-9. `interpret_regions` interpreta cada região a partir de um `RegionReasoningRequest`:
-   as views selecionadas por `multimodal_reasoning.region_views` e as claims de cena
+5. `merge_regions` consolida propostas sobrepostas em `ObservedRegion`. **A partir daqui
+   a geometria está congelada.**
+6. Se existirem regiões, o `DenseFeatureExtractor` produz o feature map da imagem. Um
+   `fallback_reason` gravado pelo adapter sobe até `PipelineResult`, para que um fallback
+   de backend nunca pareça a execução configurada.
+7. `extract_region_evidence` produz os slots de evidência da região (foreground denso
+   mask-aware, sujeito isolado, crop justo, crop contextual e cena), os embeddings
+   correspondentes, e as `RegionView` em pixels do frame — o mesmo recorte que gerou cada
+   slot. Os embeddings agora sobem até `PipelineResult`; até a #204 eles eram calculados
+   e descartados aqui dentro.
+8. `analyze_scene` descreve o **ambiente** como claims tipadas, sobre a área válida menos
+   a área do ego — um recorte, nunca uma pintura.
+9. `interpret_regions` interpreta cada região a partir de um `RegionReasoningRequest`: as
+   views selecionadas por `multimodal_reasoning.region_views` e as claims de cena
    estruturadas, sem achatar nenhuma das duas.
-10. `calibrate_observation_claims` anexa `SemanticSupport` a cada claim.
-11. `generate_relations` produz relações 2D candidatas entre as regiões resultantes.
-12. O pipeline monta a `VisualObservation` canônica.
-13. `audit_observation` verifica consistência e contradições sem modificar a observação.
+10. `attach_hypothesis_signals` mede, em cada slot alinhado a linguagem, se a evidência
+    sustenta a hipótese primária ou uma das alternativas, e anexa um
+    `HypothesisSupportSignal` a cada hipótese. É o único canal **independente** do
+    reasoner que o módulo possui, e ele nunca vira `confidence`.
+11. `calibrate_observation_claims` anexa `SemanticSupport` a cada claim, derivando
+    `visual_support` e `contradiction_support` desses sinais.
+12. `refine_observation` reinterpreta seletivamente as regiões que têm uma **razão
+    explícita** (`RefinementReason`) e para as quais existe evidência nova a oferecer. As
+    claims que ele acrescenta passam de novo por (10) e (11).
+13. `generate_relations` produz relações 2D geométricas entre as regiões resultantes.
+14. `reconcile_observation` olha o frame inteiro: canonicaliza conceitos, registra a
+    interpretação reconciliada ao lado da original, e propõe grupos de mesma superfície.
+    Nenhuma geometria muda, nenhuma região desaparece.
+15. `infer_semantic_relations` consulta o reasoner sobre os pares que a geometria
+    priorizou, dentro de um orçamento explícito, e produz relações `MODEL_INFERRED`.
+16. O pipeline monta a `VisualObservation` canônica, incluindo as
+    `ContextualEntityHypothesis`.
+17. `audit_observation` verifica consistência e contradições **depois de todos os
+    estágios que acrescentam claim ou relação**, sem modificar a observação.
+
+### Como desligar um estágio
+
+Cada estágio novo é ablatável de forma independente, para que uma comparação consiga
+atribuir um efeito a um estágio só:
+
+| estágio | como desligar | efeito |
+| --- | --- | --- |
+| suporte de hipótese | `hypothesis_support.enabled = False` | nenhuma claim recebe sinal; a calibração volta a não ter suporte visual independente |
+| refinamento seletivo | `refinement.enabled = False` | nenhuma região é reinterpretada; nenhuma chamada extra de VLM |
+| reconciliação | `reconciliation.enabled = False` | nenhuma claim `RECONCILED`, nenhum grupo |
+| relações semânticas | `semantic_relations.enabled = False` | só relações geométricas |
 
 ## Estágios
 
@@ -260,8 +364,12 @@ A execução concreta segue esta ordem:
 | Evidência multi-contexto | regiões + imagem + feature map | slots de evidência, embeddings e views em pixels | [`application/multi_context.py`](../src/visual_perception/application/multi_context.py), [`application/region_views.py`](../src/visual_perception/application/region_views.py) |
 | Scene context | imagem completa | `SceneContext` | [`application/scene_context.py`](../src/visual_perception/application/scene_context.py) |
 | Region semantics | `RegionReasoningRequest` (views + claims de cena) | `SemanticClaim` anexado à região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) |
-| Calibração | claims + evidência de suporte | `SemanticSupport` por claim | [`application/semantic_calibration.py`](../src/visual_perception/application/semantic_calibration.py) |
-| Relations | regiões interpretadas | relações 2D candidatas | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) |
+| Suporte de hipótese | claims + embeddings de crop | `HypothesisSupportSignal` por hipótese | [`application/hypothesis_support.py`](../src/visual_perception/application/hypothesis_support.py) |
+| Calibração | claims + sinais + coerência estrutural | `SemanticSupport` por claim | [`application/semantic_calibration.py`](../src/visual_perception/application/semantic_calibration.py) |
+| Refinamento seletivo | observação + razões de refinamento | claims adicionais + `RefinementStep` | [`application/refinement.py`](../src/visual_perception/application/refinement.py) |
+| Relações geométricas | regiões interpretadas | relações 2D candidatas | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) |
+| Reconciliação intra-frame | todas as regiões + embeddings densos | claim `RECONCILED` + `ContextualEntityHypothesis` | [`application/reconciliation.py`](../src/visual_perception/application/reconciliation.py) |
+| Relações semânticas | pares priorizados + view de par | relações `MODEL_INFERRED` | [`application/semantic_relations.py`](../src/visual_perception/application/semantic_relations.py) |
 | Observação final | todos os resultados anteriores | `VisualObservation` | [`application/pipeline.py`](../src/visual_perception/application/pipeline.py), [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py) |
 | Auditoria | `VisualObservation` | `AuditResult` | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py) |
 
@@ -288,16 +396,18 @@ disponíveis para inspeção e auditoria.
 
 ## Extensões pós-pipeline
 
-As capacidades abaixo compõem sobre a saída canônica e não mudam a ordem nem a API de
-`run_canonical_pipeline`:
+Sobrou **uma**, e a redução é o ponto da #207. Uma capacidade "opcional" que nenhum
+chamador invoca não existe na prática: o refinamento seletivo ficou dois ciclos como
+extensão, e nesse período nenhum run real o executou uma única vez. Ele agora é um
+estágio canônico, controlado por `refinement.enabled`.
 
-- [`application/fusion.py`](../src/visual_perception/application/fusion.py) funde propostas e claims de múltiplas fontes, preservando proveniência e contradições;
-- [`application/refinement.py`](../src/visual_perception/application/refinement.py) reinterpreta seletivamente regiões incertas;
-- [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py) seleciona um candidato de pesquisa sujeito ao orçamento de memória.
-
-Elas são APIs de capability, não etapas obrigatórias. Um consumidor que apenas precisa
-de uma observação visual deve chamar o pipeline canônico e decidir explicitamente se
-alguma extensão é necessária.
+- [`application/fusion.py`](../src/visual_perception/application/fusion.py) funde
+  propostas e claims de **múltiplas fontes de percepção**, preservando proveniência e
+  contradições. Continua fora do caminho canônico porque a composição de fontes é uma
+  decisão da aplicação: o pipeline canônico tem uma fonte só;
+- [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py)
+  seleciona um candidato de pesquisa sujeito ao orçamento de memória. É uma política de
+  composição, não um estágio.
 
 ## Pipelines legadas
 

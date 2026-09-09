@@ -10,10 +10,11 @@ import numpy as np
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import BackendExecutionError
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_reasoning import RegionReasoningRequest
+from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionRelationRequest
 
 SceneResponseFn = Callable[[ImagePayload], dict[str, Any]]
 RegionResponseFn = Callable[[RegionReasoningRequest], dict[str, Any]]
+RelationResponseFn = Callable[[RegionRelationRequest], dict[str, Any]]
 
 
 # Implementação fake do port MultimodalReasoner. Existe para permitir testar
@@ -36,10 +37,12 @@ class FakeMultimodalReasoner:
         scene_response_fn: SceneResponseFn | None = None,
         region_response_fn: RegionResponseFn | None = None,
         fail_on_region_ids: frozenset[str] = frozenset(),
+        relation_response_fn: RelationResponseFn | None = None,
     ) -> None:
         self._scene_response_fn = scene_response_fn
         self._region_response_fn = region_response_fn
         self._fail_on_region_ids = fail_on_region_ids
+        self._relation_response_fn = relation_response_fn
 
     # Gera a análise fake de cena completa: usa o hook injetado se houver,
     # senão deriva um resultado determinístico a partir do brilho médio da
@@ -89,6 +92,21 @@ class FakeMultimodalReasoner:
             "condition": "intact",
             "material": "unknown",
         }
+
+    # Gera a resposta fake de relação entre duas regiões (#206): usa o hook
+    # injetado se houver, senão devolve um predicado determinístico derivado do
+    # que a geometria já mediu. O default responde ``none`` para pares apenas
+    # encostados, porque é isso que a maioria dos pares realmente é: um fake que
+    # inventasse relação para todo par tornaria invisível qualquer regressão em
+    # que o modelo real passasse a fazer o mesmo.
+    def analyze_relation(
+        self, request: RegionRelationRequest, config: MultimodalReasoningConfig
+    ) -> dict[str, Any]:
+        if self._relation_response_fn is not None:
+            return self._relation_response_fn(request)
+        if "covers 100%" in request.geometric_summary or "covers 9" in request.geometric_summary:
+            return {"predicate": "part_of", "confidence": 0.6}
+        return {"predicate": "none"}
 
     # Levanta BackendExecutionError se region_id estiver na lista configurada
     # para simular falha; usada pelos testes para exercitar o caminho de

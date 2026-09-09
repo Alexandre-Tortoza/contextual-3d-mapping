@@ -30,7 +30,12 @@ from visual_perception.domain.region_evidence import (
     RegionEvidenceSlot,
 )
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.semantic_support import SupportPolarity, SupportState
+from visual_perception.domain.semantic_support import (
+    HypothesisSupportSignal,
+    SupportPolarity,
+    SupportSignalStatus,
+    SupportState,
+)
 from visual_perception.domain.semantics import (
     IDENTITY_CLAIM_KINDS,
     ClaimKind,
@@ -43,6 +48,9 @@ from visual_perception.domain.visual_observation import SceneContext, VisualObse
 
 _PROVENANCE = ModelProvenance(stage="region_semantics", producer="vlm", config_fingerprint="abc123")
 _EVIDENCE = (Evidence(description="raw region response"),)
+_LANGUAGE_SPACE = EmbeddingSpace(
+    "clip", "openai/clip-vit-large-patch14", 768, EmbeddingModality.LANGUAGE_ALIGNED
+)
 
 _ARTIFACT = {
     "calibration_version": "calibration/1",
@@ -109,11 +117,36 @@ def _region(support_ratio: float | None = 0.9, claims: tuple[SemanticClaim, ...]
     )
 
 
-# Constrói uma claim de label pontuada com o valor bruto pedido.
-def _claim(value: str, raw: float | None = 0.9, kind: ClaimKind = ClaimKind.LABEL) -> SemanticClaim:
+# Constrói uma claim de label pontuada com o valor bruto pedido, opcionalmente
+# já com sinais de suporte independentes anexados (#214).
+def _claim(
+    value: str,
+    raw: float | None = 0.9,
+    kind: ClaimKind = ClaimKind.LABEL,
+    signals: tuple[HypothesisSupportSignal, ...] = (),
+) -> SemanticClaim:
     confidence = None if raw is None else ConfidenceScore(raw, source="vlm")
     role = HypothesisRole.PRIMARY if kind in IDENTITY_CLAIM_KINDS else None
-    return SemanticClaim(kind, value, confidence, _EVIDENCE, _PROVENANCE, role=role)
+    return SemanticClaim(kind, value, confidence, _EVIDENCE, _PROVENANCE, role=role, signals=signals)
+
+
+# Constrói os sinais de alinhamento de uma hipótese, um por slot, com os
+# desfechos pedidos. Existe para que os testes de suporte declarem a evidência
+# independente que a claim recebeu em vez de depender de um default.
+def _signals(value: str, *statuses: SupportSignalStatus) -> tuple[HypothesisSupportSignal, ...]:
+    slots = (EvidenceSlot.MASKED_SUBJECT, EvidenceSlot.TIGHT_CROP, EvidenceSlot.CONTEXTUAL_CROP)
+    return tuple(
+        HypothesisSupportSignal(
+            source="clip_alignment",
+            hypothesis=value,
+            slot=slot,
+            status=status,
+            score=0.2,
+            margin=0.05 if status is SupportSignalStatus.SUPPORTS else -0.05,
+            space=_LANGUAGE_SPACE,
+        )
+        for slot, status in zip(slots, statuses, strict=False)
+    )
 
 
 def test_a_calibrated_score_is_emitted_only_when_the_rule_declares_it_valid(tmp_path: Path) -> None:
@@ -183,39 +216,53 @@ def test_out_of_distribution_evidence_abstains_instead_of_extrapolating(tmp_path
     assert "out-of-distribution evidence" in support.reason
 
 
+# ``visual_support`` é a fração da evidência **independente** que sustenta a
+# hipótese: um em três slots concordando é 0,333, e um limiar de 0,5 recusa
+# pontuar. Até a #214 este campo recebia a cobertura de amostragem densa da
+# máscara, que vale 1,0 para qualquer região bem amostrada, esteja o label certo
+# ou errado — e por isso não separava nada.
 def test_insufficient_visual_support_abstains_and_reports_the_measurement(tmp_path: Path) -> None:
     config = _artifact_config(tmp_path, min_visual_support=0.5)
+    weak_claim = _claim(
+        "door",
+        signals=_signals(
+            "door",
+            SupportSignalStatus.SUPPORTS,
+            SupportSignalStatus.CONTRADICTS,
+            SupportSignalStatus.CONTRADICTS,
+        ),
+    )
 
     weak, _, _ = calibrate_observation_claims(
-        (_region(support_ratio=0.2, claims=(_claim("door"),)),),
-        SceneContext(),
-        build_calibrator(config),
-        config,
+        (_region(claims=(weak_claim,)),), SceneContext(), build_calibrator(config), config
     )
     unmeasured, _, _ = calibrate_observation_claims(
-        (_region(support_ratio=None, claims=(_claim("door"),)),),
-        SceneContext(),
-        build_calibrator(config),
-        config,
+        (_region(claims=(_claim("door"),)),), SceneContext(), build_calibrator(config), config
     )
 
     assert "insufficient support" in weak[0].claims[0].support.reason
-    assert "0.200" in weak[0].claims[0].support.reason
+    assert "0.333" in weak[0].claims[0].support.reason
     assert "not measured" in unmeasured[0].claims[0].support.reason
 
 
 def test_pre_calibration_support_is_preserved_for_audit(tmp_path: Path) -> None:
     config = _artifact_config(tmp_path)
-    region = _region(claims=(_claim("door", 0.9), _claim("window", 0.6)))
+    door = _claim(
+        "door",
+        0.9,
+        signals=_signals("door", SupportSignalStatus.SUPPORTS, SupportSignalStatus.SUPPORTS),
+    )
+    region = _region(claims=(door, _claim("window", 0.6)))
 
     regions, _, _ = calibrate_observation_claims(
         (region,), SceneContext(), build_calibrator(config), config
     )
 
     support = regions[0].claims[0].support
-    assert support.visual_support == pytest.approx(0.9)
+    assert support.visual_support == pytest.approx(1.0)  # os dois sinais medidos concordam
     assert support.region_quality == pytest.approx(0.8)
-    assert support.contradiction_support == pytest.approx(1.0)  # a única irmã discorda
+    # Uma irmã afirmada que discorda, contra ela mais os dois sinais que apoiam.
+    assert support.contradiction_support == pytest.approx(1 / 3)
     assert support.source_reliability == pytest.approx(1.0)  # 250 amostras saturam em 1.0
 
 
@@ -327,13 +374,29 @@ def test_a_raw_score_outside_the_measured_bins_abstains(tmp_path: Path) -> None:
 
 def test_support_inputs_are_derived_from_evidence_that_was_actually_measured() -> None:
     region = _region(support_ratio=0.42)
-    claim = _claim("door")
+    claim = _claim(
+        "door",
+        signals=_signals(
+            "door", SupportSignalStatus.SUPPORTS, SupportSignalStatus.CONTRADICTS
+        ),
+    )
 
     inputs = derive_support_inputs(claim, region=region, siblings=(), domain="indoor_corridor")
 
-    assert inputs.visual_support == pytest.approx(0.42)
+    assert inputs.visual_support == pytest.approx(0.5)
     assert inputs.region_quality == pytest.approx(0.8)
-    assert [item.artifact_uri for item in inputs.evidence] == ["visual-region-a"]
+    # Os dois canais entram na linhagem: o slot de evidência que a região reteve
+    # e o sinal independente que julgou a hipótese, cada um com sua polaridade.
+    assert [item.artifact_uri for item in inputs.evidence] == [
+        "visual-region-a",
+        "signal:clip_alignment:masked_subject:door",
+        "signal:clip_alignment:tight_crop:door",
+    ]
+    assert [item.polarity for item in inputs.evidence] == [
+        SupportPolarity.SUPPORTIVE,
+        SupportPolarity.SUPPORTIVE,
+        SupportPolarity.CONTRADICTORY,
+    ]
 
 
 def test_the_canonical_pipeline_attaches_support_to_every_claim() -> None:

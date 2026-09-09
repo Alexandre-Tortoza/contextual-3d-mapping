@@ -1,6 +1,6 @@
 """Contract de suporte semântico estruturado e estado de calibração.
 
-Issue: #195.
+Issues: #195 (suporte calibrado), #214 (sinal de suporte independente).
 
 Uma confiança solta em uma claim não diz de onde ela veio nem se foi
 verificada. Este contract a substitui por um registro estruturado que
@@ -22,16 +22,114 @@ deste contract (ver #196 para a aplicação da regra de calibração).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
 from visual_perception.domain.confidence import ConfidenceScore
+from visual_perception.domain.embeddings import EmbeddingModality, EmbeddingSpace
+from visual_perception.domain.region_evidence import EvidenceSlot
 
 #: Versões de artifact de calibração que este módulo sabe interpretar.
 #: Uma versão fora deste conjunto falha na validação em vez de ser aceita
 #: como se fosse compatível (critério de aceitação da #195).
 SUPPORTED_CALIBRATION_VERSIONS = frozenset({"calibration/1"})
+
+
+# Enumera o que um sinal independente diz sobre uma hipótese. Existe porque a
+# medição que motivou este contract encontrou **três** desfechos com massa real,
+# e não dois: em 13 a 25 de 92 regiões dos frames de referência, a margem entre
+# a hipótese primária e a melhor alternativa fica abaixo do ruído do próprio
+# sinal. Colapsar esse terceiro caso em "discorda" inventaria um veredito que a
+# medida não sustenta (ver docs/visual-context-sota-review.md, §3.1).
+class SupportSignalStatus(StrEnum):
+    """O que um sinal independente afirma sobre uma hipótese de identidade."""
+
+    #: O sinal pontua esta hipótese acima da melhor concorrente, por uma
+    #: margem maior que o piso configurado.
+    SUPPORTS = "supports"
+    #: O sinal pontua uma concorrente acima desta hipótese.
+    CONTRADICTS = "contradicts"
+    #: A margem entre esta hipótese e a melhor concorrente está abaixo do
+    #: piso: o sinal existe, mas não distingue as duas.
+    INDISTINGUISHABLE = "indistinguishable"
+    #: O sinal não pôde ser produzido (evidência ausente, espaço incompatível,
+    #: ou nenhuma hipótese concorrente contra a qual comparar).
+    UNAVAILABLE = "unavailable"
+
+
+# Registra uma medida independente sobre **uma** hipótese de identidade, feita
+# em **um** slot de evidência. Existe porque a única alternativa disponível era
+# transformar um cosseno em ``confidence``, e isso está medido como errado
+# duas vezes: nos nossos frames a margem mediana é de 0,019 a 0,027 num intervalo
+# de similaridade que vive entre 0,13 e 0,27, e a literatura mostra que o cosseno
+# região-texto é uma mistura enviesada de escala e especificidade semântica
+# (arXiv:2607.10993). O score bruto fica aqui, nomeado como o que é; a decisão
+# fica com a calibração, que consome estes sinais.
+@dataclass(frozen=True)
+class HypothesisSupportSignal:
+    """Uma medida independente a favor ou contra uma hipótese de identidade.
+
+    ``score`` é a similaridade bruta no espaço declarado por ``space``, nunca
+    uma probabilidade. ``margin`` é ``score`` menos o score da melhor hipótese
+    concorrente da mesma região: é a grandeza comparável, e é ela que decide o
+    ``status`` contra o piso configurado.
+    """
+
+    source: str
+    hypothesis: str
+    slot: EvidenceSlot
+    status: SupportSignalStatus
+    score: float | None = None
+    margin: float | None = None
+    space: EmbeddingSpace | None = None
+    reason: str | None = None
+
+    # Impõe que um sinal disponível traga medida e espaço, e que um sinal
+    # indisponível traga motivo e nenhuma medida: sem isso, um sinal sem
+    # evidência ficaria indistinguível de um sinal neutro.
+    def __post_init__(self) -> None:
+        """Valida a coerência entre status, medida, espaço e motivo."""
+        if not self.source:
+            raise ValueError("HypothesisSupportSignal.source must not be empty.")
+        if not self.hypothesis:
+            raise ValueError("HypothesisSupportSignal.hypothesis must not be empty.")
+        if self.status is SupportSignalStatus.UNAVAILABLE:
+            if not self.reason:
+                raise ValueError("An unavailable HypothesisSupportSignal must explain itself.")
+            if self.score is not None or self.margin is not None:
+                raise ValueError("An unavailable HypothesisSupportSignal must not carry a measurement.")
+            return
+        if self.score is None or self.margin is None:
+            raise ValueError(
+                f"A {self.status.value!r} HypothesisSupportSignal requires both score and margin."
+            )
+        if self.space is None:
+            raise ValueError(
+                f"A {self.status.value!r} HypothesisSupportSignal must declare the space it measured in."
+            )
+        for name in ("score", "margin"):
+            value = float(getattr(self, name))
+            if math.isnan(value) or math.isinf(value):
+                raise ValueError(f"HypothesisSupportSignal.{name} must be finite, got {value!r}.")
+        if self.space.normalized and not -1.0 <= self.score <= 1.0:
+            raise ValueError(
+                "A signal measured in a normalized space must have a cosine score in [-1, 1], "
+                f"got {self.score}."
+            )
+        if self.space.modality is not EmbeddingModality.LANGUAGE_ALIGNED:
+            raise ValueError(
+                "A hypothesis support signal compares a text hypothesis against region evidence and "
+                f"therefore requires a language-aligned space, got {self.space.modality.value!r}."
+            )
+
+    # Responde se este sinal produziu uma medida utilizável. Usada por quem
+    # agrega sinais sem inspecionar o status na mão.
+    @property
+    def is_measured(self) -> bool:
+        """Indica que o sinal foi efetivamente medido, qualquer que seja o desfecho."""
+        return self.status is not SupportSignalStatus.UNAVAILABLE
 
 
 # Enumera os estados possíveis do suporte de uma claim. Existe para que
@@ -187,6 +285,68 @@ def _validate_signals(holder: SupportInputs | SemanticSupport) -> None:
             raise ValueError(f"{name} must be a real number or None, got {value!r}.")
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"{name} must be in [0, 1], got {value}.")
+
+
+# Converte um HypothesisSupportSignal em um dict serializável. Usada por
+# infrastructure/serialization.py ao gravar uma SemanticClaim, e pelos reports
+# de avaliação que precisam contar desfechos por slot.
+def support_signal_to_dict(signal: HypothesisSupportSignal) -> dict[str, Any]:
+    """Converte um :class:`HypothesisSupportSignal` em um dict serializável."""
+    return {
+        "source": signal.source,
+        "hypothesis": signal.hypothesis,
+        "slot": signal.slot.value,
+        "status": signal.status.value,
+        "score": signal.score,
+        "margin": signal.margin,
+        "space": None if signal.space is None else _space_to_dict(signal.space),
+        "reason": signal.reason,
+    }
+
+
+# Reconstrói um HypothesisSupportSignal a partir do dict, revalidando as
+# invariantes em vez de confiar no que estava gravado.
+def support_signal_from_dict(payload: dict[str, Any]) -> HypothesisSupportSignal:
+    """Reconstrói um :class:`HypothesisSupportSignal` validado a partir de um dict."""
+    space = payload.get("space")
+    return HypothesisSupportSignal(
+        source=payload["source"],
+        hypothesis=payload["hypothesis"],
+        slot=EvidenceSlot(payload["slot"]),
+        status=SupportSignalStatus(payload["status"]),
+        score=payload.get("score"),
+        margin=payload.get("margin"),
+        space=None if space is None else _space_from_dict(space),
+        reason=payload.get("reason"),
+    )
+
+
+# Achata um EmbeddingSpace preservando a modalidade como string. Helper
+# compartilhado por support_signal_to_dict; espelha o helper equivalente de
+# ``domain/region_evidence.py``, que serializa o espaço do outro lado do
+# contract de evidência.
+def _space_to_dict(space: EmbeddingSpace) -> dict[str, Any]:
+    """Converte um :class:`EmbeddingSpace` em um dict serializável."""
+    return {
+        "model_id": space.model_id,
+        "checkpoint": space.checkpoint,
+        "dimension": space.dimension,
+        "modality": space.modality.value,
+        "normalized": space.normalized,
+    }
+
+
+# Reconstrói um EmbeddingSpace validado a partir do dict. Helper de
+# support_signal_from_dict.
+def _space_from_dict(payload: dict[str, Any]) -> EmbeddingSpace:
+    """Reconstrói um :class:`EmbeddingSpace` validado a partir de um dict."""
+    return EmbeddingSpace(
+        model_id=payload["model_id"],
+        checkpoint=payload["checkpoint"],
+        dimension=payload["dimension"],
+        modality=EmbeddingModality(payload["modality"]),
+        normalized=payload.get("normalized", True),
+    )
 
 
 # Converte um SemanticSupport (ou a sua ausência) em um dict serializável.

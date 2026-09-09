@@ -44,9 +44,11 @@ from visual_perception.domain.semantic_support import (
     SupportEvidence,
     SupportInputs,
     SupportPolarity,
+    SupportSignalStatus,
     SupportState,
 )
-from visual_perception.domain.semantics import ClaimKind, SemanticClaim
+from visual_perception.domain.semantics import ClaimKind, SemanticClaim, measured_signals
+from visual_perception.domain.structural_consistency import StructuralVerdict, region_kind_verdict
 from visual_perception.domain.visual_observation import SceneContext
 from visual_perception.ports.calibration import ClaimCalibrator
 
@@ -481,13 +483,22 @@ def _parse_bins(raw: Any, source: str, claim_kind: str) -> tuple[tuple[float, fl
 
 
 # Deriva os sinais estruturados de suporte de uma claim a partir do que a
-# observação já mediu: qualidade geométrica da região, cobertura de suporte
-# denso do slot de foreground, e densidade de contradição entre claims
-# irmãs. Chamada por calibrate_observation_claims para cada claim.
+# observação já mediu: qualidade geométrica da região, suporte independente do
+# alinhamento, coerência estrutural entre conceito e natureza, e contradição
+# entre claims irmãs afirmadas. Chamada por calibrate_observation_claims para
+# cada claim.
 def derive_support_inputs(
     claim: SemanticClaim, *, region: ObservedRegion | None, siblings: tuple[SemanticClaim, ...], domain: str
 ) -> SupportInputs:
     """Monta os :class:`SupportInputs` de uma claim a partir de evidência já medida.
+
+    ``visual_support`` é a **fração da evidência independente que sustenta esta
+    hipótese**: quantos dos sinais de alinhamento medidos a pontuaram acima da
+    melhor concorrente. Até a #214 este campo recebia o ``support_ratio`` do
+    slot de foreground, que é a cobertura de amostragem densa da máscara —
+    uma grandeza que vale 1,0 para qualquer região bem amostrada, esteja o
+    label certo ou errado. O contract sempre documentou "evidência visual
+    independente"; agora o valor é isso.
 
     Argumentos:
         claim: a claim a calibrar.
@@ -497,7 +508,6 @@ def derive_support_inputs(
     Retorna:
         os sinais estruturados que a regra de calibração consome.
     """
-    visual_support: float | None = None
     evidence: list[SupportEvidence] = []
     region_quality: float | None = None
     if region is not None:
@@ -505,8 +515,6 @@ def derive_support_inputs(
         for slot in region.evidence:
             if slot.state is not EvidenceState.AVAILABLE or slot.artifact_ref is None:
                 continue
-            if slot.is_foreground and slot.support_ratio is not None:
-                visual_support = slot.support_ratio
             evidence.append(
                 SupportEvidence(
                     artifact_uri=slot.artifact_ref,
@@ -516,28 +524,67 @@ def derive_support_inputs(
                     slot=slot.slot.value,
                 )
             )
+
+    signals = measured_signals(claim)
+    supporting = [signal for signal in signals if signal.status is SupportSignalStatus.SUPPORTS]
+    contradicting = [signal for signal in signals if signal.status is SupportSignalStatus.CONTRADICTS]
+    visual_support = len(supporting) / len(signals) if signals else None
+    region_id = None if region is None else region.region_id
+    for signal in signals:
+        if signal.status is SupportSignalStatus.INDISTINGUISHABLE:
+            continue
+        evidence.append(
+            SupportEvidence(
+                artifact_uri=f"signal:{signal.source}:{signal.slot.value}:{signal.hypothesis}",
+                source=signal.source,
+                polarity=(
+                    SupportPolarity.SUPPORTIVE
+                    if signal.status is SupportSignalStatus.SUPPORTS
+                    else SupportPolarity.CONTRADICTORY
+                ),
+                region_id=region_id,
+                slot=signal.slot.value,
+            )
+        )
+
     # Só sobem a contradição as claims que disputam o mesmo slot exclusivo
     # (``domain/claim_exclusivity.py``). Comparar ``value`` diretamente, como
     # esta função fazia até a #202, marcava ``smooth`` como contraditório com a
     # ``description`` da mesma região e inflava o sinal em todo o frame.
     disagreeing = competing_claims(claim, siblings)
-    contradiction = len(disagreeing) / len(siblings) if siblings else 0.0
     for other in disagreeing:
         evidence.append(
             SupportEvidence(
                 artifact_uri=f"claim:{other.kind.value}:{other.value}",
                 source=other.provenance.producer,
                 polarity=SupportPolarity.CONTRADICTORY,
-                region_id=None if region is None else region.region_id,
+                region_id=region_id,
             )
         )
+
+    # A incoerência entre o conceito e a natureza declarada é evidência contra
+    # a claim, e não um aviso à parte: uma região que se diz ``wall`` e ``thing``
+    # errou em uma das duas afirmações, e a calibração precisa ver isso.
+    structural = region_kind_verdict(claim)
+    if structural is StructuralVerdict.CONTRADICTS:
+        evidence.append(
+            SupportEvidence(
+                artifact_uri=f"structural:region_kind:{claim.value}",
+                source="structural_consistency",
+                polarity=SupportPolarity.CONTRADICTORY,
+                region_id=region_id,
+            )
+        )
+
+    against = len(disagreeing) + len(contradicting) + (1 if structural is StructuralVerdict.CONTRADICTS else 0)
+    total = len(siblings) + len(signals) + (1 if structural is not StructuralVerdict.UNDETERMINED else 0)
     return SupportInputs(
         claim_kind=claim.kind.value,
         source=claim.provenance.producer,
         raw_confidence=claim.confidence,
         visual_support=visual_support,
         region_quality=region_quality,
-        contradiction_support=contradiction,
+        contradiction_support=against / total if total else 0.0,
         domain=domain,
         evidence=tuple(evidence),
     )

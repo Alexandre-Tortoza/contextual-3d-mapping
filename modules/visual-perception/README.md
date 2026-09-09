@@ -9,7 +9,8 @@ modelo e configuração anexada em todo o processo.
 > Documentação detalhada: [`docs/`](docs/README.md).
 
 O módulo é testável de forma independente e cada estágio canônico é substituível por
-trás de um port. Ele vem com fakes completos, determinísticos e GPU-free para cada
+trás de um port, e cada estágio contextual é desligável por configuração — para que uma
+comparação consiga atribuir um efeito a um estágio só. Ele vem com fakes completos, determinísticos e GPU-free para cada
 backend, para que seus contracts, pipeline, cache e fronteiras de integração possam ser
 totalmente exercitados sem uma GPU ou download de modelo; backends reais são rastreados
 separadamente (veja [docs/model-backends.md](docs/model-backends.md)).
@@ -23,7 +24,14 @@ separadamente (veja [docs/model-backends.md](docs/model-backends.md)).
   por região;
 - interpretar semântica em nível de cena e de região como claims auditáveis, não labels
   únicos;
-- gerar relações 2D candidatas entre regiões;
+- medir, por um canal **independente** do reasoner, se a evidência sustenta cada hipótese
+  de identidade;
+- reinterpretar seletivamente as regiões que têm uma razão explícita, sempre com evidência
+  nova;
+- reconciliar, dentro do frame, conceitos equivalentes e regiões que provavelmente são a
+  mesma superfície, sem apagar nenhuma delas;
+- gerar relações 2D candidatas entre regiões, geométricas e semânticas, mantidas
+  distinguíveis;
 - auditar a observação resultante quanto à consistência estrutural e contradições;
 - fazer cache de estágios caros e serializar a observação canônica para persistência.
 

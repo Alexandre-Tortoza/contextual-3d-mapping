@@ -184,6 +184,53 @@ class RegionReasoningRequest:
         return tuple(view for view in self.views if view.slot in CONTEXTUAL_SLOTS)
 
 
+# Agrupa tudo que o reasoner precisa para julgar a relação entre **duas**
+# regiões canônicas: as identidades já reconciliadas, a natureza de cada uma, o
+# que a geometria já mediu sobre o par, e uma view em pixels que mostra as duas
+# demarcadas dentro do mesmo recorte. Existe separado de
+# :class:`RegionReasoningRequest` porque a pergunta é outra — não "o que é esta
+# região", mas "como estas duas se relacionam" — e um request que servisse às
+# duas teria campos opcionais que só um dos caminhos preenche.
+#
+# ``geometric_summary`` carrega o que o caminho geométrico **já mediu** (quanto
+# uma contém a outra, quanto se sobrepõem). Ele existe para que o modelo não
+# precise reestimar no olho uma grandeza que o módulo calculou exatamente, e
+# nunca para substituir a evidência visual: um par sem view não é interpretável.
+@dataclass(frozen=True)
+class RegionRelationRequest:
+    """A entrada canônica de uma inferência de relação entre duas regiões."""
+
+    subject_region_id: str
+    object_region_id: str
+    subject_concept: str
+    object_concept: str
+    views: tuple[RegionView, ...]
+    geometric_summary: str
+    subject_kind: str = "unknown"
+    object_kind: str = "unknown"
+
+    # Impõe as invariantes que tornam a resposta atribuível: dois sujeitos
+    # distintos e válidos, conceitos não vazios, e ao menos uma view — sem ela
+    # o modelo estaria julgando a relação só pelo texto que lhe demos.
+    def __post_init__(self) -> None:
+        """Valida identidades, conceitos e presença de evidência visual do par."""
+        validate_identifier(self.subject_region_id, field="subject_region_id")
+        validate_identifier(self.object_region_id, field="object_region_id")
+        if self.subject_region_id == self.object_region_id:
+            raise ValueError(
+                f"RegionRelationRequest({self.subject_region_id!r}) relates a region to itself."
+            )
+        if not self.subject_concept.strip() or not self.object_concept.strip():
+            raise ValueError("RegionRelationRequest requires a non-empty concept for both regions.")
+        if not self.views:
+            raise ValueError(
+                f"RegionRelationRequest({self.subject_region_id!r}, {self.object_region_id!r}) has no "
+                "view: judging a relation from text alone would not be visual evidence."
+            )
+        if not self.geometric_summary.strip():
+            raise ValueError("RegionRelationRequest requires a non-empty geometric_summary.")
+
+
 # Seleciona as claims de cena que podem informar a interpretação de uma
 # região, preservando cada claim inteira. Existe porque a #202 proíbe achatar
 # a cena em uma string antes do raciocínio de região: confiança, support,

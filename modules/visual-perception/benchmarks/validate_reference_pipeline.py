@@ -278,12 +278,18 @@ def model_call_counts(
     """Conta chamadas por capacidade e devolve também o total do frame."""
     region_count = len(result.observation.regions)
     evidence_calls = sum(metric.model_calls for metric in result.evidence_metrics)
+    stage_calls = dict(result.stage_model_calls)
     counts = {
         "region_discovery": len(build_tiles(payload, config.tiling)),
         "feature_extraction": 1 if region_count else 0,
         "language_aligned_evidence": evidence_calls,
         "scene_reasoning": 1,
         "region_reasoning": region_count,
+        # Os três estágios da #214/#204/#206 aparecem nomeados: um custo que só
+        # existisse dentro de ``total`` não permitiria decidir se vale o preço.
+        "hypothesis_support_text": stage_calls.get("hypothesis_support_text", 0),
+        "region_refinement": stage_calls.get("region_refinement", 0),
+        "semantic_relations": stage_calls.get("semantic_relations", 0),
     }
     return {**counts, "total": sum(counts.values())}
 
@@ -489,6 +495,31 @@ def run_validation(
                 "dominant_label_fraction": diagnostics.mode_collapse.dominant_fraction,
                 "distinct_labels": diagnostics.mode_collapse.distinct_labels,
                 "scene_echo_label_count": diagnostics.scene_echo_label_count,
+                # O que os estágios de contexto produziram e o que custaram.
+                # Sem estes campos, ligar ou desligar qualquer um deles não
+                # mudaria nada de comparável entre dois manifests.
+                "contextual": asdict(diagnostics.contextual),
+                "signal_failure_count": len(result.signal_failures),
+                "relation_failure_count": len(result.relation_failures),
+                "refinement": [
+                    {
+                        "iteration": step.iteration,
+                        "previous_evidence": list(step.previous_evidence),
+                        "new_evidence": list(step.new_evidence),
+                        "producer": step.producer,
+                        "config_fingerprint": step.config_fingerprint,
+                        "targets": [
+                            {
+                                "region_id": target.region_id,
+                                "reasons": [reason.value for reason in target.reasons],
+                            }
+                            for target in step.targets
+                        ],
+                        "refined_region_ids": list(step.refined_region_ids),
+                        "failures": [asdict(failure) for failure in step.failures],
+                    }
+                    for step in result.refinement_history
+                ],
                 "artifacts": {
                     artifact: str((frame_dir / relative).relative_to(out_dir))
                     for artifact, relative in artifacts.items()

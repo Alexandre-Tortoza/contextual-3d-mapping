@@ -17,14 +17,15 @@ produtor informou, e o valor calibrado só existe dentro de ``support``.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from visual_perception.domain.confidence import ConfidenceScore
 from visual_perception.domain.references import ModelProvenance, SourceArtifactReference
-from visual_perception.domain.semantic_support import SemanticSupport
+from visual_perception.domain.semantic_support import HypothesisSupportSignal, SemanticSupport
 
 __all__ = [
+    "ASSERTED_HYPOTHESIS_ROLES",
     "ClaimKind",
     "ConfidenceScore",
     "Evidence",
@@ -34,6 +35,7 @@ __all__ = [
     "SemanticClaim",
     "UNSCORED_CLAIM_KINDS",
     "calibrated_confidence_of",
+    "measured_signals",
     "most_confident_claim",
     "most_supported_claim",
     "normalize_claim_value",
@@ -124,10 +126,26 @@ class HypothesisRole(StrEnum):
     uma hipótese concorrente que ele quis registrar. Uma alternative nunca
     substitui o primary por ter score maior: quem decide é o produtor, e o
     papel preserva essa decisão de forma auditável.
+
+    ``RECONCILED`` é a interpretação que a reconciliação intra-frame derivou a
+    partir de todas as regiões do frame. Ela é um claim **novo**, com produtor
+    e evidência próprios, e nunca substitui a ``PRIMARY`` de que descende: as
+    duas coexistem, e a diferença entre elas é exatamente o que a reconciliação
+    afirma ter descoberto.
     """
 
     PRIMARY = "primary"
     ALTERNATIVE = "alternative"
+    RECONCILED = "reconciled"
+
+
+#: Papéis em que uma hipótese é **afirmada** como a identidade da região, e não
+#: apenas registrada como dúvida ou derivada de outra. Só claims afirmadas
+#: podem se contradizer: uma ``ALTERNATIVE`` é a incerteza que o próprio
+#: produtor declarou na mesma resposta, e uma ``RECONCILED`` descende da
+#: primária em vez de ser uma segunda observação independente dela. Ver
+#: ``domain/claim_exclusivity.py`` para o uso.
+ASSERTED_HYPOTHESIS_ROLES = frozenset({HypothesisRole.PRIMARY})
 
 
 #: Kinds que expressam a *identidade* do sujeito, e por isso carregam papel de
@@ -211,6 +229,12 @@ class SemanticClaim:
     #202 exige que sobreviva até a serialização: qual hipótese o produtor
     elegeu, qual categoria mais estável ele atribuiu, e qual a natureza da
     região independentemente do label aberto.
+
+    ``signals`` são medidas **independentes** do produtor sobre esta mesma
+    hipótese (#214). Elas ficam ao lado de ``confidence``, e não no lugar
+    dele, pela mesma razão que ``support`` fica: bruto e derivado precisam
+    continuar distinguíveis. Um sinal nunca vira confiança sozinho — quem
+    converte evidência em score é a calibração, e só quando pode.
     """
 
     kind: ClaimKind
@@ -222,6 +246,7 @@ class SemanticClaim:
     role: HypothesisRole | None = None
     category: str | None = None
     region_kind: RegionKind | None = None
+    signals: tuple[HypothesisSupportSignal, ...] = field(default_factory=tuple)
 
     # Exige um valor não vazio e ao menos uma Evidence, para que todo claim
     # seja auditável até sua origem, e proíbe confiança bruta nos kinds
@@ -240,6 +265,29 @@ class SemanticClaim:
                 "claims are scored only through a calibrated SemanticSupport (see issue #195)."
             )
         self._validate_identity_fields()
+        self._validate_signals()
+
+    # Impõe que todo sinal anexado seja sobre *esta* hipótese e que cada
+    # produtor fale uma vez por slot. Sem a primeira regra, um sinal medido
+    # para "door" poderia ser lido como suporte de "wall"; sem a segunda, o
+    # mesmo produtor poderia contribuir duas vezes para a mesma agregação.
+    def _validate_signals(self) -> None:
+        """Valida que cada sinal é sobre esta claim e que não há slot repetido por fonte."""
+        expected = normalize_claim_value(self.value)
+        seen: set[tuple[str, str]] = set()
+        for signal in self.signals:
+            if normalize_claim_value(signal.hypothesis) != expected:
+                raise ValueError(
+                    f"HypothesisSupportSignal is about {signal.hypothesis!r} but is attached to the "
+                    f"claim {self.value!r}: a signal must measure the hypothesis it is filed under."
+                )
+            key = (signal.source, signal.slot.value)
+            if key in seen:
+                raise ValueError(
+                    f"SemanticClaim({self.value!r}) has two {signal.source!r} signals for slot "
+                    f"{signal.slot.value!r}."
+                )
+            seen.add(key)
 
     # Separa a validação dos campos de identidade porque ela é condicional ao
     # kind: um claim de identidade precisa declarar seu papel, e um claim
@@ -284,6 +332,20 @@ def most_confident_claim(claims: tuple[SemanticClaim, ...]) -> SemanticClaim | N
     if not scored:
         return None
     return max(scored, key=lambda scored_claim: scored_claim[0])[1]
+
+
+# Filtra os sinais que foram efetivamente medidos. Existe para que quem agrega
+# suporte independente (calibração, refinamento, auditoria) não precise repetir
+# o filtro por status nem conhecer o motivo de cada indisponibilidade.
+def measured_signals(claim: SemanticClaim) -> tuple[HypothesisSupportSignal, ...]:
+    """Retorna os sinais de ``claim`` que produziram medida, preservando a ordem.
+
+    Argumentos:
+        claim: a claim cujos sinais serão inspecionados.
+    Retorna:
+        os sinais cujo status não é ``unavailable``.
+    """
+    return tuple(signal for signal in claim.signals if signal.is_measured)
 
 
 # Extrai o score calibrado de uma claim, se existir. Existe para que os

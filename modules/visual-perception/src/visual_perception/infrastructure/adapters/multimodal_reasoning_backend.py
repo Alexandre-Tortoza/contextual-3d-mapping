@@ -14,7 +14,8 @@ from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_evidence import EvidenceSlot
-from visual_perception.domain.region_reasoning import RegionReasoningRequest
+from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionRelationRequest
+from visual_perception.domain.relations import NO_RELATION_PREDICATE, SEMANTIC_RELATION_PREDICATES
 from visual_perception.infrastructure.adapters._runtime import (
     payload_to_pil,
     raise_backend_execution_error,
@@ -102,6 +103,20 @@ class RealMultimodalReasoningAdapter:
         """Retorna a resposta JSON bruta do VLM para uma região da imagem."""
         return self._generate_json(
             tuple(view.payload for view in request.views), _region_prompt(request), config
+        )
+
+    # Julga a relação entre duas regiões a partir da view de par (#206). O
+    # prompt oferece "none" como primeira opção explícita e repete a medida
+    # geométrica já calculada: as duas coisas existem para reduzir a pressão que
+    # um vocabulário fechado exerce sobre um modelo — sem uma saída de escape,
+    # ele escolhe o predicado menos ruim, e a aresta inventada entra no grafo
+    # como se fosse observação.
+    def analyze_relation(
+        self, request: RegionRelationRequest, config: MultimodalReasoningConfig
+    ) -> dict[str, Any]:
+        """Retorna a resposta JSON bruta do VLM sobre a relação entre duas regiões."""
+        return self._generate_json(
+            tuple(view.payload for view in request.views), _relation_prompt(request), config
         )
 
     # Executa a conversa multimodal e converte sua resposta textual em objeto
@@ -218,6 +233,32 @@ def _region_prompt(request: RegionReasoningRequest) -> str:
         '"description": "<one short sentence>", "attributes": ["<adjective>"], '
         '"condition": "<state>", "material": "<material>"}'
         f"{_describe_scene_claims(request)}"
+    )
+
+
+# Monta o prompt de relação a partir do request. Função pura, pelo mesmo motivo
+# que ``_region_prompt``: o contrato textual precisa ser testável sem GPU.
+# Chamada por RealMultimodalReasoningAdapter.analyze_relation.
+def _relation_prompt(request: RegionRelationRequest) -> str:
+    """Retorna o prompt de relação correspondente a ``request``."""
+    predicates = ", ".join(f'"{predicate}"' for predicate in sorted(SEMANTIC_RELATION_PREDICATES))
+    return (
+        "You are given one image showing two regions of the same scene. The FIRST region is "
+        "outlined in GREEN and the SECOND region is outlined in BLUE.\n"
+        f"The green region was described as: {request.subject_concept} "
+        f"({request.subject_kind}).\n"
+        f"The blue region was described as: {request.object_concept} ({request.object_kind}).\n"
+        f"Measured geometry: {request.geometric_summary}.\n"
+        "State how the GREEN region relates to the BLUE region, using ONLY what the pixels show. "
+        f'Answer "{NO_RELATION_PREDICATE}" whenever no listed relation is actually visible — that is '
+        "the expected answer for most pairs, and it is better than a plausible guess. Do NOT infer "
+        "depth, distance, or which one is in front: this is a single image and those are not "
+        "visible. Respond with EXACTLY ONE JSON object (never a list/array, never markdown fences) "
+        'with exactly these keys: "predicate" (exactly one of '
+        f'"{NO_RELATION_PREDICATE}", {predicates}), "confidence" (number between 0 and 1 — YOUR '
+        "ACTUAL CERTAINTY; omit the key entirely if you cannot estimate it, never guess 1.0). "
+        "The SHAPE below is the required format; every value in it is a placeholder:\n"
+        '{"predicate": "<one of the listed values>", "confidence": 0.42}'
     )
 
 

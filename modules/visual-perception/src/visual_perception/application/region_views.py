@@ -39,6 +39,12 @@ _NEUTRAL_FILL = 128
 #: não ser confundida com conteúdo destes frames, que têm cast magenta.
 _CONTOUR_COLOR = np.array([0, 255, 0], dtype=np.uint8)
 
+#: Cor do contorno do **segundo** sujeito na view de par (#206). Escolhida por
+#: ser inequivocamente distinta do verde do sujeito e do cast magenta dos
+#: frames: numa view de par, confundir qual contorno é qual inverteria a
+#: direção de toda relação inferida.
+_PAIR_CONTOUR_COLOR = np.array([0, 128, 255], dtype=np.uint8)
+
 
 
 
@@ -227,6 +233,57 @@ def _boundary(window: np.ndarray) -> np.ndarray:
     # comportamento desejado — um sujeito cortado pela caixa tem borda ali.
     boundary: np.ndarray = window & ~interior
     return boundary
+
+
+# Constrói a view de um **par** de regiões: um único recorte que cobre as duas,
+# com o sujeito contornado em verde e o objeto em azul. Existe porque a inferência
+# de relação (#206) precisa que o modelo veja os dois lados na mesma imagem e
+# saiba qual é qual: mandar dois recortes separados perderia a relação espacial,
+# e mandar o recorte sem demarcação faria o modelo relacionar o que estivesse
+# mais saliente. Chamada por application/relation_generation.py.
+def build_pair_view(
+    subject: ObservedRegion,
+    target: ObservedRegion,
+    image: ImagePayload,
+    *,
+    expansion: float = 0.0,
+) -> RegionView:
+    """Recorta a união das duas regiões e demarca cada uma com sua própria cor.
+
+    Argumentos:
+        subject: a região que ocupa a posição de sujeito da relação.
+        target: a região que ocupa a posição de objeto.
+        image: o payload da imagem completa.
+        expansion: margem de contexto aplicada à caixa da união.
+    Retorna:
+        a :class:`RegionView` do par, no slot contextual.
+    Levanta:
+        ValueError: se a caixa da união for degenerada depois do recorte.
+    """
+    union = BoundingBox(
+        x_min=min(subject.box.x_min, target.box.x_min),
+        y_min=min(subject.box.y_min, target.box.y_min),
+        x_max=max(subject.box.x_max, target.box.x_max),
+        y_max=max(subject.box.y_max, target.box.y_max),
+    )
+    box = expanded_box(union, expansion, image.width, image.height)
+    x_min, y_min = int(box.x_min), int(box.y_min)
+    x_max, y_max = int(box.x_max), int(box.y_max)
+    if x_max <= x_min or y_max <= y_min:
+        raise ValueError(
+            f"Regions {subject.region_id!r} and {target.region_id!r} have a degenerate union box."
+        )
+    crop = image.crop(x_min, y_min, x_max, y_max)
+    pixels = crop.pixels.copy()
+    pixels[_boundary(subject.mask.data[y_min:y_max, x_min:x_max])] = _CONTOUR_COLOR
+    pixels[_boundary(target.mask.data[y_min:y_max, x_min:x_max])] = _PAIR_CONTOUR_COLOR
+    return RegionView(
+        slot=EvidenceSlot.CONTEXTUAL_CROP,
+        payload=ImagePayload(pixels, width=crop.width, height=crop.height),
+        crop_box=box,
+        transform=CoordinateTransform(1.0, 1.0, box.x_min, box.y_min),
+        emphasis=SubjectEmphasis.CONTOUR,
+    )
 
 
 # Calcula a fração do recorte ocupada pela máscara. Existe para que o consumidor

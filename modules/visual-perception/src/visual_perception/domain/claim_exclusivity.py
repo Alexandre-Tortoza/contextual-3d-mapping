@@ -1,6 +1,7 @@
 """Política de exclusividade mútua entre claims semânticos.
 
-Issue: #202. Existe como a Specification única de "estes dois claims se
+Issues: #202 (política de slot exclusivo), #215 (alternativa não é
+contradição). Existe como a Specification única de "estes dois claims se
 excluem", consumida tanto pela derivação de ``contradiction_support``
 (``application/semantic_calibration.py``) quanto pela auditoria de qualidade
 (``application/quality_audit.py``). Duas implementações da mesma regra já
@@ -14,11 +15,31 @@ regiões do frame com ``contradiction_support`` inflado. Contradição depende d
 *slot* ser mutuamente exclusivo, não de os valores serem diferentes: uma
 parede pode ser branca, lisa e danificada ao mesmo tempo, e um objeto composto
 pode ter mais de um material.
+
+A correção da #202 resolveu metade do problema e deixou a outra metade de pé.
+Medido no run ``20260908T131207Z``: **163 de 165 regiões** saíram com o warning
+``contradictory_claims``, e ``contradiction_support`` teve média **1,000** em
+quatro dos cinco frames. A causa era estrutural: o prompt pede uma lista
+``alternatives``, o modelo devolve quase sempre exatamente uma, e o par
+primária/alternativa era contado como contradição.
+
+Uma alternativa **não é** uma contradição. É a incerteza que o próprio produtor
+declarou, na mesma resposta, sobre a mesma evidência — o oposto de duas fontes
+independentes discordando. Confundir as duas coisas destruía justamente o sinal
+que deveria dirigir o refinamento: ``select_refinement_targets`` filtrava por
+``contradictory_claims`` e, com isso, selecionaria 163 das 165 regiões.
+
+A política atual é, portanto, mais estreita e mais informativa: dentro de um
+kind de identidade, **apenas hipóteses afirmadas** (:data:`ASSERTED_HYPOTHESIS_ROLES`)
+competem entre si. A ambiguidade entre uma primária e suas alternativas continua
+representada — por ``HypothesisSupportSignal`` com status ``indistinguishable``,
+que é medida, e não uma consequência de existir uma lista.
 """
 
 from __future__ import annotations
 
 from visual_perception.domain.semantics import (
+    ASSERTED_HYPOTHESIS_ROLES,
     IDENTITY_CLAIM_KINDS,
     ClaimKind,
     SemanticClaim,
@@ -62,6 +83,12 @@ def claims_compete(claim: SemanticClaim, other: SemanticClaim) -> bool:
     valores diferentes. Kinds diferentes descrevem eixos diferentes e nunca
     competem entre si.
 
+    Em kinds de identidade há uma condição adicional: os dois claims precisam
+    **afirmar** a identidade da região. Uma ``ALTERNATIVE`` é dúvida declarada
+    pelo próprio produtor e uma ``RECONCILED`` descende da primária; nenhuma
+    das duas é uma segunda observação independente, e tratá-las como
+    contradição tornava o sinal constante (ver a docstring do módulo).
+
     Argumentos:
         claim: o claim avaliado.
         other: o claim candidato a contradizê-lo.
@@ -73,6 +100,10 @@ def claims_compete(claim: SemanticClaim, other: SemanticClaim) -> bool:
     value, other_value = normalize_claim_value(claim.value), normalize_claim_value(other.value)
     if value == other_value:
         return False
+    if claim.kind in IDENTITY_CLAIM_KINDS:
+        return (
+            claim.role in ASSERTED_HYPOTHESIS_ROLES and other.role in ASSERTED_HYPOTHESIS_ROLES
+        )
     if claim.kind in EXCLUSIVE_CLAIM_KINDS:
         return True
     if claim.kind is ClaimKind.CONDITION:

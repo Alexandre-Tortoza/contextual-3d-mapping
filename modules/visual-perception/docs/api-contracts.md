@@ -130,9 +130,18 @@ result = run_canonical_pipeline(image, payload, config, ports)
 
 - `observation: VisualObservation`;
 - `region_interpretation_failures`, falhas locais e recuperáveis de interpretação;
-- `audit: AuditResult`;
+- `audit: AuditResult`, calculado **depois** de todos os estágios que acrescentam claim
+  ou relação;
 - `proposals: tuple[RegionProposal, ...]`, as propostas cruas de discovery, antes do merge
-  geométrico.
+  geométrico;
+- `visual_embeddings` / `language_embeddings`, os vetores por região que o estágio de
+  evidência produziu. Eles existem aqui desde a #217: antes eram calculados — 121
+  chamadas de encoder por frame na configuração real — e descartados dentro do pipeline,
+  de modo que o `artifact_ref` gravado em cada slot apontava para nada;
+- `signal_failures`, `refinement_history`, `reconciliation_records` e `relation_failures`,
+  o registro auditável dos estágios contextuais;
+- `stage_model_calls`, quantas chamadas de modelo cada estágio gastou, para que o custo
+  de uma capacidade nova seja atribuível em vez de diluído num total.
 
 `proposals` é canal de diagnóstico, não produto: o contract de dados que atravessa
 capacidades continua sendo `VisualObservation`. Ele existe porque discovery **não é
@@ -147,7 +156,9 @@ Essas falhas usam a hierarquia definida em
 
 ## `VisualObservation`
 
-`VisualObservation` é a saída canônica do módulo.
+`VisualObservation` é a saída canônica do módulo. O `schema_version` atual é **3**: ela
+acrescentou `entity_hypotheses` (#205) e os sinais de suporte por claim (#214). Payloads
+das versões 1 e 2 continuam legíveis e desserializam com os campos novos vazios.
 
 Código dono:
 [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py)
@@ -249,11 +260,24 @@ label    = "plain wall"      descrição open-vocabulary
 category = "wall"            categoria semântica mais estável
 ```
 
-### Primary e alternative
+### Primary, alternative e reconciled
 
 O papel é explícito porque recuperá-lo por posição na tupla fazia duas políticas
 divergirem em silêncio — `primary_label_claim` escolhia a primeira e o antigo `semantic_merge`
 escolhia a de maior score.
+
+```text
+PRIMARY       a interpretação que o produtor elegeu
+ALTERNATIVE   a dúvida que o mesmo produtor registrou na mesma resposta
+RECONCILED    a interpretação que a reconciliação intra-frame derivou
+```
+
+`RECONCILED` é um claim **novo**, com produtor e evidência próprios. Ele nunca substitui
+a `PRIMARY` de que descende: as duas coexistem, e a diferença entre elas é exatamente o
+que a reconciliação afirma ter descoberto. Quem quiser "a melhor interpretação atual"
+usa `reconciled_label_claim(region)`
+([`application/reconciliation.py`](../src/visual_perception/application/reconciliation.py)),
+que devolve a reconciliada quando existe e a primária caso contrário.
 
 Regras do contract:
 
@@ -263,7 +287,11 @@ Regras do contract:
   `carpet 0.9 / carpet 0.9 / carpet 0.1` vira uma única hipótese `carpet`;
 - a normalização usada no dedupe é `normalize_claim_value` — apenas caixa e espaçamento.
   Ela **não** é uma ontologia: `ceiling light` e `ceiling light fixture` continuam
-  distintos.
+  distintos;
+- a canonicalização da reconciliação (`canonical_concept`) é um segundo nível, também
+  lexical: ela colapsa plural e um punhado de modificadores não discriminativos
+  (`plain wall` → `wall`) e para aí. Ela produz um conceito **ao lado** do label cru,
+  nunca no lugar dele.
 
 Leitura: `primary_label_claim(region)` e `alternative_label_claims(region)`, ambos em
 [`domain/regions.py`](../src/visual_perception/domain/regions.py).
@@ -294,6 +322,69 @@ Não converta `None` em `0`, `1.0` ou outro número arbitrário.
 
 Essa regra evita a regressão histórica em que ausência de score era transformada em
 confiança máxima artificial.
+
+### `HypothesisSupportSignal`
+
+Código dono:
+[`domain/semantic_support.py`](../src/visual_perception/domain/semantic_support.py)
+
+Uma medida **independente do produtor** sobre uma hipótese de identidade, feita em um
+slot de evidência.
+
+```python
+HypothesisSupportSignal(
+    source="clip_alignment",
+    hypothesis="door",
+    slot=EvidenceSlot.MASKED_SUBJECT,
+    status=SupportSignalStatus.SUPPORTS,
+    score=0.213,      # a similaridade bruta, nunca uma probabilidade
+    margin=0.031,     # score menos o da melhor hipótese concorrente
+    space=EmbeddingSpace(...),
+)
+```
+
+O contract tem **quatro** status, e o terceiro é o que impede a etapa de inventar um
+vencedor:
+
+```text
+supports            o sinal pontua esta hipótese acima da melhor concorrente
+contradicts         o sinal pontua uma concorrente acima desta
+indistinguishable   a margem está abaixo do piso: o sinal existe e não distingue
+unavailable         não foi possível medir; exige um motivo
+```
+
+Duas coisas que este contract **não** é:
+
+- não é confiança. A similaridade região-texto vive numa faixa estreita e é enviesada por
+  escala da região e por especificidade do termo; convertê-la em `confidence` repetiria o
+  erro que o módulo já mediu no score do VLM;
+- não é um veredito. Quem decide o que fazer com uma discordância é o refinamento e a
+  calibração, que consomem os sinais.
+
+Um sinal só pode ser anexado à claim cuja hipótese ele mede, e cada fonte fala uma vez
+por slot. As duas invariantes são impostas por `SemanticClaim.__post_init__`.
+
+### `ContextualEntityHypothesis`
+
+Código dono:
+[`domain/contextual_entities.py`](../src/visual_perception/domain/contextual_entities.py)
+
+Um grupo de regiões do **mesmo frame** que provavelmente são manifestações da mesma
+entidade. Vive em `VisualObservation.entity_hypotheses`.
+
+```text
+entity_id            identidade estável, derivada dos membros
+kind                 same_surface
+canonical_concept    o conceito reconciliado compartilhado
+member_region_ids    os membros, em ordem determinística
+member_raw_labels    o que cada membro afirmou originalmente
+status               supported | unresolved
+feature_coherence    a coerência densa média, com o espaço em que foi medida
+```
+
+Um grupo **nunca** substitui seus membros: todas as regiões continuam na observação, com
+sua geometria intacta. A pergunta "estas três paredes são a mesma parede no mundo?" exige
+geometria 3D e pertence a `sensor-association`/`semantic-fusion`.
 
 ## Contradição entre claims
 
@@ -360,6 +451,31 @@ A ausência de `kind` em uma resposta do VLM vira `unknown`, não `thing`.
 sobrevive até a serialização. Ele descreve a natureza da região independentemente do
 label aberto que o modelo escreveu.
 
+### Coerência entre conceito e natureza
+
+`domain/structural_consistency.py` responde, de forma determinística, se o conceito e a
+natureza declarados são compatíveis:
+
+```text
+label = "plain wall", kind = "thing"
+    -> StructuralVerdict.CONTRADICTS
+
+label = "plain wall", kind = "stuff"
+    -> StructuralVerdict.SUPPORTS
+
+label = "wooden panel", kind = "thing"
+    -> StructuralVerdict.UNDETERMINED
+```
+
+Três propriedades do contract importam:
+
+- ele **reporta**, nunca reescreve. Quem registra a interpretação corrigida é a
+  reconciliação, e ela a acrescenta ao lado da original;
+- ele casa pelo **núcleo nominal** do composto, não por qualquer palavra dele:
+  `ceiling light fixture` tem núcleo `fixture` e fica corretamente indeterminado;
+- `UNDETERMINED` é um desfecho nomeado, e não a ausência de resultado. Um conceito fora
+  do conjunto inequívoco não é "correto por omissão".
+
 ## `CandidateRelation`
 
 Código dono:
@@ -369,8 +485,32 @@ Representa uma relação **candidata entre regiões da mesma observação 2D**.
 
 Pode vir de:
 
-- predicados geométricos determinísticos sobre masks/boxes;
-- inferência multimodal.
+- predicados geométricos determinísticos sobre masks/boxes (`overlaps`, `contains`,
+  `near`);
+- inferência multimodal sobre um par priorizado (`SEMANTIC_RELATION_PREDICATES`).
+
+As duas fontes coexistem no mesmo grafo com proveniências distintas, e **nunca** se
+sobrescrevem.
+
+O vocabulário semântico é fechado e versionado, e isso não contradiz a natureza
+open-vocabulary do módulo: os *conceitos* das regiões continuam abertos, e é o tipo de
+aresta que precisa ser estável para que um grafo downstream signifique alguma coisa. Cada
+predicado satisfaz duas condições — é observável nos pixels de um único frame, e tem
+consumidor declarado:
+
+```text
+part_of, attached_to      composição de objetos em semantic-fusion
+supported_by, inside      grafo em scene-graph
+covers, occludes          a que superfície um ponto pertence, em sensor-association
+```
+
+Ficaram **fora**, por exigirem geometria que este módulo não tem: `above`/`below`,
+`behind`/`in_front_of`, distância métrica, alcançabilidade e qualquer relação entre
+frames. Uma resposta que use um desses predicados é recusada pelo parser.
+
+`none` é uma resposta **válida** do produtor: ela declara que a evidência não sustenta
+nenhuma aresta, e é o desfecho esperado para a maioria dos pares. Sem essa saída, um
+vocabulário fechado empurra o modelo a escolher o predicado menos ruim.
 
 Mesmo quando a fonte é `geometric_2d`, a relação não deve ser promovida automaticamente
 para uma relação 3D. Validação espacial pertence aos módulos downstream.

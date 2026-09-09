@@ -176,6 +176,24 @@ proveniência, representabilidade, cobertura, consistência, separação, latên
 Resultados só devem orientar o perfil depois de o artifact real ser produzido; a presença
 do adapter, isoladamente, não demonstra ganho de qualidade.
 
+## Candidatos ainda não medidos
+
+Duas alternativas modernas foram investigadas nesta rodada e **nenhuma** foi medida, por
+razões diferentes:
+
+- **um backbone mais recente da mesma família** trata exatamente a fraqueza que a #208
+  identificou — a degradação do mapa denso em resolução alta — e a variante de mesma
+  classe de tamanho do DINOv2-base (86 M params) está disponível na versão de
+  `transformers` instalada. O checkpoint, porém, está sob licença *gated* no Hub e exige
+  aceite manual na conta do usuário. Issue #219;
+- **um upsampler aprendido baseado em coordenadas**, alternativo ao FeatUp já integrado.
+  Não foi avaliado nesta rodada por prioridade: a auditoria de contexto visual mediu que o
+  ganho restante maior estava na composição da evidência, não na resolução dela. Issue
+  #221.
+
+Nenhuma das duas muda o default. A regra da #208 continua valendo: a presença de um
+adapter não demonstra ganho, e o benchmark é que decide.
+
 ### O que estes números **não** sustentam
 
 - que a evidência de alta resolução melhora acerto semântico: isso exige o

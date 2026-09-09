@@ -343,3 +343,57 @@ def test_semantics_distinguishes_views_built_from_views_delivered(tmp_path: Path
     # duas listas fossem iguais, o teste não estaria medindo nada.
     assert "scene_conditioned" in built
     assert "scene_conditioned" not in delivered
+
+
+
+# Os vetores precisam sair do processo por referência: até a #217 eles eram
+# calculados — 121 chamadas de encoder por frame na configuração real — e
+# descartados dentro do pipeline, deixando cada ``artifact_ref`` de slot
+# apontando para nada. Este teste é o que impede aquele estado de voltar em
+# silêncio.
+def test_embeddings_are_persisted_and_resolve_the_slot_references(tmp_path: Path) -> None:
+    """Cada ``artifact_ref`` de slot disponível resolve para um vetor gravado."""
+    frame_dir = _run(tmp_path)
+
+    assert (frame_dir / "embeddings.npz").is_file()
+    stored = np.load(frame_dir / "embeddings.npz")
+    observation = json.loads((frame_dir / "observation.json").read_text())
+    referenced = {
+        slot["artifact_ref"]
+        for region in observation["regions"]
+        for slot in region["evidence"]
+        if slot["state"] == "available" and slot["artifact_ref"] is not None
+    }
+
+    assert referenced
+    assert referenced <= set(stored.files)
+    for name in stored.files:
+        assert np.isfinite(stored[name]).all()
+
+
+# O que a #214/#205/#206 acrescentaram precisa aparecer no diagnóstico do
+# frame: um estágio cujo efeito não é contável no artifact não é comparável
+# entre runs, e a comparação é a única forma de decidir se ele vale o custo.
+def test_the_frame_diagnostics_report_the_contextual_stages(tmp_path: Path) -> None:
+    """O diagnóstico do frame conta sinais, reconciliação, grupos e relações."""
+    frame_dir = _run(tmp_path)
+
+    diagnostics = json.loads((frame_dir / "diagnostics.json").read_text())
+    contextual = diagnostics["contextual"]
+
+    assert set(contextual) >= {
+        "signal_statuses",
+        "regions_with_unsupported_primary",
+        "regions_with_ambiguous_identity",
+        "region_kind_contradictions",
+        "reconciled_regions",
+        "distinct_raw_labels",
+        "distinct_canonical_concepts",
+        "entity_groups",
+        "regions_in_entity_groups",
+        "semantic_relations",
+        "geometric_relations",
+        "abstained_claims",
+        "unscored_claims",
+    }
+    assert diagnostics["layout_version"] == "frames/2"

@@ -19,6 +19,12 @@ from typing import Any
 import numpy as np
 from contextual_mapping_contracts import FrameId, ObservationReference, SourceArtifactReference, Timestamp
 
+from visual_perception.domain.contextual_entities import (
+    ContextualEntityHypothesis,
+    EntityHypothesisKind,
+    EntityHypothesisStatus,
+)
+from visual_perception.domain.embeddings import EmbeddingModality, EmbeddingSpace
 from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.references import ModelProvenance
@@ -28,6 +34,8 @@ from visual_perception.domain.relations import CandidateRelation, RelationSource
 from visual_perception.domain.semantic_support import (
     semantic_support_from_dict,
     semantic_support_to_dict,
+    support_signal_from_dict,
+    support_signal_to_dict,
 )
 from visual_perception.domain.semantics import (
     IDENTITY_CLAIM_KINDS,
@@ -40,8 +48,11 @@ from visual_perception.domain.semantics import (
 )
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
-#: Escrita canônica v2; a leitura v1 é migrada explicitamente preservando scores brutos.
-SUPPORTED_SCHEMA_VERSION = 2
+#: Escrita canônica v3; a leitura de v1 e v2 é migrada explicitamente. A v3
+#: acrescenta as hipóteses de entidade contextual (#205) e os sinais de suporte
+#: independentes por claim (#214); um payload anterior simplesmente não os tem,
+#: e desserializa com os campos vazios.
+SUPPORTED_SCHEMA_VERSION = 3
 
 
 # Sinaliza que um payload foi serializado com uma versão de schema que este
@@ -70,6 +81,7 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
         "scene_context": {"claims": [_claim_to_dict(claim) for claim in observation.scene_context.claims]},
         "regions": [_region_to_dict(region) for region in observation.regions],
         "relations": [_relation_to_dict(relation) for relation in observation.relations],
+        "entity_hypotheses": [_entity_to_dict(entity) for entity in observation.entity_hypotheses],
     }
 
 
@@ -79,7 +91,7 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
 def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
     """Reconstrói uma VisualObservation canônica, fazendo o round-trip sem perda de informação."""
     schema_version = payload.get("schema_version")
-    if type(schema_version) is not int or schema_version not in (1, SUPPORTED_SCHEMA_VERSION):
+    if type(schema_version) is not int or schema_version not in (1, 2, SUPPORTED_SCHEMA_VERSION):
         raise UnsupportedSchemaVersionError(
             f"Cannot deserialize schema_version={schema_version!r}; "
             f"this module reads schema_version={SUPPORTED_SCHEMA_VERSION}."
@@ -93,6 +105,9 @@ def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
         ),
         regions=tuple(_region_from_dict(region) for region in payload["regions"]),
         relations=tuple(_relation_from_dict(relation) for relation in payload["relations"]),
+        entity_hypotheses=tuple(
+            _entity_from_dict(entity) for entity in payload.get("entity_hypotheses", ())
+        ),
         schema_version=SUPPORTED_SCHEMA_VERSION,
         coordinate_convention=payload["coordinate_convention"],
     )
@@ -226,6 +241,7 @@ def _claim_to_dict(claim: SemanticClaim) -> dict[str, Any]:
         "role": None if claim.role is None else claim.role.value,
         "category": claim.category,
         "region_kind": None if claim.region_kind is None else claim.region_kind.value,
+        "signals": [support_signal_to_dict(signal) for signal in claim.signals],
     }
 
 
@@ -252,6 +268,7 @@ def _claim_from_dict(payload: dict[str, Any]) -> SemanticClaim:
         role=None if role is None else HypothesisRole(role),
         category=payload.get("category"),
         region_kind=None if region_kind is None else RegionKind(region_kind),
+        signals=tuple(support_signal_from_dict(signal) for signal in payload.get("signals", ())),
     )
 
 
@@ -317,4 +334,69 @@ def _relation_from_dict(payload: dict[str, Any]) -> CandidateRelation:
         source=RelationSource(payload["source"]),
         evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
         provenance=_provenance_from_dict(payload["provenance"]),
+    )
+
+
+# Converte uma hipótese de entidade contextual em um dict serializável (#205).
+# Ela é gravada por valor, e não por referência, porque é pequena e porque a
+# afirmação que ela faz — quais regiões são a mesma superfície — perderia o
+# sentido separada das regiões que a acompanham no mesmo arquivo.
+def _entity_to_dict(entity: ContextualEntityHypothesis) -> dict[str, Any]:
+    return {
+        "entity_id": entity.entity_id,
+        "kind": entity.kind.value,
+        "canonical_concept": entity.canonical_concept,
+        "region_kind": entity.region_kind.value,
+        "member_region_ids": list(entity.member_region_ids),
+        "member_raw_labels": list(entity.member_raw_labels),
+        "status": entity.status.value,
+        "evidence": [_evidence_to_dict(item) for item in entity.evidence],
+        "provenance": _provenance_to_dict(entity.provenance),
+        "feature_coherence": entity.feature_coherence,
+        "space": None if entity.space is None else _space_to_dict(entity.space),
+        "reason": entity.reason,
+    }
+
+
+# Reconstrói uma hipótese de entidade contextual a partir do dict, revalidando
+# as invariantes — lado inverso de _entity_to_dict.
+def _entity_from_dict(payload: dict[str, Any]) -> ContextualEntityHypothesis:
+    space = payload.get("space")
+    return ContextualEntityHypothesis(
+        entity_id=payload["entity_id"],
+        kind=EntityHypothesisKind(payload["kind"]),
+        canonical_concept=payload["canonical_concept"],
+        region_kind=RegionKind(payload["region_kind"]),
+        member_region_ids=tuple(payload["member_region_ids"]),
+        status=EntityHypothesisStatus(payload["status"]),
+        evidence=tuple(_evidence_from_dict(item) for item in payload["evidence"]),
+        provenance=_provenance_from_dict(payload["provenance"]),
+        feature_coherence=payload.get("feature_coherence"),
+        space=None if space is None else _space_from_dict(space),
+        reason=payload.get("reason"),
+        member_raw_labels=tuple(payload.get("member_raw_labels", ())),
+    )
+
+
+# Achata um EmbeddingSpace preservando a modalidade como string. Helper interno
+# de _entity_to_dict.
+def _space_to_dict(space: EmbeddingSpace) -> dict[str, Any]:
+    return {
+        "model_id": space.model_id,
+        "checkpoint": space.checkpoint,
+        "dimension": space.dimension,
+        "modality": space.modality.value,
+        "normalized": space.normalized,
+    }
+
+
+# Reconstrói um EmbeddingSpace validado a partir do dict. Helper interno de
+# _entity_from_dict.
+def _space_from_dict(payload: dict[str, Any]) -> EmbeddingSpace:
+    return EmbeddingSpace(
+        model_id=payload["model_id"],
+        checkpoint=payload["checkpoint"],
+        dimension=payload["dimension"],
+        modality=EmbeddingModality(payload["modality"]),
+        normalized=payload.get("normalized", True),
     )

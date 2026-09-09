@@ -68,6 +68,27 @@ Quando existir projeto oficial relevante, ele é indicado separadamente.
 | Referência | Pesquisa | Relação com o módulo |
 | --- | --- | --- |
 | Bai et al., **Qwen2.5-VL Technical Report** | [arXiv:2502.13923](https://arxiv.org/abs/2502.13923) | base do backend de raciocínio multimodal atualmente selecionado para contexto global e interpretação estruturada de regiões |
+| Bai et al., **Qwen3-VL Technical Report** | [arXiv:2511.21631](https://arxiv.org/abs/2511.21631), [código](https://github.com/QwenLM/Qwen3-VL) | família densa 2B/4B/8B/32B avaliada como candidata sobre a arquitetura contextual fixa (#218); ainda **não** é o backend selecionado |
+
+### Composição de evidência contextual e grafos abertos
+
+Este grupo é o que sustenta a arquitetura contextual introduzida pelas #214/#204/#205/#206.
+Ele é distinto dos grupos acima: aqui não se trata de qual modelo usar, e sim de **como
+compor a evidência que vários modelos produzem**.
+
+| Referência | Pesquisa | Contribuição relevante |
+| --- | --- | --- |
+| Gu et al., **ConceptGraphs: Open-Vocabulary 3D Scene Graphs for Perception and Planning** | [arXiv:2309.16650](https://arxiv.org/abs/2309.16650), [projeto](https://concept-graphs.github.io/) | similaridade composta geometria+semântica com limiar explícito; poda de pares candidatos **antes** de consultar o modelo de linguagem; consolidação de múltiplas descrições em um rótulo, com um desfecho `invalid` declarado |
+| Koch et al., **Open3DSG: Open-Vocabulary 3D Scene Graphs from Point Clouds with Queryable Objects and Open-Set Relationships** | [arXiv:2402.12259](https://arxiv.org/abs/2402.12259), [projeto](https://kochsebastian.com/open3dsg) | relações de conjunto aberto condicionadas aos conceitos dos nós, sem taxonomia fechada de predicados |
+| Soon & Hsieh, **Confidence Scores in Open-Vocabulary Detection Are a Biased Mixture of Scale and Semantics** | [arXiv:2607.10993](https://arxiv.org/abs/2607.10993) | evidência publicada de que o cosseno região-texto é enviesado por escala da região e por especificidade do termo, e portanto não é probabilidade de acerto |
+
+### Candidatos modernos avaliados
+
+| Referência | Pesquisa | Estado |
+| --- | --- | --- |
+| Siméoni et al., **DINOv3** | [arXiv:2508.10104](https://arxiv.org/abs/2508.10104), [código](https://github.com/facebookresearch/dinov3) | candidato a dense features; *Gram anchoring* mantém o mapa denso limpo em alta resolução. **Bloqueado** por licença gated no Hub (#219) |
+| Carion et al., **SAM 3: Segment Anything with Concepts** | [arXiv:2511.16719](https://arxiv.org/abs/2511.16719), [código](https://github.com/facebookresearch/sam3) | candidato a verificação condicionada a conceito de regiões não resolvidas. **Bloqueado** por licença gated no Hub (#220) |
+| Huang et al., **LoftUp: Learning a Coordinate-Based Feature Upsampler for Vision Foundation Models** | [arXiv:2504.14032](https://arxiv.org/abs/2504.14032), [código](https://github.com/andrehuang/loftup) | candidato a upsampling aprendido, alternativo ao FeatUp já integrado. **Não avaliado** nesta rodada (#221) |
 
 ### Open-vocabulary 3D mapping e associação 2D→3D
 
@@ -101,6 +122,8 @@ Nem todas devem ser citadas no mesmo parágrafo. A separação recomendada é:
 | --- | --- |
 | Percepção visual e region discovery | Segment Anything, SAM 2, FastSAM, DINOv2 |
 | Semântica open-vocabulary 2D | CLIP, LSeg, Detic, Qwen2.5-VL |
+| Composição de evidência contextual 2D | ConceptGraphs, Open3DSG, Confidence Scores in Open-Vocabulary Detection |
+| Candidatos modernos avaliados e não adotados | DINOv3, SAM 3, Qwen3-VL, LoftUp |
 | Visual-language mapping e memória espacial | VLMaps, CLIP-Fields |
 | Open-vocabulary 3D mapping | OpenScene, ConceptFusion, Open-Fusion |
 | 2D→3D distillation e point representations | Sonata, ScaLR, DITR, Concerto, Vernata |
@@ -374,6 +397,107 @@ representação contextual hierárquica e relacional.
 Eles pertencem principalmente à justificativa dos módulos `semantic-map`, `scene-graph`
 e `context-reasoning`, não ao funcionamento interno de `visual-perception`.
 
+## Arquitetura contextual: paper -> princípio -> decisão -> diferença
+
+Esta seção existe porque a rodada da #214/#204/#205/#206 é a primeira em que uma decisão
+de **composição** — e não de escolha de modelo — foi informada por literatura. Cada linha
+diz exatamente qual ideia foi usada e onde a nossa implementação diverge.
+
+### ConceptGraphs
+
+**O que o trabalho faz.** Constrói um scene graph 3D open-vocabulary a partir de RGB-D:
+máscaras class-agnostic por frame, um embedding CLIP por máscara, associação entre frames
+por uma similaridade **composta** (`ϕ = ϕ_semântica + ϕ_geométrica`, com limiar explícito),
+consolidação de várias legendas de um objeto em um rótulo final via LLM, e arestas geradas
+apenas sobre pares podados por IoU de caixas seguido de árvore geradora mínima.
+
+**Princípio usado, e só ele.** Três ideias, todas de composição:
+
+1. **similaridade composta com limiar explícito** — geometria e semântica entram na mesma
+   decisão, e nenhuma delas decide sozinha;
+2. **poda de pares antes de consultar o modelo** — perguntar sobre todos os pares é O(n²);
+3. **um desfecho declarado de "nada aqui"** — eles têm `invalid` para detecções; nós temos
+   `none` para relações e `indistinguishable` para hipóteses.
+
+**Nossa decisão.** `application/reconciliation.py` propõe grupos por **conceito compatível
+mais contato espacial**, com a coerência densa entrando como corroboração registrada;
+`application/semantic_relations.py` seleciona pares por prioridade geométrica dentro de um
+orçamento antes de consultar o VLM.
+
+**Diferença para o paper, e ela é grande.**
+
+| ConceptGraphs | nós |
+| --- | --- |
+| associa **entre frames**, em 3D, sobre nuvem de pontos | agrupa **dentro de um frame**, em 2D, sobre máscaras |
+| a associação produz identidade de objeto | o agrupamento produz uma **hipótese**, e todos os membros continuam existindo |
+| a similaridade semântica **decide** a associação | a nossa coerência densa **corrobora**; quem propõe é conceito + contato |
+| consolida legendas em um rótulo final | acrescenta um conceito canônico **ao lado** do label cru |
+
+A quarta linha não é preferência: é medição. Entre pares adjacentes dos nossos frames, o
+cosseno denso separa mesmo-label de label-diferente com acurácia balanceada de **0,660** no
+melhor limiar possível. Um gate por similaridade erraria um terço das decisões, e por isso
+ele não é o gate.
+
+**O que não podemos afirmar.** Que implementamos ConceptGraphs. Não fazemos associação
+multi-view, não fundimos em nuvem de pontos, não construímos grafo 3D. Essas capacidades
+pertencem a `sensor-association`, `semantic-fusion` e `scene-graph`.
+
+**Onde citar.** Ao descrever a reconciliação intra-frame e a poda de pares de relação.
+
+### Open3DSG
+
+**O que o trabalho faz.** Prevê grafos de cena 3D com classes **e relações** de conjunto
+aberto, co-embedding features de um backbone 3D com o espaço de um modelo 2D aberto, e
+condicionando um LLM aos conceitos consultados dos nós.
+
+**Princípio usado.** Condicionar a inferência de relação aos **conceitos dos dois nós**, em
+vez de classificar a aresta a partir de geometria pura.
+
+**Nossa decisão.** `RegionRelationRequest` carrega o conceito reconciliado e a natureza de
+cada lado, junto da view do par e da medida geométrica já calculada.
+
+**Diferença.** O nosso vocabulário de predicados é **fechado e versionado**, e o deles é
+aberto. A razão é a fronteira do módulo: seis dos predicados abertos que um LLM produziria
+(`above`, `behind`, distância, alcançabilidade) exigem profundidade, e afirmá-los a partir
+de um único frame seria inventar geometria. Um grafo downstream também precisa de tipos de
+aresta estáveis para significar alguma coisa. Os **conceitos** continuam abertos; o tipo de
+aresta, não.
+
+**Onde citar.** Ao descrever a inferência de relações semânticas e a escolha de manter o
+vocabulário de predicados fechado.
+
+### Confidence Scores in Open-Vocabulary Detection
+
+**O que o trabalho mostra.** O score `cos(v, t)` de detectores open-vocabulary é uma
+mistura enviesada: regiões grandes pontuam mais alto que pequenas para a mesma consulta, e
+termos genéricos pontuam mais baixo que específicos para o mesmo conteúdo visual.
+
+**Princípio usado.** Um cosseno região-texto **não é** probabilidade de acerto, e o viés
+tem direção conhecida.
+
+**Nossa decisão.** `HypothesisSupportSignal` guarda `score` e `margin` como medidas
+nomeadas, com um `status` de quatro valores, e **nunca** como `ConfidenceScore`. A decisão
+é tomada sobre a **margem** entre hipóteses da mesma região — que compartilham a escala,
+cancelando o primeiro viés — e um piso explícito produz `indistinguishable` em vez de um
+vencedor inventado.
+
+**Diferença.** Eles propõem uma correção de temperatura em tempo de teste para recuperar
+recall de objetos pequenos. Nós não corrigimos o score: preferimos não convertê-lo em
+confiança nenhuma enquanto não houver ground truth para calibrar (#210/#211).
+
+**Onde citar.** Ao justificar por que o suporte de hipótese emite sinal e não confiança.
+
+### O que esta rodada mediu por conta própria
+
+Duas medições não vêm de paper nenhum e sustentam decisões próprias:
+
+| medição | valor | decisão que ela sustenta |
+| --- | --- | --- |
+| CLIP como árbitro par-a-par, por slot | concorda 54–64%, indistinguível 14–27%, discorda 16–22% | o sinal existe e não é degenerado; o slot melhor para o VLM (`masked_subject`) é o pior para o CLIP |
+| coerência densa entre pares adjacentes | balanced accuracy 0,660 no melhor limiar | a similaridade densa **corrobora** grupos, e não os cria |
+
+Ambas são reproduzíveis por `benchmarks/evidence_signal_probe.py`.
+
 ## Decisões próprias de engenharia
 
 As decisões abaixo não devem ser atribuídas diretamente aos papers acima sem evidência
@@ -409,6 +533,26 @@ reprodutibilidade e engenharia, não uma contribuição reproduzida dos papers.
 [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py)
 mantém relações geométricas e inferidas como candidatas. Elas não são promovidas a
 relações 3D sem validação downstream.
+
+### Sinal de suporte com três desfechos
+
+O terceiro desfecho — `indistinguishable` — é decisão própria, motivada por medição: 14 a
+27% das regiões dos frames de referência têm margem abaixo do ruído do próprio sinal.
+Colapsá-lo em "sem suporte" inventaria um veredito que a medida não sustenta.
+
+### Coerência estrutural como veredito, não como correção
+
+[`domain/structural_consistency.py`](../src/visual_perception/domain/structural_consistency.py)
+emite `SUPPORTS`/`CONTRADICTS`/`UNDETERMINED` sobre a natureza declarada de uma região, e
+**não** reescreve a saída do produtor. Casar pelo núcleo nominal do composto, e não por
+qualquer palavra dele, também é decisão própria: é o que impede `ceiling light fixture` de
+ser classificado como superfície contínua.
+
+### Papel `RECONCILED`
+
+Um terceiro papel de hipótese, ao lado de `PRIMARY` e `ALTERNATIVE`, para que a
+interpretação reconciliada exista **ao lado** da original em vez de no lugar dela. Nenhum
+dos trabalhos revisados preserva as duas: o ConceptGraphs consolida em um rótulo final.
 
 ### High-resolution mask-aware pooling
 
@@ -486,6 +630,10 @@ Use este formato para novas mudanças relevantes:
 | self-supervised point representation | Sonata, Vernata | `point-representation` | módulo ainda separado da percepção visual | linear probing/3D downstream | futuro |
 | online prior knowledge integration | survey | `scene-graph`/`context-reasoning` | separado da percepção 2D | futura avaliação contextual | downstream |
 | hierarchical open-vocabulary scene graph | Hydra, HOV-SG | `semantic-map` + `scene-graph` | arquitetura própria e modular | futura avaliação contextual | downstream |
+| suporte de hipótese por alinhamento | Confidence Scores in Open-Vocabulary Detection | `application/hypothesis_support.py` | emitimos sinal com margem, nunca confiança; três desfechos em vez de dois | sonda de sinal de evidência | implementado |
+| reconciliação intra-frame | ConceptGraphs | `application/reconciliation.py` | intra-frame e 2D; grupo é hipótese, membros preservados; coerência corrobora, não decide | sonda de coerência entre pares adjacentes | implementado |
+| relações semânticas condicionadas ao conceito | Open3DSG, ConceptGraphs | `application/semantic_relations.py` | vocabulário de predicados fechado e versionado; poda de pares por prioridade geométrica | validação real de três frames | implementado |
+| coerência conceito/natureza | decisão própria | `domain/structural_consistency.py` | veredito, nunca correção; casamento por núcleo nominal | contagem no run de referência | implementado |
 
 ## Questões em aberto
 

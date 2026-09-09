@@ -180,6 +180,44 @@ benchmark.
 O espaço de embedding deve continuar compatível com a operação imagem-texto prevista
 pelo port. A dimensão de referência do ViT-L/14 é 768.
 
+### O lado de texto passou a ser usado (#214)
+
+`encode_text` existia no port e nos dois adapters desde a #163, e **nenhuma linha de
+código de produção o chamava**. O estágio de suporte de hipótese fechou esse circuito: ele
+compara o texto de cada hipótese contra os vetores de crop que o estágio de evidência já
+produziu.
+
+O custo é quase nulo por construção — nenhuma imagem é recodificada, e o texto de cada
+conceito distinto do frame é codificado uma vez só. O ganho é que o módulo passa a ter
+**duas** fontes de semântica em vez de uma.
+
+**Medido sobre os frames de referência**, com as mesmas máscaras e os mesmos recortes do
+run `20260908T131207Z` (92 regiões com alternativa, 3 frames):
+
+| slot | concorda com o primary | indistinguível | discorda |
+| --- | ---: | ---: | ---: |
+| `masked_subject` | 50/92 | 25/92 | 17/92 |
+| `tight_crop` | 55/92 | 22/92 | 15/92 |
+| `contextual_crop` | **59/92** | 13/92 | 20/92 |
+
+Três leituras importam para quem for mexer neste backend:
+
+1. como **classificador** sobre o vocabulário do frame, o CLIP acerta o primário do
+   reasoner em 6 a 13 de 40 regiões. Como **árbitro entre as hipóteses que o produtor
+   registrou**, os números acima. É a segunda pergunta que tem resposta útil;
+2. o slot certo depende do consumidor. `masked_subject` é a melhor evidência para o VLM e
+   a **pior** para o CLIP — 27% de indistinguível, porque o CLIP nunca viu recortes sobre
+   fundo cinza chapado no treino;
+3. a margem mediana é de 0,019 a 0,027, numa faixa de similaridade que vive entre 0,13 e
+   0,27. Isso proíbe tratar o cosseno como confiança e **exige** o desfecho explícito de
+   "indistinguível": sem ele, 14 a 27% das regiões receberiam um veredito inventado.
+
+A sonda que produziu esses números é reproduzível:
+
+```bash
+python benchmarks/evidence_signal_probe.py --run benchmarks/results/samples/<run-id>
+```
+
 ## Multimodal reasoning
 
 ### Responsabilidade
@@ -229,9 +267,38 @@ região, não a confiança do claim.
 Falhas locais de interpretação viram `RegionInterpretationFailure` e não precisam
 invalidar toda a observação.
 
+## Contract de resposta de relação
+
+A #206 acrescentou um terceiro prompt, e por isso a versão subiu para `v7`. Os prompts de
+**cena** e de **região** são idênticos aos do `v6`, byte a byte: labels e claims continuam
+comparáveis entre os dois runs, e o que mudou é que a versão passa a identificar três
+prompts em vez de dois.
+
+O adapter mostra ao VLM **uma** imagem contendo as duas regiões, com o sujeito contornado
+em verde e o objeto em azul, e repete a medida geométrica que o módulo já calculou
+(containment, IoU, contato). O modelo devolve:
+
+```json
+{"predicate": "part_of", "confidence": 0.42}
+```
+
+Duas decisões de prompt merecem registro, porque as duas atacam a mesma pressão:
+
+1. **`none` é a primeira opção oferecida**, e o texto diz explicitamente que ela é a
+   resposta esperada para a maioria dos pares. Um vocabulário fechado sem saída de escape
+   empurra o modelo a escolher o predicado menos ruim, e a aresta inventada entra no grafo
+   como se fosse observação;
+2. **o prompt proíbe inferir profundidade**. `behind`, `in_front_of` e distância não estão
+   no vocabulário, mas dizer isso no texto reduz a chance de o modelo tentar expressá-las
+   dentro de um predicado que existe.
+
+Quantos pares são consultados é decisão de `semantic_relations.max_pairs`, não do modelo:
+perguntar sobre todos é O(n²), e num frame de 40 regiões seriam 780 chamadas para produzir
+sobretudo "nenhuma relação".
+
 ## Contract de resposta de região
 
-A versão atual é `prompt_version = v6`. O schema da resposta **de região** é o mesmo desde
+O schema de região não mudou no `v7`. A versão anterior era `v6`. O schema da resposta **de região** é o mesmo desde
 `v2`; o que mudou até o `v5` foi a entrada, o exemplo e o enquadramento da tarefa. O `v6`
 mudou o schema da resposta **de cena** (ver "Contract de resposta de cena", abaixo) e as
 views que acompanham a região, e por isso quebra a comparabilidade direta com os runs
@@ -502,11 +569,32 @@ Saída:
 Esses artifacts servem para inspeção qualitativa e rastreabilidade. Métricas de pesquisa
 mais fortes devem ser definidas em protocolos de avaliação específicos.
 
+## Candidatos avaliados nesta rodada
+
+A revisão de contexto visual investigou quatro candidatos modernos. Nenhum deles trocou a
+configuração de referência, e os motivos são diferentes entre si:
+
+| candidato | capability | disponibilidade verificada | estado |
+| --- | --- | --- | --- |
+| Qwen3-VL 2B / 4B / 8B | multimodal reasoning | `transformers` 5.16.1 tem `Qwen3VLForConditionalGeneration`; os três checkpoints já estão no cache local (4,0 / 8,3 / 17 GB), sem gate | **benchmark pendente**, issue #218. Nenhum download necessário |
+| DINOv3 ViT-B/16 | dense features | `transformers` 5.16.1 tem `DINOv3ViTModel`; `facebook/dinov3-vitb16-pretrain-lvd1689m` é 85,7 M params — mesma classe do DINOv2-base — mas está **`gated=manual`** no Hub | **bloqueado**: exige aceite de licença na conta HF do usuário. Issue #219 |
+| SAM 3 | verificação condicionada a conceito | `transformers` 5.16.1 tem `Sam3Model`/`Sam3Processor`; `facebook/sam3` é 860 M params e está **`gated=manual`** | **bloqueado** pelo mesmo motivo. Issue #220 |
+| LoftUp | feature upsampling | não integrado | **não avaliado** nesta rodada; prioridade menor que os anteriores. Issue #221 |
+
+Duas observações de método:
+
+- o SAM 3 é interessante aqui **apenas** pela segmentação condicionada a conceito dentro
+  de um frame. O tracker de vídeo dele é identidade temporal, que é explicitamente
+  proibida neste módulo;
+- nenhuma comparação de backend é interpretável antes de a arquitetura contextual estar
+  fixa. É por isso que as quatro issues dependem da #207, e não o contrário.
+
 ## Dívidas conhecidas
 
-- `application/scene_context.py` e `application/relation_generation.py` ainda devem ser
-  revisados para garantir a mesma política explícita de confiança ausente aplicada ao
-  parser de regiões;
+- `application/scene_context.py` ainda deve ser revisado para garantir a mesma política
+  explícita de confiança ausente aplicada ao parser de regiões. `relation_generation.py`
+  e `semantic_relations.py` já a aplicam: uma relação inferida sem score sai com
+  `confidence=None`;
 - relações `geometric_2d` podem usar `ConfidenceScore(1.0)` legitimamente quando o valor
   representa o resultado de um predicado determinístico, não ausência de score;
 - over-segmentation de superfícies repetitivas não é resolvida apenas pela troca de

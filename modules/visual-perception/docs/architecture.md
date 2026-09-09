@@ -27,9 +27,14 @@ O módulo é responsável por:
 - features densas e embeddings por região;
 - embeddings alinhados à linguagem;
 - contexto global da cena;
-- claims semânticos de região;
-- relações candidatas no plano da imagem;
+- claims semânticos de região, e o suporte independente que os sustenta ou contradiz;
+- reconciliação intra-frame de conceitos e de superfícies fragmentadas;
+- relações candidatas no plano da imagem, geométricas e semânticas;
 - auditoria e proveniência da evidência produzida.
+
+Uma linha divisória interna organiza tudo isso: **antes do merge de regiões o módulo
+decide o que existe; depois dele, apenas o que aquilo significa**. Nenhum estágio
+semântico altera mask, box, identidade ou ordem de região.
 
 O módulo termina no domínio visual 2D. Ele **não** calibra sensores, estima pose,
 projeta pixels no LiDAR, confirma relações em 3D, funde observações temporais em um mapa
@@ -115,8 +120,12 @@ Contém as transformações e políticas do pipeline. Exemplos:
 - pooling de features;
 - semântica de regiões;
 - contexto de cena;
-- relações candidatas;
-- fusão e refinamento internos;
+- suporte de hipótese por evidência independente;
+- calibração e abstenção;
+- refinamento seletivo dirigido por razão;
+- reconciliação contextual intra-frame;
+- relações candidatas, geométricas e semânticas;
+- fusão multi-fonte;
 - auditoria;
 - cache e lifecycle.
 
