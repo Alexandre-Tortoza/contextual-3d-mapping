@@ -6,6 +6,9 @@ import {
   buildContextLegend,
   filterPoints,
   measureMap,
+  pointColor,
+  semanticColor,
+  srgbColorToLinear,
   validateSlice,
 } from "./map-data.js";
 
@@ -55,11 +58,30 @@ test("legenda contextual conta e filtra categorias", () => {
   const legend = buildContextLegend(POINTS);
   assert.deepEqual(legend.map((entry) => [entry.label, entry.count]), [
     ["door", 2],
-    ["RGB sem label", 1],
-    ["Sem observação", 1],
+    ["Sem contexto", 2],
   ]);
-  assert.deepEqual(filterPoints(POINTS, "context", new Set(["door"])).map((point) => point.geometry_id), ["b", "c"]);
-  assert.equal(filterPoints(POINTS, "rgb", new Set()).length, POINTS.length);
+  assert.deepEqual(filterPoints(POINTS, new Set(["door"])).map((point) => point.geometry_id), ["b", "c"]);
+  assert.equal(filterPoints(POINTS, null).length, POINTS.length);
+});
+
+// Protege a paleta apresentada ao usuário contra regressões para cores opacas,
+// inconsistentes ou dependentes da cor publicada pelo artifact.
+test("cores contextuais são estáveis e pontos sem contexto ficam discretos", () => {
+  assert.deepEqual(semanticColor("door"), [255, 82, 82]);
+  assert.deepEqual(semanticColor(" Door "), semanticColor("door"));
+  assert.deepEqual(semanticColor("label futura"), semanticColor("label futura"));
+  assert.notDeepEqual(semanticColor("door"), semanticColor("wall"));
+  assert.deepEqual(pointColor(POINTS[0]), [28, 31, 38]);
+  assert.deepEqual(pointColor(POINTS[1]), [255, 82, 82]);
+});
+
+// Confirma a conversão necessária antes de gravar cores sRGB nos buffers
+// lineares do Three.js.
+test("conversão sRGB preserva extremos e lineariza meios-tons", () => {
+  const converted = srgbColorToLinear([0, 128, 255]);
+  assert.equal(converted[0], 0);
+  assert.ok(Math.abs(converted[1] - 0.21586) < 0.00001);
+  assert.equal(converted[2], 1);
 });
 
 // Mantém a fonte estática compatível com a futura fronteira de chunks e com

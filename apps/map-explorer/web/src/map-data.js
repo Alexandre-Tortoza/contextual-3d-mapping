@@ -1,5 +1,27 @@
 const UNOBSERVED_KEY = "__unobserved__";
-const RGB_ONLY_KEY = "__rgb_only__";
+const UNOBSERVED_COLOR = [28, 31, 38];
+
+const SEMANTIC_COLORS = Object.freeze({
+  door: [255, 82, 82],
+  wall: [45, 181, 255],
+  "plain wall": [92, 124, 250],
+  floor: [255, 214, 51],
+  "wooden floor": [255, 145, 48],
+  ceiling: [190, 118, 255],
+  "ceiling tiles": [255, 105, 180],
+  "wooden panel": [61, 220, 132],
+});
+
+const FALLBACK_COLORS = Object.freeze([
+  [0, 229, 255],
+  [255, 112, 67],
+  [174, 234, 0],
+  [255, 64, 129],
+  [124, 77, 255],
+  [255, 171, 0],
+  [29, 233, 182],
+  [236, 64, 122],
+]);
 
 // Valida a fronteira mínima consumida pelo viewer antes de qualquer estado de
 // câmera ou renderização ser criado.
@@ -69,13 +91,27 @@ export function measureMap(points) {
 // Classifica pontos sem label separadamente para que ausência de contexto não
 // desapareça da legenda nem pareça uma categoria semântica.
 export function contextKey(point) {
-  if (point.association?.label) return point.association.label;
-  if (point.association?.color_rgb) return RGB_ONLY_KEY;
+  if (point.association?.label) return point.association.label.trim().toLowerCase();
   return UNOBSERVED_KEY;
 }
 
+// Escolhe uma cor semântica saturada e estável. Labels conhecidas preservam
+// convenções visuais e labels futuras recebem um fallback determinístico.
+export function semanticColor(label) {
+  const normalized = label?.trim().toLowerCase();
+  if (!normalized) return UNOBSERVED_COLOR;
+  if (SEMANTIC_COLORS[normalized]) return SEMANTIC_COLORS[normalized];
+  let hash = 2166136261;
+  for (const character of normalized) {
+    hash ^= character.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return FALLBACK_COLORS[(hash >>> 0) % FALLBACK_COLORS.length];
+}
+
 // Gera uma legenda ordenada por cobertura e preserva as cores publicadas pelo
-// artifact. Categorias especiais usam cores neutras e nomes explícitos.
+// viewer. A ausência de label é uma só categoria, independentemente de existir
+// uma associação RGB que não produziu classificação.
 export function buildContextLegend(points) {
   const byKey = new Map();
   points.forEach((point) => {
@@ -84,23 +120,16 @@ export function buildContextLegend(points) {
       key,
       label: key,
       count: 0,
-      color: point.association?.semantic_color_rgb ?? [48, 53, 64],
+      color: semanticColor(key),
       semantic: true,
     };
     current.count += 1;
     byKey.set(key, current);
   });
-  if (byKey.has(RGB_ONLY_KEY)) {
-    Object.assign(byKey.get(RGB_ONLY_KEY), {
-      label: "RGB sem label",
-      color: [91, 107, 128],
-      semantic: false,
-    });
-  }
   if (byKey.has(UNOBSERVED_KEY)) {
     Object.assign(byKey.get(UNOBSERVED_KEY), {
-      label: "Sem observação",
-      color: [48, 53, 64],
+      label: "Sem contexto",
+      color: UNOBSERVED_COLOR,
       semantic: false,
     });
   }
@@ -112,20 +141,25 @@ export function buildContextLegend(points) {
 
 // Aplica os filtros somente à camada de contexto. Geometria e RGB continuam
 // completas para que uma legenda semântica não altere silenciosamente a base.
-export function filterPoints(points, colorMode, enabledContextKeys) {
-  if (colorMode !== "context" || enabledContextKeys === null) return points;
+export function filterPoints(points, enabledContextKeys) {
+  if (enabledContextKeys === null) return points;
   return points.filter((point) => enabledContextKeys.has(contextKey(point)));
 }
 
-// Escolhe a cor sem misturar altura, cor física e claim semântico.
-export function pointColor(point, colorMode) {
-  if (colorMode === "context") {
-    return point.association?.semantic_color_rgb ?? [48, 53, 64];
-  }
-  if (colorMode === "rgb") {
-    return point.association?.color_rgb ?? [48, 53, 64];
-  }
-  return point.display_color_rgb ?? [120, 130, 145];
+// Retorna exclusivamente a cor da classe contextual usada pelo mapa.
+export function pointColor(point) {
+  return semanticColor(contextKey(point) === UNOBSERVED_KEY ? null : contextKey(point));
+}
+
+// Converte canais sRGB de interface para o espaço linear esperado pelos
+// vertex colors do Three.js, evitando cores claras e lavadas no canvas.
+export function srgbColorToLinear(color) {
+  return color.map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
 }
 
 // Encapsula o artifact atual como uma fonte de geometria estática. A mesma
@@ -149,4 +183,4 @@ export class StaticArtifactGeometrySource {
   }
 }
 
-export { RGB_ONLY_KEY, UNOBSERVED_KEY };
+export { UNOBSERVED_KEY };

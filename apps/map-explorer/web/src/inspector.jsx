@@ -77,21 +77,55 @@ function SceneClaims({ claims }) {
   );
 }
 
+// Mantém filtros contextuais dentro da sidebar para que o mapa permaneça livre
+// de painéis sobrepostos e a legenda funcione também sem ponto selecionado.
+function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCount, onToggle, onIsolate, onReset }) {
+  return (
+    <details className="legend-details" open>
+      <summary>
+        <span>Legenda</span>
+        <small>{visiblePointCount.toLocaleString("pt-BR")} / {totalPointCount.toLocaleString("pt-BR")}</small>
+      </summary>
+      <div className="legend-actions">
+        <span>Cores contextuais</span>
+        <button type="button" onClick={onReset}>Mostrar tudo</button>
+      </div>
+      <div className="legend-list">
+        {entries.map((entry) => {
+          const enabled = enabledKeys === null || enabledKeys.has(entry.key);
+          return (
+            <div className={`legend-row ${enabled ? "" : "disabled"}`} key={entry.key}>
+              <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(entry.key)}>
+                <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
+                <span>{entry.label}</span>
+                <b>{entry.count.toLocaleString("pt-BR")}</b>
+              </button>
+              <button type="button" className="isolate-action" onClick={() => onIsolate(entry.key)}>Isolar</button>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 // Apresenta a seleção em camadas de evidência e mantém metadados extensos num
 // disclosure técnico, reduzindo a densidade inicial do dock.
-export function Inspector({ point, slice, artifactUrl, onClose, onFocus, hiddenByFilter = false }) {
-  if (!point) {
-    return (
-      <aside className="inspector-dock empty" aria-label="Inspector do mapa">
-        <div className="dock-heading"><span>Inspeção</span><button type="button" onClick={onClose}>×</button></div>
-        <div className="empty-inspector">
-          <strong>Nenhum ponto selecionado</strong>
-          <p>Clique na nuvem para abrir sua geometria, evidência visual e contexto.</p>
-        </div>
-      </aside>
-    );
-  }
-  const association = point.association;
+export function Inspector({
+  point,
+  slice,
+  artifactUrl,
+  onClose,
+  onFocus,
+  hiddenByFilter = false,
+  legendEntries,
+  enabledContextKeys,
+  visiblePointCount,
+  onToggleContext,
+  onIsolateContext,
+  onResetContext,
+}) {
+  const association = point?.association;
   const observation = slice.observations?.find(
     (item) => item.observation_id === association?.rgb_observation_id,
   );
@@ -99,71 +133,83 @@ export function Inspector({ point, slice, artifactUrl, onClose, onFocus, hiddenB
   const confidence = region?.confidence?.value;
   const supportState = region?.support?.state;
   return (
-    <aside className="inspector-dock" aria-label="Inspector do ponto selecionado">
+    <aside className="inspector-dock" aria-label="Detalhes do mapa">
       <div className="dock-heading">
-        <span>Inspeção</span>
-        <div><button type="button" title="Focar seleção" onClick={onFocus}>Focar</button><button type="button" aria-label="Recolher inspector" onClick={onClose}>×</button></div>
+        <span>Detalhes</span>
+        <div>{point && <button type="button" title="Focar seleção" onClick={onFocus}>Focar</button>}<button type="button" aria-label="Recolher detalhes" onClick={onClose}>×</button></div>
       </div>
       <div className="inspector-scroll">
-        {hiddenByFilter && (
-          <div className="filter-warning">O ponto selecionado está oculto pelo filtro da legenda.</div>
-        )}
-        <div className="selection-title">
-          <span className={`status-tag ${region ? "contextual" : association ? "rgb" : "neutral"}`}>
-            {region ? "Contexto VLM" : association ? "Somente RGB" : "Somente geometria"}
-          </span>
-          <h2>{region?.label ?? (association ? "Pixel observado" : "Ponto geométrico")}</h2>
-          <code>{point.geometry_id}</code>
-        </div>
-
-        <div className="metric-strip">
-          <div><small>X</small><strong>{point.coordinates_m[0].toFixed(2)} m</strong></div>
-          <div><small>Y</small><strong>{point.coordinates_m[1].toFixed(2)} m</strong></div>
-          <div><small>Z</small><strong>{point.coordinates_m[2].toFixed(2)} m</strong></div>
-        </div>
-
-        {!association && (
-          <div className="inspector-block warning-block">
-            <strong>Sem observação visual</strong>
-            <p>Este ponto ainda não foi associado a um frame RGB processado.</p>
+        {!point ? (
+          <div className="empty-inspector">
+            <strong>Nenhum ponto selecionado</strong>
+            <p>Clique na nuvem para consultar contexto e evidência.</p>
           </div>
-        )}
-
-        {region && (
-          <div className="inspector-block">
-            <h3>Classificação</h3>
-            <div className="classification-grid">
-              <span>Confiança VLM</span><strong>{confidence == null ? "Não informada" : `${(confidence * 100).toFixed(1)}%`}</strong>
-              <span>Suporte</span><strong>{supportState ?? "Não informado"}</strong>
-              <span>Qualidade da máscara</span><strong>{region.geometric_confidence == null ? "Não informada" : `${(region.geometric_confidence * 100).toFixed(1)}%`}</strong>
+        ) : (
+          <>
+            {hiddenByFilter && (
+              <div className="filter-warning">O ponto selecionado está oculto pelo filtro da legenda.</div>
+            )}
+            <div className="selection-title">
+              <span className={`status-tag ${region ? "contextual" : "neutral"}`}>
+                {region ? "Contexto VLM" : "Sem contexto"}
+              </span>
+              <h2>{region?.label ?? "Ponto sem contexto"}</h2>
+              <code>{point.geometry_id}</code>
             </div>
-          </div>
-        )}
 
-        {association && (
-          <ObservationPreview observation={observation} region={region} pixel={association.pixel} artifactUrl={artifactUrl} />
-        )}
+            <div className="metric-strip">
+              <div><small>X</small><strong>{point.coordinates_m[0].toFixed(2)} m</strong></div>
+              <div><small>Y</small><strong>{point.coordinates_m[1].toFixed(2)} m</strong></div>
+              <div><small>Z</small><strong>{point.coordinates_m[2].toFixed(2)} m</strong></div>
+            </div>
 
-        {region?.claims?.length > 0 && (
-          <div className="inspector-block">
-            <h3>Claims da região</h3>
-            <ul className="claim-list">
-              {region.claims.map((claim, index) => (
-                <li key={`${claim.kind}:${claim.value}:${index}`}>
-                  <span>{claim.kind}</span><strong>{claim.value}</strong>
-                  {claim.role && <small>{claim.role}</small>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            {!region && (
+              <div className="inspector-block warning-block">
+                <strong>Sem classificação contextual</strong>
+                <p>Este ponto ainda não possui um label produzido pelo pipeline visual.</p>
+              </div>
+            )}
 
-        <SceneClaims claims={observation?.scene_claims} />
-        <details className="technical-details">
-          <summary>Proveniência e dados técnicos</summary>
-          <pre>{JSON.stringify(point, null, 2)}</pre>
-          {region?.provenance && <pre>{JSON.stringify(region.provenance, null, 2)}</pre>}
-        </details>
+            {region && (
+              <div className="inspector-block">
+                <h3>Classificação</h3>
+                <div className="classification-grid">
+                  <span>Confiança VLM</span><strong>{confidence == null ? "Não informada" : `${(confidence * 100).toFixed(1)}%`}</strong>
+                  <span>Suporte</span><strong>{supportState ?? "Não informado"}</strong>
+                  <span>Qualidade da máscara</span><strong>{region.geometric_confidence == null ? "Não informada" : `${(region.geometric_confidence * 100).toFixed(1)}%`}</strong>
+                </div>
+              </div>
+            )}
+
+            {association && (
+              <ObservationPreview observation={observation} region={region} pixel={association.pixel} artifactUrl={artifactUrl} />
+            )}
+
+            {region?.claims?.length > 0 && (
+              <div className="inspector-block">
+                <h3>Claims da região</h3>
+                <ul className="claim-list">
+                  {region.claims.map((claim, index) => (
+                    <li key={`${claim.kind}:${claim.value}:${index}`}>
+                      <span>{claim.kind}</span><strong>{claim.value}</strong>
+                      {claim.role && <small>{claim.role}</small>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <SceneClaims claims={observation?.scene_claims} />
+            <details className="technical-details">
+              <summary>Proveniência e dados técnicos</summary>
+              <pre>{JSON.stringify(point, null, 2)}</pre>
+              {region?.provenance && <pre>{JSON.stringify(region.provenance, null, 2)}</pre>}
+            </details>
+          </>
+        )}
+        <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
+          visiblePointCount={visiblePointCount} totalPointCount={slice.points.length}
+          onToggle={onToggleContext} onIsolate={onIsolateContext} onReset={onResetContext} />
       </div>
     </aside>
   );

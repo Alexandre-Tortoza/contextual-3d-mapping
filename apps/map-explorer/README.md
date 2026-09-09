@@ -35,8 +35,8 @@ npm run dev
 ```
 
 O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
-Para uma entrada conhecida, gere `artifacts/m1-demo.json` com `make m1-demo` e
-abra esse arquivo no seletor da página.
+Ele abre `/current-map.json` por default e aceita outra URL pelo parâmetro
+`?artifact=`.
 
 Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra
 `artifacts/corridor-02-fastlio-20s.json`. O viewer enquadra automaticamente os
@@ -52,8 +52,10 @@ make map-explorer-serve
 Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
 arquivo publicado é local e ignorado pelo Git.
 
-Artifacts contextuais expõem camadas independentes de geometria, RGB e claims
-do VLM. Ao selecionar um ponto observado, o painel mostra o frame de origem,
+Artifacts contextuais expõem geometria, associações RGB e claims do VLM. O
+mapa usa uma única camada de cores contextuais; pontos sem label permanecem em
+cinza discreto para preservar a referência geométrica. Ao selecionar um ponto
+observado, o painel mostra o frame de origem,
 o pixel projetado, a região, a confiança, o estado de suporte e a proveniência.
 Pontos sem observação visual permanecem explicitamente sem contexto. O alvo
 `map-explorer-serve` usa por default o artifact contextual e copia seus previews;
@@ -67,7 +69,7 @@ para mover câmera e alvo, e scroll para aproximar no cursor. `Modo voo` adicion
 Seleção não move a câmera; duplo clique ou `F` foca o ponto. `Home` restaura a
 vista geral, enquanto `1` e `2` abrem as vistas superior e isométrica.
 
-A legenda de contexto permite ocultar ou isolar labels sem recarregar o mapa.
-Esses filtros não alteram as camadas Geometria e RGB. O frontend consome a
-geometria por uma fronteira interna compatível com bounds e LOD futuros; o
-artifact local atual continua sendo servido como um único chunk estático.
+A sidebar `Detalhes` reúne a inspeção e a legenda de contexto, que permite
+ocultar ou isolar labels sem recarregar o mapa. O frontend consome a geometria
+por uma fronteira interna compatível com bounds e LOD futuros; o artifact local
+atual continua sendo servido como um único chunk estático.
