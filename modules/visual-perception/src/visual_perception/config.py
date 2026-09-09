@@ -382,6 +382,17 @@ class RefinementConfig:
             diferente do conjunto do passe anterior: repetir a mesma chamada
             com a mesma evidência e temperatura zero é pedir de novo esperando
             outra resposta.
+
+            O escalonamento é **region-local por decisão medida**. A primeira
+            versão deste default acrescentava ``scene_conditioned`` — o frame
+            inteiro — e o resultado foi o vazamento que a #202 e a #212 tinham
+            eliminado: em ``corridor-02-008``, 6 das 16 regiões trocaram a sua
+            hipótese por ``rows of crops``, que é literalmente a claim
+            ``layout`` da cena. Regiões que antes diziam ``wall``,
+            ``purple flower`` e ``plain surface`` passaram a repetir o texto da
+            cena. Uma propriedade global não pode virar identidade local, e
+            entregar o frame inteiro ao prompt de uma região é o caminho mais
+            direto para isso acontecer.
         small_region_area_px: abaixo desta área, "região pequena" acompanha
             outra razão. Nunca dispara sozinha: tamanho não é incerteza
             semântica.
@@ -394,10 +405,10 @@ class RefinementConfig:
     max_iterations: int = 1
     max_regions_per_iteration: int = 24
     escalation_views: tuple[str, ...] = (
+        EvidenceSlot.FOREGROUND_DENSE.value,
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
         EvidenceSlot.CONTEXTUAL_CROP.value,
-        EvidenceSlot.SCENE_CONDITIONED.value,
     )
     small_region_area_px: int = 1024
     min_mask_fill_ratio: float = 0.15

@@ -361,3 +361,30 @@ def test_a_disabled_refinement_stage_returns_the_observation_untouched() -> None
 
     assert history == ()
     assert refined is result.observation
+
+
+# O escalonamento é **region-local**, e isso é uma decisão medida, não uma
+# preferência. A primeira versão deste default acrescentava a view de cena — o
+# frame inteiro — e reintroduziu exatamente o vazamento que a #202 e a #212
+# eliminaram: em ``corridor-02-008``, 6 das 16 regiões trocaram a sua hipótese
+# por ``rows of crops``, que é a claim ``layout`` da cena. Regiões que diziam
+# ``wall``, ``purple flower`` e ``plain surface`` passaram a repetir o texto da
+# cena.
+def test_the_default_escalation_never_feeds_the_whole_scene() -> None:
+    """A view de cena não entra no escalonamento de refinamento por default."""
+    assert EvidenceSlot.SCENE_CONDITIONED.value not in RefinementConfig().escalation_views
+    assert all(
+        EvidenceSlot(name) is not EvidenceSlot.SCENE_CONDITIONED
+        for name in RefinementConfig().escalation_views
+    )
+
+
+# E o escalonamento continua sendo evidência **nova**: se ele coincidir com o
+# conjunto do primeiro passe, o loop precisa terminar sem gastar chamada, em vez
+# de repetir a mesma pergunta com a mesma entrada.
+def test_the_default_escalation_is_new_evidence_over_the_default_first_pass() -> None:
+    """O escalonamento default acrescenta ao menos uma view ao primeiro passe."""
+    first_pass = set(MultimodalReasoningConfig().region_views)
+    escalated = set(RefinementConfig().escalation_views)
+
+    assert not escalated <= first_pass

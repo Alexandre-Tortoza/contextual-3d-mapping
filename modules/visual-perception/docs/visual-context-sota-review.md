@@ -293,6 +293,74 @@ concordam, depois de normalização lexical mínima) **mais contato espacial**, 
 densa entra como **corroboração registrada**, capaz de rebaixar um grupo para
 `unresolved` quando é baixa — nunca como o critério que cria o grupo.
 
+### 3.3 Hipótese C — o canal de relação semântica lê os pixels?
+
+Esta sonda não estava planejada. Ela foi feita porque a **primeira execução real**
+do estágio de relações produziu zero arestas em `corridor-02-000`, e um estágio que
+produz zero precisa ser explicado antes de ser publicado.
+
+O que se descobriu foram três defeitos encadeados, e o terceiro é o interessante.
+
+**Primeiro: o orçamento cobria uma região, não o frame.** Dos 16 pares escolhidos,
+**13 tinham a mesma região** — de 2 px² — como sujeito. A causa é aritmética:
+`containment` satura em 1,00 para qualquer região pequena inteiramente contida numa
+grande, então ordenar por contenção elege a vizinhança inteira de uma região só.
+Corrigido com um teto de aparições por região.
+
+**Segundo: `none` virou reflexo.** O prompt dizia que `none` era "a resposta esperada
+para a maioria dos pares, e melhor que um chute plausível". O modelo respondeu `none`
+em **16 de 16** pares, quinze deles com `confidence` exatamente 0,95 — inclusive para
+um `ceiling tile` inteiramente contido num `ceiling`, que é literalmente `part_of`. É
+a lição da #212 pelo outro lado: uma cláusula que combate alucinação com força demais
+deixa de medir qualquer coisa.
+
+**Terceiro, e o que mudou o desenho: o modelo estava repetindo a nossa geometria.**
+Depois de reequilibrar o prompt, o estágio passou a produzir 6 `inside` em 16 pares.
+Parecia bom. Uma ablação de um fator — mesmos pares, mesmas views, mesmo prompt,
+apenas **sem** a fração de contenção — mediu:
+
+| braço | `inside` | `none` | outros |
+| --- | ---: | ---: | ---: |
+| com a fração de contenção no prompt | **6/16** | 10/16 | 0 |
+| sem a fração de contenção | **0/16** | 15/16 | 1 (`attached_to`) |
+
+Concordância entre os dois braços: 9/16. **Todas** as seis respostas `inside`
+desapareceram quando o número saiu. O modelo não estava lendo os pixels: estava
+devolvendo, em forma de predicado, a medida que este módulo tinha acabado de calcular
+e de entregar a ele. Uma aresta assim não é evidência independente — é geometria com
+outro nome, e publicá-la como `model_inferred` seria uma afirmação falsa sobre a sua
+origem.
+
+A correção não foi de prompt, foi de **vocabulário**: `inside` é a inversa exata do
+`contains` geométrico, e sai pelo mesmo motivo que `adjacent_to` nunca entrou — o
+caminho geométrico já responde aquilo, de graça e sem erro. O resumo entregue ao
+modelo passou a falar de contato e tamanho relativo, que não são sinônimos de nenhum
+predicado.
+
+**Resultado depois das três correções: 2 arestas em 16 pares** (`covers` e
+`part_of`), uma delas `wooden panel part_of wall` com contenção 0,00 — isto é, um par
+que a geometria jamais proporia. O rendimento é baixo, e é honesto. Ele é também a
+melhor justificativa concreta para comparar backends de raciocínio (#218) sobre esta
+arquitetura já fixa.
+
+### 3.4 O que a primeira execução real mediu
+
+`corridor-02-000`, 40 regiões, backends reais:
+
+| medida | valor |
+| --- | --- |
+| latência | 365 s, contra 188 s da baseline (1,94x) |
+| sinais independentes medidos | 120 (3 slots × 40 hipóteses primárias) |
+| `supports` / `contradicts` / `indistinguishable` | 72 / 27 / 21 |
+| regiões sem suporte independente nenhum | 5 |
+| regiões de identidade ambígua | 2 |
+| contradições conceito/natureza detectadas | 30 (o audit anterior via 11 neste frame) |
+| grupos de mesma superfície | 5, cobrindo 31 das 40 regiões, 3 corroborados |
+
+A distribuição dos sinais — 60% a favor, 22% contra, 17% empatada — reproduz de perto
+o que a sonda de CPU tinha previsto (54–64% de concordância). É a primeira vez que um
+sinal deste módulo tem três desfechos com massa real.
+
 ---
 
 ## 4. Comparação com a literatura

@@ -1,0 +1,187 @@
+{
+  "layout_version": "frames/2",
+  "frame_id": "corridor-02-008",
+  "input_sha256": "2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b",
+  "latency_s": 173.41158231999725,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 16,
+  "proposal_count": 46,
+  "merged_proposal_count": 19,
+  "regions_with_multiple_proposals": 3,
+  "label_counts": [
+    [
+      "tree",
+      3
+    ],
+    [
+      "wall",
+      3
+    ],
+    [
+      "plain surface",
+      2
+    ],
+    [
+      "row of crops",
+      2
+    ],
+    [
+      "rows of crops",
+      2
+    ],
+    [
+      "field of crops",
+      1
+    ],
+    [
+      "pink flowers",
+      1
+    ],
+    [
+      "purple flower",
+      1
+    ],
+    [
+      "purple flowers",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "agricultural field",
+      5
+    ],
+    [
+      "building",
+      3
+    ],
+    [
+      "plant",
+      3
+    ],
+    [
+      "vegetation",
+      3
+    ],
+    [
+      "floor",
+      2
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      14
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.8,
+    "maximum": 0.95,
+    "mean": 0.846875,
+    "median": 0.8,
+    "distinct_values": 2,
+    "stddev": 0.0695268608165218,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.916330099105835,
+    "maximum": 1.0,
+    "mean": 0.9666594229638577,
+    "median": 0.9664942920207977,
+    "distinct_values": 15,
+    "stddev": 0.024994126631302533,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "tree",
+    "dominant_fraction": 0.1875,
+    "distinct_labels": 9,
+    "dominant_category": "agricultural field",
+    "dominant_category_fraction": 0.3125,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 2,
+  "ego": {
+    "proposals_rejected": 17,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      17
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "below_min_relative_area",
+      4
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        28
+      ],
+      [
+        "contradicts",
+        10
+      ],
+      [
+        "indistinguishable",
+        10
+      ]
+    ],
+    "regions_with_unsupported_primary": 1,
+    "regions_with_ambiguous_identity": 1,
+    "region_kind_contradictions": 3,
+    "reconciled_regions": 12,
+    "distinct_raw_labels": 9,
+    "distinct_canonical_concepts": 7,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "covers",
+        1
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 44,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 8,
+    "competing_assertions": 8
+  }
+}
