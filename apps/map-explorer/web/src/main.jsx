@@ -19,6 +19,11 @@ import {
 import { isEditableTarget } from "./navigation.js";
 import "./styles.css";
 
+const AVAILABLE_MAPS = Object.freeze([
+  { url: "/current-map.json", label: "Contexto · 1 frame / geometria 20 s" },
+  { url: "/maps/corridor-02-geometry-20s.json", label: "Geometria · trecho FAST-LIO 20 s" },
+]);
+
 // Converte o subconjunto visível em buffers e mantém o índice de picking
 // alinhado aos pontos depois de filtros de legenda.
 function Cloud({ points, onSelect, onFocus }) {
@@ -115,6 +120,21 @@ function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCoun
   );
 }
 
+// Expõe somente os artifacts reais publicados pelo runtime e descreve no nome
+// se o conteúdo é um frame contextual ou um trecho puramente geométrico.
+function MapSelector({ value, onChange }) {
+  const known = AVAILABLE_MAPS.some((entry) => entry.url === value);
+  return (
+    <label className="map-overlay map-selector">
+      <span>Mapa</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {!known && <option value={value}>Mapa solicitado pela URL</option>}
+        {AVAILABLE_MAPS.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
 // Expõe os comandos de câmera no próprio mapa para que navegação não dependa
 // de conhecer atalhos de teclado.
 function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onFocus, onToggleFly, onHelp }) {
@@ -151,6 +171,9 @@ function NavigationHelp({ onClose }) {
 // Compõe carregamento, navegação, filtros e inspeção sem deixar um desses
 // estados reposicionar ou reconstruir os demais implicitamente.
 function Explorer() {
+  const [artifactPath, setArtifactPath] = useState(
+    () => new URLSearchParams(window.location.search).get("artifact") ?? AVAILABLE_MAPS[0].url,
+  );
   const [slice, setSlice] = useState(null);
   const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -195,12 +218,12 @@ function Explorer() {
     setError(null);
   };
 
-  // Carrega automaticamente a URL pedida e cancela a leitura se a aplicação
-  // desmontar antes da resposta.
+  // Carrega a opção inicial ou escolhida e cancela a leitura anterior quando o
+  // usuário troca de mapa antes do término do download.
   useEffect(() => {
-    const requestedUrl = new URLSearchParams(window.location.search).get("artifact") ?? "/current-map.json";
-    const resolvedUrl = new URL(requestedUrl, window.location.href).href;
+    const resolvedUrl = new URL(artifactPath, window.location.href).href;
     const controller = new AbortController();
+    setError(null);
     fetch(resolvedUrl, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`O servidor respondeu HTTP ${response.status}.`);
@@ -211,9 +234,18 @@ function Explorer() {
         if (failure.name !== "AbortError") {
           setError(failure instanceof Error ? failure.message : "Não foi possível abrir o artifact.");
         }
-      });
+    });
     return () => controller.abort();
-  }, []);
+  }, [artifactPath]);
+
+  // Mantém a URL compartilhável sincronizada sem recarregar a aplicação nem
+  // perder o estado de conexão do viewer.
+  const selectMap = (path) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("artifact", path);
+    window.history.replaceState(null, "", url);
+    setArtifactPath(path);
+  };
 
   // Centraliza atalhos globais e os desativa quando o usuário interage com
   // elementos HTML, preservando acessibilidade e edição de formulários.
@@ -284,6 +316,7 @@ function Explorer() {
                 onFocus={() => cameraActions.current?.focus(selected)}
                 onToggleFly={() => setFlyMode((value) => !value)}
                 onHelp={() => setHelpOpen((value) => !value)} />
+              <MapSelector value={artifactPath} onChange={selectMap} />
               <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
                 visiblePointCount={visiblePoints.length} totalPointCount={points.length}
                 onToggle={toggleContextKey}

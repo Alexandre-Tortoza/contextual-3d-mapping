@@ -36,6 +36,8 @@ class CameraLidarCalibration:
         mirror_xi: parâmetro do espelho no modelo unificado MEI.
         distortion_k1, distortion_k2: distorção radial do modelo MEI.
         distortion_p1, distortion_p2: distorção tangencial do modelo MEI.
+        front_hemisphere_only: restringe a projeção a raios com profundidade
+            positiva no eixo óptico da câmera.
     """
 
     calibration_id: str
@@ -51,6 +53,7 @@ class CameraLidarCalibration:
     distortion_k2: float = 0.0
     distortion_p1: float = 0.0
     distortion_p2: float = 0.0
+    front_hemisphere_only: bool = True
 
     # Rejeita calibrações sem identidade ou intrínsecos não físicos antes da
     # projeção, onde o erro seria mais difícil de diagnosticar.
@@ -72,6 +75,8 @@ class CameraLidarCalibration:
             raise ValueError("camera intrinsics must be finite.")
         if self.fx <= 0 or self.fy <= 0:
             raise ValueError("fx and fy must be positive.")
+        if not isinstance(self.front_hemisphere_only, bool):
+            raise TypeError("front_hemisphere_only must be a boolean.")
         if self.model is CameraModel.MEI:
             if self.mirror_xi is None or not isfinite(float(self.mirror_xi)):
                 raise ValueError("MEI calibration requires a finite mirror_xi.")

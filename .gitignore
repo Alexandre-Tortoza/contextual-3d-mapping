@@ -17,6 +17,7 @@ build/
 /artifacts/
 /apps/map-explorer/web/public/current-map.json
 /apps/map-explorer/web/public/*-assets/
+/apps/map-explorer/web/public/maps/
 
 # Dados brutos e artefatos locais permanecem fora do histórico Git.
 datasets/raw/

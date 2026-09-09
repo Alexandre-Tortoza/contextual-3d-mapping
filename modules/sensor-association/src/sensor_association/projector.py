@@ -46,13 +46,11 @@ def _project(
 ) -> tuple[int, int] | None:
     """Projeta coordenadas de câmera no modelo definido pela calibração."""
     x, y, z = camera_point
+    if calibration.front_hemisphere_only and z <= 0:
+        return None
     if calibration.model is CameraModel.PINHOLE:
-        if z <= 0:
-            return None
         u, v = calibration.fx * x / z + calibration.cx, calibration.fy * y / z + calibration.cy
     elif calibration.model is CameraModel.EQUIDISTANT_FISHEYE:
-        if z <= 0:
-            return None
         radius = hypot(x, y)
         theta = atan2(radius, z)
         scale = theta / radius if radius else 1.0

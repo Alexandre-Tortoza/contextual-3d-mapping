@@ -38,6 +38,11 @@ O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
 Ele abre `/current-map.json` por default e aceita outra URL pelo parâmetro
 `?artifact=`.
 
+O seletor compacto no mapa alterna entre o artifact contextual atual — um
+frame visual sobre a geometria acumulada — e o trecho puramente geométrico de
+20 segundos. Essa distinção evita apresentar contexto de um frame como se já
+fosse fusão temporal de todo o trecho.
+
 Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra
 `artifacts/corridor-02-fastlio-20s.json`. O viewer enquadra automaticamente os
 limites da nuvem e permite órbita, zoom e inspeção de cada ponto amostrado.

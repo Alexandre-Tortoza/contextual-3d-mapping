@@ -71,6 +71,9 @@ make corridor-02-context \
 
 O artifact `artifacts/corridor-02-fastlio-20s-context.json` preserva os pontos
 geométricos não observados e adiciona somente os pontos com projeção MEI e RGB
-válidos. Claims de região e de cena são mantidos como predições VLM com estado
+válidos no hemisfério frontal da câmera. A restrição é necessária porque a
+equação MEI também admite raios traseiros matematicamente projetáveis, embora
+eles não pertençam ao campo de visão físico deste rig. Claims de região e de
+cena são mantidos como predições VLM com estado
 de suporte e proveniência; não são promovidos a ground truth. Os previews ficam
 no diretório homônimo com sufixo `-assets`.

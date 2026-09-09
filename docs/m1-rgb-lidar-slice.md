@@ -84,10 +84,12 @@ npm ci
 npm run dev
 ```
 
-Abra o JSON produzido no seletor de arquivo. Um ponto selecionado deve exibir
-coordenadas de mapa, observação LiDAR, observação RGB, pixel, cor, região,
-claim visual, feature reference e artifact de calibração quando a associação
-for válida.
+Execute `make map-explorer-serve` e use o seletor compacto do viewer para
+alternar entre o trecho geométrico e o artifact contextual publicado. Um ponto
+selecionado deve exibir coordenadas de mapa, observação LiDAR, observação RGB,
+pixel, cor, região, claim visual, feature reference e artifact de calibração
+quando a associação for válida. A câmera frontal rejeita associações com
+profundidade não positiva no eixo óptico.
 
 ## Limites de M1
 

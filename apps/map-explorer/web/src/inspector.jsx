@@ -19,9 +19,9 @@ function ObservationPreview({ observation, region, pixel, artifactUrl }) {
   return (
     <div className="evidence-block">
       <div className="block-heading">
-        <strong>Frame de evidência</strong>
+        <strong>Frame · {showOverlay ? "Regiões VLM" : "Original"}</strong>
         <button className="text-action" type="button" onClick={() => setShowOverlay((value) => !value)}>
-          {showOverlay ? "Imagem original" : "Regiões do VLM"}
+          {showOverlay ? "Ver original" : "Ver regiões"}
         </button>
       </div>
       {source ? (

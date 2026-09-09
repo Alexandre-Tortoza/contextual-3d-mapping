@@ -84,6 +84,18 @@ summary:focus-visible {
 .camera-toolbar span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
 .camera-toolbar .help-action { width: 38px; justify-content: center; color: var(--yellow); font-size: 1.1rem; font-weight: 700; }
 
+.map-selector {
+  top: 14px;
+  right: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: min(365px, calc(100% - 28px));
+  min-height: 46px;
+  align-items: stretch;
+}
+.map-selector > span { display: grid; place-items: center; padding: 0 10px; border-right: 2px solid var(--line); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+.map-selector select { min-width: 0; border: 0; padding: 0 10px; background: var(--ink); color: var(--paper); font: 600 0.7rem "IBM Plex Mono", monospace; cursor: pointer; }
+
 .overlay-title {
   display: flex;
   min-height: 39px;
@@ -275,6 +287,7 @@ summary:focus-visible {
   .workspace.with-dock { grid-template-columns: minmax(0, 1fr) 350px; }
   .camera-toolbar span { display: none; }
   .camera-toolbar button { width: 43px; justify-content: center; }
+  .map-selector { top: 74px; left: 14px; right: auto; width: min(300px, calc(100% - 28px)); }
 }
 
 @media (max-width: 760px) {
@@ -282,6 +295,7 @@ summary:focus-visible {
   .workspace.with-dock .map-column { min-height: 240px; }
   .inspector-dock { border-top: 3px solid var(--line); border-left: 0; }
   .camera-toolbar { top: 8px; left: 8px; }
+  .map-selector { top: 64px; left: 8px; width: min(280px, calc(100% - 16px)); }
   .context-legend { bottom: 8px; left: 8px; width: min(255px, calc(100% - 16px)); }
   .context-legend:not([open]) { width: 158px; }
   .legend-list { max-height: 22vh; }

@@ -74,6 +74,8 @@ map-explorer-build:
 
 map-explorer-serve:
 	mkdir -p apps/map-explorer/web/public
+	mkdir -p apps/map-explorer/web/public/maps
 	cp "$(MAP_EXPLORER_ARTIFACT)" apps/map-explorer/web/public/current-map.json
+	cp "$(M1_PCD_ARTIFACT)" apps/map-explorer/web/public/maps/corridor-02-geometry-20s.json
 	if [ -d "$(MAP_EXPLORER_ASSETS)" ]; then cp -R "$(MAP_EXPLORER_ASSETS)" apps/map-explorer/web/public/; fi
 	cd apps/map-explorer/web && npm run dev -- --host 0.0.0.0
