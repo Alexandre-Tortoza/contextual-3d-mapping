@@ -41,6 +41,21 @@ def _parser() -> argparse.ArgumentParser:
         default=25_000,
         help="quantidade máxima de pontos enviada ao viewer",
     )
+    context = commands.add_parser(
+        "corridor-02-context",
+        help="associa uma observação visual real ao slice FAST-LIO do corridor-02",
+    )
+    context.add_argument("--geometric-slice", type=Path, required=True)
+    context.add_argument("--bag", type=Path, required=True)
+    context.add_argument("--intrinsics", type=Path, required=True)
+    context.add_argument("--extrinsics", type=Path, required=True)
+    context.add_argument("--ground-truth", type=Path, required=True)
+    context.add_argument("--visual-observation", type=Path, required=True)
+    context.add_argument("--raw-image", type=Path, required=True)
+    context.add_argument("--overlay-image", type=Path, required=True)
+    context.add_argument("--valid-area-mask", type=Path, required=True)
+    context.add_argument("--output", type=Path, required=True)
+    context.add_argument("--camera-sequence-index", type=int, default=0)
     return parser
 
 
@@ -65,6 +80,27 @@ def main(arguments: Sequence[str] | None = None) -> int:
             map_id=options.map_id,
             map_frame=options.map_frame,
             max_points=options.max_points,
+        )
+        print(destination)
+    elif options.command == "corridor-02-context":
+        # Importa dependências opcionais apenas no workflow real, mantendo o
+        # demo e os testes mínimos executáveis sem rosbags/Pillow/PyYAML.
+        from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
+
+        destination = export_corridor02_context(
+            Corridor02ContextRequest(
+                geometric_slice=options.geometric_slice,
+                bag=options.bag,
+                intrinsics=options.intrinsics,
+                extrinsics=options.extrinsics,
+                ground_truth=options.ground_truth,
+                visual_observation=options.visual_observation,
+                raw_image=options.raw_image,
+                overlay_image=options.overlay_image,
+                valid_area_mask=options.valid_area_mask,
+                destination=options.output,
+                camera_sequence_index=options.camera_sequence_index,
+            )
         )
         print(destination)
     return 0

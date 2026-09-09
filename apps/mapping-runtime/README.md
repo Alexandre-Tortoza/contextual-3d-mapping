@@ -57,3 +57,20 @@ make corridor-02-map
 O resultado fica em `artifacts/corridor-02-fastlio-20s.json`. A amostragem é
 determinística e mantém no máximo 25 mil pontos; `display_color_rgb` representa
 somente altura geométrica e não é tratado como associação RGB.
+
+## Associação contextual do corridor-02
+
+Quando uma execução real de `visual-perception` está disponível, o runtime pode
+associar seu primeiro frame ao scan LiDAR sincronizado e ao mapa FAST-LIO:
+
+```bash
+make corridor-02-context \
+  PYTHON=modules/visual-perception/.venv/bin/python \
+  M1_VISUAL_RUN=modules/visual-perception/benchmarks/results/samples/<run-id>
+```
+
+O artifact `artifacts/corridor-02-fastlio-20s-context.json` preserva os pontos
+geométricos não observados e adiciona somente os pontos com projeção MEI e RGB
+válidos. Claims de região e de cena são mantidos como predições VLM com estado
+de suporte e proveniência; não são promovidos a ground truth. Os previews ficam
+no diretório homônimo com sufixo `-assets`.

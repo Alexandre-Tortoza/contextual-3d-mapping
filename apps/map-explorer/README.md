@@ -51,3 +51,10 @@ make map-explorer-serve
 
 Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
 arquivo publicado é local e ignorado pelo Git.
+
+Artifacts contextuais expõem camadas independentes de geometria, RGB e claims
+do VLM. Ao selecionar um ponto observado, o painel mostra o frame de origem,
+o pixel projetado, a região, a confiança, o estado de suporte e a proveniência.
+Pontos sem observação visual permanecem explicitamente sem contexto. O alvo
+`map-explorer-serve` usa por default o artifact contextual e copia seus previews;
+outro arquivo pode ser selecionado com `MAP_EXPLORER_ARTIFACT=artifacts/outro.json`.

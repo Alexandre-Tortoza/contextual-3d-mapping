@@ -125,3 +125,37 @@ def test_associate_points_rejects_overlapping_regions() -> None:
 
     with pytest.raises(ValueError, match="must not overlap"):
         associate_points((_point("point", (0.0, 0.0, 1.0)),), rgb, _calibration(), regions)
+
+
+# Valida a projeção unificada MEI com distorção nula em um raio que o
+# modelo pinhole rejeitaria. Protege o suporte omnidirecional do corridor-02.
+def test_associate_points_projects_mei_ray_behind_optical_plane() -> None:
+    """Projeta um raio MEI com z negativo quando o denominador unificado é válido."""
+    calibration = CameraLidarCalibration(
+        "calibration-1",
+        SourceArtifactReference("fixture://calibration", "application/json"),
+        CameraModel.MEI,
+        2.0,
+        2.0,
+        2.0,
+        2.0,
+        RigidTransform(
+            FrameId("lidar"),
+            FrameId("camera"),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0, 1.0),
+        ),
+        mirror_xi=1.5,
+    )
+    rgb = RgbFrame(
+        _reference("rgb-1", "rgb", "camera"),
+        5,
+        5,
+        tuple((index, 0, 0) for index in range(25)),
+        frozenset((x, y) for y in range(5) for x in range(5)),
+    )
+
+    result = associate_points((_point("point", (0.0, 0.0, -1.0)),), rgb, calibration)
+
+    assert result[0].status is AssociationStatus.ASSOCIATED
+    assert result[0].pixel == (2, 2)

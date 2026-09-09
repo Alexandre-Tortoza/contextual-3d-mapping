@@ -18,6 +18,7 @@ class CameraModel(StrEnum):
 
     PINHOLE = "pinhole"
     EQUIDISTANT_FISHEYE = "equidistant_fisheye"
+    MEI = "mei"
 
 
 # Agrupa intrínsecos e extrínseca de câmera–LiDAR com uma referência externa
@@ -32,6 +33,9 @@ class CameraLidarCalibration:
         model: modelo de projeção da câmera.
         fx, fy, cx, cy: intrínsecos em pixels.
         lidar_to_camera: extrínseca do frame LiDAR para o frame da câmera.
+        mirror_xi: parâmetro do espelho no modelo unificado MEI.
+        distortion_k1, distortion_k2: distorção radial do modelo MEI.
+        distortion_p1, distortion_p2: distorção tangencial do modelo MEI.
     """
 
     calibration_id: str
@@ -42,6 +46,11 @@ class CameraLidarCalibration:
     cx: float
     cy: float
     lidar_to_camera: RigidTransform
+    mirror_xi: float | None = None
+    distortion_k1: float = 0.0
+    distortion_k2: float = 0.0
+    distortion_p1: float = 0.0
+    distortion_p2: float = 0.0
 
     # Rejeita calibrações sem identidade ou intrínsecos não físicos antes da
     # projeção, onde o erro seria mais difícil de diagnosticar.
@@ -49,11 +58,25 @@ class CameraLidarCalibration:
         """Valida identidade e parâmetros intrínsecos da calibração."""
         if not self.calibration_id.strip():
             raise ValueError("calibration_id must not be empty.")
-        intrinsics = (self.fx, self.fy, self.cx, self.cy)
+        intrinsics = (
+            self.fx,
+            self.fy,
+            self.cx,
+            self.cy,
+            self.distortion_k1,
+            self.distortion_k2,
+            self.distortion_p1,
+            self.distortion_p2,
+        )
         if not all(isfinite(float(value)) for value in intrinsics):
             raise ValueError("camera intrinsics must be finite.")
         if self.fx <= 0 or self.fy <= 0:
             raise ValueError("fx and fy must be positive.")
+        if self.model is CameraModel.MEI:
+            if self.mirror_xi is None or not isfinite(float(self.mirror_xi)):
+                raise ValueError("MEI calibration requires a finite mirror_xi.")
+        elif self.mirror_xi is not None:
+            raise ValueError("mirror_xi is only valid for MEI calibration.")
 
 
 # Carrega os pixels RGB e suporte válido necessários para colorização sem

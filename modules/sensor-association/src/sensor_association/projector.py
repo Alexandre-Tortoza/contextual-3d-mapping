@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import atan2, hypot
+from math import atan2, hypot, sqrt
 
 from geometric_map import GeometryPoint
 
@@ -38,22 +38,52 @@ def _to_camera(
     return tuple(rotated[axis] + calibration.lidar_to_camera.translation_m[axis] for axis in range(3))
 
 
-# Projeta em pinhole ou fisheye equidistante, sempre retornando pixel inteiro
-# por arredondamento determinístico. Pontos atrás da câmera não produzem pixel.
+# Projeta nos modelos pinhole, fisheye equidistante ou unificado MEI, sempre
+# retornando pixel inteiro por arredondamento determinístico. A formulação
+# MEI segue o contract CamOdoCal usado pelos arquivos de calibração do dataset.
 def _project(
     camera_point: tuple[float, float, float], calibration: CameraLidarCalibration
 ) -> tuple[int, int] | None:
     """Projeta coordenadas de câmera no modelo definido pela calibração."""
     x, y, z = camera_point
-    if z <= 0:
-        return None
     if calibration.model is CameraModel.PINHOLE:
+        if z <= 0:
+            return None
         u, v = calibration.fx * x / z + calibration.cx, calibration.fy * y / z + calibration.cy
-    else:
+    elif calibration.model is CameraModel.EQUIDISTANT_FISHEYE:
+        if z <= 0:
+            return None
         radius = hypot(x, y)
         theta = atan2(radius, z)
         scale = theta / radius if radius else 1.0
         u, v = calibration.fx * x * scale + calibration.cx, calibration.fy * y * scale + calibration.cy
+    else:
+        length = sqrt(x * x + y * y + z * z)
+        if length == 0.0:  # Um ponto na origem não define um raio óptico.
+            return None
+        normalized_x, normalized_y, normalized_z = x / length, y / length, z / length
+        denominator = normalized_z + float(calibration.mirror_xi)
+        if denominator <= 0.0:
+            return None
+        model_x, model_y = normalized_x / denominator, normalized_y / denominator
+        radius_squared = model_x * model_x + model_y * model_y
+        radial = (
+            1.0
+            + calibration.distortion_k1 * radius_squared
+            + calibration.distortion_k2 * radius_squared * radius_squared
+        )
+        delta_x = (
+            2.0 * calibration.distortion_p1 * model_x * model_y
+            + calibration.distortion_p2 * (radius_squared + 2.0 * model_x * model_x)
+        )
+        delta_y = (
+            calibration.distortion_p1 * (radius_squared + 2.0 * model_y * model_y)
+            + 2.0 * calibration.distortion_p2 * model_x * model_y
+        )
+        distorted_x = radial * model_x + delta_x
+        distorted_y = radial * model_y + delta_y
+        u = calibration.fx * distorted_x + calibration.cx
+        v = calibration.fy * distorted_y + calibration.cy
     return round(u), round(v)
 
 
@@ -120,7 +150,8 @@ def associate_points(
         elif pixel not in rgb.valid_pixels:
             rejected[point.reference.geometry_id] = AssociationStatus.OUTSIDE_VALID_SUPPORT
         else:
-            candidates.append((point, pixel, camera_point[2]))
+            depth = sqrt(sum(coordinate * coordinate for coordinate in camera_point))
+            candidates.append((point, pixel, depth))
     visible: dict[tuple[int, int], tuple[GeometryPoint, float]] = {}
     visible_pixel_by_geometry: dict[str, tuple[int, int]] = {}
     for point, pixel, depth in sorted(candidates, key=lambda item: (item[2], item[0].reference.geometry_id)):
