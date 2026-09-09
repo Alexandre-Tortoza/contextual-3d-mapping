@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 import sys
 from pathlib import Path
@@ -15,7 +16,9 @@ sys.path.insert(0, str(_THIS_DIR.parent / "src"))
 sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 
 from validate_reference_pipeline import (  # noqa: E402
+    ValidationOptions,
     evidence_state_counts,
+    resolve_config,
     select_frame_paths,
 )
 from visual_perception.domain.geometry import BoundingBox, Mask  # noqa: E402
@@ -145,3 +148,33 @@ def test_manifest_summary_distinguishes_missing_from_failed_slots() -> None:
     assert counts[EvidenceSlot.CONTEXTUAL_CROP.value][EvidenceState.FAILED.value] == 1
 
 
+
+
+# A comparação de backends (#218) só é interpretável se **um** fator mudar. O
+# override precisa tocar o checkpoint e nada mais: se ele arrastasse junto o
+# prompt, as views ou os tetos dos estágios contextuais, a diferença medida não
+# poderia ser atribuída ao modelo.
+def test_the_reasoning_checkpoint_override_changes_only_the_checkpoint() -> None:
+    """Trocar o checkpoint do reasoner não altera nenhum outro campo da config."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, reasoning_checkpoint="Qwen/Qwen3-VL-4B-Instruct")
+    )
+
+    assert candidate.multimodal_reasoning.checkpoint == "Qwen/Qwen3-VL-4B-Instruct"
+    assert baseline.multimodal_reasoning.checkpoint != candidate.multimodal_reasoning.checkpoint
+    assert dataclasses.replace(
+        candidate.multimodal_reasoning, checkpoint=baseline.multimodal_reasoning.checkpoint
+    ) == baseline.multimodal_reasoning
+    for field in ("region_discovery", "feature_extraction", "language_embedding",
+                  "multi_context", "hypothesis_support", "refinement",
+                  "reconciliation", "semantic_relations", "calibration"):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# E sem o override a configuração de referência fica intacta.
+def test_without_the_override_the_reference_checkpoint_is_untouched() -> None:
+    """Omitir o override preserva o checkpoint da configuração de referência."""
+    config = resolve_config(ValidationOptions(sequence_masks=None))
+
+    assert config.multimodal_reasoning.checkpoint == "Qwen/Qwen2.5-VL-3B-Instruct"

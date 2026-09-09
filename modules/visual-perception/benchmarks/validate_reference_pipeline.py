@@ -119,6 +119,14 @@ class ValidationOptions:
     #: ``region_views``: os dois canais de contexto são ablatáveis
     #: separadamente, com o resto do prompt inalterado.
     scene_context_mode: str | None = None
+    #: Sobrescreve o checkpoint do reasoner multimodal, mantendo **todo o
+    #: resto** constante: mesmos frames, mesmas views, mesmo prompt, mesma
+    #: temperatura, mesmos tetos dos estágios contextuais. Existe porque a
+    #: comparação de backends só é interpretável quando a arquitetura não se
+    #: mexe entre os braços, e esse era exatamente o problema da seleção
+    #: anterior — ela foi feita antes de os estágios contextuais existirem.
+    #: ``None`` mantém o checkpoint da configuração de referência.
+    reasoning_checkpoint: str | None = None
     #: Geometria de área da sequência (círculo útil da lente e silhueta do
     #: rig). A exclusão acontece dentro do pipeline, na filtragem de proposals,
     #: e nunca pintando pixels: até a #202 este harness tinha um
@@ -294,6 +302,59 @@ def model_call_counts(
     return {**counts, "total": sum(counts.values())}
 
 
+# Resolve a configuração de um run a partir das opções, sem executar nada.
+# Existe separada de ``run_validation`` porque a decisão de configuração é o que
+# uma comparação de backends precisa poder inspecionar: a #218 exige que apenas
+# o checkpoint difira entre dois braços, e isso é verificável sem GPU.
+def resolve_config(options: ValidationOptions) -> ModuleConfig:
+    """Retorna a ``ModuleConfig`` que ``options`` seleciona.
+
+    Argumentos:
+        options: as opções reproduzíveis do run.
+    Retorna:
+        a configuração de referência com os overrides declarados aplicados.
+    """
+    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    # A geometria de área da sequência entra na configuração do módulo, e não
+    # num passo do harness: assim ela participa do fingerprint e do manifest, e
+    # a exclusão acontece dentro do pipeline em vez de sobre os pixels.
+    config = dataclasses.replace(
+        config, image_area=load_image_area_config(options.sequence_masks)
+    )
+    if options.context_profile == "baseline":
+        config = dataclasses.replace(
+            config,
+            multi_context=MultiContextConfig(
+                foreground_enabled=True,
+                tight_crop_enabled=True,
+                contextual_crop_enabled=False,
+                scene_conditioned_enabled=False,
+            ),
+        )
+    if options.region_views is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, region_views=options.region_views
+            ),
+        )
+    if options.reasoning_checkpoint is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, checkpoint=options.reasoning_checkpoint
+            ),
+        )
+    if options.scene_context_mode is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, scene_context_mode=options.scene_context_mode
+            ),
+        )
+    return config
+
+
 # Executa a validação real e persiste artifacts canônicos e opcionais em
 # diretórios distintos. Esta função existe para tornar seleção e provenance
 # testáveis sem acoplar o contract ao argparse.
@@ -319,38 +380,9 @@ def run_validation(
             f"No frames found in {options.frames_dir}. Run prepare_corridor02_frames.py first."
         )
 
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
-    # A geometria de área da sequência entra na configuração do módulo, e não
-    # num passo do harness: assim ela participa do fingerprint e do manifest, e
-    # a exclusão acontece dentro do pipeline em vez de sobre os pixels.
-    config = dataclasses.replace(
-        config, image_area=load_image_area_config(options.sequence_masks)
-    )
+    config = resolve_config(options)
     masks_resolution = sequence_masks_resolution(options.sequence_masks)
-    if options.context_profile == "baseline":
-        config = dataclasses.replace(
-            config,
-            multi_context=MultiContextConfig(
-                foreground_enabled=True,
-                tight_crop_enabled=True,
-                contextual_crop_enabled=False,
-                scene_conditioned_enabled=False,
-            ),
-        )
-    if options.region_views is not None:
-        config = dataclasses.replace(
-            config,
-            multimodal_reasoning=dataclasses.replace(
-                config.multimodal_reasoning, region_views=options.region_views
-            ),
-        )
-    if options.scene_context_mode is not None:
-        config = dataclasses.replace(
-            config,
-            multimodal_reasoning=dataclasses.replace(
-                config.multimodal_reasoning, scene_context_mode=options.scene_context_mode
-            ),
-        )
+
     lifecycle = ModelLifecycleManager()
     ports = (ports_factory or create_perception_ports)(config, lifecycle)
 
@@ -587,6 +619,15 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame-id", action="append", default=[])
     parser.add_argument("--limit", type=int)
     parser.add_argument(
+        "--reasoning-checkpoint",
+        default=None,
+        help=(
+            "Compara um checkpoint de raciocínio multimodal diferente mantendo todo o "
+            "resto constante (#218). Trocar prompt e modelo na mesma comparação torna "
+            "as duas mudanças ininterpretáveis."
+        ),
+    )
+    parser.add_argument(
         "--context-profile",
         choices=("baseline", "full"),
         default="full",
@@ -632,6 +673,7 @@ def main(argv: list[str] | None = None) -> None:
             frame_ids=tuple(arguments.frame_id),
             limit=arguments.limit,
             context_profile=arguments.context_profile,
+            reasoning_checkpoint=arguments.reasoning_checkpoint,
             region_views=tuple(arguments.region_views) or None,
             scene_context_mode=arguments.scene_context_mode,
             sequence_masks=arguments.sequence_masks if arguments.sequence_masks.is_file() else None,
