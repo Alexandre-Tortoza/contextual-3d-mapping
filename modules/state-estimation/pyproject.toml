@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "state-estimation"
+version = "0.1.0"
+description = "Pose estimation and motion-corrected LiDAR contracts."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/state_estimation"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "../../../contracts"]
+
+[tool.ruff]
+line-length = 110
+src = ["src", "tests"]
