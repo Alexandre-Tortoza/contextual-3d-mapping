@@ -41,12 +41,13 @@ class GeometryPoint:
 
     reference: GeometryReference
     coordinates_m: tuple[float, float, float]
+    source_coordinates_m: tuple[float, float, float]
     source_observation: ObservationReference
     provenance: Provenance
 
     def __post_init__(self) -> None:
-        if len(self.coordinates_m) != 3:
-            raise ValueError("coordinates_m must contain exactly three values.")
+        if len(self.coordinates_m) != 3 or len(self.source_coordinates_m) != 3:
+            raise ValueError("coordinates_m and source_coordinates_m must contain xyz triples.")
 
 
 # Representa bounds explícitos de busca para não vazar estruturas de índice.

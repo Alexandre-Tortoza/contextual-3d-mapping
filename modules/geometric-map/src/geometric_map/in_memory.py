@@ -55,7 +55,7 @@ class InMemoryGeometricMap:
             if geometry_id in self._points:
                 raise ValueError(f"duplicate geometry id {geometry_id!r}.")
             self._points[geometry_id] = GeometryPoint(
-                reference, coordinates, frame.observation.reference, frame.provenance
+                reference, coordinates, point, frame.observation.reference, frame.provenance
             )
             references.append(reference)
         return tuple(references)
