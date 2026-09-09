@@ -69,7 +69,8 @@ para mover câmera e alvo, e scroll para aproximar no cursor. `Modo voo` adicion
 Seleção não move a câmera; duplo clique ou `F` foca o ponto. `Home` restaura a
 vista geral, enquanto `1` e `2` abrem as vistas superior e isométrica.
 
-A sidebar `Detalhes` reúne a inspeção e a legenda de contexto, que permite
-ocultar ou isolar labels sem recarregar o mapa. O frontend consome a geometria
-por uma fronteira interna compatível com bounds e LOD futuros; o artifact local
-atual continua sendo servido como um único chunk estático.
+A sidebar `Detalhes` concentra a inspeção. A legenda contextual fica em um
+painel pequeno e recolhível no canto inferior esquerdo do mapa e permite ocultar
+ou isolar labels sem recarregar a geometria. O frontend consome a nuvem por uma
+fronteira interna compatível com bounds e LOD futuros; o artifact local atual
+continua sendo servido como um único chunk estático.

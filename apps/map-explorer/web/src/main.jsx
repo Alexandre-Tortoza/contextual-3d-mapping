@@ -83,6 +83,38 @@ function SpatialReference({ metrics }) {
   );
 }
 
+// Oferece a leitura e os filtros das cores em um painel pequeno e recolhível,
+// mantendo a sidebar reservada à evidência do ponto selecionado.
+function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCount, onToggle, onIsolate, onReset }) {
+  return (
+    <details className="map-overlay context-legend" open>
+      <summary>
+        <span>Legenda</span>
+        <small>{visiblePointCount.toLocaleString("pt-BR")} / {totalPointCount.toLocaleString("pt-BR")}</small>
+      </summary>
+      <div className="legend-actions">
+        <span>Contexto</span>
+        <button type="button" onClick={onReset}>Mostrar tudo</button>
+      </div>
+      <div className="legend-list">
+        {entries.map((entry) => {
+          const enabled = enabledKeys === null || enabledKeys.has(entry.key);
+          return (
+            <div className={`legend-row ${enabled ? "" : "disabled"}`} key={entry.key}>
+              <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(entry.key)}>
+                <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
+                <span>{entry.label}</span>
+                <b>{entry.count.toLocaleString("pt-BR")}</b>
+              </button>
+              <button type="button" className="isolate-action" onClick={() => onIsolate(entry.key)}>Isolar</button>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 // Expõe os comandos de câmera no próprio mapa para que navegação não dependa
 // de conhecer atalhos de teclado.
 function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onFocus, onToggleFly, onHelp }) {
@@ -252,6 +284,11 @@ function Explorer() {
                 onFocus={() => cameraActions.current?.focus(selected)}
                 onToggleFly={() => setFlyMode((value) => !value)}
                 onHelp={() => setHelpOpen((value) => !value)} />
+              <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
+                visiblePointCount={visiblePoints.length} totalPointCount={points.length}
+                onToggle={toggleContextKey}
+                onIsolate={(key) => setEnabledContextKeys(new Set([key]))}
+                onReset={() => setEnabledContextKeys(null)} />
               {helpOpen && <NavigationHelp onClose={() => setHelpOpen(false)} />}
               {!dockOpen && (
                 <button type="button" className="dock-trigger" onClick={() => setDockOpen(true)}>
@@ -263,11 +300,7 @@ function Explorer() {
           {dockOpen && (
             <Inspector point={selected} slice={slice} artifactUrl={artifactUrl}
               onClose={() => setDockOpen(false)} onFocus={() => cameraActions.current?.focus(selected)}
-              hiddenByFilter={selectedHidden} legendEntries={legendEntries}
-              enabledContextKeys={enabledContextKeys} visiblePointCount={visiblePoints.length}
-              onToggleContext={toggleContextKey}
-              onIsolateContext={(key) => setEnabledContextKeys(new Set([key]))}
-              onResetContext={() => setEnabledContextKeys(null)} />
+              hiddenByFilter={selectedHidden} />
           )}
         </div>
       )}

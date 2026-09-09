@@ -77,38 +77,6 @@ function SceneClaims({ claims }) {
   );
 }
 
-// Mantém filtros contextuais dentro da sidebar para que o mapa permaneça livre
-// de painéis sobrepostos e a legenda funcione também sem ponto selecionado.
-function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCount, onToggle, onIsolate, onReset }) {
-  return (
-    <details className="legend-details" open>
-      <summary>
-        <span>Legenda</span>
-        <small>{visiblePointCount.toLocaleString("pt-BR")} / {totalPointCount.toLocaleString("pt-BR")}</small>
-      </summary>
-      <div className="legend-actions">
-        <span>Cores contextuais</span>
-        <button type="button" onClick={onReset}>Mostrar tudo</button>
-      </div>
-      <div className="legend-list">
-        {entries.map((entry) => {
-          const enabled = enabledKeys === null || enabledKeys.has(entry.key);
-          return (
-            <div className={`legend-row ${enabled ? "" : "disabled"}`} key={entry.key}>
-              <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(entry.key)}>
-                <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
-                <span>{entry.label}</span>
-                <b>{entry.count.toLocaleString("pt-BR")}</b>
-              </button>
-              <button type="button" className="isolate-action" onClick={() => onIsolate(entry.key)}>Isolar</button>
-            </div>
-          );
-        })}
-      </div>
-    </details>
-  );
-}
-
 // Apresenta a seleção em camadas de evidência e mantém metadados extensos num
 // disclosure técnico, reduzindo a densidade inicial do dock.
 export function Inspector({
@@ -118,12 +86,6 @@ export function Inspector({
   onClose,
   onFocus,
   hiddenByFilter = false,
-  legendEntries,
-  enabledContextKeys,
-  visiblePointCount,
-  onToggleContext,
-  onIsolateContext,
-  onResetContext,
 }) {
   const association = point?.association;
   const observation = slice.observations?.find(
@@ -207,9 +169,6 @@ export function Inspector({
             </details>
           </>
         )}
-        <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
-          visiblePointCount={visiblePointCount} totalPointCount={slice.points.length}
-          onToggle={onToggleContext} onIsolate={onIsolateContext} onReset={onResetContext} />
       </div>
     </aside>
   );
