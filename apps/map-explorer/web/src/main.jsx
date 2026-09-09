@@ -1,23 +1,29 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
-import { Bounds, OrbitControls, PointMaterial } from "@react-three/drei";
+import { PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
+
+import { CameraRig } from "./camera-rig.jsx";
+import { Inspector } from "./inspector.jsx";
+import {
+  StaticArtifactGeometrySource,
+  buildContextLegend,
+  contextKey,
+  filterPoints,
+  measureMap,
+  pointColor,
+  validateSlice,
+} from "./map-data.js";
+import { isEditableTarget } from "./navigation.js";
 import "./styles.css";
 
 const COLOR_MODES = { geometry: "Geometria", rgb: "RGB", context: "Contexto" };
 
-// Escolhe a cor sem misturar altura, cor física e claim semântico. Pontos sem
-// evidência permanecem neutros nas camadas que dependem de observação visual.
-function pointColor(point, colorMode) {
-  if (colorMode === "context") return point.association?.semantic_color_rgb ?? [48, 53, 64];
-  if (colorMode === "rgb") return point.association?.color_rgb ?? [48, 53, 64];
-  return point.display_color_rgb ?? [120, 130, 145];
-}
-
-// Converte o artifact público em buffers de renderização; o cliente nunca lê
-// detalhes do backend de geometria ou associação.
-function Cloud({ points, colorMode, onSelect }) {
+// Converte o subconjunto visível em buffers e mantém o índice de picking
+// alinhado aos pontos depois de filtros de legenda.
+function Cloud({ points, colorMode, onSelect, onFocus }) {
+  const pointerOrigin = useRef(null);
   const geometry = useMemo(() => {
     const positions = [];
     const colors = [];
@@ -31,199 +37,198 @@ function Cloud({ points, colorMode, onSelect }) {
     return value;
   }, [points, colorMode]);
   useEffect(() => () => geometry.dispose(), [geometry]);
+
+  // Distingue clique de arraste para que orbitar ou fazer pan não selecione um
+  // ponto acidentalmente ao soltar o mouse.
+  const selectIfStationary = (event, focus = false) => {
+    const origin = pointerOrigin.current;
+    const distance = origin ? Math.hypot(event.clientX - origin.x, event.clientY - origin.y) : 0;
+    if (distance > 4) return;
+    event.stopPropagation();
+    const point = points[event.index] ?? null;
+    onSelect(point);
+    if (focus && point) onFocus(point);
+  };
+
   return (
-    <points geometry={geometry} onClick={(event) => onSelect(points[event.index] ?? null)}>
-      <PointMaterial vertexColors size={2} sizeAttenuation={false} />
+    <points
+      geometry={geometry}
+      onPointerDown={(event) => { pointerOrigin.current = { x: event.clientX, y: event.clientY }; }}
+      onClick={(event) => selectIfStationary(event)}
+      onDoubleClick={(event) => selectIfStationary(event, true)}
+    >
+      <PointMaterial vertexColors size={2.2} sizeAttenuation={false} />
     </points>
   );
 }
 
-// Marca o ponto inspecionado sem alterar Bounds nem reposicionar a câmera.
-// Existe para manter seleção e navegação como estados independentes.
-function SelectionMarker({ point }) {
+// Marca o ponto inspecionado sem alterar o centro da câmera.
+function SelectionMarker({ point, radius }) {
   if (!point) return null;
   return (
-    <mesh position={point.coordinates_m}>
-      <sphereGeometry args={[0.08, 16, 16]} />
-      <meshBasicMaterial color="#ff3b30" depthTest={false} />
+    <mesh position={point.coordinates_m} renderOrder={2}>
+      <sphereGeometry args={[radius, 16, 16]} />
+      <meshBasicMaterial color="#ff3535" depthTest={false} />
     </mesh>
   );
 }
 
-// Valida somente a fronteira que o viewer consome, produzindo um diagnóstico
-// legível quando o usuário seleciona outro JSON por engano.
-function validateSlice(value) {
-  if (![1, 2].includes(value?.schema_version)) {
-    throw new Error("O artifact precisa usar schema_version 1 ou 2.");
-  }
-  if (typeof value.map_id !== "string" || typeof value.map_frame !== "string") {
-    throw new Error("O artifact precisa declarar map_id e map_frame.");
-  }
-  if (!Array.isArray(value.points)) throw new Error("O artifact precisa conter uma lista points.");
-  value.points.forEach((point, index) => {
-    if (!Array.isArray(point.coordinates_m) || point.coordinates_m.length !== 3) {
-      throw new Error(`O ponto ${index} não possui coordinates_m tridimensional.`);
-    }
-  });
-  if (value.schema_version === 2 && (!Array.isArray(value.observations) || !Array.isArray(value.regions))) {
-    throw new Error("O artifact contextual precisa declarar observations e regions.");
-  }
-  return value;
-}
-
-// Explica o alcance real do artifact sem transformar cobertura parcial em uma
-// promessa de mapa semântico completo.
-function Coverage({ slice }) {
-  if (!slice.context_summary) return <p className="notice">Este artifact contém somente geometria.</p>;
-  const summary = slice.context_summary;
+// Mantém uma referência espacial discreta no plano XY do menor Z do mapa.
+function SpatialReference({ metrics }) {
+  const size = Math.max(metrics.diagonal, 2);
   return (
-    <p className="notice">
-      <strong>{summary.contextual_point_count.toLocaleString("pt-BR")}</strong> pontos com contexto e{" "}
-      <strong>{summary.rgb_point_count.toLocaleString("pt-BR")}</strong> com RGB;{" "}
-      {summary.unobserved_geometric_point_count.toLocaleString("pt-BR")} pontos geométricos ainda não observados.
-      Claims: {summary.claim_status}.
-    </p>
+    <group position={[metrics.center[0], metrics.center[1], metrics.minimumHeight]}>
+      <gridHelper args={[size, 20, "#173dff", "#252525"]} rotation={[Math.PI / 2, 0, 0]} />
+      <axesHelper args={[Math.max(size * 0.08, 0.5)]} />
+    </group>
   );
 }
 
-// Resolve um asset relativo ao JSON servido. Upload local não fornece uma URL
-// de diretório confiável, então esse caso permanece explicitamente indisponível.
-function resolveAsset(uri, artifactUrl) {
-  if (!uri || !artifactUrl) return null;
-  return new URL(uri, artifactUrl).href;
-}
-
-// Exibe a imagem que sustentou o claim e ancora visualmente o pixel e a box da
-// região. O overlay continua sendo evidência 2D, não confirmação geométrica 3D.
-function ObservationPreview({ observation, region, pixel, artifactUrl }) {
-  const [showOverlay, setShowOverlay] = useState(true);
-  if (!observation) return null;
-  const uri = showOverlay ? observation.overlay_image_uri : observation.raw_image_uri;
-  const source = resolveAsset(uri, artifactUrl);
-  const box = region?.box;
+// Resume cobertura em blocos compactos e mantém o status de predição visível
+// sem ocupar uma faixa textual extensa acima do mapa.
+function MapStats({ slice }) {
+  const summary = slice.context_summary;
   return (
-    <div className="evidence">
-      <div className="preview-controls">
-        <strong>Frame de evidência</strong>
-        <button type="button" onClick={() => setShowOverlay((value) => !value)}>
-          {showOverlay ? "Ver imagem original" : "Ver regiões do VLM"}
-        </button>
-      </div>
-      {source ? (
-        <div className="preview-frame">
-          <img src={source} alt="Observação RGB que sustenta o contexto selecionado" />
-          {box && (
-            <span
-              className="region-box"
-              style={{
-                left: `${(100 * box.x_min) / observation.width}%`,
-                top: `${(100 * box.y_min) / observation.height}%`,
-                width: `${(100 * (box.x_max - box.x_min)) / observation.width}%`,
-                height: `${(100 * (box.y_max - box.y_min)) / observation.height}%`,
-              }}
-            />
-          )}
-          {pixel && (
-            <span
-              className="pixel-marker"
-              style={{
-                left: `${(100 * pixel[0]) / observation.width}%`,
-                top: `${(100 * pixel[1]) / observation.height}%`,
-              }}
-              title={`Pixel (${pixel[0]}, ${pixel[1]})`}
-            />
-          )}
-        </div>
-      ) : (
-        <p>A preview requer que o artifact seja aberto pelo servidor.</p>
-      )}
-      <small>{observation.sensor_id} · {observation.frame_id} · {observation.timestamp_ns} ns</small>
+    <div className="map-stats" aria-label="Resumo do mapa">
+      <div><span>Pontos</span><strong>{slice.points.length.toLocaleString("pt-BR")}</strong></div>
+      <div><span>RGB</span><strong>{(summary?.rgb_point_count ?? 0).toLocaleString("pt-BR")}</strong></div>
+      <div><span>Contexto</span><strong>{(summary?.contextual_point_count ?? 0).toLocaleString("pt-BR")}</strong></div>
+      <div className="status-stat"><span>Status</span><strong>{summary ? "Parcial · VLM" : "Geométrico"}</strong></div>
     </div>
   );
 }
 
-// Resume os claims do frame para dar o contexto global daquele instante sem
-// confundi-los com a classificação localizada da região selecionada.
-function SceneClaims({ claims }) {
-  if (!claims?.length) return null;
+// Troca a explicação da cor junto com a camada ativa e fornece filtros somente
+// onde existem categorias contextuais.
+function Legend({ mode, entries, enabledKeys, metrics, points, onToggle, onIsolate, onReset }) {
+  if (mode === "geometry") {
+    return (
+      <div className="map-overlay legend-panel">
+        <div className="overlay-title"><span>Legenda</span><strong>Altura</strong></div>
+        <div className="height-ramp" />
+        <div className="ramp-labels"><span>{metrics.minimumHeight.toFixed(1)} m</span><span>{metrics.maximumHeight.toFixed(1)} m</span></div>
+        <p>Cor técnica calculada pelo eixo Z.</p>
+      </div>
+    );
+  }
+  if (mode === "rgb") {
+    const observed = points.filter((point) => point.association?.color_rgb).length;
+    return (
+      <div className="map-overlay legend-panel">
+        <div className="overlay-title"><span>Legenda</span><strong>RGB</strong></div>
+        <div className="legend-static"><i className="rainbow-swatch" /><span>Cor física da câmera</span><b>{observed.toLocaleString("pt-BR")}</b></div>
+        <div className="legend-static"><i style={{ background: "rgb(48 53 64)" }} /><span>Sem RGB</span><b>{(points.length - observed).toLocaleString("pt-BR")}</b></div>
+      </div>
+    );
+  }
   return (
-    <div>
-      <h3>Contexto da cena</h3>
-      <dl className="claims">
-        {claims.map((claim) => (
-          <React.Fragment key={`${claim.kind}:${claim.value}`}>
-            <dt>{claim.kind}</dt><dd>{claim.value}</dd>
-          </React.Fragment>
-        ))}
+    <div className="map-overlay legend-panel context-legend">
+      <div className="overlay-title">
+        <span>Legenda</span><button type="button" onClick={onReset}>Mostrar tudo</button>
+      </div>
+      <div className="legend-list">
+        {entries.map((entry) => {
+          const enabled = enabledKeys === null || enabledKeys.has(entry.key);
+          return (
+            <div className={`legend-row ${enabled ? "" : "disabled"}`} key={entry.key}>
+              <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(entry.key)}>
+                <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
+                <span>{entry.label}</span><b>{entry.count.toLocaleString("pt-BR")}</b>
+              </button>
+              <button type="button" className="isolate-action" onClick={() => onIsolate(entry.key)}>Isolar</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Expõe os comandos de câmera no próprio mapa para que navegação não dependa
+// de conhecer atalhos de teclado.
+function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onFocus, onToggleFly, onHelp }) {
+  return (
+    <div className="map-overlay camera-toolbar" aria-label="Controles da câmera">
+      <button type="button" onClick={onReset}><kbd>Home</kbd><span>Mapa inteiro</span></button>
+      <button type="button" onClick={onTop}><kbd>1</kbd><span>Topo</span></button>
+      <button type="button" onClick={onIsometric}><kbd>2</kbd><span>Perspectiva</span></button>
+      <button type="button" onClick={onFocus} disabled={!hasSelection}><kbd>F</kbd><span>Focar</span></button>
+      <button type="button" className={flyMode ? "active" : ""} aria-pressed={flyMode} onClick={onToggleFly}><kbd>V</kbd><span>{flyMode ? "Voando" : "Modo voo"}</span></button>
+      <button type="button" className="help-action" onClick={onHelp} aria-label="Ajuda de navegação">?</button>
+    </div>
+  );
+}
+
+// Mostra os gestos e atalhos somente sob demanda para manter o mapa dominante.
+function NavigationHelp({ onClose }) {
+  return (
+    <div className="help-popover" role="dialog" aria-label="Ajuda de navegação">
+      <div className="overlay-title"><strong>Navegação</strong><button type="button" onClick={onClose}>×</button></div>
+      <dl>
+        <dt>Arrastar esquerdo</dt><dd>Orbitar</dd>
+        <dt>Arrastar direito/meio</dt><dd>Mover alvo e câmera</dd>
+        <dt>Scroll</dt><dd>Zoom no cursor</dd>
+        <dt>Duplo clique</dt><dd>Selecionar e focar ponto</dd>
+        <dt>W A S D</dt><dd>Mover no modo voo</dd>
+        <dt>Q / E</dt><dd>Descer / subir</dd>
+        <dt>Shift</dt><dd>Velocidade 4×</dd>
       </dl>
     </div>
   );
 }
 
-// Apresenta a seleção por níveis de evidência: geometria, associação calibrada,
-// claim visual e proveniência. Pontos sem contexto recebem diagnóstico direto.
-function Inspector({ point, slice, artifactUrl }) {
-  if (!point) return <p>Selecione um ponto.</p>;
-  const association = point.association;
-  if (!association) {
-    return (
-      <div>
-        <p className="badge neutral">Sem observação visual</p>
-        <p>Este ponto pertence ao mapa geométrico, mas nenhum frame processado foi associado a ele.</p>
-        <h3>Geometria</h3>
-        <code>{point.geometry_id}</code>
-        <p>{point.coordinates_m.map((value) => value.toFixed(3)).join(", ")} m</p>
-      </div>
-    );
-  }
-  const observation = slice.observations?.find((item) => item.observation_id === association.rgb_observation_id);
-  const region = slice.regions?.find((item) => item.region_id === association.region_id);
-  const confidence = region?.confidence?.value;
-  const supportState = region?.support?.state ?? "sem label de região";
-  return (
-    <div>
-      <p className={`badge ${region ? "contextual" : "rgb"}`}>
-        {region ? "Contexto VLM associado" : "RGB associado, sem região"}
-      </p>
-      <h3>{region?.label ?? "Pixel RGB observado"}</h3>
-      {region && (
-        <p>
-          Confiança do VLM: <strong>{confidence == null ? "não informada" : `${(confidence * 100).toFixed(1)}%`}</strong>
-          {" · "}suporte: <strong>{supportState}</strong>
-          {region.geometric_confidence != null && ` · máscara: ${(region.geometric_confidence * 100).toFixed(1)}%`}
-        </p>
-      )}
-      <ObservationPreview observation={observation} region={region} pixel={association.pixel} artifactUrl={artifactUrl} />
-      {region?.claims?.length > 0 && (
-        <div>
-          <h3>Claims da região</h3>
-          <ul className="claim-list">
-            {region.claims.map((claim, index) => (
-              <li key={`${claim.kind}:${claim.value}:${index}`}>
-                <span>{claim.kind}</span> {claim.value}{claim.role && <small> · {claim.role}</small>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <SceneClaims claims={observation?.scene_claims} />
-      <details>
-        <summary>Proveniência e dados técnicos</summary>
-        <pre>{JSON.stringify(point, null, 2)}</pre>
-        {region?.provenance && <pre>{JSON.stringify(region.provenance, null, 2)}</pre>}
-      </details>
-    </div>
-  );
-}
-
-// Exibe o viewer persistido: carregamento do artifact, camadas independentes,
-// órbita e seleção que recupera evidência e proveniência sem resetar a câmera.
+// Compõe carregamento, navegação, filtros e inspeção sem deixar um desses
+// estados reposicionar ou reconstruir os demais implicitamente.
 function Explorer() {
   const [slice, setSlice] = useState(null);
+  const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
   const [colorMode, setColorMode] = useState("geometry");
+  const [enabledContextKeys, setEnabledContextKeys] = useState(null);
   const [artifactUrl, setArtifactUrl] = useState(null);
+  const [dockOpen, setDockOpen] = useState(false);
+  const [flyMode, setFlyMode] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [error, setError] = useState(null);
+  const cameraActions = useRef(null);
+  const reducedMotion = useMemo(
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+    [],
+  );
+  const metrics = useMemo(() => measureMap(points), [points]);
+  const legendEntries = useMemo(() => buildContextLegend(points), [points]);
+  const visiblePoints = useMemo(
+    () => filterPoints(points, colorMode, enabledContextKeys),
+    [points, colorMode, enabledContextKeys],
+  );
+  const selectedHidden = Boolean(
+    selected
+    && colorMode === "context"
+    && enabledContextKeys !== null
+    && !enabledContextKeys.has(contextKey(selected)),
+  );
+
+  // Abre um artifact validado através da fronteira de geometria, permitindo
+  // substituir a fonte estática por chunks sem reescrever a interface.
+  const openSlice = async (payload, resolvedUrl = null) => {
+    const validated = validateSlice(payload);
+    const source = new StaticArtifactGeometrySource(validated);
+    const geometry = await source.getGeometry();
+    const loadedPoints = geometry.chunks.flatMap((chunk) => chunk.points);
+    setSlice(validated);
+    setPoints(loadedPoints);
+    setSelected(null);
+    setDockOpen(false);
+    setFlyMode(false);
+    setHelpOpen(false);
+    setArtifactUrl(resolvedUrl);
+    setEnabledContextKeys(null);
+    setColorMode(validated.schema_version === 2 ? "context" : "geometry");
+    setError(null);
+  };
+
+  // Carrega automaticamente a URL pedida e cancela a leitura se a aplicação
+  // desmontar antes da resposta.
   useEffect(() => {
     const requestedUrl = new URLSearchParams(window.location.search).get("artifact");
     if (!requestedUrl) return undefined;
@@ -234,14 +239,7 @@ function Explorer() {
         if (!response.ok) throw new Error(`O servidor respondeu HTTP ${response.status}.`);
         return response.json();
       })
-      .then((payload) => {
-        const validated = validateSlice(payload);
-        setSlice(validated);
-        setSelected(null);
-        setArtifactUrl(resolvedUrl);
-        setColorMode(validated.schema_version === 2 ? "context" : "geometry");
-        setError(null);
-      })
+      .then((payload) => openSlice(payload, resolvedUrl))
       .catch((failure) => {
         if (failure.name !== "AbortError") {
           setError(failure instanceof Error ? failure.message : "Não foi possível abrir o artifact.");
@@ -249,60 +247,131 @@ function Explorer() {
       });
     return () => controller.abort();
   }, []);
-  const load = async (event) => {
+
+  // Centraliza atalhos globais e os desativa quando o usuário interage com
+  // elementos HTML, preservando acessibilidade e edição de formulários.
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if (isEditableTarget(event.target)) return;
+      if (event.code === "Home") {
+        event.preventDefault();
+        cameraActions.current?.reset();
+      } else if (event.code === "Digit1") {
+        cameraActions.current?.preset("top");
+      } else if (event.code === "Digit2") {
+        cameraActions.current?.preset("isometric");
+      } else if (event.code === "KeyF" && selected) {
+        cameraActions.current?.focus(selected);
+      } else if (event.code === "KeyV") {
+        setFlyMode((value) => !value);
+      } else if (event.code === "Escape") {
+        if (flyMode) setFlyMode(false);
+        else if (helpOpen) setHelpOpen(false);
+        else {
+          setSelected(null);
+          setDockOpen(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [flyMode, helpOpen, selected]);
+
+  // Lê um arquivo local mantendo previews relativos explicitamente
+  // indisponíveis, já que o browser não expõe sua pasta de origem.
+  const loadFile = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     try {
-      const parsed = validateSlice(JSON.parse(await file.text()));
-      setSlice(parsed);
-      setSelected(null);
-      setArtifactUrl(null);
-      setColorMode(parsed.schema_version === 2 ? "context" : "geometry");
-      setError(null);
+      await openSlice(JSON.parse(await file.text()));
     } catch (failure) {
       setSlice(null);
+      setPoints([]);
       setSelected(null);
       setError(failure instanceof Error ? failure.message : "Não foi possível abrir o artifact.");
     }
   };
+
+  // Mantém seleção e abertura do dock como uma única intenção de usuário.
+  const selectPoint = (point) => {
+    setSelected(point);
+    setDockOpen(Boolean(point));
+  };
+  // Materializa o conjunto completo somente no primeiro filtro, permitindo que
+  // ``null`` continue representando o estado barato “todos visíveis”.
+  const toggleContextKey = (key) => {
+    setEnabledContextKeys((current) => {
+      const next = new Set(current ?? legendEntries.map((entry) => entry.key));
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   return (
-    <main>
-      <header>
-        <div><h1>Contextual 3D Map Explorer</h1><p>Geometria, RGB e contexto visual com evidência rastreável.</p></div>
-        <input aria-label="Artifact do mapa" type="file" accept="application/json,.json" onChange={load} />
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand-block"><span>CM/3D</span><div><h1>Contextual Map Explorer</h1><p>Geometria + evidência + contexto</p></div></div>
+        {slice && <div className="map-identity"><span>Mapa</span><strong>{slice.map_id}</strong><code>{slice.map_frame}</code></div>}
+        <label className="file-action"><span>Abrir artifact</span><input aria-label="Artifact do mapa" type="file" accept="application/json,.json" onChange={loadFile} /></label>
       </header>
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && <p role="alert" className="error-banner">{error}</p>}
+      {!slice && !error && <div className="empty-stage"><strong>ABRA UM MAPA</strong><p>Selecione um artifact JSON para iniciar a exploração.</p></div>}
       {slice && (
-        <>
-          <div className="map-summary">
-            <span>Mapa <code>{slice.map_id}</code></span>
-            <span>{slice.points.length.toLocaleString("pt-BR")} pontos</span>
-            <span>frame <code>{slice.map_frame}</code></span>
-          </div>
-          <Coverage slice={slice} />
-          <nav className="layers" aria-label="Camada de coloração">
-            {Object.entries(COLOR_MODES).map(([value, label]) => (
-              <button type="button" key={value} className={colorMode === value ? "active" : ""}
-                onClick={() => setColorMode(value)} disabled={value !== "geometry" && slice.schema_version < 2}>
-                {label}
-              </button>
-            ))}
-          </nav>
-          <section>
-            <div className="viewport">
-              <Canvas camera={{ position: [0, -4, 2] }}>
-                <color attach="background" args={["#0b0d12"]} />
-                <Bounds fit clip margin={1.15}>
-                  <Cloud points={slice.points} colorMode={colorMode} onSelect={setSelected} />
-                  <SelectionMarker point={selected} />
-                </Bounds>
-                <OrbitControls makeDefault />
-              </Canvas>
-              <span className="viewport-hint">Arraste para orbitar · scroll para zoom · clique para inspecionar</span>
+        <div className={`workspace ${dockOpen ? "with-dock" : ""}`}>
+          <div className="map-column">
+            <div className="map-header">
+              <MapStats slice={slice} />
+              <nav className="layer-switch" aria-label="Camada de coloração">
+                {Object.entries(COLOR_MODES).map(([value, label]) => (
+                  <button type="button" key={value} className={colorMode === value ? "active" : ""}
+                    aria-pressed={colorMode === value} onClick={() => setColorMode(value)}
+                    disabled={value !== "geometry" && slice.schema_version < 2}>
+                    {label}
+                  </button>
+                ))}
+              </nav>
             </div>
-            <aside><h2>Inspeção</h2><Inspector point={selected} slice={slice} artifactUrl={artifactUrl} /></aside>
-          </section>
-        </>
+            <div className={`viewport ${flyMode ? "fly-active" : ""}`}>
+              <Canvas camera={{ position: [0, -4, 2], near: Math.max(metrics.diagonal * 0.00001, 0.001), far: metrics.diagonal * 100, up: [0, 0, 1] }}>
+                <color attach="background" args={["#0d0d0d"]} />
+                <fog attach="fog" args={["#0d0d0d", metrics.diagonal * 2, metrics.diagonal * 12]} />
+                <SpatialReference metrics={metrics} />
+                <Cloud points={visiblePoints} colorMode={colorMode} onSelect={selectPoint}
+                  onFocus={(point) => cameraActions.current?.focus(point)} />
+                <SelectionMarker point={selectedHidden ? null : selected} radius={Math.min(Math.max(metrics.diagonal * 0.0015, 0.04), 0.35)} />
+                <CameraRig ref={cameraActions} metrics={metrics} flyMode={flyMode}
+                  mapKey={slice.map_id} reducedMotion={reducedMotion} />
+              </Canvas>
+              <CameraToolbar flyMode={flyMode} hasSelection={Boolean(selected)}
+                onReset={() => cameraActions.current?.reset()}
+                onTop={() => cameraActions.current?.preset("top")}
+                onIsometric={() => cameraActions.current?.preset("isometric")}
+                onFocus={() => cameraActions.current?.focus(selected)}
+                onToggleFly={() => setFlyMode((value) => !value)}
+                onHelp={() => setHelpOpen((value) => !value)} />
+              <Legend mode={colorMode} entries={legendEntries} enabledKeys={enabledContextKeys}
+                metrics={metrics} points={points} onToggle={toggleContextKey}
+                onIsolate={(key) => setEnabledContextKeys(new Set([key]))}
+                onReset={() => setEnabledContextKeys(null)} />
+              <div className="viewport-status">
+                <span className={flyMode ? "active-dot" : ""}>{flyMode ? "MODO VOO" : "EXPLORAR"}</span>
+                <span>{visiblePoints.length.toLocaleString("pt-BR")} / {points.length.toLocaleString("pt-BR")} pontos</span>
+              </div>
+              {helpOpen && <NavigationHelp onClose={() => setHelpOpen(false)} />}
+              {!dockOpen && (
+                <button type="button" className="dock-trigger" onClick={() => setDockOpen(true)}>
+                  <span>{selected ? "Abrir inspeção" : "Inspeção"}</span><b>›</b>
+                </button>
+              )}
+            </div>
+          </div>
+          {dockOpen && (
+            <Inspector point={selected} slice={slice} artifactUrl={artifactUrl}
+              onClose={() => setDockOpen(false)} onFocus={() => cameraActions.current?.focus(selected)}
+              hiddenByFilter={selectedHidden} />
+          )}
+        </div>
       )}
     </main>
   );

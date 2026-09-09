@@ -29,7 +29,7 @@ Instale dependências de forma determinística, produza o bundle e inicie o
 servidor local:
 
 ```bash
-make map-explorer-install map-explorer-build
+make map-explorer-install map-explorer-test map-explorer-build
 cd apps/map-explorer/web
 npm run dev
 ```
@@ -58,3 +58,16 @@ o pixel projetado, a região, a confiança, o estado de suporte e a proveniênci
 Pontos sem observação visual permanecem explicitamente sem contexto. O alvo
 `map-explorer-serve` usa por default o artifact contextual e copia seus previews;
 outro arquivo pode ser selecionado com `MAP_EXPLORER_ARTIFACT=artifacts/outro.json`.
+
+## Navegação
+
+O modo `Explorar` usa botão esquerdo para orbitar, botão direito ou central
+para mover câmera e alvo, e scroll para aproximar no cursor. `Modo voo` adiciona
+`W/A/S/D` para movimento horizontal, `Q/E` para altura e `Shift` para acelerar.
+Seleção não move a câmera; duplo clique ou `F` foca o ponto. `Home` restaura a
+vista geral, enquanto `1` e `2` abrem as vistas superior e isométrica.
+
+A legenda de contexto permite ocultar ou isolar labels sem recarregar o mapa.
+Esses filtros não alteram as camadas Geometria e RGB. O frontend consome a
+geometria por uma fronteira interna compatível com bounds e LOD futuros; o
+artifact local atual continua sendo servido como um único chunk estático.

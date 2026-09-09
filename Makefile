@@ -10,7 +10,7 @@ MAP_EXPLORER_ASSETS := $(basename $(MAP_EXPLORER_ARTIFACT))-assets
 FASTLIO_SEGMENT_SECONDS ?= 20
 M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/apps/mapping-runtime/src
 
-.PHONY: verify test lint typecheck corridor-02-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-build map-explorer-serve
+.PHONY: verify test lint typecheck corridor-02-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-serve
 
 verify: test lint typecheck
 
@@ -65,6 +65,9 @@ m1-test:
 
 map-explorer-install:
 	cd apps/map-explorer/web && npm ci
+
+map-explorer-test:
+	cd apps/map-explorer/web && npm test
 
 map-explorer-build:
 	cd apps/map-explorer/web && npm run build
