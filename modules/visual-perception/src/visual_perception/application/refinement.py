@@ -41,7 +41,7 @@ from visual_perception.application.region_semantics import interpret_regions
 from visual_perception.application.support import fingerprint_of
 from visual_perception.config import MultimodalReasoningConfig, RefinementConfig
 from visual_perception.domain.claim_exclusivity import contradicting_claims
-from visual_perception.domain.errors import RegionInterpretationFailure
+from visual_perception.domain.errors import RegionInterpretationFailure, VisualPerceptionError
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_evidence import EvidenceState
 from visual_perception.domain.region_reasoning import RegionView
@@ -296,9 +296,31 @@ def refine_observation(
         selected = tuple(region for region in current.regions if region.region_id in target_ids)
         untouched = tuple(region for region in current.regions if region.region_id not in target_ids)
 
-        refined, failures = interpret_regions(
-            selected, image, views, current.scene_context, reasoner, escalated_config
-        )
+        try:
+            refined, failures = interpret_regions(
+                selected, image, views, current.scene_context, reasoner, escalated_config
+            )
+        except VisualPerceptionError as error:
+            # O passe escalonado manda mais imagens por região — no perfil de
+            # referência, o frame inteiro entra junto do sujeito — e é o ponto
+            # do pipeline com mais chance de esbarrar no budget de VRAM. Uma
+            # falha aqui custa o refinamento, e só ele: a observação
+            # pré-refinamento continua válida e é o que sai.
+            history.append(
+                RefinementStep(
+                    iteration=iteration,
+                    targets=targets,
+                    previous_evidence=previous_evidence,
+                    new_evidence=new_evidence,
+                    producer=escalated_config.backend,
+                    config_fingerprint=fingerprint_of(escalated_config),
+                    failures=tuple(
+                        RegionInterpretationFailure(target.region_id, str(error))
+                        for target in targets
+                    ),
+                )
+            )
+            break
         current = dataclasses.replace(
             current,
             regions=tuple(sorted(untouched + refined, key=lambda region: order[region.region_id])),

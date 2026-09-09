@@ -329,11 +329,15 @@ Para a ablation operacional da #209, execute os mesmos IDs com
 os estados, chamadas e latência de cada slot; IDs e geometria continuam sendo a saída
 canônica anterior à evidência contextual.
 
-O resultado medido na RTX 3060 está em
-[`../benchmarks/results/benchmark-209-multi-context-20260906T201128Z.md`](../benchmarks/results/benchmark-209-multi-context-20260906T201128Z.md).
-Nos três frames, o perfil full produziu os quatro slots em 126/126 regiões, sem falhas,
-preservou exatamente a geometria canônica e adicionou 5,489 s (+1,09%) ao wall-clock,
-sem aumentar o pico observado de 4,57 GiB.
+O resultado medido na RTX 3060 na ocasião: nos três frames, o perfil full produziu os
+quatro slots em 126/126 regiões, sem falhas, preservou exatamente a geometria canônica e
+adicionou 5,489 s (+1,09%) ao wall-clock, sem aumentar o pico observado de 4,57 GiB.
+
+O relatório detalhado daquele run foi removido junto com os demais artifacts de benchmark
+em 2026-09-06, numa limpeza deliberada: aqueles runs deixaram de representar o
+comportamento do pipeline. Os números acima ficam registrados aqui porque continuam sendo
+a única medida daquela comparação; para o custo dos estágios contextuais atuais, consulte
+`contextual` e `model_calls` no manifest de um run recente.
 
 Naquela revisão (`ebe211f`), porém, os dois perfis produziram saída **byte-idêntica**:
 mesmo SHA-256 dos três overlays e os mesmos 126 pares `(region_id, label primário)`. A

@@ -471,6 +471,12 @@ class SemanticRelationConfig:
     Argumentos:
         enabled: se o estágio roda.
         max_pairs: teto de pares consultados por frame.
+        max_pairs_per_region: quantas vezes uma mesma região pode aparecer
+            entre os pares escolhidos. Medido em ``corridor-02-000``: sem esse
+            teto, 13 dos 16 pares do orçamento tinham a **mesma** região de
+            2 px² como sujeito, porque contenção satura em 1,00 para toda
+            região pequena contida numa grande. O orçamento cobria a vizinhança
+            de uma região em vez do frame.
         min_containment: containment mínimo para um par entrar como candidato
             por contenção.
         include_adjacent: se pares apenas encostados também são candidatos.
@@ -482,6 +488,7 @@ class SemanticRelationConfig:
 
     enabled: bool = True
     max_pairs: int = 16
+    max_pairs_per_region: int = 2
     min_containment: float = 0.6
     include_adjacent: bool = True
     require_distinct_concepts: bool = True
@@ -491,6 +498,8 @@ class SemanticRelationConfig:
         """Rejeita orçamento negativo e containment fora de ``[0, 1]``."""
         if self.max_pairs < 0:
             raise ValueError("semantic_relations.max_pairs must not be negative.")
+        if self.max_pairs_per_region <= 0:
+            raise ValueError("semantic_relations.max_pairs_per_region must be positive.")
         if not 0.0 <= self.min_containment <= 1.0:
             raise ValueError("semantic_relations.min_containment must be in [0, 1].")
 

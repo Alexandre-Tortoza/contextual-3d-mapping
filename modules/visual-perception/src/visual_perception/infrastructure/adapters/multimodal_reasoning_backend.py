@@ -106,11 +106,11 @@ class RealMultimodalReasoningAdapter:
         )
 
     # Julga a relação entre duas regiões a partir da view de par (#206). O
-    # prompt oferece "none" como primeira opção explícita e repete a medida
-    # geométrica já calculada: as duas coisas existem para reduzir a pressão que
-    # um vocabulário fechado exerce sobre um modelo — sem uma saída de escape,
-    # ele escolhe o predicado menos ruim, e a aresta inventada entra no grafo
-    # como se fosse observação.
+    # prompt oferece "none" como saída válida e repete a medida geométrica já
+    # calculada: sem a saída de escape, um vocabulário fechado faz o modelo
+    # escolher o predicado menos ruim, e a aresta inventada entra no grafo como
+    # se fosse observação. O quanto essa saída é *anunciada* também importa, e
+    # está medido em ``_relation_prompt``.
     def analyze_relation(
         self, request: RegionRelationRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
@@ -239,6 +239,17 @@ def _region_prompt(request: RegionReasoningRequest) -> str:
 # Monta o prompt de relação a partir do request. Função pura, pelo mesmo motivo
 # que ``_region_prompt``: o contrato textual precisa ser testável sem GPU.
 # Chamada por RealMultimodalReasoningAdapter.analyze_relation.
+#
+# A primeira redação deste prompt dizia que ``none`` era "a resposta esperada
+# para a maioria dos pares, e melhor que um chute plausível". Medido em
+# ``corridor-02-000``: o modelo respondeu ``none`` em **16 de 16** pares, quinze
+# deles com ``confidence`` exatamente 0,95 — inclusive para um ``ceiling tile``
+# inteiramente contido num ``ceiling``, que é literalmente ``part_of``.
+#
+# É a mesma lição que a #212 já tinha registrado do outro lado: uma frase que
+# tenta impedir alucinação com força demais deixa de medir qualquer coisa.
+# ``none`` continua disponível e continua sendo a resposta certa quando nenhuma
+# relação é visível — mas ela deixou de ser anunciada como o desfecho esperado.
 def _relation_prompt(request: RegionRelationRequest) -> str:
     """Retorna o prompt de relação correspondente a ``request``."""
     predicates = ", ".join(f'"{predicate}"' for predicate in sorted(SEMANTIC_RELATION_PREDICATES))
@@ -250,10 +261,9 @@ def _relation_prompt(request: RegionRelationRequest) -> str:
         f"The blue region was described as: {request.object_concept} ({request.object_kind}).\n"
         f"Measured geometry: {request.geometric_summary}.\n"
         "State how the GREEN region relates to the BLUE region, using ONLY what the pixels show. "
-        f'Answer "{NO_RELATION_PREDICATE}" whenever no listed relation is actually visible — that is '
-        "the expected answer for most pairs, and it is better than a plausible guess. Do NOT infer "
-        "depth, distance, or which one is in front: this is a single image and those are not "
-        "visible. Respond with EXACTLY ONE JSON object (never a list/array, never markdown fences) "
+        f'Use "{NO_RELATION_PREDICATE}" when none of the listed relations is visible in the image. '
+        "Do NOT infer depth, distance, or which one is in front: this is a single image and those "
+        "are not visible. Respond with EXACTLY ONE JSON object (never a list/array, never markdown fences) "
         'with exactly these keys: "predicate" (exactly one of '
         f'"{NO_RELATION_PREDICATE}", {predicates}), "confidence" (number between 0 and 1 — YOUR '
         "ACTUAL CERTAINTY; omit the key entirely if you cannot estimate it, never guess 1.0). "

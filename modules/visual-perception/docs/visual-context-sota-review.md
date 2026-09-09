@@ -378,6 +378,30 @@ explicitamente proibida neste módulo.
 
 ---
 
+## 6.2 Capacidade, problema, solução, prioridade e arquivos
+
+A tabela operacional da revisão. Ela é o índice entre o que foi medido (§2), o que foi
+decidido (§6) e onde a decisão vive no código.
+
+| capacidade atual | problema medido | solução | prio | arquivos |
+| --- | --- | --- | --- | --- |
+| embeddings alinhados a linguagem por região | 121 vetores por frame calculados e descartados; `encode_text` nunca chamado | sinal de suporte por hipótese, com score, margem e status de quatro valores | **P0** | `domain/semantic_support.py`, `application/hypothesis_support.py`, `config.py` |
+| confiança do produtor | 165/165 claims com `0,90` exato; `degenerate = true` em todos os frames | continua preservada como evidência bruta; decisões passam a usar sinal, suporte e abstenção | **P0** | `application/semantic_calibration.py`, `application/refinement.py` |
+| contradição entre claims | 163/165 regiões marcadas; `contradiction_support` média 1,000 | só hipóteses **afirmadas** competem; ambiguidade vira sinal medido | **P0** | `domain/claim_exclusivity.py`, `domain/semantics.py` |
+| `RegionKind` reportado pelo VLM | 119 de 165 regiões contradizem o próprio conceito; o audit via 61 | veredito determinístico compartilhado, por núcleo nominal, que reporta e nunca reescreve | **P0** | `domain/structural_consistency.py`, `application/quality_audit.py` |
+| refinamento seletivo | fora do caminho canônico; três regras degeneradas; repetia a mesma chamada | razões explícitas + escalonamento obrigatório de evidência + histórico append-only | **P0** | `application/refinement.py`, `config.py`, `application/pipeline.py` |
+| superfície contínua fragmentada | 113 de 165 regiões em grupos adjacentes de mesmo label; nada as reconciliava | grupos de mesma superfície como hipótese, conceito canônico ao lado do label cru | **P0** | `application/reconciliation.py`, `domain/contextual_entities.py` |
+| labels lexicalmente equivalentes | `wall`/`plain wall`, `tree`/`trees` contados como conceitos distintos | canonicalização lexical mínima; label cru preservado; `distinct_canonical_concepts` medido | **P1** | `application/reconciliation.py`, `application/observation_diagnostics.py` |
+| relações candidatas | 726 relações, todas geométricas; 432 `near`; zero semânticas | inferência sobre pares priorizados, vocabulário fechado e versionado, `none` de primeira classe | **P1** | `application/semantic_relations.py`, `domain/relations.py`, `domain/region_reasoning.py` |
+| composição do pipeline | capacidades prontas fora do caminho canônico não executavam | ordem determinística única, audit final depois de tudo que adiciona claim ou aresta | **P1** | `application/pipeline.py` |
+| saída para downstream | `artifact_ref` apontando para nada | embeddings expostos no resultado e persistidos por referência | **P1** | `application/pipeline.py`, `benchmarks/frame_artifacts.py` |
+| diagnóstico de frame | nada contava o efeito dos estágios contextuais | `ContextualDiagnostics` no artifact e no manifest | **P1** | `application/observation_diagnostics.py`, `benchmarks/validate_reference_pipeline.py` |
+| backend de raciocínio multimodal | selecionado antes de a arquitetura contextual existir | benchmark sobre a arquitetura fixa | **P2** | `benchmarks/`, issue #218 |
+| backbone denso | gargalo é a resolução efetiva | benchmark de candidato moderno | **P2** | issue #219 (bloqueado por licença) |
+| verificação de conceito | não existe | segmentação condicionada a conceito só em regiões não resolvidas | **P2** | issue #220 (bloqueado por licença) |
+| upsampling aprendido | FeatUp integrado, não medido na tarefa | comparar candidato mais recente | **P3** | issue #221 |
+| relações `near` O(n²) | 432 de 726 relações | poda depende da inferência semântica estar medida | **P3** | issue própria quando houver medida |
+
 ## 7. Risco, custo e dependências por oportunidade
 
 | # | risco principal | mitigação | custo VRAM | custo latência | depende de |

@@ -36,6 +36,8 @@ from visual_perception.domain.regions import (
 from visual_perception.domain.relations import RelationSource
 from visual_perception.domain.semantic_support import SupportSignalStatus, SupportState
 from visual_perception.domain.semantics import (
+    ASSERTED_HYPOTHESIS_ROLES,
+    ClaimKind,
     HypothesisRole,
     RegionKind,
     SemanticClaim,
@@ -187,6 +189,13 @@ class ContextualDiagnostics:
         supported_entity_groups: grupos cuja coerência densa os corrobora.
         semantic_relations: histograma ``(predicado, contagem)`` das relações
             inferidas por modelo.
+        scene_echo_any_assertion: regiões em que **alguma** hipótese afirmada
+            repete uma claim de cena. ``scene_echo_label_count`` olha só a
+            primeira, e por isso não veria um eco introduzido por um passe de
+            refinamento; este campo vê, e os dois coexistem para que a série
+            histórica daquele continue comparável.
+        competing_assertions: regiões que carregam mais de uma hipótese
+            afirmada, tipicamente porque o refinamento mudou de ideia.
         geometric_relations: quantas relações vieram do caminho geométrico.
         abstained_claims: claims cuja calibração se absteve explicitamente.
         unscored_claims: claims de identidade que o produtor não pontuou.
@@ -206,6 +215,8 @@ class ContextualDiagnostics:
     geometric_relations: int = 0
     abstained_claims: int = 0
     unscored_claims: int = 0
+    scene_echo_any_assertion: int = 0
+    competing_assertions: int = 0
 
 
 # Agrega tudo que se pode afirmar sobre uma observação sem reexecutar modelo
@@ -562,6 +573,22 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
             if claim.support is not None and claim.support.state is SupportState.ABSTAINED:
                 abstained += 1
 
+    scene_values = {
+        _normalized(claim.value) for claim in observation.scene_context.claims if claim.value
+    }
+    echo_any = 0
+    competing = 0
+    for region in observation.regions:
+        asserted = [
+            claim
+            for claim in region.claims
+            if claim.kind is ClaimKind.LABEL and claim.role in ASSERTED_HYPOTHESIS_ROLES
+        ]
+        if len(asserted) > 1:
+            competing += 1
+        if scene_values and any(_normalized(claim.value) in scene_values for claim in asserted):
+            echo_any += 1
+
     inferred: Counter[str] = Counter()
     geometric = 0
     for relation in observation.relations:
@@ -589,6 +616,8 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
         geometric_relations=geometric,
         abstained_claims=abstained,
         unscored_claims=unscored,
+        scene_echo_any_assertion=echo_any,
+        competing_assertions=competing,
     )
 
 

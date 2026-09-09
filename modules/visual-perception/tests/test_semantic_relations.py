@@ -93,11 +93,36 @@ def test_an_unknown_predicate_is_rejected() -> None:
 
 # As relações que exigem geometria 3D não estão no vocabulário, e uma resposta
 # que as use é recusada: é a fronteira do módulo, imposta pelo parser.
-@pytest.mark.parametrize("predicate", ["above", "below", "behind", "in_front_of", "near"])
+@pytest.mark.parametrize("predicate", ["above", "below", "behind", "in_front_of"])
 def test_predicates_that_require_3d_geometry_are_rejected(predicate: str) -> None:
     """Relações que dependem de profundidade não são inferíveis de um frame."""
     with pytest.raises(InvalidRelation):
         parse_relation_response({"predicate": predicate})
+
+
+# Predicados que o caminho geométrico já responde exatamente ficam fora do
+# vocabulário semântico. ``inside`` saiu por medição: com a fração de contenção
+# no prompt o modelo devolveu ``inside`` em 6 de 16 pares; sem ela, em 0 de 16.
+# Ele repetia o número, não lia os pixels.
+@pytest.mark.parametrize("predicate", ["near", "adjacent_to", "inside", "contains"])
+def test_predicates_the_geometric_channel_already_answers_are_rejected(predicate: str) -> None:
+    """O canal semântico não duplica uma pergunta que a geometria já mede."""
+    with pytest.raises(InvalidRelation):
+        parse_relation_response({"predicate": predicate})
+
+
+# O resumo geométrico entregue ao modelo não pode conter a resposta: ele fala de
+# contato e tamanho relativo, e nenhum dos dois é sinônimo de um predicado.
+def test_the_geometric_summary_does_not_hand_over_a_predicate() -> None:
+    """O resumo não menciona contenção, que é sinônimo de um predicado removido."""
+    container = _region("region-a", (4, 4, 40, 40), (_claim("cabinet"),))
+    part = _region("region-b", (8, 8, 20, 20), (_claim("handle"),))
+
+    summary = select_relation_candidates((part, container), SemanticRelationConfig())[0].geometric_summary()
+
+    assert "covers" not in summary
+    assert "%" not in summary
+    assert "larger" in summary
 
 
 # Confiança ausente permanece ausente; um valor fora de [0, 1] é rejeitado.

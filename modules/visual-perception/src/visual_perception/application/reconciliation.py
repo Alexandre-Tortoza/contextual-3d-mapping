@@ -56,12 +56,15 @@ from visual_perception.domain.contextual_entities import (
 from visual_perception.domain.embeddings import EmbeddingSpace, VisualEmbedding
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.regions import ObservedRegion, primary_label_claim
+from visual_perception.domain.semantic_support import SupportSignalStatus
 from visual_perception.domain.semantics import (
+    ASSERTED_HYPOTHESIS_ROLES,
     ClaimKind,
     Evidence,
     HypothesisRole,
     RegionKind,
     SemanticClaim,
+    measured_signals,
     normalize_claim_value,
 )
 from visual_perception.domain.structural_consistency import (
@@ -92,7 +95,14 @@ NON_DISCRIMINATIVE_MODIFIERS = frozenset({"blank", "flat", "plain", "simple"})
 # código que a produziu.
 @dataclass(frozen=True)
 class ReconciliationRecord:
-    """O que a reconciliação afirmou sobre uma região, e com base em quê."""
+    """O que a reconciliação afirmou sobre uma região, e com base em quê.
+
+    ``competing_assertions`` conta quantas **outras** hipóteses afirmadas a
+    região carregava — tipicamente porque o refinamento reinterpretou e mudou
+    de ideia. ``selected_label`` é preenchido só quando a reconciliação escolheu
+    uma que não é a primeira: sem esses dois campos, uma reinterpretação que
+    trocasse a resposta seria invisível no artifact.
+    """
 
     region_id: str
     raw_label: str
@@ -101,6 +111,8 @@ class ReconciliationRecord:
     reconciled_kind: RegionKind
     structural_verdict: StructuralVerdict
     entity_id: str | None = None
+    competing_assertions: int = 0
+    selected_label: str | None = None
 
 
 # Agrupa o resultado do estágio: as regiões com a claim reconciliada anexada,
@@ -179,8 +191,14 @@ def reconcile_observation(
         region.region_id: _decide(region, config) for region in regions
     }
     groups = _same_surface_groups(regions, decisions, config)
+    # O id que a claim reconciliada cita precisa ser o **mesmo** que a entidade
+    # publicada carrega. Derivá-lo aqui, e não reaproveitar a raiz do union-find,
+    # é o que impede a evidência de apontar para um id que não existe em
+    # ``entity_hypotheses``.
     entity_by_region = {
-        member: entity_id for entity_id, members in groups for member in members
+        member: derive_entity_id(observation_id, members)
+        for _, members in groups
+        for member in members
     }
 
     updated: list[ObservedRegion] = []
@@ -227,6 +245,7 @@ class _Decision:
         return (
             self.record.canonical_concept != normalize_claim_value(self.record.raw_label)
             or self.record.reconciled_kind is not self.record.declared_kind
+            or self.record.selected_label is not None
         )
 
 
@@ -235,9 +254,11 @@ class _Decision:
 # primária, caso em que não há o que reconciliar.
 def _decide(region: ObservedRegion, config: ReconciliationConfig) -> _Decision | None:
     """Deriva conceito canônico e natureza reconciliada de uma região."""
-    claim = primary_label_claim(region)
-    if claim is None:
+    asserted = _asserted_claims(region)
+    if not asserted:
         return None
+    first = asserted[0]
+    claim = _best_supported(asserted)
     concept = (
         canonical_concept(claim.value) if config.canonicalize_labels else normalize_claim_value(claim.value)
     )
@@ -252,13 +273,50 @@ def _decide(region: ObservedRegion, config: ReconciliationConfig) -> _Decision |
         claim=claim,
         record=ReconciliationRecord(
             region_id=region.region_id,
-            raw_label=claim.value,
+            raw_label=first.value,
             canonical_concept=concept,
             declared_kind=declared,
             reconciled_kind=reconciled_kind,
             structural_verdict=verdict,
+            competing_assertions=len(asserted) - 1,
+            selected_label=None if claim is first else claim.value,
         ),
     )
+
+
+# Lista as hipóteses **afirmadas** de identidade de uma região, na ordem em que
+# elas foram acrescentadas. Existe porque ``primary_label_claim`` devolve a
+# primeira, e um passe de refinamento acrescenta uma segunda: reconciliar só a
+# primeira tornaria o refinamento inteiramente inerte — ele gastaria chamadas de
+# modelo e nada do que produzisse chegaria à leitura final da região.
+def _asserted_claims(region: ObservedRegion) -> tuple[SemanticClaim, ...]:
+    """Retorna as claims de identidade com papel afirmado, na ordem original."""
+    return tuple(
+        claim
+        for claim in region.claims
+        if claim.kind is ClaimKind.LABEL and claim.role in ASSERTED_HYPOTHESIS_ROLES
+    )
+
+
+# Escolhe, entre hipóteses afirmadas concorrentes, a que a evidência
+# independente sustenta melhor. Existe porque duas afirmações que discordam
+# precisam de um critério que não seja "quem chegou primeiro" nem o score bruto
+# do produtor — que está medido como constante. Empate preserva a ordem: quem
+# afirmou primeiro continua valendo quando nada distingue as duas.
+def _best_supported(asserted: tuple[SemanticClaim, ...]) -> SemanticClaim:
+    """Retorna a hipótese afirmada com mais sinais independentes a favor."""
+    if len(asserted) == 1:
+        return asserted[0]
+
+    def supporting(claim: SemanticClaim) -> int:
+        return sum(
+            1
+            for signal in measured_signals(claim)
+            if signal.status is SupportSignalStatus.SUPPORTS
+        )
+
+    best = max(range(len(asserted)), key=lambda index: (supporting(asserted[index]), -index))
+    return asserted[best]
 
 
 # Constrói a claim reconciliada de uma região. Ela é um claim **novo**, com
@@ -270,6 +328,11 @@ def _reconciled_claim(
     """Constrói a claim de identidade reconciliada, sem tocar na original."""
     record = decision.record
     parts = [f"reconciled from raw label {record.raw_label!r}"]
+    if record.selected_label is not None:
+        parts.append(
+            f"{record.competing_assertions + 1} asserted hypotheses competed; independent support "
+            f"selected {record.selected_label!r}"
+        )
     if record.canonical_concept != normalize_claim_value(record.raw_label):
         parts.append(f"canonical concept {record.canonical_concept!r}")
     if record.reconciled_kind is not record.declared_kind:

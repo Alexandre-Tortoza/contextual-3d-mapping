@@ -38,25 +38,34 @@ _PREDICATE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 #: partir de um único frame RGB. Cada entrada passou por duas perguntas:
 #:
 #: - *é observável em 2D?* — ``part_of``, ``attached_to``, ``supported_by``,
-#:   ``inside``, ``covers`` e ``occludes`` são todos legíveis na relação entre
-#:   duas máscaras e o que elas mostram, sem geometria métrica;
+#:   ``covers`` e ``occludes`` são legíveis na relação entre duas máscaras e o
+#:   que elas mostram, sem geometria métrica;
 #: - *tem consumidor?* — ``part_of``/``attached_to`` alimentam a composição de
-#:   objetos em ``semantic-fusion``; ``supported_by``/``inside`` alimentam o
-#:   grafo de ``scene-graph``; ``covers``/``occludes`` informam a associação
-#:   2D→3D sobre qual superfície um ponto realmente pertence.
+#:   objetos em ``semantic-fusion``; ``supported_by`` alimenta o grafo de
+#:   ``scene-graph``; ``covers``/``occludes`` informam a associação 2D→3D sobre
+#:   qual superfície um ponto realmente pertence.
 #:
 #: Ficaram **fora**, por exigirem geometria que este módulo não tem:
 #: ``above``/``below``, ``behind``/``in_front_of``, distância métrica,
-#: alcançabilidade, e qualquer relação entre frames. ``adjacent_to`` também
-#: ficou fora, mas por outro motivo: ele já é produzido, medido, pelo caminho
-#: geométrico (``near``), e duplicá-lo no canal semântico criaria duas respostas
-#: para a mesma pergunta.
+#: alcançabilidade, e qualquer relação entre frames.
+#:
+#: Duas saíram por um motivo diferente, e é o mesmo motivo: o caminho geométrico
+#: já responde a pergunta, exatamente e de graça, e duplicá-la no canal semântico
+#: cria duas respostas para uma pergunta só.
+#:
+#: - ``adjacent_to`` é ``near``;
+#: - ``inside`` é a inversa de ``contains`` — e a sua remoção foi **medida**, não
+#:   deduzida. Com a fração de contenção no prompt, o modelo respondeu ``inside``
+#:   em 6 de 16 pares de ``corridor-02-000``; com o mesmo prompt, as mesmas
+#:   views e os mesmos pares, apenas sem aquela fração, respondeu ``inside`` em
+#:   **0 de 16**. Ele não estava lendo os pixels: estava repetindo o número que
+#:   o próprio módulo tinha acabado de calcular. Uma aresta assim não é evidência
+#:   independente — é geometria com outro nome.
 SEMANTIC_RELATION_PREDICATES = frozenset(
     {
         "part_of",
         "attached_to",
         "supported_by",
-        "inside",
         "covers",
         "occludes",
     }

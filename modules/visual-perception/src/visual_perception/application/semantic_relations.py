@@ -20,8 +20,16 @@ todos os pares                      O(n²)      780 em corridor-02-000
   -> só os que a geometria priorizou            contenção, sobreposição, contato
   -> menos os pares dentro do mesmo grupo       a reconciliação já os descreve
   -> menos os pares de conceito idêntico        "parede encosta em parede"
+  -> no máximo N por região                     senão uma região come o orçamento
   -> limitado por max_pairs                     orçamento explícito
 ```
+
+O teto por região não é refinamento: é correção de um defeito medido. Na primeira
+execução real deste estágio em ``corridor-02-000``, **13 dos 16** pares escolhidos
+tinham a mesma região minúscula como sujeito. A causa é que ``containment`` satura
+em 1,00 para qualquer região pequena inteiramente contida numa grande, de modo que
+a ordenação por contenção elege a vizinhança inteira de uma única região. O
+orçamento existia, mas cobria um canto do frame.
 
 A poda por prioridade geométrica antes de consultar o modelo é a mesma ideia
 que o ConceptGraphs usa (IoU de caixas seguido de árvore geradora mínima); a
@@ -39,7 +47,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from visual_perception.application.reconciliation import region_concept
+from visual_perception.application.reconciliation import reconciled_label_claim, region_concept
 from visual_perception.application.region_views import build_pair_view
 from visual_perception.application.support import fingerprint_of
 from visual_perception.config import SemanticRelationConfig
@@ -121,13 +129,24 @@ class RelationCandidate:
     # exatamente — e para que o valor que ele recebe seja o mesmo que o
     # artifact registra.
     def geometric_summary(self) -> str:
-        """Descreve a relação geométrica medida entre as duas regiões."""
-        parts = [
-            f"the first region's mask covers {self.containment:.0%} of the second region's mask",
-            f"the two masks overlap with IoU {self.overlap:.2f}",
-        ]
-        parts.append("their bounding boxes touch" if self.touching else "their bounding boxes are apart")
-        return "; ".join(parts)
+        """Descreve o que a geometria mede **sem** entregar a resposta ao modelo.
+
+        A fração de contenção saiu daqui depois de ser medida como um vazamento:
+        "cobre 100% da outra" é sinônimo do predicado ``inside``, e o modelo
+        passou a devolvê-lo sempre que o número aparecia — 6 de 16 pares com a
+        fração, 0 de 16 sem ela, nas mesmas views. O que resta é contato e
+        tamanho relativo: nenhum dos dois é sinônimo de um predicado do
+        vocabulário, e os dois ajudam o modelo a saber qual região é qual.
+        """
+        ratio = self.subject.mask.area() / max(self.target.mask.area(), 1)
+        if ratio >= 2.0:
+            size = "the green region is much larger than the blue one"
+        elif ratio <= 0.5:
+            size = "the green region is much smaller than the blue one"
+        else:
+            size = "the two regions are of comparable size"
+        contact = "they touch or overlap" if self.touching else "they do not touch"
+        return f"{size}; {contact}"
 
 
 # Agrupa o resultado da etapa: as relações inferidas, as falhas isoladas e
@@ -200,7 +219,29 @@ def select_relation_candidates(
                 )
             )
     candidates.sort(key=lambda candidate: candidate.priority)
-    return tuple(candidates[: config.max_pairs])
+    return _diversified(candidates, config)
+
+
+# Percorre os candidatos já ordenados e aceita cada um só enquanto nenhum dos
+# dois lados tiver esgotado a sua cota. Existe para que o orçamento cubra o
+# frame em vez da vizinhança da região com maior contenção; helper de
+# select_relation_candidates.
+def _diversified(
+    candidates: list[RelationCandidate], config: SemanticRelationConfig
+) -> tuple[RelationCandidate, ...]:
+    """Limita quantas vezes cada região aparece, preservando a ordem de prioridade."""
+    appearances: dict[str, int] = {}
+    chosen: list[RelationCandidate] = []
+    for candidate in candidates:
+        if len(chosen) >= config.max_pairs:
+            break
+        ids = (candidate.subject.region_id, candidate.target.region_id)
+        if any(appearances.get(region_id, 0) >= config.max_pairs_per_region for region_id in ids):
+            continue
+        for region_id in ids:
+            appearances[region_id] = appearances.get(region_id, 0) + 1
+        chosen.append(candidate)
+    return tuple(chosen)
 
 
 # Valida e normaliza a resposta bruta do reasoner sobre um par. É a fronteira
@@ -359,8 +400,6 @@ def infer_semantic_relations(
 # seria acoplamento desnecessário do adapter ao domínio.
 def _kind_of(region: ObservedRegion) -> str:
     """Retorna o ``RegionKind`` reconciliado da região como string."""
-    from visual_perception.application.reconciliation import reconciled_label_claim
-
     claim = reconciled_label_claim(region)
     if claim is None or claim.region_kind is None:
         return RegionKind.UNKNOWN.value

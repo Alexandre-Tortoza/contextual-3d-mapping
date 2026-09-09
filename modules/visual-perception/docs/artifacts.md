@@ -214,6 +214,7 @@ benchmarks/results/samples/<run-id>/
 └── frames/<frame-id>/
     ├── observation.json      VisualObservation serializada
     ├── diagnostics.json      resumo estatístico do frame
+    ├── embeddings.npz        os vetores por região que os slots referenciam
     ├── raw.png               pixels de origem, nunca modificados
     ├── proposals.png         masks + boxes antes do merge, sem semântica
     ├── regions-masks.png     só as masks finais
@@ -249,7 +250,16 @@ jitter dele. Persistir as três para cada uma de dezenas de regiões por frame p
 milhares de arquivos versionados que quase nunca seriam abertos.
 
 `manifest.json` grava `frame_artifact_layout`, de modo que um leitor que espere outro
-layout falhe explicitamente em vez de ler o diretório errado em silêncio.
+layout falhe explicitamente em vez de ler o diretório errado em silêncio. A versão atual é
+`frames/2`.
+
+O que a `frames/2` acrescentou é `embeddings.npz`, e a razão é uma falha de referência,
+não uma conveniência: até a #217 cada `RegionEvidenceSlot` gravava um `artifact_ref` e
+**nenhum artifact existia para ele resolver**. Os vetores eram produzidos — 121 chamadas de
+encoder por frame na configuração real — e descartados dentro do pipeline. Agora eles saem
+no `PipelineResult` e são persistidos num `.npz` comprimido, indexado exatamente pelos
+mesmos identificadores que os slots citam. A observação canônica continua sendo
+referências-only: nenhum vetor é embutido nela.
 
 ### Campos de `diagnostics.json`
 
@@ -268,6 +278,13 @@ e os labels finais. Os campos que exigem leitura cuidadosa:
 | `rejected_proposals` | histograma dos motivos de descarte, para que `proposal_count - merged_proposal_count` seja explicável |
 | `ego_vehicle_mask_applied` | se havia geometria de ego declarada. Significa *filtragem aplicada*, nunca pixels pintados |
 | `valid_fisheye_mask` | `applied` quando a sequência declara área válida, `unavailable` quando não |
+| `contextual.signal_statuses` | histograma dos desfechos do canal independente sobre as hipóteses primárias. `indistinguishable` conta à parte de propósito: colapsá-lo em "sem suporte" inventaria um veredito que a margem medida não sustenta |
+| `contextual.regions_with_unsupported_primary` | regiões cuja hipótese primária é contradita por **todos** os sinais medidos |
+| `contextual.regions_with_ambiguous_identity` | regiões em que nenhum sinal medido distingue a primária das concorrentes |
+| `contextual.region_kind_contradictions` | regiões cujo conceito e natureza declarados são incompatíveis. A cobertura mudou na #216 (de casamento por string exata de `category` para casamento por núcleo nominal), então esta contagem **não é comparável** com runs anteriores a ela |
+| `contextual.distinct_raw_labels` vs `distinct_canonical_concepts` | o primeiro é a métrica contaminada por variação de grafia, preservada para comparabilidade histórica; o segundo é o número que responde "quantas coisas diferentes este frame diz" |
+| `contextual.entity_groups` / `regions_in_entity_groups` / `supported_entity_groups` | grupos de mesma superfície propostos, regiões que eles cobrem, e quantos a coerência densa corrobora. Um grupo `unresolved` continua sendo evidência |
+| `contextual.semantic_relations` | histograma `(predicado, contagem)` das relações inferidas por modelo, separado de `geometric_relations` |
 
 Esses artifacts têm finalidade diferente da persistência operacional. Eles existem para
 inspeção, reprodução e comparação experimental.
