@@ -52,6 +52,21 @@ function validateSlice(value) {
   return value;
 }
 
+// Explica a origem das cores sem confundir apoio visual com evidência
+// contextual. Artifacts geométricos usam apenas altura para inspeção.
+function describeColorMode(slice) {
+  if (slice.points.some((point) => point.association?.region_id || point.association?.label)) {
+    return "RGB associado a regiões visuais; o contexto aparece na inspeção do ponto.";
+  }
+  if (slice.points.some((point) => point.association?.color_rgb)) {
+    return "RGB calibrado, ainda sem região contextual associada.";
+  }
+  if (slice.points.some((point) => point.display_color_rgb)) {
+    return "altura geométrica; este artifact ainda não contém associação RGB ou contextual.";
+  }
+  return "neutra; este artifact não contém evidência visual.";
+}
+
 // Exibe o primeiro viewer persistido: carregamento do artifact, órbita e
 // seleção de ponto que revela a proveniência preservada na associação.
 function Explorer() {
@@ -110,11 +125,12 @@ function Explorer() {
             Mapa <code>{slice.map_id}</code> no frame <code>{slice.map_frame}</code>:{" "}
             {slice.points.length} pontos.
           </p>
+          <p>Coloração: {describeColorMode(slice)}</p>
           <section>
             <Canvas camera={{ position: [0, -4, 2] }}>
               <color attach="background" args={["#101218"]} />
               <ambientLight intensity={1} />
-              <Bounds fit clip observe margin={1.15}>
+              <Bounds fit clip margin={1.15}>
                 <Cloud points={slice.points} onSelect={setSelected} />
               </Bounds>
               <OrbitControls makeDefault />
