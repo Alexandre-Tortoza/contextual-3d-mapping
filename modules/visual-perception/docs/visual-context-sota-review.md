@@ -545,3 +545,52 @@ Sem `#210`/`#211`, tudo que se pode medir depois da implementação é estrutura
 de contradições reais, cobertura de abstenção, grupos propostos, relações semânticas
 válidas, custo. Acurácia continua bloqueada, e dizer o contrário seria transformar a
 saída do próprio pipeline em ground truth.
+
+---
+
+## 10. O que a execução real confirmou, e o que ela corrigiu no plano
+
+Esta seção é escrita **depois** da implementação, e existe porque uma auditoria que só
+previsse acertos não teria valor. Ela registra onde a previsão bateu e onde a execução
+contradisse o plano.
+
+### Confirmado
+
+| previsão da auditoria | o que a execução mediu |
+| --- | --- |
+| o sinal de alinhamento não é degenerado | 120 sinais no frame 000: 72 `supports`, 27 `contradicts`, 21 `indistinguishable` — três desfechos com massa real, contra 1 valor distinto em 165 da `confidence` |
+| os estágios novos não custam VRAM | pico idêntico, 4,57 GiB nos dois runs |
+| a geometria não muda | 75/46/76 proposals e 40/16/38 regiões, iguais à baseline |
+| a fragmentação é descritível sem apagar região | 7 e 5 grupos cobrindo 30 e 24 regiões, nenhuma removida |
+| a coerência densa não decide sozinha | 6 de 7 e 3 de 5 grupos corroborados; o resto fica `unresolved` |
+
+### Contradito pela execução, e corrigido
+
+Três coisas que o plano dava por boas e a execução reprovou. As três só apareceram porque
+o run foi feito antes de a rodada ser declarada pronta.
+
+1. **O refinamento era inerte.** `primary_label_claim` devolve a primeira hipótese
+   afirmada, então a claim que um passe de refinamento acrescentava não chegava à
+   reconciliação, ao diagnóstico nem ao overlay. O estágio gastava chamadas e não mudava
+   nada observável — exatamente o defeito que a §2.8 desta auditoria criticava no código
+   antigo. A reconciliação passou a escolher entre **todas** as hipóteses afirmadas,
+   usando os sinais independentes, e a registrar quantas competiram.
+2. **O canal de relação estava repetindo a nossa geometria.** Descrito em §3.3. A
+   correção foi de vocabulário, não de prompt: `inside` saiu.
+3. **A cena no escalonamento reintroduziu o vazamento da `#202`.** Descrito na limitação 7
+   de `known-limitations.md`: 6 de 16 regiões de `corridor-02-008` adotaram a claim
+   `layout` da cena como identidade. O escalonamento passou a ser region-local.
+
+O padrão comum às três é o mesmo, e vale mais que qualquer uma delas: **um estágio que
+não é medido em execução real não está pronto, por mais testado que esteja.** As 487
+verificações da suíte passavam em todos os três casos.
+
+### O que continua sem resposta
+
+- se o rendimento baixo das relações semânticas é do modelo ou da tarefa (`#218`);
+- se um backbone denso mais recente melhora a corroboração de grupos (`#219`, bloqueado
+  por licença);
+- se a verificação condicionada a conceito resolve as regiões ambíguas (`#220`, bloqueado
+  por licença);
+- **qualquer coisa sobre acurácia.** `#210`/`#211` continuam abertas, e sem elas nenhum
+  número desta rodada é uma afirmação de correção semântica.

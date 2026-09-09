@@ -19,7 +19,47 @@ Todas as contagens abaixo vêm dos runs versionados dos três frames vinculantes
 | `samples/20260907T005820Z/` | `0fda5cf` | primeira versão multi-view, `prompt_version v3` |
 | `samples/20260907T014526Z/` | `50ed564` | `prompt_version v5`, sem exclusão de área |
 | `samples/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
-| `samples/20260908T003114Z/` | #202 | estado atual, `prompt_version v6`, áreas declaradas |
+| `samples/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
+| `samples/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
+| `samples/20260909T135428Z/` | `1270e53` | arquitetura contextual, `prompt_version v7`, três frames vinculantes |
+
+O run `20260909T135428Z` é o primeiro com suporte de hipótese, refinamento dirigido por
+razão, reconciliação intra-frame e relações semânticas. A comparação estrutural completa
+contra a baseline está em
+[`../benchmarks/results/comparison-contextual-20260909T135428Z.md`](../benchmarks/results/comparison-contextual-20260909T135428Z.md)
+e é reproduzível por `python benchmarks/compare_runs.py`.
+
+## O que a arquitetura contextual mudou, medido nos três frames vinculantes
+
+Geometria idêntica em todos os três frames — 75/46/76 proposals e 40/16/38 regiões, iguais
+à baseline. É a invariante que o desenho promete: nenhum estágio depois do merge toca
+mask, box, identidade ou ordem.
+
+| eixo | baseline `03ec593` | contextual `1270e53` |
+| --- | ---: | ---: |
+| pico de VRAM | 4,57 GiB | **4,57 GiB** (nenhum modelo novo) |
+| latência dos três frames | 456 s | 865 s (1,90x) |
+| chamadas de modelo | 388 | 568 |
+| `contradictory_claims` | 163/165 regiões | **0** |
+| contradições conceito/natureza visíveis | 61 | **119** (mesmas regiões, regra por núcleo nominal) |
+| sinais independentes por frame | 0 | 120 / 48 / 114 |
+| relações semânticas | 0 | 8 / 2 / 7 |
+| grupos de mesma superfície | inexistente | 7 / 0 / 5 |
+
+Três leituras que importam para não superinterpretar a tabela:
+
+- **`contradictory_claims` caindo de 163 para 0 não é qualidade nova.** É a correção de um
+  falso positivo: a alternativa que o produtor registra na mesma resposta deixou de ser
+  contada como contradição. O sinal que substitui a ambiguidade é o
+  `HypothesisSupportSignal` com status `indistinguishable`, que é medido;
+- **as contradições de natureza subindo de 61 para 119 não é regressão.** São as mesmas
+  regiões do mesmo run; o que mudou é que a regra passou a casar pelo núcleo nominal em
+  vez de por seis strings exatas de `category`. O erro do reasoner sempre esteve lá — o
+  audit é que só via metade dele. **Contagens deste código não são comparáveis através
+  dessa mudança**;
+- **o custo é quase todo de chamadas de VLM.** O suporte de hipótese acrescenta só
+  encoding de texto (24 a 30 chamadas curtas por frame) porque reusa os vetores de imagem
+  que o estágio de evidência já produzia e descartava.
 
 ## O que a #202 fechou, medido em `corridor-02-002`
 
@@ -140,7 +180,25 @@ do mesmo frame.
 
 ## 2. Labels não são normalizados
 
-**Status: aberto.** Sem issue dona; candidato natural à `#205` (reconciliação intra-frame).
+**Status: parcialmente fechado pela `#205`.** O que continua aberto está descrito no fim
+do item.
+
+O conceito canônico agora existe **ao lado** do label cru, e não no lugar dele: a
+reconciliação anexa uma claim de papel `RECONCILED`, e `diagnostics.json` passa a reportar
+`distinct_raw_labels` e `distinct_canonical_concepts` separadamente. Medido no run
+contextual: 8 → 7, 9 → 7 e 10 → 9 conceitos nos três frames.
+
+A redução é pequena de propósito. A canonicalização é lexical e mínima — colapsa plural e
+um punhado de modificadores não discriminativos (`plain wall` → `wall`) e para aí. Ela
+**não** sabe que `ceiling tiles` e `ceiling` têm relação, e não deve saber: isso é uma
+afirmação sobre o mundo, não sobre a grafia, e o lugar dela é uma relação `part_of`
+sustentada por evidência.
+
+**O que continua aberto:** `distinct_labels` segue sendo uma métrica contaminada, e
+continua no artifact justamente para preservar a série histórica. Ao comparar runs, use
+`distinct_canonical_concepts`.
+
+### O texto original, preservado
 
 `long, narrow hallway` e `long narrow hallway` são contados hoje como dois labels
 distintos, diferindo apenas por uma vírgula. O mesmo vale para pares como `tree`/`trees`
@@ -188,7 +246,32 @@ mudou foi a legibilidade do artifact, não o comportamento do modelo.
 
 ## 4. Superfície contínua vira muitas regiões
 
-**Status: aberto.** Candidato natural à `#205` (reconciliação intra-frame).
+**Status: a geometria continua igual; o downstream deixou de ficar sem saber.**
+
+A `#205` não reduz `region_count`, e não deveria: unir máscaras para satisfazer uma
+métrica seria descartar evidência. O que ela acrescenta é a **hipótese** de que aquelas
+regiões são a mesma superfície. Medido no run contextual:
+
+| frame | regiões | grupos | regiões cobertas | corroborados pela coerência densa |
+| --- | ---: | ---: | ---: | ---: |
+| `corridor-02-000` | 40 | 7 | 30 | 6 |
+| `corridor-02-008` | 16 | 0 | 0 | 0 |
+| `corridor-02-017` | 38 | 5 | 24 | 3 |
+
+Um grupo `unresolved` continua sendo evidência: contato e conceito ainda valem, e o que
+falta é a corroboração densa. Isso não é conservadorismo gratuito — entre pares
+adjacentes, o cosseno DINOv2 separa mesmo-label de label-diferente com acurácia balanceada
+de apenas **0,660** no melhor limiar possível, e um gate por similaridade erraria um terço
+das decisões.
+
+`corridor-02-008` produzir zero grupos é o comportamento correto: é campo aberto, sem
+superfícies contínuas fragmentadas.
+
+**O que continua aberto:** decidir se as três paredes são a mesma parede *no mundo* exige
+geometria 3D e pertence a `sensor-association`/`semantic-fusion`. Este módulo entrega a
+hipótese e todos os membros.
+
+### O texto original, preservado
 
 No run atual de `corridor-02-002`, 14 das 38 regiões saem como `plain wall` e 11 como
 `wall`. Somadas, 25 das 38 regiões descrevem *a mesma parede*, recortada em pedaços pelo
@@ -215,7 +298,27 @@ sido descartar evidência para satisfazer uma métrica.
 
 ## 5. `RegionKind` é reportado, mas o modelo erra muito
 
-**Status: aberto.** Dona: `#205`/`#203` conforme onde a evidência melhorar.
+**Status: aberto no modelo, fechado na visibilidade e na interpretação.**
+
+O reasoner continua errando na mesma proporção: 30 de 40, 3 de 16 e 27 de 38 regiões nos
+três frames declaram uma natureza incompatível com o próprio conceito. Nada no pipeline
+reescreve essa saída, e é deliberado.
+
+Duas coisas mudaram, e nenhuma delas é o modelo acertar mais:
+
+- **a cobertura do audit dobrou.** A regra saiu de seis strings exatas de `category` para
+  o casamento pelo **núcleo nominal** do composto, em
+  `domain/structural_consistency.py`. Nas mesmas 165 regiões da baseline, o que era
+  visível passou de 61 para 119. Casar pelo núcleo, e não por qualquer palavra, é o que
+  mantém `ceiling light fixture` corretamente indeterminado;
+- **a interpretação reconciliada existe ao lado da original.** A região continua dizendo
+  `wall`/`thing`, e ganha uma claim `RECONCILED` que diz `wall`/`stuff`, com a evidência
+  nomeando o veredito estrutural que a produziu.
+
+**Consequência para comparações:** contagens de `region_kind_inconsistent_with_category`
+**não são comparáveis** através dessa mudança de cobertura.
+
+### O texto original, preservado
 
 O contract agora carrega `RegionKind` até a serialização, e o run atual o traz em 38 de 38
 regiões. Mas a distribuição é `thing: 34, stuff: 4`, e a auditoria acusa **16** ocorrências
@@ -235,6 +338,67 @@ conjunto é fácil e é justamente o que **não** se deve fazer sem antes melhor
 evidência: o caminho é medir se o modelo acerta mais com views melhores, não estender a
 tabela até o número ficar bonito.
 
+## 6. O canal de relação semântica rende pouco, e quase respondeu geometria
+
+**Status: aberto.** Dona: `#218` (comparar backends sobre esta arquitetura).
+
+O estágio produz relações que a geometria não consegue produzir — mas poucas. Medido no
+run contextual, sobre os pares que a seleção priorizou:
+
+| frame | pares consultados | arestas produzidas | predicados |
+| --- | ---: | ---: | --- |
+| `corridor-02-000` | 16 | 8 | `covers` ×4, `part_of` ×3, `attached_to` ×1 |
+| `corridor-02-008` | 11 | 2 | `covers` ×1, `part_of` ×1 |
+| `corridor-02-017` | 16 | 7 | `part_of` ×6, `covers` ×1 |
+
+O caminho até esse número passou por dois erros que valem mais que o número:
+
+**O prompt quase transformou `none` em reflexo.** A primeira redação dizia que `none` era
+"a resposta esperada para a maioria dos pares, e melhor que um chute plausível". O modelo
+respondeu `none` em **16 de 16** pares, quinze deles com `confidence` exatamente 0,95 —
+inclusive para um `ceiling tile` inteiramente contido num `ceiling`. É a lição da `#212`
+pelo outro lado: uma cláusula que combate alucinação com força demais deixa de medir.
+
+**E o canal quase virou geometria com outro nome.** Reequilibrado o prompt, o estágio
+passou a devolver 6 `inside` em 16 pares. Uma ablação de um fator — mesmos pares, mesmas
+views, mesmo prompt, apenas **sem** a fração de contenção no texto — devolveu **0 `inside`
+em 16**. O modelo estava repetindo o número que este módulo tinha acabado de calcular e
+entregar a ele. `inside` saiu do vocabulário (é a inversa exata do `contains` geométrico)
+e o resumo entregue ao modelo passou a falar de contato e tamanho relativo, que não são
+sinônimos de nenhum predicado.
+
+**O que continua aberto:**
+
+- o rendimento é baixo, e não há como saber se é o modelo ou a tarefa sem comparar
+  backends sobre esta mesma arquitetura;
+- a `confidence` das relações é tão degenerada quanto a das claims: 0,95 na esmagadora
+  maioria. Vale a limitação 3 inteira, aplicada a relações;
+- `covers` e `occludes` continuam os predicados mais arriscados do vocabulário, porque são
+  os mais próximos de uma afirmação de profundidade que um frame único não sustenta.
+  Nenhuma anotação existe para verificá-los.
+
+## 7. Alimentar a cena ao refinamento reintroduz o vazamento que a #202 fechou
+
+**Status: fechado por configuração, e registrado porque a lição é geral.**
+
+O primeiro run com refinamento ativo usava `scene_conditioned` — o frame inteiro — como
+evidência de escalonamento. Medido em `corridor-02-008`: **6 das 16 regiões** trocaram a
+sua hipótese por `rows of crops`, que é literalmente a claim `layout` da cena. Regiões
+cuja primeira resposta era `wall`, `purple flower` e `plain surface` convergiram todas
+para o texto da cena. Nos outros dois frames o eco foi zero.
+
+O escalonamento passou a ser **region-local**, e dois testes de regressão fixam a decisão.
+
+Duas observações de método:
+
+- a falha só foi visível porque o diagnóstico ganhou `scene_echo_any_assertion` na mesma
+  rodada. `scene_echo_label_count` lê a **primeira** hipótese afirmada e teria reportado 1
+  onde 8 regiões estavam afetadas: um passe de refinamento pode introduzir um eco que a
+  métrica histórica não enxerga. As duas contagens convivem agora;
+- o frame afetado foi justamente o que **não** é um corredor. Em campo aberto as claims
+  ambientais e os conceitos locais compartilham vocabulário, e o vazamento fica mais
+  provável. Uma medida tomada só em corredores teria passado.
+
 ## Observações menores, registradas para não se perderem
 
 ### O cast de cor da câmera puxa labels literais
@@ -246,6 +410,32 @@ literais de cor como `purple cloud` e `pink textured surface`.
 Não é um defeito do pipeline: o modelo descreve os pixels que recebe. Mas é um confundidor
 real para qualquer avaliação de acurácia semântica nesse dataset, e precisa constar do
 protocolo antes de comparar contra ground truth humano.
+
+### O custo dobrou, e é quase todo de chamadas de VLM
+
+A latência dos três frames vinculantes foi de 456 s para 865 s (1,90x), e as chamadas de
+modelo de 388 para 568. O pico de VRAM **não mudou**: 4,57 GiB nos dois runs, porque
+nenhum estágio novo carrega um modelo novo — todos reusam o que já está residente.
+
+A distribuição do custo novo, por frame: refinamento 24/8/24 chamadas, relações
+semânticas 16/11/16, e suporte de hipótese 30/27/24 — estas últimas são encodings de
+texto curtos, não de imagem, porque o estágio reusa os vetores de imagem que já existiam.
+
+Os dois tetos são configuráveis (`refinement.max_regions_per_iteration`,
+`semantic_relations.max_pairs`) e nenhum deles foi ajustado por evidência ainda: os
+defaults foram escolhidos como orçamento plausível, não medidos como ótimos.
+
+### DINOv3 e SAM 3 estão bloqueados por licença
+
+Os dois candidatos modernos avaliados nesta rodada existem na versão de `transformers`
+instalada (5.16.1 tem `DINOv3ViTModel` e `Sam3Model`), mas os checkpoints
+`facebook/dinov3-vitb16-pretrain-lvd1689m` e `facebook/sam3` estão `gated=manual` no Hub e
+exigem aceite de licença na conta do usuário. Nenhum token está configurado neste
+ambiente. As issues `#219` e `#220` registram o bloqueio; ele não é técnico.
+
+Qwen3-VL, ao contrário, **não** está bloqueado: os checkpoints 2B, 4B e 8B já estão no
+cache local e a família é suportada pela mesma versão de `transformers`. A `#218` não
+depende de download nenhum.
 
 ### `corridor-02-008` não é um corredor
 
