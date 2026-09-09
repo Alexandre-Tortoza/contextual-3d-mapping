@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
-import { Bounds, OrbitControls, Points, PointMaterial } from "@react-three/drei";
+import { Bounds, OrbitControls, PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import "./styles.css";
 
@@ -23,12 +23,12 @@ function Cloud({ points, onSelect }) {
   }, [points]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <Points
+    <points
       geometry={geometry}
       onClick={(event) => onSelect(points[event.index] ?? null)}
     >
-      <PointMaterial vertexColors size={0.05} sizeAttenuation />
-    </Points>
+      <PointMaterial vertexColors size={2} sizeAttenuation={false} />
+    </points>
   );
 }
 
