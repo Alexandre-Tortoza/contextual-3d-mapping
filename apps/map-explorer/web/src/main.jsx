@@ -58,6 +58,27 @@ function Explorer() {
   const [slice, setSlice] = useState(null);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
+  useEffect(() => {
+    const artifactUrl = new URLSearchParams(window.location.search).get("artifact");
+    if (!artifactUrl) return undefined;
+    const controller = new AbortController();
+    fetch(artifactUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`O servidor respondeu HTTP ${response.status}.`);
+        return response.json();
+      })
+      .then((payload) => {
+        setSlice(validateSlice(payload));
+        setSelected(null);
+        setError(null);
+      })
+      .catch((failure) => {
+        if (failure.name !== "AbortError") {
+          setError(failure instanceof Error ? failure.message : "Não foi possível abrir o artifact.");
+        }
+      });
+    return () => controller.abort();
+  }, []);
   const load = async (event) => {
     const file = event.target.files[0];
     if (!file) return;

@@ -6,7 +6,7 @@ M1_PCD_ARTIFACT ?= artifacts/corridor-02-fastlio-20s.json
 FASTLIO_SEGMENT_SECONDS ?= 20
 M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/apps/mapping-runtime/src
 
-.PHONY: verify test lint typecheck corridor-02-map m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-build
+.PHONY: verify test lint typecheck corridor-02-map m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-build map-explorer-serve
 
 verify: test lint typecheck
 
@@ -51,3 +51,8 @@ map-explorer-install:
 
 map-explorer-build:
 	cd apps/map-explorer/web && npm run build
+
+map-explorer-serve:
+	mkdir -p apps/map-explorer/web/public
+	cp "$(M1_PCD_ARTIFACT)" apps/map-explorer/web/public/current-map.json
+	cd apps/map-explorer/web && npm run dev -- --host 0.0.0.0

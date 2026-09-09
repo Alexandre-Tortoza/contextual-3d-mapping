@@ -15,6 +15,7 @@ node_modules/
 dist/
 build/
 /artifacts/
+/apps/map-explorer/web/public/current-map.json
 
 # Dados brutos e artefatos locais permanecem fora do histórico Git.
 datasets/raw/

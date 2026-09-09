@@ -41,3 +41,13 @@ abra esse arquivo no seletor da página.
 Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra
 `artifacts/corridor-02-fastlio-20s.json`. O viewer enquadra automaticamente os
 limites da nuvem e permite órbita, zoom e inspeção de cada ponto amostrado.
+
+Em uma sessão SSH, publique o artifact pelo próprio servidor para evitar o
+seletor de arquivos do computador cliente:
+
+```bash
+make map-explorer-serve
+```
+
+Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
+arquivo publicado é local e ignorado pelo Git.
