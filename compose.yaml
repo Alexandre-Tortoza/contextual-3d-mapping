@@ -1,0 +1,36 @@
+services:
+  fastlio-ros1:
+    build:
+      context: .
+      dockerfile: docker/ros1/Dockerfile
+    profiles: ["ros1"]
+    volumes:
+      - .:/workspace
+      - ./datasets/raw:/workspace/datasets/raw:ro
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+
+  fastlio-ros2:
+    build:
+      context: .
+      dockerfile: docker/ros2/Dockerfile
+    profiles: ["ros2"]
+    volumes:
+      - .:/workspace
+      - ./datasets/raw:/workspace/datasets/raw:ro
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+
+  visual-gpu:
+    image: nvidia/cuda:12.4.1-runtime-ubuntu22.04
+    profiles: ["gpu"]
+    gpus: all
+    volumes:
+      - .:/workspace
+      - ./datasets/raw:/workspace/datasets/raw:ro
+    working_dir: /workspace
+    command: ["bash"]
+    stdin_open: true
+    tty: true
