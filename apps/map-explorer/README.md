@@ -37,3 +37,7 @@ npm run dev
 O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
 Para uma entrada conhecida, gere `artifacts/m1-demo.json` com `make m1-demo` e
 abra esse arquivo no seletor da página.
+
+Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra
+`artifacts/corridor-02-fastlio-20s.json`. O viewer enquadra automaticamente os
+limites da nuvem e permite órbita, zoom e inspeção de cada ponto amostrado.

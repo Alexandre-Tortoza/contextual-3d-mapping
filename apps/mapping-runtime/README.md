@@ -43,3 +43,17 @@ PYTHONPATH="contracts:modules/state-estimation/src:modules/geometric-map/src:mod
 O demo não substitui validação com rosbag. Sua função é provar que composição,
 frames, sincronização, oclusão, cor, região e proveniência chegam a um artifact
 que o viewer consegue abrir.
+
+## Trecho FAST-LIO real
+
+Com o dataset `corridor-02` em `datasets/raw`, o alvo abaixo executa os primeiros
+20 segundos da rosbag no FAST-LIO ROS 1 e converte o PCD para uma amostra que o
+viewer consegue carregar:
+
+```bash
+make corridor-02-map
+```
+
+O resultado fica em `artifacts/corridor-02-fastlio-20s.json`. A amostragem é
+determinística e mantém no máximo 25 mil pontos; `display_color_rgb` representa
+somente altura geométrica e não é tratado como associação RGB.

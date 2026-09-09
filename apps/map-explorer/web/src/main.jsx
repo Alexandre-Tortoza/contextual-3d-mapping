@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Points, PointMaterial } from "@react-three/drei";
+import { Bounds, OrbitControls, Points, PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import "./styles.css";
 
@@ -13,7 +13,7 @@ function Cloud({ points, onSelect }) {
     const colors = [];
     points.forEach((point) => {
       positions.push(...point.coordinates_m);
-      const rgb = point.association?.color_rgb ?? [90, 90, 90];
+      const rgb = point.association?.color_rgb ?? point.display_color_rgb ?? [90, 90, 90];
       colors.push(...rgb.map((channel) => channel / 255));
     });
     const value = new THREE.BufferGeometry();
@@ -93,7 +93,9 @@ function Explorer() {
             <Canvas camera={{ position: [0, -4, 2] }}>
               <color attach="background" args={["#101218"]} />
               <ambientLight intensity={1} />
-              <Cloud points={slice.points} onSelect={setSelected} />
+              <Bounds fit clip observe margin={1.15}>
+                <Cloud points={slice.points} onSelect={setSelected} />
+              </Bounds>
               <OrbitControls makeDefault />
             </Canvas>
             <aside>

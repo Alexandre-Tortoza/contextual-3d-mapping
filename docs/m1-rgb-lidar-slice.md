@@ -19,6 +19,19 @@ Isso cria `artifacts/m1-demo.json` com pontos associados, um ponto ocluído,
 cores, região e proveniência. O comando não afirma validar FAST-LIO: ele isola
 e testa o restante do slice enquanto rosbag e calibração reais não existem.
 
+Para o dataset local `corridor-02`, execute um trecho real de 20 segundos e
+produza uma amostra geométrica pronta para o viewer:
+
+```bash
+make corridor-02-map
+```
+
+O workflow usa a configuração Velodyne VLP-16 e os extrínsecos fornecidos pelo
+dataset. Ele gera `artifacts/corridor-02-fastlio-20s.pcd` com o mapa completo do
+trecho e `artifacts/corridor-02-fastlio-20s.json` com no máximo 25 mil pontos.
+As cores do segundo artifact codificam altura somente para inspeção; elas não
+representam associação RGB–LiDAR.
+
 ## Ambiente reproduzível
 
 Os perfis Docker isolam ROS e FAST-LIO do ambiente do host:

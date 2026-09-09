@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from .demo import export_demo_slice
+from .pcd_slice import export_pcd_slice
 
 
 # Declara os comandos suportados em um parser isolado para permitir teste sem
@@ -26,6 +27,20 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("artifacts/m1-demo.json"),
         help="arquivo JSON de destino",
     )
+    pcd_slice = commands.add_parser(
+        "pcd-slice",
+        help="amostra um mapa PCD binário para inspeção no map-explorer",
+    )
+    pcd_slice.add_argument("source", type=Path, help="arquivo PCD de origem")
+    pcd_slice.add_argument("--output", type=Path, required=True, help="arquivo JSON de destino")
+    pcd_slice.add_argument("--map-id", required=True, help="identidade do mapa")
+    pcd_slice.add_argument("--map-frame", default="map", help="frame global do mapa")
+    pcd_slice.add_argument(
+        "--max-points",
+        type=int,
+        default=25_000,
+        help="quantidade máxima de pontos enviada ao viewer",
+    )
     return parser
 
 
@@ -42,5 +57,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
     options = _parser().parse_args(arguments)
     if options.command == "demo":
         destination = export_demo_slice(options.output)
+        print(destination)
+    elif options.command == "pcd-slice":
+        destination = export_pcd_slice(
+            options.source,
+            options.output,
+            map_id=options.map_id,
+            map_frame=options.map_frame,
+            max_points=options.max_points,
+        )
         print(destination)
     return 0
