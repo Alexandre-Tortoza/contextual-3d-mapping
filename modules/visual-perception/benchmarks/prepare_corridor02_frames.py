@@ -20,6 +20,7 @@ Escreve frames PNG, amostrados uniformemente ao longo da sequência, em
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -118,9 +119,39 @@ def extract_frames(
     return written
 
 
-# Ponto de entrada de CLI: parseia os argumentos (bag, out_dir, count, topic),
-# valida que o bag existe, e chama extract_frames, reportando quantos frames
-# foram escritos. Executado via
+# Extrai exatamente os keyframes de uma janela resolvida por
+# `mapping-runtime bag-window`, nomeando cada PNG pelo índice original do frame
+# no stream RGB do bag. Existe porque a amostragem uniforme acima perde essa
+# identidade (ela numera pela ordem da amostra), e é justamente ela que a
+# composição contextual precisa para reencontrar o frame e sua pose.
+def extract_window_frames(bag_path: Path, out_dir: Path, window_path: Path) -> list[Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    payload = json.loads(window_path.read_text(encoding="utf-8"))
+    written: list[Path] = []
+
+    with AnyReader([bag_path]) as reader:
+        topic = payload.get("camera_topic")
+        connections = [c for c in reader.connections if c.topic == topic]
+        if not connections:
+            raise SystemExit(f"Topic {topic!r} not found in {bag_path}.")
+        for keyframe in payload["keyframes"]:
+            bag_timestamp = int(keyframe["bag_timestamp_ns"])
+            for connection, _timestamp, rawdata in reader.messages(
+                connections=connections, start=bag_timestamp, stop=bag_timestamp + 1
+            ):
+                msg = reader.deserialize(rawdata, connection.msgtype)
+                image = _decode_image(msg, connection.msgtype)
+                out_path = out_dir / f"corridor-02-{int(keyframe['sequence_index']):05d}.png"
+                Image.fromarray(image).save(out_path)
+                written.append(out_path)
+                break
+
+    return written
+
+
+# Ponto de entrada de CLI: parseia os argumentos (bag, out_dir, count, topic,
+# window), valida que o bag existe, e extrai frames por amostragem uniforme ou
+# pelos keyframes de uma janela. Executado via
 # `python benchmarks/prepare_corridor02_frames.py`.
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -128,12 +159,21 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--count", type=int, default=18)
     parser.add_argument("--topic", type=str, default=None, help="Override auto-detected RGB topic.")
+    parser.add_argument(
+        "--window",
+        type=Path,
+        default=None,
+        help="Window JSON from `mapping-runtime bag-window`; extracts its keyframes instead.",
+    )
     args = parser.parse_args()
 
     if not args.bag.exists():
         raise SystemExit(f"Bag not found: {args.bag}")
 
-    written = extract_frames(args.bag, args.out_dir, count=args.count, topic=args.topic)
+    if args.window is not None:
+        written = extract_window_frames(args.bag, args.out_dir, args.window)
+    else:
+        written = extract_frames(args.bag, args.out_dir, count=args.count, topic=args.topic)
     print(f"Wrote {len(written)} frames to {args.out_dir}")
 
 

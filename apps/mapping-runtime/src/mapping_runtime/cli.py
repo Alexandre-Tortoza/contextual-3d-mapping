@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -43,19 +44,58 @@ def _parser() -> argparse.ArgumentParser:
     )
     context = commands.add_parser(
         "corridor-02-context",
-        help="associa uma observação visual real ao slice FAST-LIO do corridor-02",
+        help="contextualiza o slice FAST-LIO do corridor-02 com os keyframes de um trecho",
     )
     context.add_argument("--geometric-slice", type=Path, required=True)
     context.add_argument("--bag", type=Path, required=True)
     context.add_argument("--intrinsics", type=Path, required=True)
     context.add_argument("--extrinsics", type=Path, required=True)
-    context.add_argument("--ground-truth", type=Path, required=True)
-    context.add_argument("--visual-observation", type=Path, required=True)
-    context.add_argument("--raw-image", type=Path, required=True)
-    context.add_argument("--overlay-image", type=Path, required=True)
-    context.add_argument("--valid-area-mask", type=Path, required=True)
+    context.add_argument(
+        "--window",
+        type=Path,
+        required=True,
+        help="janela resolvida por `bag-window`, que identifica os keyframes",
+    )
+    context.add_argument(
+        "--visual-run",
+        type=Path,
+        required=True,
+        help="execução de visual-perception que contém frames/<frame-id>/",
+    )
+    context.add_argument(
+        "--odometry",
+        type=Path,
+        default=None,
+        help="trajetória do FAST-LIO; ignorada com aviso quando ausente",
+    )
+    context.add_argument("--ground-truth", type=Path, default=None)
     context.add_argument("--output", type=Path, required=True)
-    context.add_argument("--camera-sequence-index", type=int, default=0)
+    window = commands.add_parser(
+        "bag-window",
+        help="resolve um trecho da rosbag e seus keyframes RGB nos dois relógios do arquivo",
+    )
+    window.add_argument("--bag", type=Path, required=True, help="rosbag de origem")
+    window.add_argument(
+        "--start-s",
+        type=float,
+        required=True,
+        help="início da janela, em segundos após o primeiro frame RGB",
+    )
+    window.add_argument("--duration-s", type=float, required=True, help="duração da janela")
+    window.add_argument(
+        "--keyframe-interval-s",
+        type=float,
+        default=0.0,
+        help="espaçamento entre keyframes; zero seleciona apenas o primeiro",
+    )
+    window.add_argument(
+        "--lead-s",
+        type=float,
+        default=3.0,
+        help="prefixo reproduzido antes da janela para o estimator convergir",
+    )
+    window.add_argument("--camera-topic", default="/camera_1/image_raw", help="tópico RGB")
+    window.add_argument("--output", type=Path, default=None, help="arquivo JSON de destino")
     return parser
 
 
@@ -86,21 +126,45 @@ def main(arguments: Sequence[str] | None = None) -> int:
         # Importa dependências opcionais apenas no workflow real, mantendo o
         # demo e os testes mínimos executáveis sem rosbags/Pillow/PyYAML.
         from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
+        from .keyframe_inputs import resolve_keyframe_inputs
 
+        keyframes, skipped, pose_anchor_ns = resolve_keyframe_inputs(
+            options.window, options.visual_run
+        )
+        if skipped:
+            print(f"AVISO: {len(skipped)} keyframes sem percepção visual: {', '.join(skipped)}")
+        odometry = options.odometry
+        if odometry is not None and not odometry.is_file():
+            print(f"AVISO: odometria ausente em {odometry}; usando o ground-truth do dataset.")
+            odometry = None
         destination = export_corridor02_context(
             Corridor02ContextRequest(
                 geometric_slice=options.geometric_slice,
                 bag=options.bag,
                 intrinsics=options.intrinsics,
                 extrinsics=options.extrinsics,
-                ground_truth=options.ground_truth,
-                visual_observation=options.visual_observation,
-                raw_image=options.raw_image,
-                overlay_image=options.overlay_image,
-                valid_area_mask=options.valid_area_mask,
+                keyframes=keyframes,
                 destination=options.output,
-                camera_sequence_index=options.camera_sequence_index,
+                odometry=odometry,
+                ground_truth=options.ground_truth,
+                pose_anchor_ns=pose_anchor_ns,
             )
         )
         print(destination)
+    elif options.command == "bag-window":
+        # Importa a leitura de rosbag apenas no workflow real, mantendo demo e
+        # testes mínimos executáveis sem a dependência opcional.
+        from .bag_window import export_bag_window, resolve_bag_window
+
+        window = resolve_bag_window(
+            options.bag,
+            start_s=options.start_s,
+            duration_s=options.duration_s,
+            keyframe_interval_s=options.keyframe_interval_s,
+            lead_s=options.lead_s,
+            camera_topic=options.camera_topic,
+        )
+        if options.output is not None:
+            export_bag_window(window, options.output)
+        print(json.dumps(window.to_payload(), indent=2))
     return 0

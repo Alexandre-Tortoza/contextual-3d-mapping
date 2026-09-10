@@ -59,6 +59,9 @@ def test_export_pcd_slice_samples_binary_map(tmp_path: Path) -> None:
     ]
     assert payload["points"][0]["intensity"] == 10.0
     assert payload["points"][0]["display_color_rgb"] != payload["points"][1]["display_color_rgb"]
+    # Um ponto de mapa acumulado não pertence a um único scan: publicar uma
+    # coordenada "de origem" afirmaria uma proveniência que não existe.
+    assert "source_coordinates_m" not in payload["points"][0]
 
 
 # Rejeita variantes que exigiriam um decoder diferente. O erro explícito evita

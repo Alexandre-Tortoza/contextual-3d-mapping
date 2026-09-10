@@ -1,79 +1,80 @@
-"""Composição contextual auditável para uma observação do corridor-02."""
+"""Composição contextual auditável de um trecho do corridor-02."""
 
 from __future__ import annotations
 
 import json
 import math
 import shutil
-import struct
+from bisect import bisect_left
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from geometric_map import GeometryPoint, GeometryReference
+from geometric_map import GeometryReference
+from semantic_fusion import SemanticContribution, fuse_point_contributions
 from sensor_association import (
     AssociationStatus,
     CameraLidarCalibration,
     CameraModel,
+    MapAnchoredPoint,
     RgbFrame,
     VisualRegionEvidence,
-    associate_points,
+    associate_map_points,
 )
 
 from contextual_mapping_contracts import (
     FrameId,
     MapId,
     ObservationReference,
-    Provenance,
     RigidTransform,
     SourceArtifactReference,
     Timestamp,
 )
 
+# Ordem de informatividade das rejeições. Um ponto que a câmera enquadrou e
+# perdeu por oclusão diz algo sobre a cena; um ponto que ficou atrás da câmera
+# em todos os keyframes diz apenas que ninguém olhou para lá. O viewer mostra a
+# rejeição mais informativa entre as observações.
+_REJECTION_PRIORITY = (
+    AssociationStatus.OCCLUDED,
+    AssociationStatus.OUTSIDE_VALID_SUPPORT,
+    AssociationStatus.OUTSIDE_IMAGE,
+    AssociationStatus.BEHIND_CAMERA,
+)
 
-# Agrupa os arquivos externos necessários para não esconder paths ou escolher
-# implicitamente uma execução de percepção no composition root.
+
+# Agrupa os arquivos de um keyframe visual e sua identidade temporal. As três
+# identidades vêm de `mapping-runtime bag-window`, porque o bag preserva dois
+# relógios e nenhuma delas é derivável das outras.
 @dataclass(frozen=True)
-class Corridor02ContextRequest:
-    """Entradas explícitas para associar uma observação visual ao mapa.
+class Corridor02Keyframe:
+    """Entradas de um keyframe visual do trecho.
 
     Argumentos:
-        geometric_slice: slice geométrico FAST-LIO usado como base.
-        bag: rosbag original que preserva RGB e LiDAR timestampados.
-        intrinsics: calibração intrínseca MEI do dataset.
-        extrinsics: calibração extrínseca LiDAR–IMU–câmera.
-        ground_truth: trajetória usada apenas para registrar o scan de evidência.
+        frame_id: identidade do frame usada nos artifacts de percepção.
+        camera_sequence_index: posição do frame no stream RGB do bag.
+        header_timestamp_ns: instante do frame no relógio do dataset.
+        bag_timestamp_ns: instante de gravação, usado para ler a mensagem.
         visual_observation: saída canônica de visual-perception.
         raw_image: imagem exata consumida por visual-perception.
         overlay_image: preview auditável das regiões e labels.
         valid_area_mask: suporte óptico válido da imagem omnidirecional.
-        destination: artifact contextual de destino.
-        camera_sequence_index: índice original do frame RGB no rosbag.
     """
 
-    geometric_slice: Path
-    bag: Path
-    intrinsics: Path
-    extrinsics: Path
-    ground_truth: Path
+    frame_id: str
+    camera_sequence_index: int
+    header_timestamp_ns: int
+    bag_timestamp_ns: int
     visual_observation: Path
     raw_image: Path
     overlay_image: Path
     valid_area_mask: Path
-    destination: Path
-    camera_sequence_index: int = 0
 
-    # Falha antes de ler o rosbag quando a composição aponta para artifacts
-    # ausentes ou para um índice impossível de interpretar.
+    # Falha antes de abrir o bag quando a composição aponta para artifacts
+    # ausentes, onde o erro seria atribuído à leitura do dataset.
     def __post_init__(self) -> None:
-        """Valida presença dos arquivos e índice da observação RGB."""
+        """Valida presença dos artifacts de percepção do keyframe."""
         for path in (
-            self.geometric_slice,
-            self.bag,
-            self.intrinsics,
-            self.extrinsics,
-            self.ground_truth,
             self.visual_observation,
             self.raw_image,
             self.overlay_image,
@@ -83,6 +84,54 @@ class Corridor02ContextRequest:
                 raise FileNotFoundError(path)
         if self.camera_sequence_index < 0:
             raise ValueError("camera_sequence_index must be non-negative.")
+
+
+# Agrupa os arquivos externos necessários para não esconder paths ou escolher
+# implicitamente uma execução de percepção no composition root.
+@dataclass(frozen=True)
+class Corridor02ContextRequest:
+    """Entradas explícitas para contextualizar um trecho do mapa.
+
+    Argumentos:
+        geometric_slice: slice geométrico FAST-LIO usado como base.
+        bag: rosbag original que preserva RGB e LiDAR timestampados.
+        intrinsics: calibração intrínseca MEI do dataset.
+        extrinsics: calibração extrínseca LiDAR–IMU–câmera.
+        keyframes: keyframes visuais que contextualizam o trecho.
+        destination: artifact contextual de destino.
+        odometry: trajetória estimada pelo FAST-LIO, fonte de pose preferencial.
+        ground_truth: trajetória do dataset, usada quando não há odometria.
+        pose_anchor_ns: instante em que o mapa foi iniciado, usado para alinhar
+            o ground-truth à origem do mapa FAST-LIO.
+    """
+
+    geometric_slice: Path
+    bag: Path
+    intrinsics: Path
+    extrinsics: Path
+    keyframes: tuple[Corridor02Keyframe, ...]
+    destination: Path
+    odometry: Path | None = None
+    ground_truth: Path | None = None
+    pose_anchor_ns: int | None = None
+
+    # Exige uma fonte de pose e ao menos um keyframe antes de qualquer leitura,
+    # porque ambos são pré-condições da composição, e não erros de dados.
+    def __post_init__(self) -> None:
+        """Valida arquivos, keyframes e disponibilidade de uma fonte de pose."""
+        for path in (self.geometric_slice, self.bag, self.intrinsics, self.extrinsics):
+            if not path.is_file():
+                raise FileNotFoundError(path)
+        if not self.keyframes:
+            raise ValueError("at least one keyframe is required.")
+        available = [path for path in (self.odometry, self.ground_truth) if path is not None]
+        if not available:
+            raise ValueError("either odometry or ground_truth must be provided.")
+        for path in available:
+            if not path.is_file():
+                raise FileNotFoundError(path)
+        if self.ground_truth is not None and self.odometry is None and self.pose_anchor_ns is None:
+            raise ValueError("ground-truth poses require pose_anchor_ns.")
 
 
 # Converte uma matriz de rotação válida em quaternion xyzw para usar o contract
@@ -117,10 +166,33 @@ def _matrix_to_quaternion(matrix: Any) -> tuple[float, float, float, float]:
     return tuple(value / norm for value in quaternion)  # type: ignore[return-value]
 
 
-# Lê os YAML do dataset e deriva diretamente LiDAR→câmera. O adapter não
-# publica as matrizes de terceiros; devolve o contract de calibração do módulo.
-def _load_calibration(intrinsics_path: Path, extrinsics_path: Path) -> CameraLidarCalibration:
-    """Carrega a calibração MEI e compõe a extrínseca LiDAR→câmera."""
+# Monta a matriz homogênea de uma pose translação + quaternion xyzw. Existe
+# porque as duas fontes de pose deste trecho — odometria e ground-truth —
+# publicam poses nesse mesmo formato.
+def _pose_matrix(translation: tuple[float, float, float], rotation_xyzw: tuple[float, ...]) -> Any:
+    """Converte translação e quaternion em matriz homogênea 4×4."""
+    import numpy as np
+
+    qx, qy, qz, qw = (float(value) for value in rotation_xyzw)
+    rotation = np.asarray(
+        [
+            [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
+            [2 * (qx * qy + qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qx * qw)],
+            [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx * qx + qy * qy)],
+        ],
+        dtype=np.float64,
+    )
+    value = np.eye(4, dtype=np.float64)
+    value[:3, :3] = rotation
+    value[:3, 3] = translation
+    return value
+
+
+# Lê os YAML do dataset e deriva as extrínsecas necessárias. O adapter não
+# publica as matrizes de terceiros; devolve o contract de calibração do módulo
+# e, separadamente, a extrínseca LiDAR→IMU exigida pelas fontes de pose.
+def _load_calibration(intrinsics_path: Path, extrinsics_path: Path) -> tuple[CameraLidarCalibration, Any]:
+    """Carrega a calibração MEI, a extrínseca LiDAR→câmera e a LiDAR→IMU."""
     import numpy as np
     import yaml
 
@@ -132,7 +204,7 @@ def _load_calibration(intrinsics_path: Path, extrinsics_path: Path) -> CameraLid
     projection = intrinsics_payload["projection_parameters"]
     mirror = intrinsics_payload["mirror_parameters"]
     distortion = intrinsics_payload["distortion_parameters"]
-    return CameraLidarCalibration(
+    calibration = CameraLidarCalibration(
         calibration_id="corridor-02-camera-lidar-mei-v1",
         artifact=SourceArtifactReference(extrinsics_path.resolve().as_uri(), "application/yaml"),
         model=CameraModel.MEI,
@@ -152,6 +224,7 @@ def _load_calibration(intrinsics_path: Path, extrinsics_path: Path) -> CameraLid
         distortion_p1=float(distortion["p1"]),
         distortion_p2=float(distortion["p2"]),
     )
+    return calibration, laser_to_imu
 
 
 # Extrai o timestamp do header ROS sem usar o horário de gravação do bag,
@@ -161,100 +234,132 @@ def _header_timestamp_ns(message: Any) -> int:
     return int(message.header.stamp.sec) * 1_000_000_000 + int(message.header.stamp.nanosec)
 
 
-# Busca o frame RGB pelo índice original e o scan LiDAR temporalmente mais
-# próximo. Isso restaura a identidade que o benchmark visual local não reteve.
-def _read_synchronized_messages(bag: Path, camera_sequence_index: int) -> tuple[Any, int, Any, int, int]:
-    """Lê um frame RGB e o scan LiDAR mais próximo usando timestamps dos headers."""
-    from rosbags.highlevel import AnyReader
+# Lê a odometria gravada durante a execução do FAST-LIO. É a fonte de pose
+# preferencial porque descreve exatamente a trajetória que originou o mapa;
+# com o contexto ancorado nos pontos do mapa, um erro de pose vira pixel errado
+# e, portanto, label errado.
+def _load_odometry(path: Path) -> tuple[tuple[int, Any], ...]:
+    """Carrega poses corpo→mapa a partir do CSV de `rostopic echo -p`.
 
-    with AnyReader([bag]) as reader:
-        camera_connections = [item for item in reader.connections if item.topic == "/camera_1/image_raw"]
-        lidar_connections = [item for item in reader.connections if item.topic == "/velodyne_points"]
-        if len(camera_connections) != 1 or len(lidar_connections) != 1:
-            raise ValueError("corridor-02 bag must contain one RGB and one LiDAR connection.")
-        camera_message = None
-        camera_timestamp_ns = None
-        for index, (connection, _, rawdata) in enumerate(reader.messages(connections=camera_connections)):
-            if index == camera_sequence_index:
-                camera_message = reader.deserialize(rawdata, connection.msgtype)
-                camera_timestamp_ns = _header_timestamp_ns(camera_message)
-                break
-        if camera_message is None or camera_timestamp_ns is None:
-            raise ValueError("camera_sequence_index exceeds the RGB stream.")
-        nearest: tuple[int, Any, int, int] | None = None
-        for index, (connection, _, rawdata) in enumerate(reader.messages(connections=lidar_connections)):
-            message = reader.deserialize(rawdata, connection.msgtype)
-            timestamp_ns = _header_timestamp_ns(message)
-            delta_ns = abs(timestamp_ns - camera_timestamp_ns)
-            if nearest is None or (delta_ns, index) < (nearest[0], nearest[2]):
-                nearest = (delta_ns, message, index, timestamp_ns)
-            if timestamp_ns > camera_timestamp_ns and nearest is not None and delta_ns > nearest[0]:
-                break
-    if nearest is None:
-        raise ValueError("corridor-02 bag does not contain LiDAR messages.")
-    return camera_message, camera_timestamp_ns, nearest[1], nearest[3], nearest[2]
-
-
-# Decodifica somente os campos físicos usados pelo slice e mantém o índice do
-# registro original para formar geometry_id e proveniência estáveis.
-def _decode_point_cloud(message: Any) -> tuple[tuple[int, tuple[float, float, float], float | None], ...]:
-    """Decodifica x, y, z e intensidade de uma mensagem PointCloud2."""
-    fields = {field.name: field for field in message.fields}
-    if not {"x", "y", "z"}.issubset(fields):
-        raise ValueError("PointCloud2 must contain x, y and z fields.")
-    endian = ">" if message.is_bigendian else "<"
-    float32_datatype = 7
-    if any(fields[axis].datatype != float32_datatype for axis in ("x", "y", "z")):
-        raise ValueError("corridor-02 PointCloud2 coordinates must be float32.")
-    intensity_field = fields.get("intensity")
-    payload = bytes(message.data)
-    records: list[tuple[int, tuple[float, float, float], float | None]] = []
-    for index in range(int(message.width) * int(message.height)):
-        offset = index * int(message.point_step)
-        coordinates = tuple(
-            float(struct.unpack_from(endian + "f", payload, offset + int(fields[axis].offset))[0])
-            for axis in ("x", "y", "z")
-        )
-        if not all(math.isfinite(value) for value in coordinates):
+    Argumentos:
+        path: CSV produzido durante a execução do FAST-LIO.
+    Retorna:
+        pares ``(timestamp_ns, matriz 4×4)`` ordenados por tempo.
+    Levanta:
+        ValueError: se o CSV não declarar as colunas de pose esperadas.
+    """
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if len(lines) < 2:
+        raise ValueError(f"odometry file {path} does not contain samples.")
+    header = [column.strip() for column in lines[0].split(",")]
+    required = {
+        "stamp": "field.header.stamp",
+        "x": "field.pose.pose.position.x",
+        "y": "field.pose.pose.position.y",
+        "z": "field.pose.pose.position.z",
+        "qx": "field.pose.pose.orientation.x",
+        "qy": "field.pose.pose.orientation.y",
+        "qz": "field.pose.pose.orientation.z",
+        "qw": "field.pose.pose.orientation.w",
+    }
+    missing = [column for column in required.values() if column not in header]
+    if missing:
+        raise ValueError(f"odometry file {path} is missing columns: {missing}.")
+    index = {name: header.index(column) for name, column in required.items()}
+    samples: list[tuple[int, Any]] = []
+    for line in lines[1:]:
+        values = line.split(",")
+        if len(values) < len(header):
             continue
-        intensity = None
-        if intensity_field is not None and intensity_field.datatype == float32_datatype:
-            intensity = float(struct.unpack_from(endian + "f", payload, offset + int(intensity_field.offset))[0])
-        records.append((index, coordinates, intensity))
-    return tuple(records)
+        translation = tuple(float(values[index[axis]]) for axis in ("x", "y", "z"))
+        rotation = tuple(float(values[index[axis]]) for axis in ("qx", "qy", "qz", "qw"))
+        samples.append((int(values[index["stamp"]]), _pose_matrix(translation, rotation)))
+    if not samples:
+        raise ValueError(f"odometry file {path} does not contain usable samples.")
+    return tuple(sorted(samples, key=lambda item: item[0]))
 
 
-# Encontra a pose mais próxima e a torna relativa à primeira pose da sequência,
-# alinhando o scan de evidência ao frame inicial usado pelo mapa FAST-LIO.
-def _relative_pose(ground_truth: Path, timestamp_ns: int) -> tuple[Any, str]:
-    """Retorna a matriz de pose relativa mais próxima e sua linha de origem."""
+# Lê a trajetória de ground-truth e a realinha à origem do mapa. O FAST-LIO
+# começa o mapa na pose do primeiro scan processado, então a âncora precisa ser
+# aquele instante — e não a primeira linha do arquivo, que descreve o início do
+# dataset inteiro.
+def _load_ground_truth(path: Path, anchor_ns: int) -> tuple[tuple[int, Any], ...]:
+    """Carrega poses corpo→mapa a partir da trajetória do dataset.
+
+    Argumentos:
+        path: arquivo de trajetória ``timestamp tx ty tz qx qy qz qw``.
+        anchor_ns: instante que define a origem do mapa.
+    Retorna:
+        pares ``(timestamp_ns, matriz 4×4)`` relativos à âncora.
+    Levanta:
+        ValueError: se a trajetória estiver vazia.
+    """
     import numpy as np
 
-    rows = [line.split() for line in ground_truth.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = [line.split() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not rows:
         raise ValueError("ground-truth trajectory must not be empty.")
-    target_seconds = timestamp_ns / 1_000_000_000
-    selected = min(rows, key=lambda row: abs(float(row[0]) - target_seconds))
-
-    # Converte quaternion xyzw e translação no transform homogêneo gravado pelo dataset.
-    def transform(row: list[str]) -> Any:
-        """Converte uma linha da trajetória em matriz homogênea 4×4."""
-        values = [float(value) for value in row]
-        tx, ty, tz, qx, qy, qz, qw = values[1:]
-        rotation = np.asarray(
-            [
-                [1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
-                [2 * (qx * qy + qz * qw), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qx * qw)],
-                [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx * qx + qy * qy)],
-            ],
-            dtype=np.float64,
+    samples = [
+        (
+            int(round(float(row[0]) * 1_000_000_000)),
+            _pose_matrix(
+                (float(row[1]), float(row[2]), float(row[3])),
+                (float(row[4]), float(row[5]), float(row[6]), float(row[7])),
+            ),
         )
-        value = np.eye(4, dtype=np.float64)
-        value[:3, :3] = rotation
-        value[:3, 3] = (tx, ty, tz)
-        return value
+        for row in rows
+    ]
+    samples.sort(key=lambda item: item[0])
+    anchor = min(samples, key=lambda item: abs(item[0] - anchor_ns))[1]
+    inverse_anchor = np.linalg.inv(anchor)
+    return tuple((timestamp, inverse_anchor @ matrix) for timestamp, matrix in samples)
 
-    return np.linalg.inv(transform(rows[0])) @ transform(selected), " ".join(selected)
+
+# Seleciona a pose mais próxima de um instante. A escolha é por vizinho mais
+# próximo, e não por interpolação, para que a proveniência aponte para uma
+# amostra real da trajetória.
+def _nearest_pose(samples: tuple[tuple[int, Any], ...], timestamp_ns: int) -> tuple[int, Any]:
+    """Retorna a amostra de pose mais próxima do instante pedido."""
+    times = [sample[0] for sample in samples]
+    position = bisect_left(times, timestamp_ns)
+    candidates = [index for index in (position - 1, position) if 0 <= index < len(samples)]
+    return samples[min(candidates, key=lambda index: abs(times[index] - timestamp_ns))]
+
+
+# Lê uma mensagem identificada pelo instante de gravação. Existe para que a
+# composição não percorra o stream inteiro a cada keyframe: neste dataset o
+# stream RGB tem dezenas de gigabytes.
+def _message_at(reader: Any, connections: list[Any], bag_timestamp_ns: int) -> Any:
+    """Desserializa a mensagem gravada em um instante conhecido."""
+    for connection, _, rawdata in reader.messages(
+        connections=connections, start=bag_timestamp_ns, stop=bag_timestamp_ns + 1
+    ):
+        return reader.deserialize(rawdata, connection.msgtype)
+    raise ValueError(f"no message recorded at bag timestamp {bag_timestamp_ns}.")
+
+
+# Encontra o scan LiDAR sincronizado com um keyframe RGB. O scan não fornece
+# geometria — o mapa já a fornece — mas ancora temporalmente a pose usada na
+# projeção, e essa âncora precisa ser um instante medido, não estimado.
+def _nearest_lidar(
+    reader: Any,
+    connections: list[Any],
+    bag_times: list[int],
+    camera_header_ns: int,
+    clock_offset_ns: int,
+) -> tuple[int, int]:
+    """Retorna o índice e o timestamp de header do scan LiDAR mais próximo."""
+    estimate = camera_header_ns + clock_offset_ns
+    position = bisect_left(bag_times, estimate)
+    candidates = [index for index in (position - 1, position, position + 1) if 0 <= index < len(bag_times)]
+    if not candidates:
+        raise ValueError("bag does not contain LiDAR messages.")
+    measured = {
+        index: _header_timestamp_ns(_message_at(reader, connections, bag_times[index]))
+        for index in candidates
+    }
+    best = min(measured, key=lambda index: (abs(measured[index] - camera_header_ns), index))
+    return best, measured[best]
 
 
 # Extrai o claim primário sem promover alternativas do VLM. O estado de
@@ -267,8 +372,10 @@ def _primary_claim(region: dict[str, Any]) -> dict[str, Any] | None:
 
 # Materializa masks não sobrepostas, priorizando regiões menores e mais
 # específicas. Isso adapta proposals sobrepostas ao contract ponto→região único.
+# Os identificadores recebem o prefixo do keyframe porque, com vários frames, o
+# mesmo identificador de região pode reaparecer em observações diferentes.
 def _region_evidence(
-    visual_payload: dict[str, Any], valid_mask: Any
+    visual_payload: dict[str, Any], valid_mask: Any, frame_id: str
 ) -> tuple[tuple[VisualRegionEvidence, ...], dict[str, dict[str, Any]]]:
     """Converte regiões canônicas em evidências 2D disjuntas e metadados de inspeção."""
     import numpy as np
@@ -307,7 +414,8 @@ def _region_evidence(
         if not len(x_values):
             continue
         ownership[accepted] = region_index
-        region_id = str(region["region_id"])
+        region_id = f"{frame_id}:{region['region_id']}"
+        support = region.get("support") or {}
         evidence.append(
             VisualRegionEvidence(
                 region_id,
@@ -318,12 +426,16 @@ def _region_evidence(
         )
         metadata[region_id] = {
             "region_id": region_id,
+            "observation_frame_id": frame_id,
             "label": claim["value"],
             "confidence": claim.get("confidence"),
             "support": claim.get("support"),
             "category": claim.get("category"),
             "region_kind": claim.get("region_kind"),
             "geometric_confidence": region.get("geometric_confidence"),
+            "visual_support": support.get("visual_support"),
+            "region_quality": support.get("region_quality"),
+            "calibrated_confidence": support.get("calibrated_confidence"),
             "box": region.get("box"),
             "claims": [
                 {
@@ -340,200 +452,297 @@ def _region_evidence(
     return tuple(evidence), metadata
 
 
-# Gera uma paleta estável por label para a camada semântica. A cor é uma
-# visualização de um claim, e não a cor física RGB observada pelo sensor.
-def _semantic_color(label: str) -> tuple[int, int, int]:
-    """Retorna uma cor RGB determinística derivada do label canônico."""
-    digest = sha256(label.encode("utf-8")).digest()
-    return tuple(70 + value % 166 for value in digest[:3])  # type: ignore[return-value]
-
-
-# Constrói GeometryPoint com coordenadas de origem LiDAR e coordenadas globais
-# separadas; essa distinção é necessária para projetar e renderizar corretamente.
-def _geometry_points(
-    records: tuple[tuple[int, tuple[float, float, float], float | None], ...],
-    pose: Any,
-    lidar_reference: ObservationReference,
-    map_id: MapId,
-) -> tuple[tuple[GeometryPoint, float | None], ...]:
-    """Registra os pontos do scan no mapa preservando coordenadas e índices de origem."""
+# Constrói o frame RGB consumido pela associação. Converte via ``tolist`` em vez
+# de laços Python porque a conversão acontece uma vez por keyframe e domina o
+# custo da composição quando o trecho tem muitos frames.
+def _rgb_frame(reference: ObservationReference, raw_rgb: Any, valid_mask: Any) -> RgbFrame:
+    """Converte imagem e máscara de suporte no contract de frame RGB."""
     import numpy as np
 
-    provenance = Provenance(
-        "corridor-02-context-association",
-        (lidar_reference,),
-        (SourceArtifactReference("rosbag://corridor-02/velodyne_points", "sensor_msgs/PointCloud2"),),
+    y_values, x_values = np.nonzero(valid_mask)
+    return RgbFrame(
+        reference,
+        width=int(raw_rgb.shape[1]),
+        height=int(raw_rgb.shape[0]),
+        pixels=tuple(map(tuple, raw_rgb.reshape(-1, 3).tolist())),
+        valid_pixels=frozenset(zip(x_values.tolist(), y_values.tolist(), strict=True)),
     )
-    result: list[tuple[GeometryPoint, float | None]] = []
-    for source_index, source_coordinates, intensity in records:
-        homogeneous = pose @ np.asarray((*source_coordinates, 1.0), dtype=np.float64)
-        geometry = GeometryPoint(
-            GeometryReference(map_id, f"{map_id}:rgb-lidar:{lidar_reference.sequence_index}:{source_index}"),
-            tuple(float(value) for value in homogeneous[:3]),
-            source_coordinates,
-            lidar_reference,
-            provenance,
-        )
-        result.append((geometry, intensity))
-    return tuple(result)
 
 
-# Monta o artifact v2 unindo a geometria completa amostrada a um scan com
-# evidência RGB/semântica real. Somente pontos visíveis são adicionados à camada.
+# Monta o artifact v2 rotulando os próprios pontos do mapa persistente. Anexar
+# o scan colorido ao mapa criava duas amostragens da mesma superfície a poucos
+# centímetros uma da outra, das quais só uma carregava contexto — o "ponto
+# fantasma" observado no viewer. Ancorando no mapa, cada ponto persistido passa
+# a ter ou não label, e a ausência passa a declarar seu motivo.
 def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
-    """Exporta um mapa com associação RGB, contexto VLM e previews auditáveis."""
+    """Exporta um trecho do mapa contextualizado por múltiplos keyframes.
+
+    Argumentos:
+        request: entradas explícitas do trecho, keyframes e fonte de pose.
+    Retorna:
+        caminho do artifact contextual gravado.
+    Levanta:
+        ValueError: se o slice, a calibração ou as observações forem incompatíveis.
+    """
     import numpy as np
     from PIL import Image
+    from rosbags.highlevel import AnyReader
 
     base = json.loads(request.geometric_slice.read_text(encoding="utf-8"))
     if base.get("schema_version") != 1 or not isinstance(base.get("points"), list):
         raise ValueError("geometric_slice must be a schema_version 1 point slice.")
-    visual_payload = json.loads(request.visual_observation.read_text(encoding="utf-8"))
-    camera_message, camera_timestamp_ns, lidar_message, lidar_timestamp_ns, lidar_index = (
-        _read_synchronized_messages(request.bag, request.camera_sequence_index)
-    )
-    if (int(camera_message.width), int(camera_message.height)) != (
-        int(visual_payload["image_width"]),
-        int(visual_payload["image_height"]),
-    ):
-        raise ValueError("visual observation dimensions differ from the source RGB message.")
-    raw_rgb = np.asarray(Image.open(request.raw_image).convert("RGB"), dtype=np.uint8)
-    valid_mask = np.asarray(Image.open(request.valid_area_mask).convert("L"), dtype=np.uint8) > 0
-    if raw_rgb.shape[:2] != valid_mask.shape:
-        raise ValueError("valid-area mask dimensions must match the RGB image.")
-    camera_frame = FrameId("camera_1_optical_frame")
-    lidar_frame = FrameId(str(lidar_message.header.frame_id))
-    calibration = _load_calibration(request.intrinsics, request.extrinsics)
-    if calibration.lidar_to_camera.source_frame != lidar_frame:
-        raise ValueError("LiDAR message frame differs from the calibration source frame.")
-    rgb_reference = ObservationReference(
-        observation_id=f"corridor-02:camera_1:{request.camera_sequence_index}",
-        dataset_id="corridor-02",
-        sequence_id="corridor-02",
-        sensor_id="camera_1",
-        sequence_index=request.camera_sequence_index,
-        timestamp=Timestamp(camera_timestamp_ns, "corridor-02-sensor"),
-        frame_id=camera_frame,
-        calibration_id=calibration.calibration_id,
-    )
-    lidar_reference = ObservationReference(
-        observation_id=f"corridor-02:velodyne:{lidar_index}",
-        dataset_id="corridor-02",
-        sequence_id="corridor-02",
-        sensor_id="velodyne",
-        sequence_index=lidar_index,
-        timestamp=Timestamp(lidar_timestamp_ns, "corridor-02-sensor"),
-        frame_id=lidar_frame,
-    )
-    rgb = RgbFrame(
-        rgb_reference,
-        width=raw_rgb.shape[1],
-        height=raw_rgb.shape[0],
-        pixels=tuple(tuple(int(channel) for channel in pixel) for pixel in raw_rgb.reshape(-1, 3)),
-        valid_pixels=frozenset(
-            (int(x), int(y)) for y, x in zip(*np.nonzero(valid_mask), strict=True)
-        ),
-    )
-    regions, region_metadata = _region_evidence(visual_payload, valid_mask)
-    pose, pose_source = _relative_pose(request.ground_truth, lidar_timestamp_ns)
     map_id = MapId(str(base["map_id"]))
-    geometry_with_intensity = _geometry_points(
-        _decode_point_cloud(lidar_message), pose, lidar_reference, map_id
+    map_frame = FrameId(str(base["map_frame"]))
+    camera_frame = FrameId("camera_1_optical_frame")
+    calibration, laser_to_imu = _load_calibration(request.intrinsics, request.extrinsics)
+    laser_to_camera = _pose_matrix(
+        calibration.lidar_to_camera.translation_m, calibration.lidar_to_camera.rotation_xyzw
     )
-    geometry = tuple(item[0] for item in geometry_with_intensity)
-    associations = associate_points(
-        geometry,
-        rgb,
-        calibration,
-        regions,
-        max_time_delta_ns=100_000_000,
+    map_points = tuple(
+        MapAnchoredPoint(
+            GeometryReference(map_id, str(point["geometry_id"])),
+            tuple(float(value) for value in point["coordinates_m"]),
+        )
+        for point in base["points"]
     )
-    intensity_by_id = {
-        point.reference.geometry_id: intensity for point, intensity in geometry_with_intensity
-    }
-    associated_records = []
-    for point, association in zip(geometry, associations, strict=True):
-        if association.status is not AssociationStatus.ASSOCIATED:
-            continue
-        associated_records.append(
-            {
-                "geometry_id": point.reference.geometry_id,
-                "coordinates_m": point.coordinates_m,
-                "source_coordinates_m": point.source_coordinates_m,
-                "intensity": intensity_by_id[point.reference.geometry_id],
-                "association": {
-                    "status": association.status.value,
-                    "rgb_observation_id": rgb_reference.observation_id,
-                    "rgb_timestamp_ns": camera_timestamp_ns,
+    if request.odometry is not None:
+        poses = _load_odometry(request.odometry)
+        pose_source = "fastlio_odometry"
+    else:
+        assert request.ground_truth is not None and request.pose_anchor_ns is not None
+        poses = _load_ground_truth(request.ground_truth, request.pose_anchor_ns)
+        pose_source = "dataset_ground_truth"
+
+    assets = request.destination.parent / f"{request.destination.stem}-assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    associated: dict[str, list[dict[str, Any]]] = {}
+    rejected: dict[str, AssociationStatus] = {}
+    observations: list[dict[str, Any]] = []
+    regions: dict[str, dict[str, Any]] = {}
+
+    with AnyReader([request.bag]) as reader:
+        camera_connections = [item for item in reader.connections if item.topic == "/camera_1/image_raw"]
+        lidar_connections = [item for item in reader.connections if item.topic == "/velodyne_points"]
+        if len(camera_connections) != 1 or len(lidar_connections) != 1:
+            raise ValueError("corridor-02 bag must contain one RGB and one LiDAR connection.")
+        lidar_identifiers = {item.id for item in lidar_connections}
+        lidar_bag_times = sorted(
+            entry.time
+            for source in reader.readers
+            for connection_id, entries in source.indexes.items()
+            if connection_id in lidar_identifiers
+            for entry in entries
+        )
+        for keyframe in request.keyframes:
+            camera_message = _message_at(reader, camera_connections, keyframe.bag_timestamp_ns)
+            camera_timestamp_ns = _header_timestamp_ns(camera_message)
+            if camera_timestamp_ns != keyframe.header_timestamp_ns:
+                raise ValueError(
+                    f"keyframe {keyframe.frame_id} header timestamp does not match the recorded message."
+                )
+            visual_payload = json.loads(keyframe.visual_observation.read_text(encoding="utf-8"))
+            if (int(camera_message.width), int(camera_message.height)) != (
+                int(visual_payload["image_width"]),
+                int(visual_payload["image_height"]),
+            ):
+                raise ValueError("visual observation dimensions differ from the source RGB message.")
+            lidar_index, lidar_timestamp_ns = _nearest_lidar(
+                reader,
+                lidar_connections,
+                lidar_bag_times,
+                camera_timestamp_ns,
+                keyframe.bag_timestamp_ns - camera_timestamp_ns,
+            )
+            pose_timestamp_ns, body_to_map = _nearest_pose(poses, camera_timestamp_ns)
+            lidar_to_map = body_to_map @ laser_to_imu
+            map_to_camera_matrix = laser_to_camera @ np.linalg.inv(lidar_to_map)
+            map_to_camera = RigidTransform(
+                map_frame,
+                camera_frame,
+                tuple(float(value) for value in map_to_camera_matrix[:3, 3]),
+                _matrix_to_quaternion(map_to_camera_matrix[:3, :3]),
+            )
+            raw_rgb = np.asarray(Image.open(keyframe.raw_image).convert("RGB"), dtype=np.uint8)
+            valid_mask = np.asarray(Image.open(keyframe.valid_area_mask).convert("L"), dtype=np.uint8) > 0
+            if raw_rgb.shape[:2] != valid_mask.shape:
+                raise ValueError("valid-area mask dimensions must match the RGB image.")
+            observation_id = f"corridor-02:camera_1:{keyframe.camera_sequence_index}"
+            rgb_reference = ObservationReference(
+                observation_id=observation_id,
+                dataset_id="corridor-02",
+                sequence_id="corridor-02",
+                sensor_id="camera_1",
+                sequence_index=keyframe.camera_sequence_index,
+                timestamp=Timestamp(camera_timestamp_ns, "corridor-02-sensor"),
+                frame_id=camera_frame,
+                calibration_id=calibration.calibration_id,
+            )
+            lidar_reference = ObservationReference(
+                observation_id=f"corridor-02:velodyne:{lidar_index}",
+                dataset_id="corridor-02",
+                sequence_id="corridor-02",
+                sensor_id="velodyne",
+                sequence_index=lidar_index,
+                timestamp=Timestamp(lidar_timestamp_ns, "corridor-02-sensor"),
+                frame_id=FrameId("cmu_rc1_velodyne"),
+            )
+            rgb = _rgb_frame(rgb_reference, raw_rgb, valid_mask)
+            evidence, region_metadata = _region_evidence(visual_payload, valid_mask, keyframe.frame_id)
+            regions.update(region_metadata)
+            results = associate_map_points(
+                map_points,
+                rgb,
+                calibration,
+                map_to_camera,
+                evidence,
+                lidar_observation=lidar_reference,
+                max_time_delta_ns=100_000_000,
+            )
+            for association in results:
+                geometry_id = association.geometry.geometry_id
+                if association.status is not AssociationStatus.ASSOCIATED:
+                    current = rejected.get(geometry_id)
+                    if current is None or _REJECTION_PRIORITY.index(
+                        association.status
+                    ) < _REJECTION_PRIORITY.index(current):
+                        rejected[geometry_id] = association.status
+                    continue
+                associated.setdefault(geometry_id, []).append(
+                    {
+                        "observation_id": observation_id,
+                        "observation_timestamp_ns": camera_timestamp_ns,
+                        "pixel": association.pixel,
+                        "color_rgb": association.color_rgb,
+                        "region_id": association.region_id,
+                        "label": association.label,
+                        "lidar_observation_id": lidar_reference.observation_id,
+                        "lidar_timestamp_ns": lidar_timestamp_ns,
+                    }
+                )
+            raw_destination = assets / f"{keyframe.frame_id}-raw.png"
+            overlay_destination = assets / f"{keyframe.frame_id}-regions.png"
+            shutil.copyfile(keyframe.raw_image, raw_destination)
+            shutil.copyfile(keyframe.overlay_image, overlay_destination)
+            observations.append(
+                {
+                    "observation_id": observation_id,
+                    "frame_id": str(camera_frame),
+                    "visual_frame_id": keyframe.frame_id,
+                    "timestamp_ns": camera_timestamp_ns,
+                    "sensor_id": rgb_reference.sensor_id,
+                    "camera_sequence_index": keyframe.camera_sequence_index,
+                    "width": rgb.width,
+                    "height": rgb.height,
+                    "raw_image_uri": f"{assets.name}/{raw_destination.name}",
+                    "overlay_image_uri": f"{assets.name}/{overlay_destination.name}",
+                    "scene_claims": [
+                        {
+                            "kind": claim.get("kind"),
+                            "value": claim.get("value"),
+                            "confidence": claim.get("confidence"),
+                            "support_state": (claim.get("support") or {}).get("state"),
+                            "provenance": claim.get("provenance"),
+                        }
+                        for claim in visual_payload.get("scene_context", {}).get("claims", ())
+                    ],
+                    "visual_artifact": keyframe.visual_observation.resolve().as_uri(),
                     "lidar_observation_id": lidar_reference.observation_id,
                     "lidar_timestamp_ns": lidar_timestamp_ns,
                     "time_delta_ns": abs(camera_timestamp_ns - lidar_timestamp_ns),
-                    "pixel": association.pixel,
-                    "color_rgb": association.color_rgb,
-                    "region_id": association.region_id,
-                    "label": association.label,
-                    "semantic_color_rgb": (
-                        None if association.label is None else _semantic_color(association.label)
-                    ),
-                    "calibration_id": calibration.calibration_id,
-                },
-                "provenance": {
-                    "producer": point.provenance.producer,
-                    "observation_ids": [lidar_reference.observation_id, rgb_reference.observation_id],
                     "pose_source": pose_source,
-                },
-            }
-        )
-    assets = request.destination.parent / f"{request.destination.stem}-assets"
-    assets.mkdir(parents=True, exist_ok=True)
-    raw_destination = assets / "corridor-02-000-raw.png"
-    overlay_destination = assets / "corridor-02-000-regions.png"
-    shutil.copyfile(request.raw_image, raw_destination)
-    shutil.copyfile(request.overlay_image, overlay_destination)
-    observation_id = rgb_reference.observation_id
-    scene_claims = [
-        {
-            "kind": claim.get("kind"),
-            "value": claim.get("value"),
-            "confidence": claim.get("confidence"),
-            "support_state": (claim.get("support") or {}).get("state"),
-            "provenance": claim.get("provenance"),
+                    "pose_timestamp_ns": pose_timestamp_ns,
+                }
+            )
+
+    contextual_point_count = 0
+    multi_observation_point_count = 0
+    for point in base["points"]:
+        geometry_id = str(point["geometry_id"])
+        records = associated.get(geometry_id)
+        if not records:
+            status = rejected.get(geometry_id)
+            if status is not None:
+                point["context"] = {
+                    "status": status.value,
+                    "observations_considered": len(request.keyframes),
+                }
+            continue
+        if len(records) > 1:
+            multi_observation_point_count += 1
+        contributions = [
+            SemanticContribution(
+                observation_id=record["observation_id"],
+                timestamp_ns=record["observation_timestamp_ns"],
+                region_id=str(record["region_id"]),
+                label=str(record["label"]),
+                confidence=(regions[record["region_id"]].get("confidence") or {}).get("value"),
+                calibrated_confidence=regions[record["region_id"]].get("calibrated_confidence"),
+                support_state=(regions[record["region_id"]].get("support") or {}).get("state"),
+                visual_support=regions[record["region_id"]].get("visual_support"),
+                region_quality=regions[record["region_id"]].get("region_quality"),
+            )
+            for record in records
+            if record["label"] and record["region_id"]
+        ]
+        if contributions:
+            fused = fuse_point_contributions(contributions)
+            primary = next(
+                record
+                for record in records
+                if record["observation_id"] == fused.observation_id
+                and record["region_id"] == fused.region_id
+            )
+            contextual_point_count += 1
+        else:
+            fused = None
+            primary = records[0]
+        # O payload por ponto carrega apenas o que é próprio do ponto. Instante,
+        # scan sincronizado e calibração pertencem à observação e ao artifact, e
+        # repeti-los em cada um de centenas de milhares de pontos multiplicaria
+        # o tamanho do arquivo sem acrescentar informação.
+        context = {
+            "status": AssociationStatus.ASSOCIATED.value,
+            "observation_id": primary["observation_id"],
+            "pixel": primary["pixel"],
+            "color_rgb": primary["color_rgb"],
+            "region_id": primary["region_id"],
+            "label": primary["label"],
         }
-        for claim in visual_payload.get("scene_context", {}).get("claims", ())
-    ]
+        if fused is not None:
+            context["confidence"] = fused.confidence
+        if fused is not None and fused.contribution_count > 1:
+            context["observation_count"] = fused.contribution_count
+            context["agreement"] = fused.agreement
+            context["contributions"] = [
+                {
+                    "observation_id": item.observation_id,
+                    "region_id": item.region_id,
+                    "label": item.label,
+                    "confidence": item.confidence,
+                }
+                for item in fused.contributions
+            ]
+        point["context"] = context
+
     base["schema_version"] = 2
     base["artifact_type"] = "contextual_rgb_lidar_slice"
+    base["calibration_id"] = calibration.calibration_id
     base["capabilities"] = {
         "geometric_map": "available",
         "rgb_association": "partial",
         "semantic_overlay": "partial_unverified",
         "evidence_inspection": "available",
+        "temporal_fusion": "available" if len(request.keyframes) > 1 else "single_observation",
     }
-    base["observations"] = [
-        {
-            "observation_id": observation_id,
-            "timestamp_ns": camera_timestamp_ns,
-            "sensor_id": rgb_reference.sensor_id,
-            "frame_id": str(rgb_reference.frame_id),
-            "width": rgb.width,
-            "height": rgb.height,
-            "raw_image_uri": f"{assets.name}/{raw_destination.name}",
-            "overlay_image_uri": f"{assets.name}/{overlay_destination.name}",
-            "scene_claims": scene_claims,
-            "visual_artifact": request.visual_observation.resolve().as_uri(),
-            "visual_artifact_declared_timestamp_ns": visual_payload["source"]["timestamp"]["nanoseconds"],
-            "timestamp_resolution": "restored_from_rosbag_sequence_index",
-        }
-    ]
-    base["regions"] = list(region_metadata.values())
-    base["points"].extend(associated_records)
+    base["observations"] = observations
+    base["regions"] = list(regions.values())
     base["context_summary"] = {
-        "visual_observation_count": 1,
-        "contextual_point_count": sum(
-            point.get("association", {}).get("region_id") is not None for point in associated_records
-        ),
-        "rgb_point_count": len(associated_records),
-        "unobserved_geometric_point_count": len(base["points"]) - len(associated_records),
+        "visual_observation_count": len(request.keyframes),
+        "contextual_point_count": contextual_point_count,
+        "rgb_point_count": len(associated),
+        "unobserved_geometric_point_count": len(base["points"]) - len(associated),
+        "multi_observation_point_count": multi_observation_point_count,
+        "pose_source": pose_source,
         "claim_status": "predição VLM não verificada",
     }
     request.destination.parent.mkdir(parents=True, exist_ok=True)

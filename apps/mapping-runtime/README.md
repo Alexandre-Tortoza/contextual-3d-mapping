@@ -46,34 +46,95 @@ que o viewer consegue abrir.
 
 ## Trecho FAST-LIO real
 
-Com o dataset `corridor-02` em `datasets/raw`, o alvo abaixo executa os primeiros
-20 segundos da rosbag no FAST-LIO ROS 1 e converte o PCD para uma amostra que o
-viewer consegue carregar:
+Com o dataset `corridor-02` em `datasets/raw`, o alvo abaixo resolve a janela do
+trecho, executa esse trecho no FAST-LIO ROS 1 e converte o PCD para uma amostra
+que o viewer consegue carregar:
 
 ```bash
 make corridor-02-map
 ```
 
-O resultado fica em `artifacts/corridor-02-fastlio-20s.json`. A amostragem é
-determinística e mantém no máximo 25 mil pontos; `display_color_rgb` representa
-somente altura geométrica e não é tratado como associação RGB.
-
-## Associação contextual do corridor-02
-
-Quando uma execução real de `visual-perception` está disponível, o runtime pode
-associar seu primeiro frame ao scan LiDAR sincronizado e ao mapa FAST-LIO:
+A janela é parametrizada:
 
 ```bash
+make corridor-02-map SEGMENT_START_S=176.3 SEGMENT_SECONDS=30 \
+  SEGMENT_ID=corridor-02-fastlio-176s-30s
+```
+
+`SEGMENT_START_S` conta segundos a partir do **primeiro frame RGB do bag**.
+Ao mudá-lo, mude também `SEGMENT_ID`: ele nomeia os artifacts e vira o `map_id`,
+e dois trechos com o mesmo identificador colidiriam no namespace de
+`geometry_id`.
+
+### Os dois relógios do bag
+
+O bag do corridor-02 preserva dois relógios diferentes: o **tempo de gravação**
+(epoch de quando o arquivo foi escrito) e o **header** de cada mensagem, que é o
+relógio original da captura e o mesmo usado pelo ground-truth. `rosbag play
+--start` entende apenas o primeiro; a associação e a trajetória usam o segundo.
+A diferença entre eles não é constante: ela deriva dezenas de milissegundos ao
+longo da sequência.
+
+Por isso a janela é resolvida antes da execução, lendo headers reais:
+
+```bash
+make corridor-02-window
+```
+
+O resultado, `artifacts/<segment-id>-window.json`, publica o offset de
+reprodução e a identidade completa de cada keyframe — posição no stream RGB,
+timestamp de header e timestamp de gravação —, que é o que a composição
+contextual precisa para reencontrar cada frame.
+
+O trecho começa `SEGMENT_LEAD_S` segundos antes da janela pedida, para o
+estimator inercial convergir antes do intervalo que será mapeado.
+
+## Contexto de um trecho
+
+Extraia os keyframes da janela, rode `visual-perception` sobre eles e componha:
+
+```bash
+cd modules/visual-perception
+python benchmarks/prepare_corridor02_frames.py \
+  --window ../../artifacts/<segment-id>-window.json \
+  --out-dir benchmarks/.local/corridor-02-frames
+python benchmarks/validate_reference_pipeline.py --frame-id corridor-02-04234 ...
+cd ../..
 make corridor-02-context \
   PYTHON=modules/visual-perception/.venv/bin/python \
   M1_VISUAL_RUN=modules/visual-perception/benchmarks/results/samples/<run-id>
 ```
 
-O artifact `artifacts/corridor-02-fastlio-20s-context.json` preserva os pontos
-geométricos não observados e adiciona somente os pontos com projeção MEI e RGB
-válidos no hemisfério frontal da câmera. A restrição é necessária porque a
-equação MEI também admite raios traseiros matematicamente projetáveis, embora
-eles não pertençam ao campo de visão físico deste rig. Claims de região e de
-cena são mantidos como predições VLM com estado
-de suporte e proveniência; não são promovidos a ground truth. Os previews ficam
-no diretório homônimo com sufixo `-assets`.
+Os PNGs extraídos por janela são nomeados pelo índice original do frame no bag
+(`corridor-02-04234.png`), e não pela ordem da amostragem. Essa identidade é o
+que liga a execução de percepção de volta ao keyframe e à sua pose.
+
+O artifact contextual **rotula os próprios pontos do mapa**: ele não anexa o
+scan colorido ao lado da geometria acumulada. Cada ponto persistido termina com
+um label ou com o motivo explícito de não ter um — fora do campo de visão,
+projetado fora da imagem, fora do suporte óptico válido, ou ocluído por uma
+superfície mais próxima.
+
+A restrição ao hemisfério frontal continua necessária porque a equação MEI
+também admite raios traseiros matematicamente projetáveis, embora eles não
+pertençam ao campo de visão físico deste rig.
+
+Quando vários keyframes classificam o mesmo ponto, `semantic-fusion` escolhe o
+label primário e registra a concordância, preservando todos os contribuintes.
+Claims de região e de cena continuam sendo predições VLM com estado de suporte e
+proveniência; não são promovidos a ground truth. Os previews de cada keyframe
+ficam no diretório homônimo com sufixo `-assets`.
+
+### Fonte de pose
+
+A pose que registra o mapa na câmera vem, por ordem de preferência:
+
+1. da odometria gravada durante a execução do FAST-LIO
+   (`artifacts/<segment-id>-odometry.csv`), que descreve exatamente a trajetória
+   que originou o mapa;
+2. do ground-truth do dataset, realinhado ao instante em que o mapa começou.
+
+A primeira é preferida porque, com o contexto ancorado nos pontos do mapa, um
+erro de pose entra direto na projeção: vira pixel errado e, portanto, label
+errado. O ground-truth permanece como alternativa auditável, e é aproximado —
+ele não compartilha a origem nem o alinhamento gravitacional do FAST-LIO.

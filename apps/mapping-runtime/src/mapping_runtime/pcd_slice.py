@@ -120,6 +120,12 @@ def _height_color(height: float, minimum: float, maximum: float) -> tuple[int, i
 
 # Amostra deterministicamente um PCD binário e o exporta no schema consumido
 # pelo viewer. Existe para inspecionar trechos FAST-LIO sem carregar PCL no app.
+# Décimo de milímetro. O PCD guarda os pontos em float32 e o LiDAR resolve
+# centímetros, então as casas decimais além desta são ruído de representação:
+# elas custam mais bytes por ponto do que a geometria inteira do slice.
+_COORDINATE_DECIMALS = 4
+
+
 def export_pcd_slice(
     source: Path,
     destination: Path,
@@ -179,8 +185,7 @@ def export_pcd_slice(
     points = [
         {
             "geometry_id": f"{map_id}:pcd:{index}",
-            "coordinates_m": coordinates,
-            "source_coordinates_m": coordinates,
+            "coordinates_m": [round(value, _COORDINATE_DECIMALS) for value in coordinates],
             "intensity": intensity,
             "display_color_rgb": _height_color(coordinates[2], minimum_height, maximum_height),
         }
