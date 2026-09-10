@@ -21,13 +21,18 @@ Todas as contagens abaixo vêm dos runs versionados dos três frames vinculantes
 | `samples/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
 | `samples/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
 | `samples/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
-| `samples/20260909T135428Z/` | `1270e53` | arquitetura contextual, `prompt_version v7`, três frames vinculantes |
+| `samples/20260909T135428Z/` | `1270e53` | primeira arquitetura contextual — **superado**, tinha a view de cena no escalonamento |
+| `samples/20260910T115810Z/` | `7001803` | **run de referência desta rodada**, escalonamento region-local |
+| `samples/20260909T205243Z/` | `478fe63` | 16 keyframes de um segmento, mesma configuração; corroboração em escala |
 
-O run `20260909T135428Z` é o primeiro com suporte de hipótese, refinamento dirigido por
-razão, reconciliação intra-frame e relações semânticas. A comparação estrutural completa
-contra a baseline está em
-[`../benchmarks/results/comparison-contextual-20260909T135428Z.md`](../benchmarks/results/comparison-contextual-20260909T135428Z.md)
+O run de referência é o `20260910T115810Z`. A comparação estrutural contra a baseline está
+em
+[`../benchmarks/results/comparison-contextual-20260910T115810Z.md`](../benchmarks/results/comparison-contextual-20260910T115810Z.md)
 e é reproduzível por `python benchmarks/compare_runs.py`.
+
+O `20260909T135428Z` fica versionado como registro do defeito que ele expôs — a view de
+cena no escalonamento — e **não deve ser citado como resultado**: os labels de 6 regiões
+de `corridor-02-008` nele vêm daquele vazamento.
 
 ## O que a arquitetura contextual mudou, medido nos três frames vinculantes
 
@@ -35,16 +40,17 @@ Geometria idêntica em todos os três frames — 75/46/76 proposals e 40/16/38 r
 à baseline. É a invariante que o desenho promete: nenhum estágio depois do merge toca
 mask, box, identidade ou ordem.
 
-| eixo | baseline `03ec593` | contextual `1270e53` |
+| eixo | baseline `03ec593` | referência `7001803` |
 | --- | ---: | ---: |
 | pico de VRAM | 4,57 GiB | **4,57 GiB** (nenhum modelo novo) |
-| latência dos três frames | 456 s | 865 s (1,90x) |
-| chamadas de modelo | 388 | 568 |
+| latência dos três frames | 456 s | 792 s (1,74x) |
+| chamadas de modelo | 388 | 574 |
 | `contradictory_claims` | 163/165 regiões | **0** |
-| contradições conceito/natureza visíveis | 61 | **119** (mesmas regiões, regra por núcleo nominal) |
-| sinais independentes por frame | 0 | 120 / 48 / 114 |
-| relações semânticas | 0 | 8 / 2 / 7 |
-| grupos de mesma superfície | inexistente | 7 / 0 / 5 |
+| contradições conceito/natureza visíveis | 61 (5 frames) | 60 (3 frames), regra por núcleo nominal |
+| sinais independentes | 0 | 282: 162 `supports`, 63 `contradicts`, 57 `indistinguishable` |
+| relações semânticas | 0 | 17 (`part_of` ×11, `covers` ×6) |
+| grupos de mesma superfície | inexistente | 10, cobrindo 57 das 94 regiões, 6 corroborados |
+| eco de cena introduzido por refinamento | — | **0 nos três frames** |
 
 Três leituras que importam para não superinterpretar a tabela:
 
@@ -429,9 +435,21 @@ defaults foram escolhidos como orçamento plausível, não medidos como ótimos.
 
 Os dois candidatos modernos avaliados nesta rodada existem na versão de `transformers`
 instalada (5.16.1 tem `DINOv3ViTModel` e `Sam3Model`), mas os checkpoints
-`facebook/dinov3-vitb16-pretrain-lvd1689m` e `facebook/sam3` estão `gated=manual` no Hub e
-exigem aceite de licença na conta do usuário. Nenhum token está configurado neste
-ambiente. As issues `#219` e `#220` registram o bloqueio; ele não é técnico.
+`facebook/dinov3-vitb16-pretrain-lvd1689m` e `facebook/sam3` estão `gated=manual` no Hub.
+
+Verificado em 2026-09-10: existe um token válido da conta `alexmrtr` em
+`~/.cache/huggingface/token`, e mesmo assim os dois repositórios devolvem **HTTP 403** ao
+pedir `config.json`. O token não é o que falta — falta o **aceite da licença**, que é feito
+uma vez por modelo na página do repositório:
+
+```text
+https://huggingface.co/facebook/dinov3-vitb16-pretrain-lvd1689m
+https://huggingface.co/facebook/sam3
+```
+
+Depois do aceite, `curl -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)"` sobre
+aquele `config.json` passa a devolver 200, e as issues `#219` e `#220` deixam de estar
+bloqueadas. O bloqueio não é técnico em nenhum momento.
 
 Qwen3-VL, ao contrário, **não** está bloqueado: os checkpoints 2B, 4B e 8B já estão no
 cache local e a família é suportada pela mesma versão de `transformers`. A `#218` não

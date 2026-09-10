@@ -12,15 +12,15 @@ dela só apareceram na execução real, com a suíte inteira verde. Leia
 
 ## Estado recebido
 
-- Data do handoff: 2026-09-09.
+- Data do handoff: 2026-09-10.
 - Branch: `main`.
-- Revisões desta rodada: `39e6888`, `3c546a7`, `4ce4e3c`.
+- Revisões desta rodada: `39e6888`, `3c546a7`, `4ce4e3c`, `89ed955`.
 - `prompt_version` atual: `v7`. Os prompts de cena e de região são byte-idênticos aos do
   `v6`; o `v7` acrescentou o prompt de **relação**.
 - `schema_version` da `VisualObservation`: **3**. Ela ganhou `entity_hypotheses` e os
   sinais de suporte por claim; payloads v1 e v2 continuam legíveis.
 - Layout de artifacts por frame: **`frames/2`**, com `embeddings.npz`.
-- Suíte: 487 verificações determinísticas mais os testes de GPU, todas verdes por
+- Suíte: 491 verificações determinísticas mais os testes de GPU, todas verdes por
   `make verify`.
 
 ### O que passou a existir
@@ -32,6 +32,7 @@ dela só apareceram na execução real, com a suíte inteira verde. Leia
 | reconciliação contextual intra-frame e grupos de superfície | `application/reconciliation.py` | #205 |
 | relações semânticas candidatas sobre pares priorizados | `application/semantic_relations.py` | #206 |
 | coerência determinística conceito ↔ natureza | `domain/structural_consistency.py` | #216 |
+| comparação de backend em um fator só | `benchmarks/validate_reference_pipeline.py` (`--reasoning-checkpoint`) | #218 |
 | embeddings expostos e persistidos por referência | `benchmarks/frame_artifacts.py` | #217 |
 | integração de tudo em uma ordem determinística | `application/pipeline.py` | #207 |
 
@@ -49,8 +50,10 @@ Inalterados. Use exatamente estes IDs, nesta ordem, com estes hashes:
 
 ```text
 benchmarks/results/samples/20260908T131207Z/   baseline sem estágios contextuais (03ec593)
-benchmarks/results/samples/20260909T135428Z/   arquitetura contextual (1270e53)
-benchmarks/results/comparison-contextual-20260909T135428Z.md
+benchmarks/results/samples/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
+benchmarks/results/samples/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
+benchmarks/results/samples/20260909T135428Z/   superado, registro do defeito de escalonamento
+benchmarks/results/comparison-contextual-20260910T115810Z.md
 ```
 
 A comparação é reproduzível:
@@ -61,48 +64,49 @@ python benchmarks/compare_runs.py \
   --candidate benchmarks/results/samples/<novo>
 ```
 
-> **Ressalva sobre `20260909T135428Z`.** Ele foi produzido com `scene_conditioned` no
-> escalonamento de refinamento, e essa configuração foi **revertida depois** por
-> reintroduzir o vazamento de cena (limitação 7 de `known-limitations.md`). Os eixos de
-> geometria, sinal, grupos e relações continuam válidos; os labels das 8 regiões afetadas
-> de `corridor-02-008` não. Um run com a configuração atual ainda não foi produzido —
-> **é a primeira coisa a fazer**, e a GPU estava ocupada por outro processo quando esta
-> rodada terminou.
+> **`20260909T135428Z` está superado.** Ele foi produzido com `scene_conditioned` no
+> escalonamento de refinamento, configuração revertida por reintroduzir o vazamento de
+> cena. Fica versionado como registro do defeito; **não cite como resultado**.
+
+O run de referência é o `20260910T115810Z` (revisão `7001803`): três frames vinculantes,
+hashes conferidos, sem fallback, sem OOM, zero erro de audit, e **zero eco de cena
+introduzido por refinamento** nos três frames.
+
+O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: **zero eco em
+462 regiões**.
 
 ## Trabalho recomendado, em ordem
 
-1. **Reproduzir o run dos três frames na configuração atual.** Ele é o baseline de tudo
-   que vem depois, e a única coisa que falta para fechar esta rodada:
-
-   ```bash
-   ./.venv/bin/python benchmarks/validate_reference_pipeline.py \
-     --context-profile full \
-     --frame-id corridor-02-000 --frame-id corridor-02-008 --frame-id corridor-02-017
-   ```
-
-   Confirme no manifest: `git_revision` contendo o comportamento avaliado, os três
-   SHA-256, ausência de `feature_fallback_reason`, zero `audit_error_count`, e
-   `contextual.scene_echo_any_assertion` igual a zero nos três frames.
-
-2. **#218 — comparar Qwen2.5-VL-3B contra Qwen3-VL 2B e 4B.** É a comparação com melhor
+1. **#218 — comparar Qwen2.5-VL-3B contra Qwen3-VL 2B e 4B.** É a comparação com melhor
    relação custo/informação disponível: os três checkpoints já estão no cache local, a
    versão instalada de `transformers` suporta a família, e não há download nenhum. Fixe
    tudo menos o checkpoint — prompt, views, temperatura, tetos dos estágios contextuais —
    e meça os eixos da issue. Uma troca de prompt junto com a troca de modelo torna as
    duas ininterpretáveis.
 
-3. **#219 e #220** dependem de você aceitar as licenças de `facebook/dinov3-*` e
+2. **#219 e #220** dependem de você aceitar as licenças de `facebook/dinov3-*` e
    `facebook/sam3` no Hugging Face e configurar um token. O bloqueio não é técnico: o
    código da versão instalada de `transformers` já suporta os dois.
 
-4. **Calibrar os tetos dos estágios novos.** `refinement.max_regions_per_iteration` e
+3. **Calibrar os tetos dos estágios novos.** `refinement.max_regions_per_iteration` e
    `semantic_relations.max_pairs` foram escolhidos como orçamento plausível, **não**
-   medidos. O custo hoje é 1,90x da baseline em latência, com VRAM inalterada.
+   medidos. O custo hoje é 1,74x da baseline em latência, com VRAM inalterada.
 
-5. **#210/#211 continuam sendo o bloqueio real.** Enquanto não houver anotação humana
+4. **#210/#211 continuam sendo o bloqueio real.** Enquanto não houver anotação humana
    revisada, nenhuma métrica de acurácia, ECE, Brier ou taxa de alucinação pode ser
    publicada, e nenhuma comparação de backend pode afirmar superioridade semântica —
    apenas diferença estrutural.
+
+## Uma armadilha do ambiente, não do código
+
+`grep` neste shell é uma **função** instalada pelo Claude Code que roteia para `claude -G`.
+Ela repassa poucas flags; `grep -vE` cai no `claude`, que lê o `-v` como `--version`,
+imprime a versão e sai. Num pipe, isso fecha o cano e mata o processo da esquerda por
+SIGPIPE — foi assim que um braço de benchmark morreu deixando só um diretório vazio, com
+exit code 0.
+
+Ao encanar a saída de um run longo, use `/usr/bin/grep` ou `command grep`, ou não encane
+nada: o arquivo de log já guarda tudo.
 
 ## Três armadilhas que esta rodada pagou para descobrir
 
