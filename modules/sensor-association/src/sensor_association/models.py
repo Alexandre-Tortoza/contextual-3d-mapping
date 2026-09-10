@@ -156,6 +156,32 @@ class VisualRegionEvidence:
             raise ValueError("region pixels must be non-negative.")
 
 
+# Representa um ponto do mapa persistente como entrada de associação. Existe
+# porque um ponto acumulado não pertence a um único scan: ele não tem
+# coordenada no frame do LiDAR nem observação de origem única, que é o que
+# ``GeometryPoint`` exige. É consumido por ``associate_map_points``.
+@dataclass(frozen=True)
+class MapAnchoredPoint:
+    """Ponto de geometria persistente candidato à associação visual.
+
+    Argumentos:
+        geometry: identidade estável do ponto dentro do mapa.
+        coordinates_m: coordenadas no frame do mapa, em metros.
+    """
+
+    geometry: GeometryReference
+    coordinates_m: tuple[float, float, float]
+
+    # Rejeita coordenadas não físicas antes da projeção, onde o erro apareceria
+    # como um pixel arbitrário em vez de dado inválido.
+    def __post_init__(self) -> None:
+        """Valida dimensão e finitude das coordenadas do ponto."""
+        if len(self.coordinates_m) != 3:
+            raise ValueError("coordinates_m must contain exactly three values.")
+        if not all(isfinite(float(value)) for value in self.coordinates_m):
+            raise ValueError("coordinates_m must be finite.")
+
+
 # Explicita o resultado de toda tentativa de associação, inclusive rejeições.
 # Isso torna pixels inválidos e oclusões depuráveis no viewer e em artifacts.
 class AssociationStatus(StrEnum):
