@@ -248,6 +248,22 @@ como certeza semântica. Os dois eixos agora aparecem nomeados — `sem=0.90 geo
 voltar. A limitação em si, o backend nunca omitir `confidence`, **continua aberta**: o que
 mudou foi a legibilidade do artifact, não o comportamento do modelo.
 
+### O `0,9` do prompt de cena, que ninguém tinha corrigido
+
+Ao investigar se `sem=0,90` era um default do nosso código, a resposta foi **não**: no run
+de referência o valor vem literalmente do JSON do produtor, preservado em
+`Evidence.raw_response_json`. Nenhum caminho do módulo inventa `0,9`.
+
+Mas a investigação encontrou o mesmo defeito em um lugar que tinha escapado das duas
+correções anteriores. O exemplo de formato do prompt de **região** foi des-arredondado para
+`0,71` na `#212`, depois de 26 de 27 regiões reproduzirem a assinatura inteira do exemplo;
+o do prompt de **relação** virou `0,42` depois de 15 de 16 respostas `none` voltarem com
+`0,95` exato. O prompt de **cena** continuava embutindo `"confidence": 0.9`.
+
+Ele é o mesmo tipo de âncora, no mesmo formato, no único dos três prompts que ninguém
+tinha revisitado. Corrigido na mesma rodada, em commit e run separados, porque trocar a
+política de publicação e um prompt no mesmo run tornaria os dois ininterpretáveis.
+
 ---
 
 ## 4. Superfície contínua vira muitas regiões
@@ -276,6 +292,21 @@ superfícies contínuas fragmentadas.
 **O que continua aberto:** decidir se as três paredes são a mesma parede *no mundo* exige
 geometria 3D e pertence a `sensor-association`/`semantic-fusion`. Este módulo entrega a
 hipótese e todos os membros.
+
+### O que a política de publicação contextual mudou aqui
+
+A fragmentação **não** foi resolvida: a geometria continua a mesma, e o SAM continua
+recortando uma parede contínua em dezenas de máscaras. O que mudou é onde ela aparece.
+
+Os fragmentos de parede deixaram de ser output público e passaram a viver em
+`observation.structural_context`. Um consumidor downstream deixa de receber 25 regiões que
+descrevem a mesma parede — mas elas continuam medidas, continuam agrupadas pela
+reconciliação, e `region_count`/`mode_collapse` continuam contando a observação inteira
+justamente para que esta limitação siga visível e comparável entre runs.
+
+A distinção importa para não confundir duas coisas: a política reduz o **ruído entregue**,
+e não a **fragmentação observada**. Quem quiser medir a segunda deve ler
+`region_count` e `structural_context_count`, nunca `published_region_count`.
 
 ### O texto original, preservado
 
@@ -320,6 +351,20 @@ Duas coisas mudaram, e nenhuma delas é o modelo acertar mais:
 - **a interpretação reconciliada existe ao lado da original.** A região continua dizendo
   `wall`/`thing`, e ganha uma claim `RECONCILED` que diz `wall`/`stuff`, com a evidência
   nomeando o veredito estrutural que a produziu.
+
+**A política de publicação contextual não mexe nisto, de propósito.** Ela não consulta
+`RegionKind` — apoiar-se num campo que o modelo erra em 73,3% das regiões herdaria o erro
+inteiro. Ela decide pelo **conceito** afirmado, e o audit continua varrendo a observação
+inteira (`all_regions`), de modo que as contradições nas superfícies suprimidas continuam
+contáveis. Auditar só a metade publicada tornaria invisível exatamente a maioria dos casos,
+já que eles ocorrem justamente nas superfícies estruturais.
+
+Note também que `INHERENTLY_STUFF_HEAD_NOUNS` (o invariante do audit) e
+`GENERIC_STRUCTURAL_HEAD_NOUNS` (a política de publicação) são conjuntos **separados**. O
+primeiro precisa continuar minúsculo, porque ampliá-lo mascararia o erro do reasoner no
+momento em que ele passou a ser mensurável. O segundo responde outra pergunta — "isto vale
+como evidência contextual?" — e um conceito a mais nele não apaga nenhuma medida: a região
+continua no contexto estrutural.
 
 **Consequência para comparações:** contagens de `region_kind_inconsistent_with_category`
 **não são comparáveis** através dessa mudança de cobertura.

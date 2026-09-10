@@ -18,6 +18,7 @@ frames/<frame-id>/
     regions-boxes.png     só as boxes finais
     regions-labels.png    labels no centróide, sem caixas
     regions-overlay.png   tudo junto
+    structural-context.png  as superfícies não publicadas, esmaecidas
     ego-mask.png          máscara de exclusão, quando existe
     pipeline-input.png    só quando difere de raw.png
 ```
@@ -38,7 +39,7 @@ import numpy as np
 from PIL import Image
 
 from render_layers import binary_mask_image, blend_masks, draw_boxes, draw_labels
-from render_overlay import proposal_shapes, region_shapes
+from render_overlay import proposal_shapes, region_shapes, structural_context_shapes
 from visual_perception.application.observation_diagnostics import ObservationDiagnostics
 from visual_perception.application.pipeline import PipelineResult
 from visual_perception.domain.image_payload import ImagePayload
@@ -46,10 +47,13 @@ from visual_perception.infrastructure.serialization import serialize_observation
 
 #: Versão do layout de artifacts por frame, gravada no manifest. Um leitor que
 #: espera outro layout falha explicitamente em vez de ler o diretório errado em
-#: silêncio. A ``frames/2`` acrescenta ``embeddings.npz``: até a #217 os vetores
-#: eram calculados e descartados dentro do pipeline, e o que ficava no artifact
-#: era só a string de ``artifact_ref``, apontando para nada.
-FRAME_ARTIFACT_LAYOUT_VERSION = "frames/2"
+#: silêncio. A ``frames/3`` acrescenta ``structural-context.png`` e os registros
+#: por região da política de publicação contextual, para que a supressão seja
+#: inspecionável no artifact e não apenas contável. A ``frames/2`` havia
+#: acrescentado ``embeddings.npz``: até a #217 os vetores eram calculados e
+#: descartados dentro do pipeline, e o que ficava no artifact era só a string de
+#: ``artifact_ref``, apontando para nada.
+FRAME_ARTIFACT_LAYOUT_VERSION = "frames/3"
 
 
 # Agrupa os pixels distinguíveis de um frame e as máscaras de exclusão do rig.
@@ -184,6 +188,15 @@ def write_frame_artifacts(
     draw_labels(draw_boxes(blend_masks(raw_image, regions), regions), regions).save(overlay_path)
     _record("regions_overlay", overlay_path)
 
+    # A camada do contexto estrutural usa alpha baixo de propósito: ela existe
+    # para responder "o que foi suprimido, e onde", e não para competir
+    # visualmente com a evidência que o módulo de fato publica.
+    structural = structural_context_shapes(result.observation)
+    if structural:
+        structural_path = frame_dir / "structural-context.png"
+        draw_labels(blend_masks(raw_image, structural, alpha=0.25), structural).save(structural_path)
+        _record("structural_context", structural_path)
+
     payload: dict[str, object] = {
         "layout_version": FRAME_ARTIFACT_LAYOUT_VERSION,
         **dict(extra_diagnostics or {}),
@@ -195,6 +208,17 @@ def write_frame_artifacts(
         "ego_vehicle_mask_applied": diagnostics.ego.applied,
         "valid_fisheye_mask": "applied" if diagnostics.fisheye.applied else "unavailable",
         **asdict(diagnostics),
+        # O histograma por motivo vive em ``diagnostics.suppressed_regions``.
+        # Esta lista é a rastreabilidade por região que o histograma não dá:
+        # qual região saiu do output público, com que conceito, e por quê.
+        "suppressed_region_records": [
+            {
+                "region_id": record.region_id,
+                "suppressed_reason": record.reason.value,
+                "concept": record.concept,
+            }
+            for record in result.suppressed_regions
+        ],
     }
     diagnostics_path = frame_dir / "diagnostics.json"
     diagnostics_path.write_text(json.dumps(payload, indent=2))

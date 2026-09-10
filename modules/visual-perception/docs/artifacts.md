@@ -220,7 +220,8 @@ benchmarks/results/samples/<run-id>/
     ├── regions-masks.png     só as masks finais
     ├── regions-boxes.png     só as boxes finais
     ├── regions-labels.png    labels no centróide, sem caixas
-    ├── regions-overlay.png   masks + boxes + labels
+    ├── regions-overlay.png   masks + boxes + labels das regiões publicadas
+    ├── structural-context.png as superfícies não publicadas, esmaecidas
     ├── ego-mask.png          silhueta do rig, quando a sequência a declara
     ├── valid-area-mask.png   área útil do sensor, quando declarada
     └── pipeline-input.png    só quando difere de raw.png
@@ -251,7 +252,14 @@ milhares de arquivos versionados que quase nunca seriam abertos.
 
 `manifest.json` grava `frame_artifact_layout`, de modo que um leitor que espere outro
 layout falhe explicitamente em vez de ler o diretório errado em silêncio. A versão atual é
-`frames/2`.
+`frames/3`.
+
+O que a `frames/3` acrescentou é a camada `structural-context.png` e os registros por
+região da política de publicação contextual. A razão é a mesma dos artifacts por camada:
+sem eles, "esta superfície foi suprimida" e "esta superfície nunca foi observada" seriam
+indistinguíveis olhando o overlay. `regions-overlay.png` mostra o que o módulo **publica**
+— e um frame inteiramente normal produz um overlay quase vazio, o que é o comportamento
+correto; `structural-context.png` mostra, com alpha baixo, o que ele decidiu não publicar.
 
 O que a `frames/2` acrescentou é `embeddings.npz`, e a razão é uma falha de referência,
 não uma conveniência: até a #217 cada `RegionEvidenceSlot` gravava um `artifact_ref` e
@@ -285,6 +293,10 @@ e os labels finais. Os campos que exigem leitura cuidadosa:
 | `contextual.distinct_raw_labels` vs `distinct_canonical_concepts` | o primeiro é a métrica contaminada por variação de grafia, preservada para comparabilidade histórica; o segundo é o número que responde "quantas coisas diferentes este frame diz" |
 | `contextual.entity_groups` / `regions_in_entity_groups` / `supported_entity_groups` | grupos de mesma superfície propostos, regiões que eles cobrem, e quantos a coerência densa corrobora. Um grupo `unresolved` continua sendo evidência |
 | `contextual.semantic_relations` | histograma `(predicado, contagem)` das relações inferidas por modelo, separado de `geometric_relations` |
+| `region_count`, `label_counts`, `mode_collapse`, `semantic_confidence` | contam a observação **inteira**, publicada e contexto estrutural. Contá-las só sobre a metade publicada quebraria a comparabilidade com todos os runs anteriores à política de publicação e esconderia a over-segmentação de superfície que `mode_collapse` existe para medir |
+| `published_region_count` / `structural_context_count` | quanto do frame virou evidência contextual publicada, e quanto ficou como contexto. A soma é `region_count` |
+| `suppressed_regions` | histograma `(motivo, contagem)` das supressões da política de publicação. Hoje o único motivo é `generic_structural_surface` |
+| `suppressed_region_records` | a rastreabilidade por região que o histograma não dá: `region_id`, `suppressed_reason` e o `concept` que disparou a regra |
 
 Esses artifacts têm finalidade diferente da persistência operacional. Eles existem para
 inspeção, reprodução e comparação experimental.

@@ -272,7 +272,7 @@ def evidence_state_counts(observation: VisualObservation) -> dict[str, dict[str,
         slot.value: {state.value: 0 for state in EvidenceState}
         for slot in EvidenceSlot
     }
-    for region in observation.regions:
+    for region in observation.all_regions:
         for evidence in region.evidence:
             counts[evidence.slot.value][evidence.state.value] += 1
     return counts
@@ -284,7 +284,7 @@ def model_call_counts(
     payload: ImagePayload, config: ModuleConfig, result: PipelineResult
 ) -> dict[str, int]:
     """Conta chamadas por capacidade e devolve também o total do frame."""
-    region_count = len(result.observation.regions)
+    region_count = len(result.observation.all_regions)
     evidence_calls = sum(metric.model_calls for metric in result.evidence_metrics)
     stage_calls = dict(result.stage_model_calls)
     counts = {
@@ -446,6 +446,7 @@ def run_validation(
             discovered_proposals=len(result.proposals) + len(result.rejected_proposals),
             kept_proposals=result.proposals,
             proposal_rejections=result.rejected_proposals,
+            region_suppressions=result.suppressed_regions,
             area_masks=result.area_masks,
             ego_overlap_threshold=config.proposal_filter.max_ego_overlap,
             valid_area_threshold=config.proposal_filter.min_valid_overlap,
@@ -478,7 +479,9 @@ def run_validation(
         )
         audit_status = "pass" if result.audit.passed else "FAIL"
         print(
-            f"  canonical_regions={len(canonical_observation.regions)} "
+            f"  canonical_regions={len(canonical_observation.all_regions)} "
+            f"published={len(canonical_observation.regions)} "
+            f"structural_context={len(canonical_observation.structural_context)} "
             f"relations={len(result.observation.relations)} "
             f"interpretation_failures={len(result.region_interpretation_failures)} "
             f"audit={audit_status} warnings={len(result.audit.warnings)}"
@@ -500,7 +503,13 @@ def run_validation(
                     "height": height,
                 },
                 "failed": False,
-                "canonical_region_count": len(canonical_observation.regions),
+                # Continua contando a observação inteira, para que a série
+                # histórica desta métrica siga comparável com os runs
+                # anteriores à política de publicação contextual. Quanto disso
+                # chegou ao output público está nos dois campos seguintes.
+                "canonical_region_count": len(canonical_observation.all_regions),
+                "published_region_count": len(canonical_observation.regions),
+                "structural_context_count": len(canonical_observation.structural_context),
                 "relation_count": len(result.observation.relations),
                 "interpretation_failure_count": len(result.region_interpretation_failures),
                 "evidence_failure_count": len(result.evidence_failures),
@@ -564,7 +573,9 @@ def run_validation(
             f"## {name}\n\n"
             f"![{name}]({overlay_path.relative_to(out_dir)})\n\n"
             f"**scene_type:** {scene_type} · "
-            f"**regiões canônicas:** {len(canonical_observation.regions)} · "
+            f"**regiões canônicas:** {len(canonical_observation.all_regions)} "
+            f"({len(canonical_observation.regions)} publicadas, "
+            f"{len(canonical_observation.structural_context)} contexto estrutural) · "
             f"**relações:** {len(result.observation.relations)} · "
             f"**falhas de interpretação:** {len(result.region_interpretation_failures)} · "
             f"**audit:** {'✅ pass' if result.audit.passed else '❌ FAIL'} "

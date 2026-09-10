@@ -64,7 +64,12 @@ def to_sample_prediction(
         sample_id=sample_id,
         width=observation.image_width,
         height=observation.image_height,
-        regions=tuple(_region(region) for region in observation.regions),
+        # Exporta a observação inteira, publicada e contexto estrutural. A
+        # política de anotação do conjunto de referência manda anotar parede,
+        # piso e teto como regiões, e exportar só a metade publicada faria a
+        # métrica de detecção medir a política de publicação em vez de medir o
+        # sistema.
+        regions=tuple(_region(region) for region in observation.all_regions),
         relations=tuple(
             PredictedRelation(
                 relation_id=relation.relation_id,

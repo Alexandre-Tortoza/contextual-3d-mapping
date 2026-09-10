@@ -48,11 +48,13 @@ from visual_perception.domain.semantics import (
 )
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
-#: Escrita canônica v3; a leitura de v1 e v2 é migrada explicitamente. A v3
-#: acrescenta as hipóteses de entidade contextual (#205) e os sinais de suporte
-#: independentes por claim (#214); um payload anterior simplesmente não os tem,
-#: e desserializa com os campos vazios.
-SUPPORTED_SCHEMA_VERSION = 3
+#: Escrita canônica v4; a leitura de v1 a v3 é migrada explicitamente. A v4
+#: acrescenta ``structural_context``: a partição entre evidência contextual
+#: publicada e superfície estrutural preservada como contexto. A v3 havia
+#: acrescentado as hipóteses de entidade contextual (#205) e os sinais de
+#: suporte independentes por claim (#214); um payload anterior simplesmente não
+#: os tem, e desserializa com os campos vazios.
+SUPPORTED_SCHEMA_VERSION = 4
 
 
 # Sinaliza que um payload foi serializado com uma versão de schema que este
@@ -82,6 +84,11 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
         "regions": [_region_to_dict(region) for region in observation.regions],
         "relations": [_relation_to_dict(relation) for relation in observation.relations],
         "entity_hypotheses": [_entity_to_dict(entity) for entity in observation.entity_hypotheses],
+        # As superfícies suprimidas continuam no artifact, e não só na memória
+        # do processo: sem elas, uma relação ou um grupo que as referencia
+        # deixaria de ser resolvível ao recarregar a observação, e o motivo da
+        # supressão registrado no diagnóstico não teria alvo.
+        "structural_context": [_region_to_dict(region) for region in observation.structural_context],
     }
 
 
@@ -91,7 +98,7 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
 def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
     """Reconstrói uma VisualObservation canônica, fazendo o round-trip sem perda de informação."""
     schema_version = payload.get("schema_version")
-    if type(schema_version) is not int or schema_version not in (1, 2, SUPPORTED_SCHEMA_VERSION):
+    if type(schema_version) is not int or schema_version not in (1, 2, 3, SUPPORTED_SCHEMA_VERSION):
         raise UnsupportedSchemaVersionError(
             f"Cannot deserialize schema_version={schema_version!r}; "
             f"this module reads schema_version={SUPPORTED_SCHEMA_VERSION}."
@@ -107,6 +114,12 @@ def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
         relations=tuple(_relation_from_dict(relation) for relation in payload["relations"]),
         entity_hypotheses=tuple(
             _entity_from_dict(entity) for entity in payload.get("entity_hypotheses", ())
+        ),
+        # Um payload anterior à v4 não tinha a partição: tudo que ele traz é
+        # output publicado, e o contexto estrutural fica vazio. É a leitura
+        # correta, e não uma perda: aquele run não suprimiu nada.
+        structural_context=tuple(
+            _region_from_dict(region) for region in payload.get("structural_context", ())
         ),
         schema_version=SUPPORTED_SCHEMA_VERSION,
         coordinate_convention=payload["coordinate_convention"],

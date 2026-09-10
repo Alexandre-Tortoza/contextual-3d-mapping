@@ -20,6 +20,13 @@ diferentes de quem lê o relatório:
   score daquela claim foi verificado — não é discordância semântica;
 - ``evidence_slot_failed``: um slot de evidência opcional não pôde ser
   produzido, sem invalidar os slots que deram certo na mesma region.
+
+O audit varre a observação **inteira**, incluindo as regiões que a política de
+publicação contextual manteve fora do output público. Medir a qualidade do que
+foi observado é uma pergunta diferente de decidir o que vale a pena publicar, e
+auditar só a metade publicada tornaria invisível exatamente o erro que
+``region_kind_inconsistent_with_category`` existe para contar — que ocorre em
+maioria justamente nas superfícies estruturais.
 """
 
 from __future__ import annotations
@@ -43,14 +50,14 @@ def audit_observation(observation: VisualObservation) -> AuditResult:
     """Audita uma VisualObservation de forma determinística, sem modificá-la."""
     issues: list[AuditIssue] = []
 
-    region_ids = [region.region_id for region in observation.regions]
+    region_ids = [region.region_id for region in observation.all_regions]
     if len(region_ids) != len(set(region_ids)):
         issues.append(
             AuditIssue(AuditSeverity.ERROR, "duplicate_region_id", "Observation has duplicate region ids.")
         )
     known_ids = frozenset(region_ids)
 
-    for region in observation.regions:
+    for region in observation.all_regions:
         if (region.mask.image_width, region.mask.image_height) != (
             observation.image_width,
             observation.image_height,

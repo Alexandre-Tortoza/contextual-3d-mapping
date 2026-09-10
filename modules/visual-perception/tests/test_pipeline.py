@@ -6,12 +6,17 @@ import dataclasses
 
 from fixtures import blank_payload, default_config, image_observation, payload_with_blobs
 from fixtures_ports import default_ports
-from visual_perception.application.pipeline import run_canonical_pipeline
-from visual_perception.config import FeatureExtractionConfig, MultiContextConfig
+from visual_perception.application.pipeline import PerceptionPorts, run_canonical_pipeline
+from visual_perception.config import (
+    ContextualPublicationConfig,
+    FeatureExtractionConfig,
+    MultiContextConfig,
+)
 from visual_perception.domain.feature_map import FeatureMap
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.semantics import HypothesisRole
+from visual_perception.domain.semantics import ClaimKind, HypothesisRole
 from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
+from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
 
 # Verifica o caso degenerado: uma imagem sem nenhuma região descoberta ainda produz uma
@@ -233,3 +238,63 @@ def test_each_new_stage_can_be_disabled_independently() -> None:
         assert all(claim.role is not HypothesisRole.RECONCILED for claim in region.claims)
     # E o suporte de hipótese, que não foi desligado, continua produzindo.
     assert any(claim.signals for region in result.observation.regions for claim in region.claims)
+
+
+# Um reasoner que responde sempre a mesma superfície, para exercitar a política
+# de publicação de ponta a ponta sem GPU nem download de modelo.
+def _surface_ports(label: str, **extra: object) -> PerceptionPorts:
+    reasoner = FakeMultimodalReasoner(
+        region_response_fn=lambda request: {"label": label, "kind": "stuff", **extra}
+    )
+    return dataclasses.replace(default_ports(), multimodal_reasoner=reasoner)
+
+
+# O contract público mudou: superfície estrutural genérica sai de ``regions`` e
+# fica em ``structural_context``, sem deixar de existir.
+def test_the_pipeline_publishes_no_region_for_a_frame_of_plain_walls() -> None:
+    """Um frame que só contém parede não publica nenhuma evidência contextual."""
+    payload = payload_with_blobs(blobs=((4, 4, 12, 12, (200, 30, 30)), (20, 20, 28, 28, (30, 200, 30))))
+    result = run_canonical_pipeline(
+        image_observation(), payload, default_config(), _surface_ports("plain wall")
+    )
+
+    assert result.observation.regions == ()
+    assert len(result.observation.structural_context) == 2
+    assert len(result.observation.all_regions) == 2
+    assert result.audit.passed
+    assert {record.reason.value for record in result.suppressed_regions} == {
+        "generic_structural_surface"
+    }
+
+
+# A mesma geometria, com o dano nomeado, volta a ser evidência — e a parede
+# sobrevive como contexto na própria claim derivada.
+def test_the_pipeline_publishes_damage_on_a_wall_with_its_host_surface() -> None:
+    """``cracked wall`` é publicada e carrega ``host_surface: wall``."""
+    payload = payload_with_blobs(blobs=((4, 4, 12, 12, (200, 30, 30)),))
+    result = run_canonical_pipeline(
+        image_observation(), payload, default_config(), _surface_ports("cracked wall")
+    )
+
+    (region,) = result.observation.regions
+    hosts = [claim.value for claim in region.claims if claim.kind is ClaimKind.HOST_SURFACE]
+    assert hosts == ["wall"]
+    assert result.observation.structural_context == ()
+    assert result.suppressed_regions == ()
+
+
+# Desligar a política precisa devolver exatamente a observação anterior a ela.
+# É o que permite a uma comparação atribuir um efeito à política sozinha.
+def test_disabling_the_policy_restores_the_previous_public_output() -> None:
+    """Com a política desligada, todas as regiões continuam publicadas."""
+    payload = payload_with_blobs(blobs=((4, 4, 12, 12, (200, 30, 30)),))
+    config = dataclasses.replace(
+        default_config(), contextual_publication=ContextualPublicationConfig(enabled=False)
+    )
+    result = run_canonical_pipeline(image_observation(), payload, config, _surface_ports("wall"))
+
+    assert len(result.observation.regions) == 1
+    assert result.observation.structural_context == ()
+    assert not [
+        claim for claim in result.observation.regions[0].claims if claim.kind is ClaimKind.HOST_SURFACE
+    ]

@@ -20,8 +20,15 @@ dense features         congelada         refinamento seletivo
 evidência multi-contexto                 relações geométricas
                                          reconciliação intra-frame
                                          relações semânticas
+                                         publicação contextual
                                          audit final
 ```
+
+O penúltimo estágio decide o que o módulo **publica**: regiões cuja identidade
+afirmada é apenas superfície estrutural genérica saem de ``observation.regions``
+e ficam em ``observation.structural_context``, sem perder nada. O audit final
+continua vendo a observação inteira, porque medir a qualidade do que foi
+observado é diferente de decidir o que vale a pena publicar.
 
 Depois do merge, **nenhum estágio altera mask, box ou identidade de região**.
 Os estágios semânticos só acrescentam claims, sinais, grupos e relações — e a
@@ -41,6 +48,11 @@ import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from visual_perception.application.contextual_publication import (
+    PublicationResult,
+    SuppressedRegion,
+    partition_observation,
+)
 from visual_perception.application.hypothesis_support import (
     HypothesisSupportResult,
     SignalExtractionFailure,
@@ -155,6 +167,12 @@ class PipelineResult:
     reconciliation_records: tuple[ReconciliationRecord, ...] = ()
     #: Falhas isoladas ao inferir uma relação semântica de um par (#206).
     relation_failures: tuple[RelationInferenceFailure, ...] = ()
+    #: As regiões que a política de publicação contextual manteve fora do
+    #: output público, com o motivo e o conceito que dispararam a regra. Elas
+    #: continuam inteiras em ``observation.structural_context``; estes registros
+    #: existem para que o descarte seja contável no diagnóstico, exatamente como
+    #: ``rejected_proposals`` é para a geometria.
+    suppressed_regions: tuple[SuppressedRegion, ...] = ()
     #: Chamadas de modelo gastas por estágio, para que o custo de cada
     #: capacidade nova seja atribuível no manifest de validação.
     stage_model_calls: Mapping[str, int] = field(default_factory=dict)
@@ -271,14 +289,20 @@ def run_canonical_pipeline(
         context_expansion=config.multi_context.context_expansion,
     )
 
+    # A partição é o último estágio semântico de propósito: todos os anteriores
+    # precisam das superfícies estruturais para entender a cena, e só o contract
+    # público distingue evidência contextual de contexto.
+    publication = partition_observation(regions, config.contextual_publication)
+
     observation = VisualObservation(
         source=image.source,
         image_width=image.width,
         image_height=image.height,
         scene_context=scene_context,
-        regions=regions,
+        regions=publication.published,
         relations=geometric_relations + inferred.relations,
         entity_hypotheses=reconciliation.entities,
+        structural_context=publication.structural_context,
     )
     audit = audit_observation(observation)
     return PipelineResult(
@@ -298,6 +322,7 @@ def run_canonical_pipeline(
         refinement_history=refinement_history,
         reconciliation_records=reconciliation.records,
         relation_failures=inferred.failures,
+        suppressed_regions=publication.records,
         stage_model_calls=_stage_model_calls(evidence, support, refinement_history, inferred),
     )
 
@@ -402,4 +427,11 @@ def _discover_regions(
 # Mantém a assinatura anterior de views para os consumidores que a importavam
 # daqui. Existe apenas como reexport tipado; a construção continua sendo do
 # estágio de evidência.
-__all__ = ["PerceptionPorts", "PipelineResult", "RegionView", "run_canonical_pipeline"]
+__all__ = [
+    "PerceptionPorts",
+    "PipelineResult",
+    "PublicationResult",
+    "RegionView",
+    "SuppressedRegion",
+    "run_canonical_pipeline",
+]

@@ -205,7 +205,7 @@ def write_region_inspection(
     Levanta:
         SystemExit: quando a região não existe na observação.
     """
-    regions = {region.region_id: region for region in snapshot.observation.regions}
+    regions = {region.region_id: region for region in snapshot.observation.all_regions}
     if region_id not in regions:
         raise SystemExit(
             f"Unknown region {region_id!r}. Known ids: {sorted(regions)[:5]}… "
@@ -226,7 +226,7 @@ def write_region_inspection(
     # A mesma função que o pipeline usou: a correspondência é estrutural, e não
     # uma convenção que possa divergir de uma reimplementação local do crop.
     views = build_region_views(
-        snapshot.observation.regions, snapshot.payload, snapshot.config
+        snapshot.observation.all_regions, snapshot.payload, snapshot.config
     ).get(region_id, ())
     for view in views:
         filename = _VIEW_FILENAMES.get(view.slot)

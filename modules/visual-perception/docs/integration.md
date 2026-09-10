@@ -163,6 +163,18 @@ A fronteira de referência está em:
 
 [`infrastructure/integration/sensor_association_contract.py`](../src/visual_perception/infrastructure/integration/sensor_association_contract.py)
 
+`sensor-association` recebe `observation.regions`: a **evidência contextual publicada**,
+não toda superfície que o frame contém. Uma parede genérica não chega por aqui, e um frame
+inteiramente normal pode entregar poucas regiões ou nenhuma. As superfícies continuam na
+observação, em `observation.structural_context`, para quem precisar delas — inclusive para
+resolver o alvo de uma relação que aponta da evidência para a superfície que a hospeda.
+
+Uma evidência publicada pode carregar uma claim `host_surface` derivada do próprio
+conceito que o produtor afirmou (`cracked wall` → `wall`). Ela é uma pista 2D, e não uma
+afirmação sobre o mundo: **decidir a que superfície física a evidência pertence é
+exatamente o trabalho de `sensor-association`**, com a geometria 3D que este módulo não
+tem. Ausência da claim significa host desconhecido, e é um desfecho legítimo.
+
 O consumidor pode usar:
 
 - identidade da observação;
@@ -177,6 +189,10 @@ O consumidor pode usar:
 O que **não** deve ser assumido nessa fronteira:
 
 - uma `ObservedRegion` não é uma entidade 3D;
+- `host_surface` não é a superfície 3D à qual a evidência pertence, e ausência dela não
+  significa que a evidência não esteja sobre nenhuma superfície;
+- `regions` não é um inventário do que a imagem contém: é o que o módulo julga valer a
+  pena preservar como evidência contextual;
 - uma mask 2D não confirma ocupação geométrica;
 - uma `CandidateRelation` não é uma relação 3D confirmada;
 - confiança geométrica não é confiança semântica.

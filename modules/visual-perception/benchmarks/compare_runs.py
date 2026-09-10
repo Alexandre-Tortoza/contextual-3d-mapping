@@ -36,6 +36,8 @@ BINDING_FRAMES = ("corridor-02-000", "corridor-02-008", "corridor-02-017")
 _AXES: tuple[tuple[str, str, str], ...] = (
     ("proposals", "diag:proposal_count", "{}"),
     ("regiões canônicas", "diag:region_count", "{}"),
+    ("regiões publicadas", "diag:published_region_count", "{}"),
+    ("contexto estrutural", "diag:structural_context_count", "{}"),
     ("labels crus distintos", "diag:mode_collapse.distinct_labels", "{}"),
     ("conceitos canônicos", "diag:contextual.distinct_canonical_concepts", "{}"),
     ("label dominante", "diag:mode_collapse.dominant_label", "{}"),

@@ -15,7 +15,9 @@ proveniência, junto com um `ImagePayload`, que contém os pixels RGB validados.
 A saída principal é uma `VisualObservation`. Ela reúne, para a mesma imagem:
 
 - contexto global da cena;
-- regiões 2D com `mask`, `bounding box` e confiança geométrica;
+- regiões 2D com `mask`, `bounding box` e confiança geométrica, particionadas entre a
+  **evidência contextual publicada** e a **superfície estrutural preservada como
+  contexto**;
 - embeddings visuais obtidos a partir de features densas;
 - embeddings alinhados à linguagem;
 - claims semânticos sobre as regiões, como label, atributos, material e condição;
@@ -154,6 +156,7 @@ Esta tabela é o índice operacional do módulo. Use-a antes de procurar pelo c�
 | Relações 2D geométricas entre regiões | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py), [`tests/test_relation_generation.py`](../tests/test_relation_generation.py) |
 | Como o alinhamento arbitra entre hipóteses, ou o template de texto | [`application/hypothesis_support.py`](../src/visual_perception/application/hypothesis_support.py) | [`config.py`](../src/visual_perception/config.py) (`HypothesisSupportConfig`), [`domain/semantic_support.py`](../src/visual_perception/domain/semantic_support.py), [`tests/test_hypothesis_support.py`](../tests/test_hypothesis_support.py) |
 | Quais razões disparam refinamento, ou a evidência de escalonamento | [`application/refinement.py`](../src/visual_perception/application/refinement.py) | [`config.py`](../src/visual_perception/config.py) (`RefinementConfig`), [`tests/test_refinement.py`](../tests/test_refinement.py) |
+| O que conta como evidência contextual publicável | [`domain/contextual_evidence.py`](../src/visual_perception/domain/contextual_evidence.py) | [`application/contextual_publication.py`](../src/visual_perception/application/contextual_publication.py), [`tests/test_contextual_evidence.py`](../tests/test_contextual_evidence.py), [`tests/test_contextual_publication.py`](../tests/test_contextual_publication.py) |
 | Canonicalização de conceito, ou formação de grupo de superfície | [`application/reconciliation.py`](../src/visual_perception/application/reconciliation.py) | [`domain/contextual_entities.py`](../src/visual_perception/domain/contextual_entities.py), [`domain/structural_consistency.py`](../src/visual_perception/domain/structural_consistency.py), [`tests/test_reconciliation.py`](../tests/test_reconciliation.py) |
 | Predicados semânticos, seleção de pares ou orçamento de relação | [`application/semantic_relations.py`](../src/visual_perception/application/semantic_relations.py) | [`domain/relations.py`](../src/visual_perception/domain/relations.py) (`SEMANTIC_RELATION_PREDICATES`), [`tests/test_semantic_relations.py`](../tests/test_semantic_relations.py) |
 | Regra de coerência entre conceito e `RegionKind` | [`domain/structural_consistency.py`](../src/visual_perception/domain/structural_consistency.py) | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py), [`tests/test_structural_consistency.py`](../tests/test_structural_consistency.py) |
@@ -252,6 +255,7 @@ O que continua sendo 2D, explicitamente:
 | --- | --- |
 | esta máscara existe neste frame | onde ela está no mundo |
 | o produtor a chamou de `plain wall` | que ela é uma parede |
+| esta marca é evidência contextual, e a parede não é | a que parede do mundo ela pertence |
 | o canal independente concorda, discorda ou não distingue | qual dos dois está certo |
 | estas três regiões se tocam e compartilham o conceito | que são o mesmo objeto 3D |
 | esta relação é candidata a `part_of` | que a relação é verdadeira em 3D |
@@ -334,10 +338,19 @@ seu orçamento configurado.
     Nenhuma geometria muda, nenhuma região desaparece.
 15. `infer_semantic_relations` consulta o reasoner sobre os pares que a geometria
     priorizou, dentro de um orçamento explícito, e produz relações `MODEL_INFERRED`.
-16. O pipeline monta a `VisualObservation` canônica, incluindo as
+16. `partition_observation` separa a **evidência contextual** da **superfície estrutural
+    genérica**. É o último estágio semântico de propósito: todos os anteriores precisam
+    das superfícies para entender a cena, e só o contract público distingue as duas
+    coisas. Nenhuma região é apagada — as suprimidas vão para `structural_context`, com o
+    motivo registrado, e continuam alvo válido de relação e de grupo. As publicadas cuja
+    identidade nomeia a superfície que as hospeda ganham uma claim derivada
+    `host_surface`.
+17. O pipeline monta a `VisualObservation` canônica com as duas metades, incluindo as
     `ContextualEntityHypothesis`.
-17. `audit_observation` verifica consistência e contradições **depois de todos os
-    estágios que acrescentam claim ou relação**, sem modificar a observação.
+18. `audit_observation` verifica consistência e contradições **depois de todos os
+    estágios que acrescentam claim ou relação**, sem modificar a observação. Ele varre a
+    observação inteira, não só a metade publicada: medir a qualidade do que foi observado
+    é uma pergunta diferente de decidir o que vale a pena publicar.
 
 ### Como desligar um estágio
 
@@ -350,6 +363,7 @@ atribuir um efeito a um estágio só:
 | refinamento seletivo | `refinement.enabled = False` | nenhuma região é reinterpretada; nenhuma chamada extra de VLM |
 | reconciliação | `reconciliation.enabled = False` | nenhuma claim `RECONCILED`, nenhum grupo |
 | relações semânticas | `semantic_relations.enabled = False` | só relações geométricas |
+| publicação contextual | `contextual_publication.enabled = False` | tudo publicado, `structural_context` vazio, nenhuma claim `host_surface` |
 
 ## Estágios
 
@@ -370,6 +384,7 @@ atribuir um efeito a um estágio só:
 | Relações geométricas | regiões interpretadas | relações 2D candidatas | [`application/relation_generation.py`](../src/visual_perception/application/relation_generation.py) |
 | Reconciliação intra-frame | todas as regiões + embeddings densos | claim `RECONCILED` + `ContextualEntityHypothesis` | [`application/reconciliation.py`](../src/visual_perception/application/reconciliation.py) |
 | Relações semânticas | pares priorizados + view de par | relações `MODEL_INFERRED` | [`application/semantic_relations.py`](../src/visual_perception/application/semantic_relations.py) |
+| Publicação contextual | todas as regiões reconciliadas | partição publicado/contexto + claim `host_surface` + `SuppressedRegion` | [`application/contextual_publication.py`](../src/visual_perception/application/contextual_publication.py), [`domain/contextual_evidence.py`](../src/visual_perception/domain/contextual_evidence.py) |
 | Observação final | todos os resultados anteriores | `VisualObservation` | [`application/pipeline.py`](../src/visual_perception/application/pipeline.py), [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py) |
 | Auditoria | `VisualObservation` | `AuditResult` | [`application/quality_audit.py`](../src/visual_perception/application/quality_audit.py) |
 

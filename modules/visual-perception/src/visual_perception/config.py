@@ -515,6 +515,40 @@ class SemanticRelationConfig:
             raise ValueError("semantic_relations.min_containment must be in [0, 1].")
 
 
+# Configuração da política de publicação contextual. Existe para que a decisão
+# "isto vale como evidência contextual?" seja versionada no fingerprint e
+# ablatável por configuração, como todo estágio contextual deste módulo: uma
+# comparação precisa conseguir atribuir o efeito da política a ela sozinha.
+@dataclass(frozen=True)
+class ContextualPublicationConfig:
+    """O que o módulo publica como evidência contextual, e o que fica como contexto.
+
+    Argumentos:
+        enabled: se a partição roda. Desligada, toda região continua sendo
+            publicada e ``structural_context`` fica vazio — que é exatamente o
+            comportamento anterior à política, preservado para ablação.
+        extra_structural_head_nouns: núcleos nominais estruturais adicionais,
+            além dos que o domínio já conhece. Existe para que uma composição
+            possa declarar o vocabulário do seu ambiente sem que o módulo
+            precise conhecê-lo de antemão; vazio por default, porque uma lista
+            longa aqui viraria a taxonomia fechada que o projeto recusa.
+    """
+
+    enabled: bool = True
+    extra_structural_head_nouns: tuple[str, ...] = ()
+
+    # Valida que cada núcleo extra é uma palavra utilizável, já que um token
+    # vazio ou com espaço nunca casaria e ficaria como configuração morta.
+    def __post_init__(self) -> None:
+        """Rejeita núcleo estrutural vazio ou composto por mais de uma palavra."""
+        for noun in self.extra_structural_head_nouns:
+            if not noun.strip() or len(noun.split()) != 1:
+                raise ValueError(
+                    "contextual_publication.extra_structural_head_nouns must contain "
+                    f"single non-empty words, got {noun!r}."
+                )
+
+
 # Configuração da fronteira de calibração semântica (#196). Existe para que
 # a regra de calibração seja selecionável e versionada por configuração, e
 # para que o artifact de calibração participe do fingerprint de cache: uma
@@ -672,6 +706,9 @@ class ModuleConfig:
     refinement: RefinementConfig = field(default_factory=RefinementConfig)
     reconciliation: ReconciliationConfig = field(default_factory=ReconciliationConfig)
     semantic_relations: SemanticRelationConfig = field(default_factory=SemanticRelationConfig)
+    contextual_publication: ContextualPublicationConfig = field(
+        default_factory=ContextualPublicationConfig
+    )
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
     proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
@@ -721,6 +758,7 @@ class ModuleConfig:
             ("refinement", RefinementConfig),
             ("reconciliation", ReconciliationConfig),
             ("semantic_relations", SemanticRelationConfig),
+            ("contextual_publication", ContextualPublicationConfig),
             ("calibration", CalibrationConfig),
             ("image_area", ImageAreaConfig),
             ("proposal_filter", ProposalFilterConfig),

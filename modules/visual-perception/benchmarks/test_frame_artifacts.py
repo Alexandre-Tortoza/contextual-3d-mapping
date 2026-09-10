@@ -396,4 +396,10 @@ def test_the_frame_diagnostics_report_the_contextual_stages(tmp_path: Path) -> N
         "abstained_claims",
         "unscored_claims",
     }
-    assert diagnostics["layout_version"] == "frames/2"
+    assert diagnostics["layout_version"] == "frames/3"
+    assert set(diagnostics) >= {
+        "published_region_count",
+        "structural_context_count",
+        "suppressed_regions",
+        "suppressed_region_records",
+    }

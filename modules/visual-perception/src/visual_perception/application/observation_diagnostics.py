@@ -23,6 +23,7 @@ import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 
+from visual_perception.application.contextual_publication import SuppressedRegion
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.regions import (
@@ -244,6 +245,10 @@ class ObservationDiagnostics:
         fisheye: exclusão da área fora da lente.
         rejected_proposals: histograma ``(motivo, contagem)`` dos descartes.
         scene_echo_label_count: regiões cujo label repete uma claim de cena.
+        published_region_count: regiões publicadas como evidência contextual.
+        structural_context_count: regiões mantidas como contexto estrutural.
+        suppressed_regions: histograma ``(motivo, contagem)`` das supressões da
+            política de publicação contextual.
     """
 
     region_count: int
@@ -262,6 +267,9 @@ class ObservationDiagnostics:
     fisheye: ValidAreaStats = field(default_factory=ValidAreaStats)
     rejected_proposals: tuple[tuple[str, int], ...] = field(default_factory=tuple)
     contextual: ContextualDiagnostics = field(default_factory=ContextualDiagnostics)
+    published_region_count: int = 0
+    structural_context_count: int = 0
+    suppressed_regions: tuple[tuple[str, int], ...] = field(default_factory=tuple)
 
 
 # Resume uma lista de valores opcionais em ConfidenceStats. Recebe os ausentes
@@ -327,7 +335,7 @@ def _scene_echo_count(observation: VisualObservation) -> int:
     if not scene_values:
         return 0
     echoes = 0
-    for region in observation.regions:
+    for region in observation.all_regions:
         claim = primary_label_claim(region)
         if claim is not None and _normalized(claim.value) in scene_values:
             echoes += 1
@@ -432,6 +440,7 @@ def diagnose_observation(
     discovered_proposals: int,
     kept_proposals: tuple[RegionProposal, ...] = (),
     proposal_rejections: tuple[RejectedProposal, ...] = (),
+    region_suppressions: tuple[SuppressedRegion, ...] = (),
     area_masks: ImageAreaMasks | None = None,
     ego_overlap_threshold: float = _DEFAULT_EGO_OVERLAP_THRESHOLD,
     valid_area_threshold: float = _DEFAULT_VALID_AREA_THRESHOLD,
@@ -448,6 +457,8 @@ def diagnose_observation(
             válida ou sobre o rig.
         proposal_rejections: os descartes registrados pela filtragem, usados
             para contar exclusão de ego e de área válida por motivo.
+        region_suppressions: os registros da política de publicação contextual,
+            usados para contar por motivo o que ficou fora do output público.
         area_masks: as áreas declaradas do frame, para medir quanto delas ainda
             aparece nas regiões finais. ``None`` significa nenhuma declarada, e
             o diagnóstico registra isso em vez de fingir que houve filtragem.
@@ -458,7 +469,12 @@ def diagnose_observation(
     Retorna:
         o diagnóstico do frame, pronto para ser serializado por quem chama.
     """
-    regions = observation.regions
+    # As estatísticas descrevem tudo que o frame observou, publicado ou não.
+    # Contá-las só sobre a metade publicada quebraria a comparabilidade com
+    # todos os runs anteriores à política e esconderia exatamente a
+    # over-segmentação de superfície que ``mode_collapse`` existe para medir.
+    # Quanto disso chegou ao output público está em ``published_region_count``.
+    regions = observation.all_regions
     labels: Counter[str] = Counter()
     categories: Counter[str] = Counter()
     region_kinds: Counter[str] = Counter()
@@ -533,6 +549,11 @@ def diagnose_observation(
         ),
         rejected_proposals=_histogram(rejections),
         contextual=_contextual_diagnostics(observation),
+        published_region_count=len(observation.regions),
+        structural_context_count=len(observation.structural_context),
+        suppressed_regions=_histogram(
+            Counter(record.reason.value for record in region_suppressions)
+        ),
     )
 
 
@@ -547,7 +568,7 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
     raw_labels: set[str] = set()
     concepts: set[str] = set()
 
-    for region in observation.regions:
+    for region in observation.all_regions:
         primary = primary_label_claim(region)
         if primary is not None:
             raw_labels.add(_normalized(primary.value))
@@ -578,7 +599,7 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
     }
     echo_any = 0
     competing = 0
-    for region in observation.regions:
+    for region in observation.all_regions:
         asserted = [
             claim
             for claim in region.claims
