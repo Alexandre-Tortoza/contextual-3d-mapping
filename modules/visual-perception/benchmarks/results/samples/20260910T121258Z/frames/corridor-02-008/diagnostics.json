@@ -1,0 +1,195 @@
+{
+  "layout_version": "frames/2",
+  "frame_id": "corridor-02-008",
+  "input_sha256": "2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b",
+  "latency_s": 128.62768607199996,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 16,
+  "proposal_count": 46,
+  "merged_proposal_count": 19,
+  "regions_with_multiple_proposals": 3,
+  "label_counts": [
+    [
+      "tree",
+      9
+    ],
+    [
+      "a purple, fuzzy object",
+      1
+    ],
+    [
+      "field",
+      1
+    ],
+    [
+      "ground",
+      1
+    ],
+    [
+      "shadow",
+      1
+    ],
+    [
+      "thing",
+      1
+    ],
+    [
+      "trees",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "plant",
+      11
+    ],
+    [
+      "field",
+      1
+    ],
+    [
+      "object",
+      1
+    ],
+    [
+      "part",
+      1
+    ],
+    [
+      "surface",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      15
+    ],
+    [
+      "stuff",
+      1
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.71,
+    "maximum": 0.95,
+    "mean": 0.725,
+    "median": 0.71,
+    "distinct_values": 2,
+    "stddev": 0.05809475019311125,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.916330099105835,
+    "maximum": 1.0,
+    "mean": 0.9666594229638577,
+    "median": 0.9664942920207977,
+    "distinct_values": 15,
+    "stddev": 0.024994126631302533,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 3,
+  "mode_collapse": {
+    "dominant_label": "tree",
+    "dominant_fraction": 0.5625,
+    "distinct_labels": 8,
+    "dominant_category": "plant",
+    "dominant_category_fraction": 0.6875,
+    "distinct_categories": 6
+  },
+  "scene_echo_label_count": 1,
+  "ego": {
+    "proposals_rejected": 17,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      17
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "below_min_relative_area",
+      4
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "unavailable",
+        24
+      ],
+      [
+        "supports",
+        13
+      ],
+      [
+        "indistinguishable",
+        7
+      ],
+      [
+        "contradicts",
+        4
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 1,
+    "reconciled_regions": 3,
+    "distinct_raw_labels": 8,
+    "distinct_canonical_concepts": 7,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "attached_to",
+        2
+      ],
+      [
+        "covers",
+        2
+      ],
+      [
+        "part_of",
+        2
+      ]
+    ],
+    "geometric_relations": 44,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 1,
+    "competing_assertions": 3
+  }
+}

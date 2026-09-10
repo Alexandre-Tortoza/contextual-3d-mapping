@@ -33,6 +33,7 @@ dela só apareceram na execução real, com a suíte inteira verde. Leia
 | relações semânticas candidatas sobre pares priorizados | `application/semantic_relations.py` | #206 |
 | coerência determinística conceito ↔ natureza | `domain/structural_consistency.py` | #216 |
 | comparação de backend em um fator só | `benchmarks/validate_reference_pipeline.py` (`--reasoning-checkpoint`) | #218 |
+| comparação estrutural entre dois runs | `benchmarks/compare_runs.py` | #218 |
 | embeddings expostos e persistidos por referência | `benchmarks/frame_artifacts.py` | #217 |
 | integração de tudo em uma ordem determinística | `application/pipeline.py` | #207 |
 
@@ -53,7 +54,10 @@ benchmarks/results/samples/20260908T131207Z/   baseline sem estágios contextuai
 benchmarks/results/samples/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
 benchmarks/results/samples/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
 benchmarks/results/samples/20260909T135428Z/   superado, registro do defeito de escalonamento
+benchmarks/results/samples/20260910T121258Z/   braço #218, Qwen3-VL-2B
+benchmarks/results/samples/20260910T122608Z/   braço #218, Qwen3-VL-4B
 benchmarks/results/comparison-contextual-20260910T115810Z.md
+benchmarks/results/benchmark-218-multimodal-reasoning-20260910T122608Z.md
 ```
 
 A comparação é reproduzível:
@@ -77,12 +81,17 @@ O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: *
 
 ## Trabalho recomendado, em ordem
 
-1. **#218 — comparar Qwen2.5-VL-3B contra Qwen3-VL 2B e 4B.** É a comparação com melhor
-   relação custo/informação disponível: os três checkpoints já estão no cache local, a
-   versão instalada de `transformers` suporta a família, e não há download nenhum. Fixe
-   tudo menos o checkpoint — prompt, views, temperatura, tetos dos estágios contextuais —
-   e meça os eixos da issue. Uma troca de prompt junto com a troca de modelo torna as
-   duas ininterpretáveis.
+1. **Elicitar alternativas por prompt, e só então reabrir a #218.** A comparação de
+   backends foi feita (relatório em
+   `benchmarks/results/benchmark-218-multimodal-reasoning-20260910T122608Z.md`) e o
+   resultado é uma bifurcação, não um vencedor: o Qwen3-VL-4B é 34% mais rápido e erra a
+   natureza da região sete vezes menos, mas devolve `alternatives: []` em 40 de 40 regiões
+   — o que desliga o canal de evidência independente inteiro.
+
+   O passo seguinte é de **prompt**, não de modelo: exigir alternativas explicitamente,
+   incrementar `prompt_version`, rodar a ablation com o modelo fixo, e só depois repetir a
+   comparação de backends. Mudar os dois juntos torna ambos ininterpretáveis — é a regra
+   que esta rodada já pagou para aprender duas vezes.
 
 2. **#219 e #220** dependem de você aceitar as licenças de `facebook/dinov3-*` e
    `facebook/sam3` no Hugging Face e configurar um token. O bloqueio não é técnico: o

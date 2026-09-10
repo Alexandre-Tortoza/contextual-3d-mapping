@@ -383,6 +383,40 @@ sinônimos de nenhum predicado.
   os mais próximos de uma afirmação de profundidade que um frame único não sustenta.
   Nenhuma anotação existe para verificá-los.
 
+## 8. Um modelo que não declara dúvida desliga o canal independente
+
+**Status: aberto.** Dona: `#218`.
+
+Medido na comparação de backends (`benchmark-218-multimodal-reasoning-20260910T122608Z.md`),
+três checkpoints sobre exatamente a mesma arquitetura:
+
+```text
+Qwen2.5-VL-3B   regiões com alternativa: 40/40
+Qwen3-VL-2B     regiões com alternativa: 40/40
+Qwen3-VL-4B     regiões com alternativa:  0/40
+```
+
+O Qwen3-VL-4B nunca devolve `alternatives`. Sem hipótese concorrente o alinhamento não tem
+o que arbitrar, e **282 sinais viram `unavailable`**. Quatro medidas do diagnóstico caem a
+zero por construção — `supports`, `contradicts`, `indistinguishable` e "sem suporte
+independente" — junto com os warnings correspondentes e duas das razões de refinamento.
+
+O risco é de leitura, e é grande: numa tabela comparativa o 4B parece dominar. **Não
+domina.** Ele silencia sobre a própria incerteza, e este módulo inteiro é construído sobre
+preservá-la.
+
+O contrapeso é real e vale registrar: no único eixo de qualidade **não circular**
+disponível — a coerência determinística entre conceito e natureza, que não consulta modelo
+nenhum — o 4B tem 8 contradições contra 60 e 73 dos outros dois, e é o único que usa
+`part`. Ele erra muito menos naquilo que dá para verificar sem anotação.
+
+Os dois fatos coexistem, e nenhum critério atual os ordena. É por isso que a referência não
+mudou.
+
+**O que desbloquearia:** um prompt que exija alternativas, versionado como
+`prompt_version`, seguido de nova comparação. Mudar prompt e modelo juntos tornaria as duas
+mudanças ininterpretáveis, então isso é trabalho de outra rodada.
+
 ## 7. Alimentar a cena ao refinamento reintroduz o vazamento que a #202 fechou
 
 **Status: fechado por configuração, e registrado porque a lição é geral.**
