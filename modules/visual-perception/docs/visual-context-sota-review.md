@@ -33,7 +33,7 @@ Todas as contagens vêm de artifacts versionados, não de leitura de código.
 
 | origem | o que é |
 | --- | --- |
-| `benchmarks/results/samples/20260908T131207Z/` | run real mais recente, revisão `03ec593`, 5 frames, 165 regiões canônicas, `prompt_version v6`, pico de 4,57 GiB |
+| `benchmarks/results/samples/old/20260908T131207Z/` | run real mais recente, revisão `03ec593`, 5 frames, 165 regiões canônicas, `prompt_version v6`, pico de 4,57 GiB |
 | `benchmarks/evidence_signal_probe.py` | sonda reproduzível criada nesta rodada; mede os sinais de alinhamento e coerência descritos abaixo |
 | `docs/known-limitations.md` | limitações já medidas em runs anteriores |
 

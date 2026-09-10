@@ -15,15 +15,15 @@ Todas as contagens abaixo vêm dos runs versionados dos três frames vinculantes
 
 | run | revisão | o que era |
 | --- | --- | --- |
-| `samples/20260906T195310Z/` | `ebe211f` | baseline: crop pelo bounding box, cena achatada em string, `prompt_version v2` |
-| `samples/20260907T005820Z/` | `0fda5cf` | primeira versão multi-view, `prompt_version v3` |
-| `samples/20260907T014526Z/` | `50ed564` | `prompt_version v5`, sem exclusão de área |
-| `samples/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
-| `samples/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
-| `samples/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
-| `samples/20260909T135428Z/` | `1270e53` | primeira arquitetura contextual — **superado**, tinha a view de cena no escalonamento |
-| `samples/20260910T115810Z/` | `7001803` | **run de referência desta rodada**, escalonamento region-local |
-| `samples/20260909T205243Z/` | `478fe63` | 16 keyframes de um segmento, mesma configuração; corroboração em escala |
+| `samples/old/20260906T195310Z/` | `ebe211f` | baseline: crop pelo bounding box, cena achatada em string, `prompt_version v2` |
+| `samples/old/20260907T005820Z/` | `0fda5cf` | primeira versão multi-view, `prompt_version v3` |
+| `samples/old/20260907T014526Z/` | `50ed564` | `prompt_version v5`, sem exclusão de área |
+| `samples/old/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
+| `samples/old/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
+| `samples/old/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
+| `samples/old/20260909T135428Z/` | `1270e53` | primeira arquitetura contextual — **superado**, tinha a view de cena no escalonamento |
+| `samples/old/20260910T115810Z/` | `7001803` | **run de referência desta rodada**, escalonamento region-local |
+| `samples/old/20260909T205243Z/` | `478fe63` | 16 keyframes de um segmento, mesma configuração; corroboração em escala |
 
 O run de referência é o `20260910T115810Z`. A comparação estrutural contra a baseline está
 em
@@ -69,7 +69,7 @@ Três leituras que importam para não superinterpretar a tabela:
 
 ## O que a #202 fechou, medido em `corridor-02-002`
 
-Comparação direta entre `samples/20260907T115208Z/` e `samples/20260908T003114Z/`, mesmo
+Comparação direta entre `samples/old/20260907T115208Z/` e `samples/old/20260908T003114Z/`, mesmo
 frame, mesmo SHA-256 de entrada:
 
 | campo | antes | depois |

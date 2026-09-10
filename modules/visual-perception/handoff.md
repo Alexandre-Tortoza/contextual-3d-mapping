@@ -50,12 +50,12 @@ Inalterados. Use exatamente estes IDs, nesta ordem, com estes hashes:
 ## Baselines que não devem ser apagadas
 
 ```text
-benchmarks/results/samples/20260908T131207Z/   baseline sem estágios contextuais (03ec593)
-benchmarks/results/samples/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
-benchmarks/results/samples/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
-benchmarks/results/samples/20260909T135428Z/   superado, registro do defeito de escalonamento
-benchmarks/results/samples/20260910T121258Z/   braço #218, Qwen3-VL-2B
-benchmarks/results/samples/20260910T122608Z/   braço #218, Qwen3-VL-4B
+benchmarks/results/samples/old/20260908T131207Z/   baseline sem estágios contextuais (03ec593)
+benchmarks/results/samples/old/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
+benchmarks/results/samples/old/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
+benchmarks/results/samples/old/20260909T135428Z/   superado, registro do defeito de escalonamento
+benchmarks/results/samples/old/20260910T121258Z/   braço #218, Qwen3-VL-2B
+benchmarks/results/samples/old/20260910T122608Z/   braço #218, Qwen3-VL-4B
 benchmarks/results/comparison-contextual-20260910T115810Z.md
 benchmarks/results/benchmark-218-multimodal-reasoning-20260910T122608Z.md
 ```
@@ -64,7 +64,7 @@ A comparação é reproduzível:
 
 ```bash
 python benchmarks/compare_runs.py \
-  --baseline benchmarks/results/samples/20260908T131207Z \
+  --baseline benchmarks/results/samples/old/20260908T131207Z \
   --candidate benchmarks/results/samples/<novo>
 ```
 

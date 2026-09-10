@@ -18,7 +18,7 @@ e nenhuma métrica de acurácia é calculada: sem ground truth humano revisado
 Uso, a partir de ``modules/visual-perception``:
 
     python benchmarks/evidence_signal_probe.py \
-      --run benchmarks/results/samples/20260908T131207Z
+      --run benchmarks/results/samples/old/20260908T131207Z
 
 O relatório vai para stdout e, com ``--output``, para um JSON versionável.
 """
