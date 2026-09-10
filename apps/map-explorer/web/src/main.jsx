@@ -9,12 +9,14 @@ import { Inspector } from "./inspector.jsx";
 import {
   DIMMED_COLOR,
   StaticArtifactGeometrySource,
-  buildContextLegend,
+  allLegendKeys,
+  buildContextPalette,
   contextKey,
+  countSupportStates,
+  legendKeys,
   mapEntriesFromIndex,
   measureMap,
   partitionByFocus,
-  pointColor,
   srgbColorToLinear,
   validateSlice,
 } from "./map-data.js";
@@ -75,7 +77,7 @@ function PointLayer({ points, colorOf, size, opacity, onPointerDown, onClick, on
 // atenuado como referência espacial. Remover a geometria vizinha esconderia
 // justamente o contexto que permite localizar a classe dentro do mapa, então
 // pontos atenuados continuam desenhados e selecionáveis.
-function Cloud({ focused, dimmed, onSelect, onFocus }) {
+function Cloud({ focused, dimmed, colorOf, onSelect, onFocus }) {
   const pointerOrigin = useRef(null);
 
   // Distingue clique de arraste para que orbitar ou fazer pan não selecione um
@@ -100,7 +102,7 @@ function Cloud({ focused, dimmed, onSelect, onFocus }) {
   return (
     <>
       <PointLayer points={dimmed} colorOf={dimmedColor} size={1.6} opacity={0.35} {...handlers} />
-      <PointLayer points={focused} colorOf={pointColor} size={2.6} opacity={1} {...handlers} />
+      <PointLayer points={focused} colorOf={colorOf} size={2.6} opacity={1} {...handlers} />
     </>
   );
 }
@@ -129,7 +131,25 @@ function SpatialReference({ metrics }) {
 
 // Oferece a leitura e os filtros das cores em um painel pequeno e recolhível,
 // mantendo a sidebar reservada à evidência do ponto selecionado.
-function ContextLegend({ entries, enabledKeys, focusedPointCount, totalPointCount, onToggle, onIsolate, onReset }) {
+function ContextLegend({
+  entries,
+  enabledKeys,
+  focusedPointCount,
+  totalPointCount,
+  supportRules,
+  supportCounts,
+  onToggle,
+  onIsolate,
+  onReset,
+  onToggleSupport,
+}) {
+  const [expanded, setExpanded] = useState(new Set());
+  const toggleExpanded = (key) => setExpanded((current) => {
+    const next = new Set(current);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    return next;
+  });
   return (
     <details className="map-overlay context-legend" open>
       <summary>
@@ -140,17 +160,62 @@ function ContextLegend({ entries, enabledKeys, focusedPointCount, totalPointCoun
         <span>Contexto</span>
         <button type="button" onClick={onReset}>Focar tudo</button>
       </div>
+      <div className="legend-support">
+        <label>
+          <input
+            type="checkbox"
+            checked={supportRules.dimWeak}
+            onChange={() => onToggleSupport("dimWeak")}
+          />
+          <span>Atenuar contexto sem suporte</span>
+          <b>{supportCounts.weak.toLocaleString("pt-BR")}</b>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={supportRules.dimUncorroborated}
+            onChange={() => onToggleSupport("dimUncorroborated")}
+          />
+          <span>Atenuar visto por um frame só</span>
+          <b>{supportCounts.uncorroborated.toLocaleString("pt-BR")}</b>
+        </label>
+      </div>
       <div className="legend-list">
         {entries.map((entry) => {
-          const enabled = enabledKeys === null || enabledKeys.has(entry.key);
+          const keys = legendKeys(entry);
+          const enabled = enabledKeys === null || keys.every((key) => enabledKeys.has(key));
+          const detailed = entry.members.length > 1;
+          const open = expanded.has(entry.key);
           return (
-            <div className={`legend-row ${enabled ? "" : "disabled"}`} key={entry.key}>
-              <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(entry.key)}>
-                <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
-                <span>{entry.label}</span>
-                <b>{entry.count.toLocaleString("pt-BR")}</b>
-              </button>
-              <button type="button" className="isolate-action" onClick={() => onIsolate(entry.key)}>Isolar</button>
+            <div key={entry.key}>
+              <div className={`legend-row ${enabled ? "" : "disabled"}`}>
+                <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(keys)}>
+                  <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
+                  <span>{entry.label}</span>
+                  <b>{entry.count.toLocaleString("pt-BR")}</b>
+                </button>
+                {detailed && (
+                  <button type="button" className="isolate-action" aria-expanded={open}
+                    aria-label={`Labels de ${entry.label}`} onClick={() => toggleExpanded(entry.key)}>
+                    {open ? "▾" : `${entry.members.length}`}
+                  </button>
+                )}
+                <button type="button" className="isolate-action" onClick={() => onIsolate(keys)}>Isolar</button>
+              </div>
+              {detailed && open && entry.members.map((member) => {
+                const memberEnabled = enabledKeys === null || enabledKeys.has(member.key);
+                return (
+                  <div className={`legend-row legend-member ${memberEnabled ? "" : "disabled"}`} key={member.key}>
+                    <button type="button" className="legend-toggle" aria-pressed={memberEnabled}
+                      onClick={() => onToggle([member.key])}>
+                      <i />
+                      <span>{member.label}</span>
+                      <b>{member.count.toLocaleString("pt-BR")}</b>
+                    </button>
+                    <button type="button" className="isolate-action" onClick={() => onIsolate([member.key])}>Isolar</button>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
@@ -215,6 +280,7 @@ function Explorer() {
     () => new URLSearchParams(window.location.search).get("artifact") ?? DEFAULT_MAP_URL,
   );
   const [availableMaps, setAvailableMaps] = useState(FALLBACK_MAPS);
+  const [supportRules, setSupportRules] = useState({ dimWeak: true, dimUncorroborated: false });
   const [slice, setSlice] = useState(null);
   const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -230,10 +296,11 @@ function Explorer() {
     [],
   );
   const metrics = useMemo(() => measureMap(points), [points]);
-  const legendEntries = useMemo(() => buildContextLegend(points), [points]);
+  const palette = useMemo(() => buildContextPalette(points), [points]);
+  const supportCounts = useMemo(() => countSupportStates(points), [points]);
   const { focused, dimmed } = useMemo(
-    () => partitionByFocus(points, enabledContextKeys),
-    [points, enabledContextKeys],
+    () => partitionByFocus(points, enabledContextKeys, supportRules),
+    [points, enabledContextKeys, supportRules],
   );
   const selectedOutOfFocus = Boolean(
     selected
@@ -337,12 +404,13 @@ function Explorer() {
     setDockOpen(Boolean(point));
   };
   // Materializa o conjunto completo somente no primeiro filtro, permitindo que
-  // ``null`` continue representando o estado barato “todos visíveis”.
-  const toggleContextKey = (key) => {
+  // ``null`` continue representando o estado barato “todos visíveis”. Alternar
+  // uma família alterna todos os labels que ela agrupa, de uma vez.
+  const toggleContextKeys = (keys) => {
     setEnabledContextKeys((current) => {
-      const next = new Set(current ?? legendEntries.map((entry) => entry.key));
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      const next = new Set(current ?? allLegendKeys(palette.legend));
+      if (keys.every((key) => next.has(key))) keys.forEach((key) => next.delete(key));
+      else keys.forEach((key) => next.add(key));
       return next;
     });
   };
@@ -361,7 +429,7 @@ function Explorer() {
               >
                 <color attach="background" args={["#0d0d0d"]} />
                 <SpatialReference metrics={metrics} />
-                <Cloud focused={focused} dimmed={dimmed} onSelect={selectPoint}
+                <Cloud focused={focused} dimmed={dimmed} colorOf={palette.colorOf} onSelect={selectPoint}
                   onFocus={(point) => cameraActions.current?.focus(point)} />
                 <SelectionMarker point={selected} radius={Math.min(Math.max(metrics.diagonal * 0.0015, 0.04), 0.35)} />
                 <CameraRig ref={cameraActions} metrics={metrics} flyMode={flyMode}
@@ -375,10 +443,12 @@ function Explorer() {
                 onToggleFly={() => setFlyMode((value) => !value)}
                 onHelp={() => setHelpOpen((value) => !value)} />
               <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
-              <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
+              <ContextLegend entries={palette.legend} enabledKeys={enabledContextKeys}
                 focusedPointCount={focused.length} totalPointCount={points.length}
-                onToggle={toggleContextKey}
-                onIsolate={(key) => setEnabledContextKeys(new Set([key]))}
+                supportRules={supportRules} supportCounts={supportCounts}
+                onToggleSupport={(key) => setSupportRules((current) => ({ ...current, [key]: !current[key] }))}
+                onToggle={toggleContextKeys}
+                onIsolate={(keys) => setEnabledContextKeys(new Set(keys))}
                 onReset={() => setEnabledContextKeys(null)} />
               {helpOpen && <NavigationHelp onClose={() => setHelpOpen(false)} />}
               {!dockOpen && (

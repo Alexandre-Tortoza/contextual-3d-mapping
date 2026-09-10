@@ -58,6 +58,35 @@ make map-explorer-serve
 Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
 arquivo publicado é local e ignorado pelo Git.
 
+## Cores e sustentação
+
+O reasoner produz vocabulário aberto e cheio de quase-sinônimos: `wall`,
+`plain wall`, `wall tiles` e `arch-shaped wall` descrevem a mesma superfície. O
+viewer agrupa labels em famílias derivadas dos próprios dados — um label entra
+na família do label mais frequente que aparece inteiro dentro dele — e colore
+por família, com a legenda expansível nos labels brutos.
+
+São **quatro matizes, e nenhum a mais**. Uma nuvem de pontos é um caso
+"all-pairs": qualquer classe pode encostar em qualquer outra no espaço, então
+toda combinação precisa ser distinguível, e não apenas as vizinhas de uma
+legenda ordenada. Sob essa restrição, contra o fundo deste viewer, só dois
+conjuntos de quatro matizes passam nos limiares de separação para visão normal e
+para daltonismo, e nenhum conjunto de cinco passa. As famílias além da quarta
+compartilham um neutro claro em uma linha `Outros labels`, em vez de receberem
+matizes que o leitor não conseguiria separar.
+
+A regra de agrupamento é por token, então variantes morfológicas de uma mesma
+raiz (`flooring` contra `floor`) formam famílias separadas. É o limite aceito
+para não embutir morfologia no viewer; a linha `Outros labels` permanece
+expansível e isolável.
+
+Pontos cujo label não se sustenta aparecem apagados. O artifact publica dois
+sinais independentes por ponto — concordância entre keyframes e suporte da
+vizinhança geométrica — e a legenda oferece atenuar quem falha nos dois
+(ligado por default) e quem foi visto por um único frame (desligado). Nenhum
+claim é reescrito: a atenuação é decisão de desenho, e o inspector mostra os
+dois números e o estado.
+
 Artifacts contextuais expõem geometria, associações RGB e claims do VLM. O
 mapa usa uma única camada de cores contextuais e distingue três estados: pontos
 com label recebem a cor da classe, pontos que a câmera observou sem classificar

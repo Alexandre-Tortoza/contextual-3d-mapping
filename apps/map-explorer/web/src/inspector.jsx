@@ -5,6 +5,14 @@ import { observationIdOf, visualEvidence } from "./map-data.js";
 // Traduz o motivo pelo qual um ponto do mapa ficou sem contexto. Sem isso o
 // viewer só sabe dizer que falta label, e a pergunta que o usuário faz diante
 // de um ponto cinza ao lado de um colorido é justamente "por quê".
+// Explica o estado de corroboração em vez de mostrar só um rótulo técnico. O
+// usuário precisa saber por que um ponto está apagado no mapa.
+const SUPPORT_STATE_COPY = Object.freeze({
+  weak: "A vizinhança geométrica e os outros keyframes discordam deste label. O ponto aparece apagado no mapa.",
+  uncorroborated: "Um único keyframe observou este ponto, então não há verificação cruzada possível.",
+  corroborated: "A vizinhança geométrica ou os demais keyframes sustentam este label.",
+});
+
 const MISSING_CONTEXT_REASON = Object.freeze({
   behind_camera: "Ficou fora do campo de visão de todos os keyframes.",
   outside_image: "Projetou-se fora dos limites da imagem.",
@@ -94,17 +102,22 @@ function SceneClaims({ claims }) {
 // sustentado por cinco frames não tem o mesmo peso de um sustentado por um.
 function FusionSummary({ evidence }) {
   const contributions = evidence?.contributions ?? [];
-  if (contributions.length < 2) return null;
+  const state = evidence?.support_state;
+  if (contributions.length < 2 && !state) return null;
   return (
     <div className="inspector-block">
-      <h3>Fusão entre observações</h3>
+      <h3>Sustentação do label</h3>
       <div className="classification-grid">
-        <span>Observações</span><strong>{contributions.length}</strong>
-        <span>Concordância</span>
-        <strong>{evidence.agreement == null ? "Não informada" : `${(evidence.agreement * 100).toFixed(0)}%`}</strong>
+        {state && <><span>Estado</span><strong>{state}</strong></>}
+        <span>Observações</span><strong>{Math.max(contributions.length, 1)}</strong>
+        <span>Concordância entre frames</span>
+        <strong>{evidence.agreement == null ? "Sem corroboração" : `${(evidence.agreement * 100).toFixed(0)}%`}</strong>
+        <span>Suporte da vizinhança 3D</span>
+        <strong>{evidence.spatial_support == null ? "Indefinido" : `${(evidence.spatial_support * 100).toFixed(0)}%`}</strong>
       </div>
+      {state && <p className="empty-copy">{SUPPORT_STATE_COPY[state]}</p>}
       <ul className="claim-list">
-        {contributions.map((item) => (
+        {contributions.length > 1 && contributions.map((item) => (
           <li key={`${item.observation_id}:${item.region_id}`}>
             <span>{item.observation_id}</span><strong>{item.label}</strong>
             {item.confidence != null && <small>{(item.confidence * 100).toFixed(0)}%</small>}

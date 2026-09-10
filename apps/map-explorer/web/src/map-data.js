@@ -2,34 +2,31 @@ const UNOBSERVED_KEY = "__unobserved__";
 const UNOBSERVED_COLOR = [28, 31, 38];
 const OBSERVED_UNLABELED_KEY = "__observed_unlabeled__";
 const OBSERVED_UNLABELED_COLOR = [104, 111, 124];
+const OTHER_FAMILY_KEY = "__other__";
+const OTHER_FAMILY_COLOR = [185, 189, 199];
 const DIMMED_COLOR = [70, 74, 84];
+
+// Quatro matizes, nesta ordem, e nenhum a mais.
+//
+// Uma nuvem de pontos é um caso "all-pairs": qualquer classe pode encostar em
+// qualquer outra no espaço, então toda combinação precisa ser distinguível — e
+// não apenas as vizinhas de uma legenda ordenada. Sob essa restrição, contra o
+// fundo #0d0d0d deste viewer, apenas dois conjuntos de quatro matizes passam nos
+// limiares de separação para visão normal e para daltonismo; nenhum conjunto de
+// cinco passa. Famílias além da quarta recebem um neutro claro em vez de um
+// matiz gerado que o leitor não conseguiria separar dos demais.
+const FAMILY_COLORS = Object.freeze([
+  [57, 135, 229],
+  [201, 133, 0],
+  [213, 81, 129],
+  [0, 131, 0],
+]);
 
 const NEUTRAL_LABELS = Object.freeze({
   [UNOBSERVED_KEY]: "Sem contexto",
   [OBSERVED_UNLABELED_KEY]: "Observado, sem label",
+  [OTHER_FAMILY_KEY]: "Outros labels",
 });
-
-const SEMANTIC_COLORS = Object.freeze({
-  door: [255, 82, 82],
-  wall: [45, 181, 255],
-  "plain wall": [92, 124, 250],
-  floor: [255, 214, 51],
-  "wooden floor": [255, 145, 48],
-  ceiling: [190, 118, 255],
-  "ceiling tiles": [255, 105, 180],
-  "wooden panel": [61, 220, 132],
-});
-
-const FALLBACK_COLORS = Object.freeze([
-  [0, 229, 255],
-  [255, 112, 67],
-  [174, 234, 0],
-  [255, 64, 129],
-  [124, 77, 255],
-  [255, 171, 0],
-  [29, 233, 182],
-  [236, 64, 122],
-]);
 
 // Valida a fronteira mínima consumida pelo viewer antes de qualquer estado de
 // câmera ou renderização ser criado.
@@ -131,67 +128,172 @@ export function contextKey(point) {
   return UNOBSERVED_KEY;
 }
 
-// Centraliza a cor de uma categoria para que legenda e nuvem nunca divirjam.
-function colorForKey(key) {
-  if (key === UNOBSERVED_KEY) return UNOBSERVED_COLOR;
-  if (key === OBSERVED_UNLABELED_KEY) return OBSERVED_UNLABELED_COLOR;
-  return semanticColor(key);
-}
-
-// Escolhe uma cor semântica saturada e estável. Labels conhecidas preservam
-// convenções visuais e labels futuras recebem um fallback determinístico.
-export function semanticColor(label) {
-  const normalized = label?.trim().toLowerCase();
-  if (!normalized) return UNOBSERVED_COLOR;
-  if (SEMANTIC_COLORS[normalized]) return SEMANTIC_COLORS[normalized];
-  let hash = 2166136261;
-  for (const character of normalized) {
-    hash ^= character.codePointAt(0);
-    hash = Math.imul(hash, 16777619);
+// Verifica se uma sequência de tokens aparece inteira e contígua dentro de
+// outra. É a relação que define parentesco entre labels: "wall" aparece dentro
+// de "plain wall" e de "wall tiles".
+function containsTokens(tokens, needle) {
+  if (needle.length >= tokens.length) return false;
+  for (let start = 0; start + needle.length <= tokens.length; start += 1) {
+    if (needle.every((token, offset) => tokens[start + offset] === token)) return true;
   }
-  return FALLBACK_COLORS[(hash >>> 0) % FALLBACK_COLORS.length];
+  return false;
 }
 
-// Gera uma legenda ordenada por cobertura e preserva as cores publicadas pelo
-// viewer. A ausência de label é uma só categoria, independentemente de existir
-// uma associação RGB que não produziu classificação.
-export function buildContextLegend(points) {
-  const byKey = new Map();
+// Agrupa labels de vocabulário aberto em famílias derivadas dos próprios dados.
+//
+// Existe porque o reasoner produz quase-sinônimos — "wall", "plain wall" e
+// "wall tiles" descrevem a mesma superfície — e tratá-los como categorias
+// independentes gasta matizes que o leitor não consegue separar. Um label entra
+// na família do label mais frequente que aparece inteiro dentro dele, o que
+// dispensa uma tabela escrita à mão e funciona em um dataset novo.
+export function buildLabelFamilies(labelCounts) {
+  const ordered = [...labelCounts.entries()].sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+  );
+  const host = new Map();
+  ordered.forEach(([label]) => {
+    const tokens = label.split(/\s+/);
+    const parent = ordered.find(
+      ([candidate]) => candidate !== label && containsTokens(tokens, candidate.split(/\s+/)),
+    );
+    host.set(label, parent ? parent[0] : label);
+  });
+  const families = new Map();
+  host.forEach((_, label) => {
+    const seen = new Set();
+    let root = label;
+    while (host.get(root) !== root && !seen.has(root)) {
+      seen.add(root);
+      root = host.get(root);
+    }
+    families.set(label, root);
+  });
+  return families;
+}
+
+// Constrói a paleta e a legenda a partir de um artifact concreto.
+//
+// A cor segue a família, e a família é decidida uma vez para o mapa aberto:
+// filtrar ou isolar na legenda nunca repinta o que sobrou. Famílias além da
+// quarta compartilham um neutro claro, porque só quatro matizes se separam com
+// segurança sobre este fundo.
+export function buildContextPalette(points) {
+  const labelCounts = new Map();
+  const neutralCounts = new Map();
   points.forEach((point) => {
     const key = contextKey(point);
-    const current = byKey.get(key) ?? {
+    const target = key in NEUTRAL_LABELS ? neutralCounts : labelCounts;
+    target.set(key, (target.get(key) ?? 0) + 1);
+  });
+  const families = buildLabelFamilies(labelCounts);
+  const grouped = new Map();
+  labelCounts.forEach((count, label) => {
+    const family = families.get(label) ?? label;
+    const entry = grouped.get(family) ?? { key: family, count: 0, members: [] };
+    entry.count += count;
+    entry.members.push({ key: label, label, count });
+    grouped.set(family, entry);
+  });
+  const ranked = [...grouped.values()].sort(
+    (left, right) => right.count - left.count || left.key.localeCompare(right.key),
+  );
+  const colorByFamily = new Map();
+  ranked.forEach((entry, rank) => {
+    colorByFamily.set(entry.key, FAMILY_COLORS[rank] ?? OTHER_FAMILY_COLOR);
+  });
+  const byCoverage = (left, right) => right.count - left.count;
+  const legend = ranked.slice(0, FAMILY_COLORS.length).map((entry) => ({
+    key: entry.key,
+    label: entry.key,
+    count: entry.count,
+    color: colorByFamily.get(entry.key),
+    semantic: true,
+    members: [...entry.members].sort(byCoverage),
+  }));
+  // A cauda vira uma linha só. Espalhá-la em várias linhas do mesmo neutro
+  // sugeriria categorias distinguíveis no mapa, quando elas compartilham cor.
+  const tail = ranked.slice(FAMILY_COLORS.length);
+  if (tail.length) {
+    legend.push({
+      key: OTHER_FAMILY_KEY,
+      label: NEUTRAL_LABELS[OTHER_FAMILY_KEY],
+      count: tail.reduce((total, entry) => total + entry.count, 0),
+      color: OTHER_FAMILY_COLOR,
+      semantic: true,
+      members: tail.flatMap((entry) => entry.members).sort(byCoverage),
+    });
+  }
+  [OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY].forEach((key) => {
+    const count = neutralCounts.get(key);
+    if (!count) return;
+    legend.push({
       key,
-      label: NEUTRAL_LABELS[key] ?? key,
-      count: 0,
-      color: colorForKey(key),
-      semantic: !(key in NEUTRAL_LABELS),
-    };
-    current.count += 1;
-    byKey.set(key, current);
+      label: NEUTRAL_LABELS[key],
+      count,
+      color: key === UNOBSERVED_KEY ? UNOBSERVED_COLOR : OBSERVED_UNLABELED_COLOR,
+      semantic: false,
+      members: [],
+    });
   });
-  return [...byKey.values()].sort((left, right) => {
-    if (left.semantic !== right.semantic) return left.semantic ? -1 : 1;
-    return right.count - left.count || left.label.localeCompare(right.label);
-  });
+  const colorOf = (point) => {
+    const key = contextKey(point);
+    if (key === UNOBSERVED_KEY) return UNOBSERVED_COLOR;
+    if (key === OBSERVED_UNLABELED_KEY) return OBSERVED_UNLABELED_COLOR;
+    return colorByFamily.get(families.get(key) ?? key) ?? OTHER_FAMILY_COLOR;
+  };
+  return { legend, colorOf, familyOf: (label) => families.get(label) ?? label };
 }
 
-// Separa o mapa entre a classe em foco e o restante, em vez de descartar
-// pontos. A legenda responde "onde está esta classe dentro do mapa", e isso
-// exige que a geometria vizinha continue desenhada como referência espacial.
-export function partitionByFocus(points, enabledContextKeys) {
-  if (enabledContextKeys === null) return { focused: points, dimmed: [] };
+// Resolve as chaves de contexto que uma linha da legenda representa. Uma
+// família cobre todos os seus labels brutos; uma categoria neutra cobre a si
+// mesma. Existe para que alternar e isolar funcionem igual nos dois níveis.
+export function legendKeys(entry) {
+  return entry.members?.length ? entry.members.map((member) => member.key) : [entry.key];
+}
+
+// Reúne todas as chaves presentes no mapa aberto, que é o estado inicial de
+// "tudo em foco" materializado no primeiro filtro.
+export function allLegendKeys(legend) {
+  return legend.flatMap(legendKeys);
+}
+
+// Conta os pontos por estado de corroboração para que a legenda diga quanto do
+// mapa cada opção de atenuação afeta, em vez de oferecer um interruptor cego.
+export function countSupportStates(points) {
+  const counts = { corroborated: 0, uncorroborated: 0, weak: 0 };
+  points.forEach((point) => {
+    const state = visualEvidence(point)?.support_state;
+    if (state in counts) counts[state] += 1;
+  });
+  return counts;
+}
+
+// Decide se um ponto tem sustentação suficiente para ser desenhado com cor
+// plena. Um label pode estar geometricamente deslocado sem que nada na imagem
+// o denuncie — é o caso do ponto atrás da parede que herda a cor da superfície
+// da frente. O artifact publica os dois sinais que detectam isso; aqui eles
+// viram uma decisão de desenho, nunca uma alteração do claim.
+function isWeaklySupported(point, { dimWeak, dimUncorroborated }) {
+  const state = visualEvidence(point)?.support_state;
+  if (state === "weak") return dimWeak;
+  if (state === "uncorroborated") return dimUncorroborated;
+  return false;
+}
+
+// Separa o mapa entre o que é desenhado com cor plena e o que fica atenuado,
+// em vez de descartar pontos. A legenda responde "onde está esta classe dentro
+// do mapa", e isso exige que a geometria vizinha continue desenhada como
+// referência espacial.
+export function partitionByFocus(points, enabledContextKeys, support = {}) {
+  const rules = { dimWeak: true, dimUncorroborated: false, ...support };
   const focused = [];
   const dimmed = [];
   points.forEach((point) => {
-    if (enabledContextKeys.has(contextKey(point))) focused.push(point);
+    const inFocus = enabledContextKeys === null || enabledContextKeys.has(contextKey(point));
+    if (inFocus && !isWeaklySupported(point, rules)) focused.push(point);
     else dimmed.push(point);
   });
   return { focused, dimmed };
-}
-
-// Retorna exclusivamente a cor da classe contextual usada pelo mapa.
-export function pointColor(point) {
-  return colorForKey(contextKey(point));
 }
 
 // Converte canais sRGB de interface para o espaço linear esperado pelos

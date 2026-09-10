@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from geometric_map import GeometryReference
-from semantic_fusion import SemanticContribution, fuse_point_contributions
+from semantic_fusion import (
+    LabelledPoint,
+    SemanticContribution,
+    fuse_point_contributions,
+    measure_spatial_support,
+)
 from sensor_association import (
     AssociationStatus,
     CameraLidarCalibration,
@@ -469,6 +474,63 @@ def _rgb_frame(reference: ObservationReference, raw_rgb: Any, valid_mask: Any) -
     )
 
 
+# Limiares da marcação de suporte fraco. Medidos no trecho de 30 s do
+# corridor-02 contra o subconjunto comprovadamente incoerente (pontos `ceiling`
+# abaixo da altura em que estão os `ceiling tiles`): exigir os dois sinais marca
+# 9,7% dos pontos rotulados e alcança 33,2% dos incoerentes, contra 20,3%/35,2%
+# usando só o espacial. Exigir ambos é o que dá precisão, porque uma fronteira
+# legítima entre superfícies tem suporte espacial baixo mas concordância alta
+# entre keyframes, enquanto um vazamento real falha nos dois.
+_WEAK_SPATIAL_SUPPORT = 0.5
+_WEAK_VIEW_AGREEMENT = 0.5
+
+
+# Mede quanto a vizinhança geométrica sustenta cada label e classifica o estado
+# de corroboração de cada ponto. Existe porque um label pode estar
+# geometricamente deslocado sem que nada na imagem o denuncie, e o viewer
+# precisa de um critério para apagar o que não se sustenta sem apagar o claim.
+def _apply_spatial_support(points: list[dict[str, Any]]) -> dict[str, int]:
+    """Anota suporte espacial e estado de corroboração nos pontos rotulados.
+
+    Argumentos:
+        points: pontos do artifact, já com o contexto fundido.
+    Retorna:
+        contagem de pontos por estado de corroboração.
+    """
+    labelled = [
+        LabelledPoint(
+            str(point["geometry_id"]),
+            tuple(float(value) for value in point["coordinates_m"]),
+            str(point["context"]["label"]),
+        )
+        for point in points
+        if (point.get("context") or {}).get("label")
+    ]
+    support = measure_spatial_support(labelled)
+    counts: dict[str, int] = {"corroborated": 0, "uncorroborated": 0, "weak": 0}
+    for point in points:
+        context = point.get("context") or {}
+        if not context.get("label"):
+            continue
+        spatial = support.get(str(point["geometry_id"]))
+        agreement = context.get("agreement")
+        if spatial is not None:
+            context["spatial_support"] = spatial
+        if agreement is None:
+            state = "uncorroborated"
+        elif (
+            spatial is not None
+            and spatial < _WEAK_SPATIAL_SUPPORT
+            and agreement < _WEAK_VIEW_AGREEMENT
+        ):
+            state = "weak"
+        else:
+            state = "corroborated"
+        context["support_state"] = state
+        counts[state] += 1
+    return counts
+
+
 # Monta o artifact v2 rotulando os próprios pontos do mapa persistente. Anexar
 # o scan colorido ao mapa criava duas amostragens da mesma superfície a poucos
 # centímetros uma da outra, das quais só uma carregava contexto — o "ponto
@@ -724,6 +786,8 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             ]
         point["context"] = context
 
+    support_counts = _apply_spatial_support(base["points"])
+
     base["schema_version"] = 2
     base["artifact_type"] = "contextual_rgb_lidar_slice"
     base["calibration_id"] = calibration.calibration_id
@@ -742,6 +806,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         "rgb_point_count": len(associated),
         "unobserved_geometric_point_count": len(base["points"]) - len(associated),
         "multi_observation_point_count": multi_observation_point_count,
+        "support_state_counts": support_counts,
         "pose_source": pose_source,
         "claim_status": "predição VLM não verificada",
     }

@@ -19,6 +19,33 @@ def _unit_interval(value: float | None, name: str) -> float | None:
     return number
 
 
+# Descreve a vizinhança usada para medir suporte espacial. A aresta é um
+# parâmetro porque depende da densidade do mapa: em um mapa esparso demais a
+# vizinhança fica vazia, e em um denso demais ela atravessa superfícies.
+@dataclass(frozen=True)
+class SpatialNeighbourhood:
+    """Vizinhança de voxels usada para medir concordância local de label.
+
+    Argumentos:
+        voxel_edge_m: aresta do voxel em metros; a vizinhança é o bloco 3×3×3
+            de voxels ao redor do ponto.
+        minimum_neighbours: quantidade mínima de vizinhos rotulados para que o
+            suporte seja definido.
+    """
+
+    voxel_edge_m: float = 0.30
+    minimum_neighbours: int = 4
+
+    # Uma aresta não positiva não define uma grade, e um mínimo não positivo
+    # aceitaria medir suporte a partir de nenhuma evidência.
+    def __post_init__(self) -> None:
+        """Valida os parâmetros da vizinhança."""
+        if not isfinite(float(self.voxel_edge_m)) or self.voxel_edge_m <= 0.0:
+            raise ValueError("voxel_edge_m must be a finite positive length.")
+        if self.minimum_neighbours < 1:
+            raise ValueError("minimum_neighbours must be at least one.")
+
+
 # Representa uma classificação proposta por uma observação para um ponto do
 # mapa. Existe porque, com múltiplos keyframes, o mesmo ponto passa a receber
 # várias propostas concorrentes, e nenhuma delas pode ser descartada sem
