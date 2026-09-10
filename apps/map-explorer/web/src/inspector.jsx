@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from "react";
 
+import { observationIdOf, visualEvidence } from "./map-data.js";
+
+// Traduz o motivo pelo qual um ponto do mapa ficou sem contexto. Sem isso o
+// viewer só sabe dizer que falta label, e a pergunta que o usuário faz diante
+// de um ponto cinza ao lado de um colorido é justamente "por quê".
+const MISSING_CONTEXT_REASON = Object.freeze({
+  behind_camera: "Ficou fora do campo de visão de todos os keyframes.",
+  outside_image: "Projetou-se fora dos limites da imagem.",
+  outside_valid_support: "Caiu fora do suporte óptico válido da lente.",
+  occluded: "Ficou atrás de uma superfície mais próxima da câmera.",
+});
+
 // Resolve um asset relativo ao JSON servido. Upload local não fornece uma URL
 // de diretório confiável, então esse caso permanece explicitamente indisponível.
 function resolveAsset(uri, artifactUrl) {
@@ -77,6 +89,32 @@ function SceneClaims({ claims }) {
   );
 }
 
+// Mostra quantas observações classificaram o mesmo ponto e o quanto elas
+// concordam. Com vários keyframes, a concordância é evidência: um label
+// sustentado por cinco frames não tem o mesmo peso de um sustentado por um.
+function FusionSummary({ evidence }) {
+  const contributions = evidence?.contributions ?? [];
+  if (contributions.length < 2) return null;
+  return (
+    <div className="inspector-block">
+      <h3>Fusão entre observações</h3>
+      <div className="classification-grid">
+        <span>Observações</span><strong>{contributions.length}</strong>
+        <span>Concordância</span>
+        <strong>{evidence.agreement == null ? "Não informada" : `${(evidence.agreement * 100).toFixed(0)}%`}</strong>
+      </div>
+      <ul className="claim-list">
+        {contributions.map((item) => (
+          <li key={`${item.observation_id}:${item.region_id}`}>
+            <span>{item.observation_id}</span><strong>{item.label}</strong>
+            {item.confidence != null && <small>{(item.confidence * 100).toFixed(0)}%</small>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // Apresenta a seleção em camadas de evidência e mantém metadados extensos num
 // disclosure técnico, reduzindo a densidade inicial do dock.
 export function Inspector({
@@ -85,13 +123,13 @@ export function Inspector({
   artifactUrl,
   onClose,
   onFocus,
-  hiddenByFilter = false,
+  outOfFocus = false,
 }) {
-  const association = point?.association;
+  const evidence = point ? visualEvidence(point) : null;
   const observation = slice.observations?.find(
-    (item) => item.observation_id === association?.rgb_observation_id,
+    (item) => item.observation_id === observationIdOf(evidence),
   );
-  const region = slice.regions?.find((item) => item.region_id === association?.region_id);
+  const region = slice.regions?.find((item) => item.region_id === evidence?.region_id);
   const confidence = region?.confidence?.value;
   const supportState = region?.support?.state;
   return (
@@ -108,8 +146,8 @@ export function Inspector({
           </div>
         ) : (
           <>
-            {hiddenByFilter && (
-              <div className="filter-warning">O ponto selecionado está oculto pelo filtro da legenda.</div>
+            {outOfFocus && (
+              <div className="filter-warning">O ponto selecionado está fora do foco atual da legenda.</div>
             )}
             <div className="selection-title">
               <span className={`status-tag ${region ? "contextual" : "neutral"}`}>
@@ -128,7 +166,12 @@ export function Inspector({
             {!region && (
               <div className="inspector-block warning-block">
                 <strong>Sem classificação contextual</strong>
-                <p>Este ponto ainda não possui um label produzido pelo pipeline visual.</p>
+                <p>
+                  {MISSING_CONTEXT_REASON[evidence?.status]
+                    ?? (evidence
+                      ? "A câmera observou este ponto, mas nenhuma região do frame o cobriu."
+                      : "Nenhum keyframe deste trecho considerou este ponto.")}
+                </p>
               </div>
             )}
 
@@ -143,9 +186,11 @@ export function Inspector({
               </div>
             )}
 
-            {association && (
-              <ObservationPreview observation={observation} region={region} pixel={association.pixel} artifactUrl={artifactUrl} />
+            {evidence && (
+              <ObservationPreview observation={observation} region={region} pixel={evidence.pixel} artifactUrl={artifactUrl} />
             )}
+
+            <FusionSummary evidence={evidence} />
 
             {region?.claims?.length > 0 && (
               <div className="inspector-block">

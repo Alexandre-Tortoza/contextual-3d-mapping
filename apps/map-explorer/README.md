@@ -38,14 +38,15 @@ O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
 Ele abre `/current-map.json` por default e aceita outra URL pelo parâmetro
 `?artifact=`.
 
-O seletor compacto no mapa alterna entre o artifact contextual atual — um
-frame visual sobre a geometria acumulada — e o trecho puramente geométrico de
-20 segundos. Essa distinção evita apresentar contexto de um frame como se já
-fosse fusão temporal de todo o trecho.
+O seletor compacto no mapa alterna entre os artifacts publicados. A lista vem de
+`public/maps/index.json`, gravado pela publicação a partir do que existe no
+diretório servido, e cada rótulo é derivado do próprio artifact: quantos
+keyframes o contextualizam, ou que é geometria pura. Um trecho novo aparece no
+seletor sem alterar código do viewer.
 
-Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra
-`artifacts/corridor-02-fastlio-20s.json`. O viewer enquadra automaticamente os
-limites da nuvem e permite órbita, zoom e inspeção de cada ponto amostrado.
+Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra o
+artifact gerado. O viewer enquadra automaticamente os limites da nuvem e permite
+órbita, zoom e inspeção de cada ponto amostrado.
 
 Em uma sessão SSH, publique o artifact pelo próprio servidor para evitar o
 seletor de arquivos do computador cliente:
@@ -58,13 +59,22 @@ Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
 arquivo publicado é local e ignorado pelo Git.
 
 Artifacts contextuais expõem geometria, associações RGB e claims do VLM. O
-mapa usa uma única camada de cores contextuais; pontos sem label permanecem em
-cinza discreto para preservar a referência geométrica. Ao selecionar um ponto
-observado, o painel mostra o frame de origem,
+mapa usa uma única camada de cores contextuais e distingue três estados: pontos
+com label recebem a cor da classe, pontos que a câmera observou sem classificar
+aparecem em cinza neutro, e pontos que nenhuma observação alcançou permanecem em
+cinza discreto. A distinção existe porque os dois últimos casos têm diagnósticos
+diferentes — um aponta para a máscara ou para o reasoner, o outro para cobertura
+de frames. Ao selecionar um ponto observado, o painel mostra o frame de origem,
 o pixel projetado, a região, a confiança, o estado de suporte e a proveniência.
-Pontos sem observação visual permanecem explicitamente sem contexto. O alvo
+O alvo
 `map-explorer-serve` usa por default o artifact contextual e copia seus previews;
 outro arquivo pode ser selecionado com `MAP_EXPLORER_ARTIFACT=artifacts/outro.json`.
+
+Um ponto sem label declara o motivo no painel de detalhes — fora do campo de
+visão, projetado fora da imagem, fora do suporte óptico válido, ou ocluído por
+uma superfície mais próxima. Quando várias observações classificam o mesmo ponto,
+o painel mostra o label primário, quantas observações contribuíram e a
+concordância entre elas.
 
 ## Navegação
 
@@ -74,8 +84,16 @@ para mover câmera e alvo, e scroll para aproximar no cursor. `Modo voo` adicion
 Seleção não move a câmera; duplo clique ou `F` foca o ponto. `Home` restaura a
 vista geral, enquanto `1` e `2` abrem as vistas superior e isométrica.
 
+O clique seleciona o ponto mais próximo do cursor, e não o mais próximo da
+câmera. A distinção importa: o raycaster do Three.js ordena interseções por
+distância à câmera, então sem essa regra — e com o raio de captura default de um
+metro — um vizinho à frente vence o ponto apontado. O raio de captura acompanha
+a escala do mapa.
+
 A sidebar `Detalhes` concentra a inspeção. A legenda contextual fica em um
-painel pequeno e recolhível no canto inferior esquerdo do mapa e permite ocultar
-ou isolar labels sem recarregar a geometria. O frontend consome a nuvem por uma
+painel pequeno e recolhível no canto inferior esquerdo do mapa e altera o foco
+sem recarregar a geometria: a classe em foco fica com cor plena e o restante do
+mapa continua desenhado, atenuado, como referência espacial. Pontos atenuados
+seguem selecionáveis. O frontend consome a nuvem por uma
 fronteira interna compatível com bounds e LOD futuros; o artifact local atual
 continua sendo servido como um único chunk estático.

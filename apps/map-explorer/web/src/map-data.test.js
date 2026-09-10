@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   StaticArtifactGeometrySource,
   buildContextLegend,
-  filterPoints,
+  contextKey,
+  mapEntriesFromIndex,
   measureMap,
+  partitionByFocus,
   pointColor,
   semanticColor,
   srgbColorToLinear,
@@ -27,7 +29,12 @@ const POINTS = [
   {
     geometry_id: "d",
     coordinates_m: [1, 2, 0],
-    association: { color_rgb: [90, 80, 70] },
+    association: { status: "associated", color_rgb: [90, 80, 70] },
+  },
+  {
+    geometry_id: "e",
+    coordinates_m: [1, 2, 0],
+    context: { status: "occluded" },
   },
 ];
 
@@ -52,16 +59,30 @@ test("measureMap calcula centro, alturas e diagonal", () => {
   assert.equal(metrics.diagonal, Math.sqrt(96));
 });
 
-// Verifica contagem, ordenação semântica e isolamento sem perder o vínculo
-// entre índice renderizado e identidade original.
-test("legenda contextual conta e filtra categorias", () => {
+// Verifica contagem e ordenação semântica, e protege a distinção entre um
+// ponto que a câmera viu sem classificar e um que ela nunca viu.
+test("legenda contextual separa observado sem label de nunca observado", () => {
   const legend = buildContextLegend(POINTS);
   assert.deepEqual(legend.map((entry) => [entry.label, entry.count]), [
     ["door", 2],
     ["Sem contexto", 2],
+    ["Observado, sem label", 1],
   ]);
-  assert.deepEqual(filterPoints(POINTS, new Set(["door"])).map((point) => point.geometry_id), ["b", "c"]);
-  assert.equal(filterPoints(POINTS, null).length, POINTS.length);
+  assert.equal(contextKey(POINTS[0]), "__unobserved__");
+  assert.equal(contextKey(POINTS[3]), "__observed_unlabeled__");
+  assert.equal(contextKey(POINTS[4]), "__unobserved__");
+});
+
+// Garante que a legenda mude o foco sem descartar geometria: o restante do
+// mapa continua entregue à cena como referência espacial e continua clicável.
+test("partitionByFocus preserva todos os pontos em duas camadas", () => {
+  const { focused, dimmed } = partitionByFocus(POINTS, new Set(["door"]));
+  assert.deepEqual(focused.map((point) => point.geometry_id), ["b", "c"]);
+  assert.deepEqual(dimmed.map((point) => point.geometry_id), ["a", "d", "e"]);
+  assert.equal(focused.length + dimmed.length, POINTS.length);
+  const everything = partitionByFocus(POINTS, null);
+  assert.equal(everything.focused.length, POINTS.length);
+  assert.deepEqual(everything.dimmed, []);
 });
 
 // Protege a paleta apresentada ao usuário contra regressões para cores opacas,
@@ -73,6 +94,8 @@ test("cores contextuais são estáveis e pontos sem contexto ficam discretos", (
   assert.notDeepEqual(semanticColor("door"), semanticColor("wall"));
   assert.deepEqual(pointColor(POINTS[0]), [28, 31, 38]);
   assert.deepEqual(pointColor(POINTS[1]), [255, 82, 82]);
+  assert.deepEqual(pointColor(POINTS[3]), [104, 111, 124]);
+  assert.deepEqual(pointColor(POINTS[4]), [28, 31, 38]);
 });
 
 // Confirma a conversão necessária antes de gravar cores sRGB nos buffers
@@ -82,6 +105,20 @@ test("conversão sRGB preserva extremos e lineariza meios-tons", () => {
   assert.equal(converted[0], 0);
   assert.ok(Math.abs(converted[1] - 0.21586) < 0.00001);
   assert.equal(converted[2], 1);
+});
+
+// O seletor não pode quebrar quando o índice publicado estiver ausente ou
+// malformado: abrir o mapa é mais importante que listar alternativas.
+test("mapEntriesFromIndex aceita entradas válidas e descarta o resto", () => {
+  const entries = mapEntriesFromIndex([
+    { url: "/current-map.json", label: "Contexto · 16 frames · trecho" },
+    { url: "/maps/x.json" },
+    { label: "sem url" },
+    "texto",
+  ]);
+  assert.deepEqual(entries, [{ url: "/current-map.json", label: "Contexto · 16 frames · trecho" }]);
+  assert.deepEqual(mapEntriesFromIndex(null), []);
+  assert.deepEqual(mapEntriesFromIndex({}), []);
 });
 
 // Mantém a fonte estática compatível com a futura fronteira de chunks e com

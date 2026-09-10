@@ -1,5 +1,13 @@
 const UNOBSERVED_KEY = "__unobserved__";
 const UNOBSERVED_COLOR = [28, 31, 38];
+const OBSERVED_UNLABELED_KEY = "__observed_unlabeled__";
+const OBSERVED_UNLABELED_COLOR = [104, 111, 124];
+const DIMMED_COLOR = [70, 74, 84];
+
+const NEUTRAL_LABELS = Object.freeze({
+  [UNOBSERVED_KEY]: "Sem contexto",
+  [OBSERVED_UNLABELED_KEY]: "Observado, sem label",
+});
 
 const SEMANTIC_COLORS = Object.freeze({
   door: [255, 82, 82],
@@ -88,11 +96,46 @@ export function measureMap(points) {
   };
 }
 
-// Classifica pontos sem label separadamente para que ausência de contexto não
-// desapareça da legenda nem pareça uma categoria semântica.
+// Resolve a evidência visual de um ponto tolerando as duas composições de
+// artifact: a associação anexada por scan e o contexto gravado no próprio ponto
+// do mapa. Existe para que legenda, cor e inspeção não precisem saber qual
+// composição gerou o arquivo aberto.
+export function visualEvidence(point) {
+  return point.association ?? point.context ?? null;
+}
+
+// Resolve a observação de origem entre os dois nomes que os artifacts usaram:
+// a composição por scan publicava ``rgb_observation_id``, e a ancorada no mapa
+// publica ``observation_id``. Existe para que o inspector abra a evidência dos
+// dois formatos sem ramificar em cada uso.
+export function observationIdOf(evidence) {
+  return evidence?.observation_id ?? evidence?.rgb_observation_id ?? null;
+}
+
+// Decide se a câmera realmente enxergou o ponto. Uma evidência rejeitada
+// (ocluída, fora da imagem, fora do suporte válido) descreve por que o ponto
+// não foi observado, e por isso não conta como observação.
+function isVisuallyObserved(evidence) {
+  if (!evidence) return false;
+  if (evidence.status) return evidence.status === "associated";
+  return Boolean(evidence.color_rgb || evidence.pixel);
+}
+
+// Classifica cada ponto em uma de três categorias, porque "a câmera viu e não
+// classificou" e "a câmera nunca viu" são diagnósticos diferentes: o primeiro
+// aponta para a máscara ou para o reasoner, o segundo para cobertura de frames.
 export function contextKey(point) {
-  if (point.association?.label) return point.association.label.trim().toLowerCase();
+  const evidence = visualEvidence(point);
+  if (evidence?.label) return evidence.label.trim().toLowerCase();
+  if (isVisuallyObserved(evidence)) return OBSERVED_UNLABELED_KEY;
   return UNOBSERVED_KEY;
+}
+
+// Centraliza a cor de uma categoria para que legenda e nuvem nunca divirjam.
+function colorForKey(key) {
+  if (key === UNOBSERVED_KEY) return UNOBSERVED_COLOR;
+  if (key === OBSERVED_UNLABELED_KEY) return OBSERVED_UNLABELED_COLOR;
+  return semanticColor(key);
 }
 
 // Escolhe uma cor semântica saturada e estável. Labels conhecidas preservam
@@ -118,37 +161,37 @@ export function buildContextLegend(points) {
     const key = contextKey(point);
     const current = byKey.get(key) ?? {
       key,
-      label: key,
+      label: NEUTRAL_LABELS[key] ?? key,
       count: 0,
-      color: semanticColor(key),
-      semantic: true,
+      color: colorForKey(key),
+      semantic: !(key in NEUTRAL_LABELS),
     };
     current.count += 1;
     byKey.set(key, current);
   });
-  if (byKey.has(UNOBSERVED_KEY)) {
-    Object.assign(byKey.get(UNOBSERVED_KEY), {
-      label: "Sem contexto",
-      color: UNOBSERVED_COLOR,
-      semantic: false,
-    });
-  }
   return [...byKey.values()].sort((left, right) => {
     if (left.semantic !== right.semantic) return left.semantic ? -1 : 1;
     return right.count - left.count || left.label.localeCompare(right.label);
   });
 }
 
-// Aplica os filtros somente à camada de contexto. Geometria e RGB continuam
-// completas para que uma legenda semântica não altere silenciosamente a base.
-export function filterPoints(points, enabledContextKeys) {
-  if (enabledContextKeys === null) return points;
-  return points.filter((point) => enabledContextKeys.has(contextKey(point)));
+// Separa o mapa entre a classe em foco e o restante, em vez de descartar
+// pontos. A legenda responde "onde está esta classe dentro do mapa", e isso
+// exige que a geometria vizinha continue desenhada como referência espacial.
+export function partitionByFocus(points, enabledContextKeys) {
+  if (enabledContextKeys === null) return { focused: points, dimmed: [] };
+  const focused = [];
+  const dimmed = [];
+  points.forEach((point) => {
+    if (enabledContextKeys.has(contextKey(point))) focused.push(point);
+    else dimmed.push(point);
+  });
+  return { focused, dimmed };
 }
 
 // Retorna exclusivamente a cor da classe contextual usada pelo mapa.
 export function pointColor(point) {
-  return semanticColor(contextKey(point) === UNOBSERVED_KEY ? null : contextKey(point));
+  return colorForKey(contextKey(point));
 }
 
 // Converte canais sRGB de interface para o espaço linear esperado pelos
@@ -160,6 +203,16 @@ export function srgbColorToLinear(color) {
       ? normalized / 12.92
       : ((normalized + 0.055) / 1.055) ** 2.4;
   });
+}
+
+// Valida o índice de mapas publicado pelo servidor local. O seletor precisa
+// refletir o que existe no diretório servido, e não uma lista fixa no código,
+// mas um índice malformado nunca pode impedir a abertura do mapa atual.
+export function mapEntriesFromIndex(payload) {
+  if (!Array.isArray(payload)) return [];
+  return payload.filter(
+    (entry) => typeof entry?.url === "string" && typeof entry?.label === "string",
+  ).map((entry) => ({ url: entry.url, label: entry.label }));
 }
 
 // Encapsula o artifact atual como uma fonte de geometria estática. A mesma
@@ -183,4 +236,4 @@ export class StaticArtifactGeometrySource {
   }
 }
 
-export { UNOBSERVED_KEY };
+export { DIMMED_COLOR, OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY };

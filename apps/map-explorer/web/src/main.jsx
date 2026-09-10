@@ -7,62 +7,101 @@ import * as THREE from "three";
 import { CameraRig } from "./camera-rig.jsx";
 import { Inspector } from "./inspector.jsx";
 import {
+  DIMMED_COLOR,
   StaticArtifactGeometrySource,
   buildContextLegend,
   contextKey,
-  filterPoints,
+  mapEntriesFromIndex,
   measureMap,
+  partitionByFocus,
   pointColor,
   srgbColorToLinear,
   validateSlice,
 } from "./map-data.js";
 import { isEditableTarget } from "./navigation.js";
+import { nearestIntersection, pickThreshold, pointFromIntersection } from "./picking.js";
 import "./styles.css";
 
-const AVAILABLE_MAPS = Object.freeze([
-  { url: "/current-map.json", label: "Contexto · 1 frame / geometria 20 s" },
-  { url: "/maps/corridor-02-geometry-20s.json", label: "Geometria · trecho FAST-LIO 20 s" },
-]);
+const DEFAULT_MAP_URL = "/current-map.json";
+const MAP_INDEX_URL = "/maps/index.json";
+const FALLBACK_MAPS = Object.freeze([{ url: DEFAULT_MAP_URL, label: "Mapa atual" }]);
 
-// Converte o subconjunto visível em buffers e mantém o índice de picking
-// alinhado aos pontos depois de filtros de legenda.
-function Cloud({ points, onSelect, onFocus }) {
-  const pointerOrigin = useRef(null);
+// Cor única da camada atenuada. Fica fora do componente para que o builder de
+// geometria continue memoizável por identidade da função.
+const dimmedColor = () => DIMMED_COLOR;
+
+// Converte um subconjunto de pontos em buffers e publica o array de origem no
+// objeto renderizado. Existe para que a seleção resolva a identidade do ponto
+// pelo mesmo índice de buffer que esta camada preencheu, sem reconciliar
+// índices entre camadas.
+function PointLayer({ points, colorOf, size, opacity, onPointerDown, onClick, onDoubleClick }) {
   const geometry = useMemo(() => {
     const positions = [];
     const colors = [];
     points.forEach((point) => {
       positions.push(...point.coordinates_m);
-      colors.push(...srgbColorToLinear(pointColor(point)));
+      colors.push(...srgbColorToLinear(colorOf(point)));
     });
     const value = new THREE.BufferGeometry();
     value.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
     value.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
     return value;
-  }, [points]);
+  }, [points, colorOf]);
   useEffect(() => () => geometry.dispose(), [geometry]);
+  if (!points.length) return null;
+  return (
+    <points
+      geometry={geometry}
+      userData={{ points }}
+      onPointerDown={onPointerDown}
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+    >
+      <PointMaterial
+        vertexColors
+        size={size}
+        sizeAttenuation={false}
+        toneMapped={false}
+        fog={false}
+        transparent={opacity < 1}
+        opacity={opacity}
+        depthWrite={opacity >= 1}
+      />
+    </points>
+  );
+}
+
+// Desenha o mapa em duas camadas: a classe em foco com cor plena e o restante
+// atenuado como referência espacial. Remover a geometria vizinha esconderia
+// justamente o contexto que permite localizar a classe dentro do mapa, então
+// pontos atenuados continuam desenhados e selecionáveis.
+function Cloud({ focused, dimmed, onSelect, onFocus }) {
+  const pointerOrigin = useRef(null);
 
   // Distingue clique de arraste para que orbitar ou fazer pan não selecione um
-  // ponto acidentalmente ao soltar o mouse.
+  // ponto acidentalmente ao soltar o mouse. A escolha do ponto considera todas
+  // as interseções do evento, e não a camada que recebeu o clique.
   const selectIfStationary = (event, focus = false) => {
     const origin = pointerOrigin.current;
     const distance = origin ? Math.hypot(event.clientX - origin.x, event.clientY - origin.y) : 0;
     if (distance > 4) return;
     event.stopPropagation();
-    const point = points[event.index] ?? null;
+    const point = pointFromIntersection(nearestIntersection(event.intersections));
     onSelect(point);
     if (focus && point) onFocus(point);
   };
 
+  const handlers = {
+    onPointerDown: (event) => { pointerOrigin.current = { x: event.clientX, y: event.clientY }; },
+    onClick: (event) => selectIfStationary(event),
+    onDoubleClick: (event) => selectIfStationary(event, true),
+  };
+
   return (
-    <points
-      geometry={geometry}
-      onPointerDown={(event) => { pointerOrigin.current = { x: event.clientX, y: event.clientY }; }}
-      onClick={(event) => selectIfStationary(event)}
-      onDoubleClick={(event) => selectIfStationary(event, true)}
-    >
-      <PointMaterial vertexColors size={2.2} sizeAttenuation={false} toneMapped={false} fog={false} />
-    </points>
+    <>
+      <PointLayer points={dimmed} colorOf={dimmedColor} size={1.6} opacity={0.35} {...handlers} />
+      <PointLayer points={focused} colorOf={pointColor} size={2.6} opacity={1} {...handlers} />
+    </>
   );
 }
 
@@ -90,16 +129,16 @@ function SpatialReference({ metrics }) {
 
 // Oferece a leitura e os filtros das cores em um painel pequeno e recolhível,
 // mantendo a sidebar reservada à evidência do ponto selecionado.
-function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCount, onToggle, onIsolate, onReset }) {
+function ContextLegend({ entries, enabledKeys, focusedPointCount, totalPointCount, onToggle, onIsolate, onReset }) {
   return (
     <details className="map-overlay context-legend" open>
       <summary>
         <span>Legenda</span>
-        <small>{visiblePointCount.toLocaleString("pt-BR")} / {totalPointCount.toLocaleString("pt-BR")}</small>
+        <small>{focusedPointCount.toLocaleString("pt-BR")} em foco / {totalPointCount.toLocaleString("pt-BR")}</small>
       </summary>
       <div className="legend-actions">
         <span>Contexto</span>
-        <button type="button" onClick={onReset}>Mostrar tudo</button>
+        <button type="button" onClick={onReset}>Focar tudo</button>
       </div>
       <div className="legend-list">
         {entries.map((entry) => {
@@ -120,16 +159,17 @@ function ContextLegend({ entries, enabledKeys, visiblePointCount, totalPointCoun
   );
 }
 
-// Expõe somente os artifacts reais publicados pelo runtime e descreve no nome
-// se o conteúdo é um frame contextual ou um trecho puramente geométrico.
-function MapSelector({ value, onChange }) {
-  const known = AVAILABLE_MAPS.some((entry) => entry.url === value);
+// Expõe os artifacts realmente publicados pelo servidor local. A lista vem do
+// índice gravado ao publicar os mapas, e não de constantes no frontend, para
+// que um trecho novo apareça no seletor sem alterar o viewer.
+function MapSelector({ entries, value, onChange }) {
+  const known = entries.some((entry) => entry.url === value);
   return (
     <label className="map-overlay map-selector">
       <span>Mapa</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {!known && <option value={value}>Mapa solicitado pela URL</option>}
-        {AVAILABLE_MAPS.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}
+        {entries.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}
       </select>
     </label>
   );
@@ -172,8 +212,9 @@ function NavigationHelp({ onClose }) {
 // estados reposicionar ou reconstruir os demais implicitamente.
 function Explorer() {
   const [artifactPath, setArtifactPath] = useState(
-    () => new URLSearchParams(window.location.search).get("artifact") ?? AVAILABLE_MAPS[0].url,
+    () => new URLSearchParams(window.location.search).get("artifact") ?? DEFAULT_MAP_URL,
   );
+  const [availableMaps, setAvailableMaps] = useState(FALLBACK_MAPS);
   const [slice, setSlice] = useState(null);
   const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -190,11 +231,11 @@ function Explorer() {
   );
   const metrics = useMemo(() => measureMap(points), [points]);
   const legendEntries = useMemo(() => buildContextLegend(points), [points]);
-  const visiblePoints = useMemo(
-    () => filterPoints(points, enabledContextKeys),
+  const { focused, dimmed } = useMemo(
+    () => partitionByFocus(points, enabledContextKeys),
     [points, enabledContextKeys],
   );
-  const selectedHidden = Boolean(
+  const selectedOutOfFocus = Boolean(
     selected
     && enabledContextKeys !== null
     && !enabledContextKeys.has(contextKey(selected)),
@@ -237,6 +278,20 @@ function Explorer() {
     });
     return () => controller.abort();
   }, [artifactPath]);
+
+  // Lê o índice publicado uma única vez. A ausência do índice não é erro: um
+  // artifact aberto por URL continua abrindo com o seletor mínimo.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(MAP_INDEX_URL, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((payload) => {
+        const entries = mapEntriesFromIndex(payload);
+        if (entries.length) setAvailableMaps(entries);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   // Mantém a URL compartilhável sincronizada sem recarregar a aplicação nem
   // perder o estado de conexão do viewer.
@@ -300,12 +355,15 @@ function Explorer() {
         <div className={`workspace ${dockOpen ? "with-dock" : ""}`}>
           <div className="map-column">
             <div className={`viewport ${flyMode ? "fly-active" : ""}`}>
-              <Canvas camera={{ position: [0, -4, 2], near: Math.max(metrics.diagonal * 0.00001, 0.001), far: metrics.diagonal * 100, up: [0, 0, 1] }}>
+              <Canvas
+                camera={{ position: [0, -4, 2], near: Math.max(metrics.diagonal * 0.00001, 0.001), far: metrics.diagonal * 100, up: [0, 0, 1] }}
+                raycaster={{ params: { Points: { threshold: pickThreshold(metrics.diagonal) } } }}
+              >
                 <color attach="background" args={["#0d0d0d"]} />
                 <SpatialReference metrics={metrics} />
-                <Cloud points={visiblePoints} onSelect={selectPoint}
+                <Cloud focused={focused} dimmed={dimmed} onSelect={selectPoint}
                   onFocus={(point) => cameraActions.current?.focus(point)} />
-                <SelectionMarker point={selectedHidden ? null : selected} radius={Math.min(Math.max(metrics.diagonal * 0.0015, 0.04), 0.35)} />
+                <SelectionMarker point={selected} radius={Math.min(Math.max(metrics.diagonal * 0.0015, 0.04), 0.35)} />
                 <CameraRig ref={cameraActions} metrics={metrics} flyMode={flyMode}
                   mapKey={slice.map_id} reducedMotion={reducedMotion} />
               </Canvas>
@@ -316,9 +374,9 @@ function Explorer() {
                 onFocus={() => cameraActions.current?.focus(selected)}
                 onToggleFly={() => setFlyMode((value) => !value)}
                 onHelp={() => setHelpOpen((value) => !value)} />
-              <MapSelector value={artifactPath} onChange={selectMap} />
+              <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
               <ContextLegend entries={legendEntries} enabledKeys={enabledContextKeys}
-                visiblePointCount={visiblePoints.length} totalPointCount={points.length}
+                focusedPointCount={focused.length} totalPointCount={points.length}
                 onToggle={toggleContextKey}
                 onIsolate={(key) => setEnabledContextKeys(new Set([key]))}
                 onReset={() => setEnabledContextKeys(null)} />
@@ -333,7 +391,7 @@ function Explorer() {
           {dockOpen && (
             <Inspector point={selected} slice={slice} artifactUrl={artifactUrl}
               onClose={() => setDockOpen(false)} onFocus={() => cameraActions.current?.focus(selected)}
-              hiddenByFilter={selectedHidden} />
+              outOfFocus={selectedOutOfFocus} />
           )}
         </div>
       )}
