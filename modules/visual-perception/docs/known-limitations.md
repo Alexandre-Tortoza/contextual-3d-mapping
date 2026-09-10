@@ -304,6 +304,28 @@ descrevem a mesma parede — mas elas continuam medidas, continuam agrupadas pel
 reconciliação, e `region_count`/`mode_collapse` continuam contando a observação inteira
 justamente para que esta limitação siga visível e comparável entre runs.
 
+Medido no run `20260910T175410Z` (revisão `3ac763a`, mesma configuração e mesmos três
+frames vinculantes da referência):
+
+| frame | regiões | publicadas | contexto estrutural |
+| --- | ---: | ---: | ---: |
+| `corridor-02-000` | 40 | 2 | 38 |
+| `corridor-02-008` | 16 | 13 | 3 |
+| `corridor-02-017` | 38 | 4 | 34 |
+| **total** | **94** | **19** | **75** |
+
+`corridor-02-008` publicar 13 de 16 é o comportamento correto e o melhor controle que os
+três frames oferecem: é o único que **não** é um corredor. Campo aberto com culturas,
+árvores e flores quase não contém superfície estrutural genérica, e a política quase não
+suprime nada. Os dois corredores caem para 2 e 4 regiões publicadas.
+
+A comparação estrutural contra a referência está em
+[`../benchmarks/results/comparison-contextual-publication-20260910T175410Z.md`](../benchmarks/results/comparison-contextual-publication-20260910T175410Z.md).
+Nos três frames, **todos** os eixos medidos são idênticos aos da referência — proposals,
+regiões canônicas, conceitos, colapso de modo, eco de cena, contradições conceito/natureza,
+grupos, relações, falhas e audit — exceto os dois campos novos e a latência (±7 s). A
+política não altera nenhum estágio anterior a ela; ela decide o que é publicado.
+
 A distinção importa para não confundir duas coisas: a política reduz o **ruído entregue**,
 e não a **fragmentação observada**. Quem quiser medir a segunda deve ler
 `region_count` e `structural_context_count`, nunca `published_region_count`.
