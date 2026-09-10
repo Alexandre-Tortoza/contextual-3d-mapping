@@ -1,0 +1,175 @@
+{
+  "layout_version": "frames/2",
+  "frame_id": "corridor-02-04810",
+  "input_sha256": "2db3cbd90166b27a74457754db02d499a3c5ce2f137a1f0724946262d82d7112",
+  "latency_s": 225.02366468499895,
+  "scene_context_mode": "context_assisted",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 22,
+  "proposal_count": 51,
+  "merged_proposal_count": 27,
+  "regions_with_multiple_proposals": 5,
+  "label_counts": [
+    [
+      "ceiling",
+      7
+    ],
+    [
+      "wall",
+      6
+    ],
+    [
+      "floor",
+      4
+    ],
+    [
+      "plain wall",
+      3
+    ],
+    [
+      "ceiling tiles",
+      1
+    ],
+    [
+      "ground",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "building interior",
+      9
+    ],
+    [
+      "wall",
+      5
+    ],
+    [
+      "flooring",
+      4
+    ],
+    [
+      "ceilings",
+      2
+    ],
+    [
+      "ceiling",
+      1
+    ],
+    [
+      "floor",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      21
+    ],
+    [
+      "stuff",
+      1
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 22,
+    "missing": 0,
+    "minimum": 0.8,
+    "maximum": 0.9,
+    "mean": 0.8045454545454546,
+    "median": 0.8,
+    "distinct_values": 2,
+    "stddev": 0.02082988952252654,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 22,
+    "missing": 0,
+    "minimum": 0.920654833316803,
+    "maximum": 1.0,
+    "mean": 0.9701160165396604,
+    "median": 0.9750693738460541,
+    "distinct_values": 20,
+    "stddev": 0.02810206153468496,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 15,
+  "mode_collapse": {
+    "dominant_label": "ceiling",
+    "dominant_fraction": 0.3181818181818182,
+    "distinct_labels": 6,
+    "dominant_category": "building interior",
+    "dominant_category_fraction": 0.4090909090909091,
+    "distinct_categories": 6
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 15,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 9,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      15
+    ],
+    [
+      "outside_valid_area",
+      9
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        35
+      ],
+      [
+        "contradicts",
+        17
+      ],
+      [
+        "indistinguishable",
+        14
+      ]
+    ],
+    "regions_with_unsupported_primary": 1,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 21,
+    "reconciled_regions": 21,
+    "distinct_raw_labels": 6,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 4,
+    "regions_in_entity_groups": 19,
+    "supported_entity_groups": 1,
+    "semantic_relations": [
+      [
+        "covers",
+        6
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 89,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 22
+  }
+}
