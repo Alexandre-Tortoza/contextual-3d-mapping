@@ -261,8 +261,18 @@ o do prompt de **relação** virou `0,42` depois de 15 de 16 respostas `none` vo
 `0,95` exato. O prompt de **cena** continuava embutindo `"confidence": 0.9`.
 
 Ele é o mesmo tipo de âncora, no mesmo formato, no único dos três prompts que ninguém
-tinha revisitado. Corrigido na mesma rodada, em commit e run separados, porque trocar a
-política de publicação e um prompt no mesmo run tornaria os dois ininterpretáveis.
+tinha revisitado — e a busca encontrou ainda um segundo: o exemplo de `alternatives` no
+prompt de região oferecia `0.2`. Os dois escaparam pelo mesmo motivo: nenhum deles aparece
+em uma distribuição que o `diagnostics.json` resuma. O de cena é consultado uma vez por
+frame, e o de alternativa não é agregado em lugar nenhum, então nem "confiança degenerada"
+nem `label_counts` jamais os denunciariam.
+
+Corrigidos no `prompt_version` **v8** (`0.9` → `0.63`, `0.2` → `0.18`), em commit e run
+separados da política de publicação: trocar as duas coisas no mesmo run tornaria as duas
+ininterpretáveis. Um teste de regressão agora recusa qualquer exemplo de `confidence`
+redondo em qualquer um dos três prompts.
+
+**O que o run mediu:** ver a comparação `v7 → v8` versionada em `benchmarks/results/`.
 
 ---
 

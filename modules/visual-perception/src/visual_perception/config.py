@@ -612,7 +612,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v7"
+    prompt_version: str = "v8"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
@@ -637,7 +637,15 @@ class MultimodalReasoningConfig:
     scene_context_mode: str = SceneContextMode.CONTEXT_ASSISTED.value
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar. ``v7`` acrescenta o prompt
+    # qual template estruturado o backend deve usar. ``v8`` des-arredonda os dois
+    # ``confidence`` de exemplo que ainda ofereciam um valor plausível para o
+    # modelo copiar: o do prompt de **cena** (``0.9`` → ``0.63``) e o da
+    # ``alternatives`` no prompt de região (``0.2`` → ``0.18``). A mesma correção
+    # já tinha sido medida no exemplo primário do prompt de região (``v4``,
+    # 0,71) e aplicada ao de relação (``v7``, 0,42); estes dois escaparam — o de
+    # cena por ser consultado uma vez por frame, e o de alternativa por não
+    # aparecer em nenhuma distribuição que o diagnóstico resume. Fora esses dois
+    # números, os três prompts são byte-idênticos aos do ``v7``. ``v7`` acrescentou o prompt
     # de **relação** (#206); os prompts de cena e de região são idênticos aos do
     # ``v6``, byte a byte, de modo que labels e claims continuam comparáveis
     # entre os dois — o que muda é que a versão passa a identificar três

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -237,3 +239,24 @@ def test_the_region_prompt_example_uses_placeholders_not_answerable_values() -> 
     assert '"material": "wood"' not in prompt
     assert '"label": "panel"' not in prompt
     assert "never copy a placeholder" in prompt
+
+
+# O exemplo de formato de um prompt é copiado de volta pelo modelo quando o
+# valor nele é plausível. Foi medido duas vezes — 26 de 27 regiões reproduzindo
+# a assinatura inteira do exemplo (#212), e 15 de 16 respostas de relação com
+# ``0.95`` exato — e corrigido nos dois prompts. O de cena era o terceiro, e
+# escapou por só ser consultado uma vez por frame.
+def test_no_prompt_offers_a_round_confidence_for_the_model_to_copy() -> None:
+    """Nenhum dos três prompts embute um ``confidence`` de exemplo redondo."""
+    import re
+
+    from visual_perception.infrastructure.adapters import multimodal_reasoning_backend
+
+    source = Path(multimodal_reasoning_backend.__file__).read_text()
+    offered = re.findall(r'"confidence":\s*([0-9.]+)', source)
+
+    assert offered, "os prompts precisam continuar mostrando o formato esperado"
+    for value in offered:
+        assert float(value) * 100 % 10 != 0, (
+            f"o exemplo de confidence {value} é redondo o bastante para ser copiado de volta"
+        )

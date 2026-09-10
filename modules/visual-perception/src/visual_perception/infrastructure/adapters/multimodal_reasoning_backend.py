@@ -59,6 +59,13 @@ class RealMultimodalReasoningAdapter:
         # onde a "mala" era o próprio quad que carrega a câmera — e aquele texto
         # ia para o prompt de cada uma das 60 regiões. Não há frase que conserte
         # isso: o campo que pedia objetos precisou sair (#202).
+        #
+        # O ``confidence`` do exemplo é deliberadamente não redondo, pela mesma
+        # razão que o do prompt de região virou 0,71 e o do de relação virou
+        # 0,42: um valor plausível no exemplo é copiado de volta. Este era o
+        # último dos três prompts que ainda embutia ``0.9``, e escapou das duas
+        # correções anteriores por só ser consultado uma vez por frame — o
+        # sintoma dele nunca aparecia como distribuição degenerada.
         prompt = (
             "Describe the ENVIRONMENT shown in this image. Do NOT list or name individual "
             "objects. Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
@@ -70,7 +77,7 @@ class RealMultimodalReasoningAdapter:
             '"layout": "<how the space is arranged, in one clause>", '
             '"lighting": "<how the space is lit>", '
             '"visibility": "<how far and how clearly one can see>", '
-            '"navigability": "<how traversable the space is>", "confidence": 0.9}'
+            '"navigability": "<how traversable the space is>", "confidence": 0.63}'
         )
         return self._generate_json((image,), prompt, config)
 
@@ -229,7 +236,7 @@ def _region_prompt(request: RegionReasoningRequest) -> str:
         "values into your answer:\n"
         '{"label": "<one noun naming the subject>", "kind": "thing", '
         '"category": "<coarse category>", "confidence": 0.71, '
-        '"alternatives": [{"label": "<competing noun>", "confidence": 0.2}], '
+        '"alternatives": [{"label": "<competing noun>", "confidence": 0.18}], '
         '"description": "<one short sentence>", "attributes": ["<adjective>"], '
         '"condition": "<state>", "material": "<material>"}'
         f"{_describe_scene_claims(request)}"
