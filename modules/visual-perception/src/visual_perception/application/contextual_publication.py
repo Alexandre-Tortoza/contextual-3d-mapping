@@ -32,7 +32,9 @@ auditável — a mesma promessa que ``proposal_filtering`` já faz para a geomet
 from __future__ import annotations
 
 import dataclasses
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from visual_perception.application.support import fingerprint_of
 from visual_perception.config import ContextualPublicationConfig
@@ -45,6 +47,7 @@ from visual_perception.domain.contextual_evidence import (
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.regions import ObservedRegion, primary_label_claim
 from visual_perception.domain.semantics import ClaimKind, Evidence, SemanticClaim
+from visual_perception.infrastructure.debug_recorder import record_partition_stage
 
 #: Nome do estágio e do produtor em ``ModelProvenance``. Uma claim de host
 #: surface nunca se apresenta como se o VLM a tivesse escrito.
@@ -96,7 +99,10 @@ class PublicationResult:
 # estrutural. Chamada pelo pipeline canônico depois das relações semânticas e
 # antes da construção da VisualObservation, que é o contract público.
 def partition_observation(
-    regions: tuple[ObservedRegion, ...], config: ContextualPublicationConfig
+    regions: tuple[ObservedRegion, ...],
+    config: ContextualPublicationConfig,
+    observation_id: str | None = None,
+    debug_root: Path | str | None = None,
 ) -> PublicationResult:
     """Particiona as regiões do frame sem alterar nenhuma geometria.
 
@@ -108,6 +114,8 @@ def partition_observation(
             reconciliadas.
         config: se a partição roda e quais núcleos estruturais extras a
             composição declarou.
+        observation_id: id do frame (para nomear artefatos de debug).
+        debug_root: raiz do diretório DEBUG. Se None, não grava nada.
     Retorna:
         o :class:`PublicationResult` com as duas metades e os motivos.
     """
@@ -121,19 +129,34 @@ def partition_observation(
     published: list[ObservedRegion] = []
     structural: list[ObservedRegion] = []
     records: list[SuppressedRegion] = []
+    verdicts: dict[str, ContextualEvidenceVerdict] = {}
+    suppressed_for_debug: list[tuple[str, str, str]] = []
+
     for region in regions:
         verdict = contextual_evidence_verdict(region, extra_head_nouns=extra)
+        verdicts[region.region_id] = verdict
         if verdict is ContextualEvidenceVerdict.GENERIC_STRUCTURAL_SURFACE:
             structural.append(region)
+            concept = _asserted_concept(region)
             records.append(
                 SuppressedRegion(
                     region_id=region.region_id,
                     reason=RegionSuppressionReason.GENERIC_STRUCTURAL_SURFACE,
-                    concept=_asserted_concept(region),
+                    concept=concept,
                 )
+            )
+            suppressed_for_debug.append(
+                (region.region_id, "GENERIC_STRUCTURAL_SURFACE", concept)
             )
             continue
         published.append(_with_host_surface(region, provenance, extra))
+
+    # Grava debug se solicitado.
+    if debug_root and observation_id:
+        debug_path = Path(debug_root) / "visual-perception"
+        debug_path.mkdir(parents=True, exist_ok=True)
+        record_partition_stage(debug_path, observation_id, verdicts, suppressed_for_debug)
+
     return PublicationResult(
         published=tuple(published),
         structural_context=tuple(structural),

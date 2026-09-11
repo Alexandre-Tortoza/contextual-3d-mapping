@@ -23,3 +23,6 @@ build/
 datasets/raw/
 modules/*/benchmarks/.local/
 modules/*/benchmarks/runs/
+
+# DEBUG outputs por execução de pipeline.
+/artifacts/*-DEBUG/

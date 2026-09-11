@@ -8,6 +8,7 @@ import { CameraRig } from "./camera-rig.jsx";
 import { Inspector } from "./inspector.jsx";
 import {
   DIMMED_COLOR,
+  STRUCTURAL_KEY,
   StaticArtifactGeometrySource,
   allLegendKeys,
   buildContextPalette,
@@ -292,7 +293,11 @@ function Explorer() {
   const [slice, setSlice] = useState(null);
   const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [enabledContextKeys, setEnabledContextKeys] = useState(null);
+  const [enabledContextKeys, setEnabledContextKeys] = useState(() => {
+    // Inicializa com estrutural oculto quando o primeiro artifact carrega.
+    // Será sobrescrito em openSlice quando temos os pontos/paleta.
+    return null;
+  });
   const [artifactUrl, setArtifactUrl] = useState(null);
   const [dockOpen, setDockOpen] = useState(true);
   const [flyMode, setFlyMode] = useState(false);
@@ -306,6 +311,17 @@ function Explorer() {
   const metrics = useMemo(() => measureMap(points), [points]);
   const palette = useMemo(() => buildContextPalette(points), [points]);
   const supportCounts = useMemo(() => countSupportStates(points), [points]);
+
+  // Calcula o default de enabledContextKeys: todas as chaves exceto estrutural.
+  // Usado em dois contextos: ao abrir o artifact e ao resetar o filtro.
+  const defaultEnabledKeys = useMemo(() => {
+    if (!palette.legend || palette.legend.length === 0) return null;
+    const allKeys = allLegendKeys(palette.legend);
+    const next = new Set(allKeys);
+    next.delete(STRUCTURAL_KEY);
+    return next.size === allKeys.length ? null : next; // null se nada foi excluído
+  }, [palette.legend]);
+
   const { focused, dimmed } = useMemo(
     () => partitionByFocus(points, enabledContextKeys, supportRules),
     [points, enabledContextKeys, supportRules],
@@ -330,12 +346,12 @@ function Explorer() {
     setFlyMode(false);
     setHelpOpen(false);
     setArtifactUrl(resolvedUrl);
-    setEnabledContextKeys(null);
     setError(null);
   };
 
   // Carrega a opção inicial ou escolhida e cancela a leitura anterior quando o
-  // usuário troca de mapa antes do término do download.
+  // usuário troca de mapa antes do término do download. Após abrir, aplica o
+  // default de estrutural oculto.
   useEffect(() => {
     const resolvedUrl = new URL(artifactPath, window.location.href).href;
     const controller = new AbortController();
@@ -353,6 +369,14 @@ function Explorer() {
     });
     return () => controller.abort();
   }, [artifactPath]);
+
+  // Após paleta ser construída (carregamento bem-sucedido de novo artifact),
+  // aplica o default de estrutural oculto.
+  useEffect(() => {
+    if (defaultEnabledKeys !== undefined) {
+      setEnabledContextKeys(defaultEnabledKeys);
+    }
+  }, [defaultEnabledKeys]);
 
   // Lê o índice publicado uma única vez. A ausência do índice não é erro: um
   // artifact aberto por URL continua abrindo com o seletor mínimo.
@@ -411,12 +435,13 @@ function Explorer() {
     setSelected(point);
     setDockOpen(Boolean(point));
   };
-  // Materializa o conjunto completo somente no primeiro filtro, permitindo que
-  // ``null`` continue representando o estado barato “todos visíveis”. Alternar
+  // Materializa o conjunto completo somente no primeiro filtro. Alternar
   // uma família alterna todos os labels que ela agrupa, de uma vez.
   const toggleContextKeys = (keys) => {
     setEnabledContextKeys((current) => {
-      const next = new Set(current ?? allLegendKeys(palette.legend));
+      // Se está usando o default (estrutural oculto), expande primeiro.
+      const base = current ?? defaultEnabledKeys ?? allLegendKeys(palette.legend);
+      const next = new Set(base);
       if (keys.every((key) => next.has(key))) keys.forEach((key) => next.delete(key));
       else keys.forEach((key) => next.add(key));
       return next;
@@ -457,7 +482,7 @@ function Explorer() {
                 onToggleSupport={(key) => setSupportRules((current) => ({ ...current, [key]: !current[key] }))}
                 onToggle={toggleContextKeys}
                 onIsolate={(keys) => setEnabledContextKeys(new Set(keys))}
-                onReset={() => setEnabledContextKeys(null)} />
+                onReset={() => setEnabledContextKeys(defaultEnabledKeys)} />
               {helpOpen && <NavigationHelp onClose={() => setHelpOpen(false)} />}
               {!dockOpen && (
                 <button type="button" className="dock-trigger" onClick={() => setDockOpen(true)}>

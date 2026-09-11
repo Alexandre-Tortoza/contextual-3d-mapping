@@ -313,7 +313,9 @@ def run_canonical_pipeline(
     # A partição é o último estágio semântico de propósito: todos os anteriores
     # precisam das superfícies estruturais para entender a cena, e só o contract
     # público distingue evidência contextual de contexto.
-    publication = partition_observation(regions, config.contextual_publication)
+    publication = partition_observation(
+        regions, config.contextual_publication, observation_id=image.observation_id
+    )
 
     observation = VisualObservation(
         source=image.source,

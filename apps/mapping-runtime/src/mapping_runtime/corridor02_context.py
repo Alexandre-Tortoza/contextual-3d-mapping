@@ -810,6 +810,34 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         "pose_source": pose_source,
         "claim_status": "predição VLM não verificada",
     }
+
+    # Grava DEBUG de composição final: distribuição de labels por ponto.
+    debug_dir = request.destination.parent / (request.destination.stem + "-DEBUG")
+    if debug_dir and debug_dir.parent.exists():
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        label_counts: dict[str, int] = {}
+        support_state_samples: dict[str, list[str]] = {}
+        for point in base["points"]:
+            context = point.get("context")
+            if context:
+                label = context.get("label", "__unlabeled__")
+                label_counts[label] = label_counts.get(label, 0) + 1
+                support_state = point.get("support_state", "__unknown__")
+                if support_state not in support_state_samples:
+                    support_state_samples[support_state] = []
+                if len(support_state_samples[support_state]) < 3:
+                    support_state_samples[support_state].append(label)
+        debug_data = {
+            "segment_id": request.destination.stem.replace("-context", ""),
+            "label_distribution": label_counts,
+            "total_contextual_points": contextual_point_count,
+            "total_rgb_points": len(associated),
+            "support_state_counts": support_counts,
+            "support_state_label_samples": support_state_samples,
+        }
+        debug_file = debug_dir / "composition.json"
+        debug_file.write_text(json.dumps(debug_data, indent=2), encoding="utf-8")
+
     request.destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = request.destination.with_suffix(request.destination.suffix + ".tmp")
     temporary.write_text(json.dumps(base, separators=(",", ":")), encoding="utf-8")
