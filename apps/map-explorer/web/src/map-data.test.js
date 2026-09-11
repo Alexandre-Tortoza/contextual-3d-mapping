@@ -77,15 +77,15 @@ test("measureMap calcula centro, alturas e diagonal", () => {
 });
 
 // Verifica contagem e ordenação semântica, e protege a distinção entre um
-// ponto que a câmera viu sem classificar e um que ela nunca viu.
-test("legenda contextual separa observado sem label de nunca observado", () => {
+// ponto visto sem evidência publicada e um que os keyframes nunca observaram.
+test("legenda separa ausência de evidência publicada de falta de cobertura", () => {
   const legend = buildContextPalette(POINTS).legend;
   // As duas categorias neutras têm ordem fixa, e não por cobertura: elas não
   // competem entre si, e a mais informativa vem primeiro.
   assert.deepEqual(legend.map((entry) => [entry.label, entry.count]), [
     ["door", 2],
-    ["Observado, sem label", 1],
-    ["Sem contexto", 2],
+    ["Observado, sem evidência publicada", 1],
+    ["Não observado pelos keyframes", 2],
   ]);
   assert.equal(contextKey(POINTS[0]), "__unobserved__");
   assert.equal(contextKey(POINTS[3]), "__observed_unlabeled__");

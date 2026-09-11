@@ -21,7 +21,7 @@ MAP_EXPLORER_ARTIFACT ?= $(M1_CONTEXT_ARTIFACT)
 MAP_EXPLORER_ASSETS := $(basename $(MAP_EXPLORER_ARTIFACT))-assets
 M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/apps/mapping-runtime/src
 
-.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-serve
+.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-map-from-window corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-serve
 
 verify: test lint typecheck
 
@@ -55,6 +55,11 @@ corridor-02-window:
 		--output "$(M1_SEGMENT_WINDOW)"
 
 corridor-02-map: corridor-02-window
+	$(MAKE) corridor-02-map-from-window PYTHON="$(PYTHON)"
+
+# Consome uma window já resolvida sem sobrescrevê-la. A CLI usa esta fronteira
+# depois de selecionar trecho, bag inteiro e política de keyframes.
+corridor-02-map-from-window:
 	offset=$$($(RESOLVED_PYTHON) -c "import json;print(json.load(open('$(M1_SEGMENT_WINDOW)'))['play_offset_s'])"); \
 	duration=$$($(RESOLVED_PYTHON) -c "import json;print(json.load(open('$(M1_SEGMENT_WINDOW)'))['play_duration_s'])"); \
 	docker compose --profile ros1 run --rm fastlio-ros1 bash \

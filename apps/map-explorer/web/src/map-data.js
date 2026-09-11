@@ -23,8 +23,8 @@ const FAMILY_COLORS = Object.freeze([
 ]);
 
 const NEUTRAL_LABELS = Object.freeze({
-  [UNOBSERVED_KEY]: "Sem contexto",
-  [OBSERVED_UNLABELED_KEY]: "Observado, sem label",
+  [UNOBSERVED_KEY]: "Não observado pelos keyframes",
+  [OBSERVED_UNLABELED_KEY]: "Observado, sem evidência publicada",
   [OTHER_FAMILY_KEY]: "Outros labels",
 });
 
@@ -118,9 +118,10 @@ function isVisuallyObserved(evidence) {
   return Boolean(evidence.color_rgb || evidence.pixel);
 }
 
-// Classifica cada ponto em uma de três categorias, porque "a câmera viu e não
-// classificou" e "a câmera nunca viu" são diagnósticos diferentes: o primeiro
-// aponta para a máscara ou para o reasoner, o segundo para cobertura de frames.
+// Classifica cada ponto em uma de três categorias, porque "a câmera viu, mas
+// nenhuma evidência foi publicada" e "a câmera nunca viu" são estados
+// diferentes: o primeiro pode ser uma ausência contextual legítima, enquanto o
+// segundo descreve a cobertura dos keyframes.
 export function contextKey(point) {
   const evidence = visualEvidence(point);
   if (evidence?.label) return evidence.label.trim().toLowerCase();

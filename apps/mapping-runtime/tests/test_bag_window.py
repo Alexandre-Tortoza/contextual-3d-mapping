@@ -71,3 +71,5 @@ def test_payload_preserva_as_tres_identidades_do_keyframe() -> None:
     ]
     assert payload["play_offset_s"] == 1.5
     assert payload["camera_topic"] == "/camera_1/image_raw"
+    assert payload["recording_id"] == "corridor-02"
+    assert payload["frame_id_prefix"] == "corridor-02"

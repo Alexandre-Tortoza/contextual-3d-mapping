@@ -21,7 +21,7 @@ from typing import Any
 
 from visual_perception.domain.image_area import ImageAreaGeometry, ImageAreaMasks
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
-from visual_perception.domain.region_reasoning import SceneContextMode
+from visual_perception.domain.region_reasoning import SceneContextMode, TemporalPriorMode
 
 
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
@@ -635,6 +635,22 @@ class MultimodalReasoningConfig:
     #: ``context_assisted`` porque o modo local-first mediu levemente pior no
     #: colapso de labels, e o eco que ele elimina é residual.
     scene_context_mode: str = SceneContextMode.CONTEXT_ASSISTED.value
+    #: Se o conceito afirmado pela observação anterior para a mesma área da
+    #: imagem acompanha a região no prompt. É o terceiro canal ablatável, ao
+    #: lado de ``scene_context_mode`` (textual, dentro do frame) e
+    #: ``region_views`` (visual): este é o canal **temporal**. Vive aqui, e não
+    #: em uma sub-config própria, porque ``fingerprint_of`` carimba cada claim
+    #: de região com o fingerprint **desta** sub-config — um switch em outro
+    #: lugar deixaria dois braços de experimento indistinguíveis no artifact
+    #: por claim. O default é ``disabled``: sem ele, o request é idêntico ao
+    #: histórico.
+    temporal_prior_mode: str = TemporalPriorMode.DISABLED.value
+    #: Sobreposição mínima de caixa entre a região e a região anterior para o
+    #: casamento valer. Não é um limiar de similaridade densa: a #203 mediu o
+    #: cosseno DINOv2 em 0,660 de acurácia balanceada para separar "mesmo
+    #: label", e por isso ele entra só como desempate entre candidatos que já se
+    #: sobrepõem geometricamente.
+    temporal_prior_min_overlap: float = 0.3
 
     # Garante que a versão do prompt está definida, já que ela identifica
     # qual template estruturado o backend deve usar. ``v8`` des-arredonda os dois
@@ -688,6 +704,15 @@ class MultimodalReasoningConfig:
             raise ValueError(
                 "multimodal_reasoning.scene_context_mode must be "
                 f"{sorted(mode.value for mode in SceneContextMode)}."
+            )
+        if self.temporal_prior_mode not in {mode.value for mode in TemporalPriorMode}:
+            raise ValueError(
+                "multimodal_reasoning.temporal_prior_mode must be "
+                f"{sorted(mode.value for mode in TemporalPriorMode)}."
+            )
+        if not 0.0 <= self.temporal_prior_min_overlap <= 1.0:
+            raise ValueError(
+                "multimodal_reasoning.temporal_prior_min_overlap must be within [0, 1]."
             )
 
 

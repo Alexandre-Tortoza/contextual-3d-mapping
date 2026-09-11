@@ -89,6 +89,22 @@ contextual precisa para reencontrar cada frame.
 O trecho começa `SEGMENT_LEAD_S` segundos antes da janela pedida, para o
 estimator inercial convergir antes do intervalo que será mapeado.
 
+O comando também aceita uma rosbag inteira e pode selecionar todas as imagens:
+
+```bash
+python -m mapping_runtime bag-window \
+  --bag datasets/raw/<dataset>/<run>.bag \
+  --whole-bag \
+  --all-frames \
+  --camera-topic /camera/image_raw \
+  --recording-id <run> \
+  --output artifacts/<run>-window.json
+```
+
+`recording_id` e `frame_id_prefix` preservam a identidade da gravação nos
+artifacts. Leitores continuam aceitando windows antigas que não possuem esses
+campos, usando `corridor-02` como prefixo compatível.
+
 ## Contexto de um trecho
 
 Extraia os keyframes da janela, rode `visual-perception` sobre eles e componha:

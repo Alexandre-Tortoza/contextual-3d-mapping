@@ -78,10 +78,16 @@ def _parser() -> argparse.ArgumentParser:
     window.add_argument(
         "--start-s",
         type=float,
-        required=True,
+        default=0.0,
         help="início da janela, em segundos após o primeiro frame RGB",
     )
-    window.add_argument("--duration-s", type=float, required=True, help="duração da janela")
+    duration = window.add_mutually_exclusive_group(required=True)
+    duration.add_argument("--duration-s", type=float, help="duração da janela")
+    duration.add_argument(
+        "--whole-bag",
+        action="store_true",
+        help="usa todo o stream RGB do bag",
+    )
     window.add_argument(
         "--keyframe-interval-s",
         type=float,
@@ -95,6 +101,12 @@ def _parser() -> argparse.ArgumentParser:
         help="prefixo reproduzido antes da janela para o estimator convergir",
     )
     window.add_argument("--camera-topic", default="/camera_1/image_raw", help="tópico RGB")
+    window.add_argument(
+        "--all-frames",
+        action="store_true",
+        help="seleciona todos os frames RGB dentro da janela",
+    )
+    window.add_argument("--recording-id", default=None, help="identidade estável da gravação")
     window.add_argument("--output", type=Path, default=None, help="arquivo JSON de destino")
     return parser
 
@@ -128,9 +140,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
         from .keyframe_inputs import resolve_keyframe_inputs
 
-        keyframes, skipped, pose_anchor_ns = resolve_keyframe_inputs(
-            options.window, options.visual_run
-        )
+        keyframes, skipped, pose_anchor_ns = resolve_keyframe_inputs(options.window, options.visual_run)
         if skipped:
             print(f"AVISO: {len(skipped)} keyframes sem percepção visual: {', '.join(skipped)}")
         odometry = options.odometry
@@ -159,10 +169,12 @@ def main(arguments: Sequence[str] | None = None) -> int:
         window = resolve_bag_window(
             options.bag,
             start_s=options.start_s,
-            duration_s=options.duration_s,
+            duration_s=None if options.whole_bag else options.duration_s,
             keyframe_interval_s=options.keyframe_interval_s,
             lead_s=options.lead_s,
             camera_topic=options.camera_topic,
+            all_frames=options.all_frames,
+            recording_id=options.recording_id,
         )
         if options.output is not None:
             export_bag_window(window, options.output)

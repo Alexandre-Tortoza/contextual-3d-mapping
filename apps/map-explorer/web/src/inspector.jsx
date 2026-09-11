@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { observationIdOf, visualEvidence } from "./map-data.js";
 
-// Traduz o motivo pelo qual um ponto do mapa ficou sem contexto. Sem isso o
-// viewer só sabe dizer que falta label, e a pergunta que o usuário faz diante
-// de um ponto cinza ao lado de um colorido é justamente "por quê".
+// Traduz o motivo pelo qual um ponto do mapa ficou sem evidência contextual.
+// Sem isso o viewer só sabe dizer que nada foi publicado, e a pergunta que o
+// usuário faz diante de um ponto cinza ao lado de um colorido é "por quê".
 // Explica o estado de corroboração em vez de mostrar só um rótulo técnico. O
 // usuário precisa saber por que um ponto está apagado no mapa.
 const SUPPORT_STATE_COPY = Object.freeze({
@@ -27,50 +28,151 @@ function resolveAsset(uri, artifactUrl) {
   return new URL(uri, artifactUrl).href;
 }
 
+// Mantém imagem, box e pixel no mesmo sistema de coordenadas em qualquer
+// tamanho. Existe porque ``object-fit`` deslocaria as marcações nas faixas
+// vazias quando o aspect ratio do container divergisse do frame.
+function ObservationImage({ source, observation, region, pixel, marked }) {
+  const box = region?.box;
+  const markerRadius = Math.max(observation.width, observation.height) * 0.006;
+  return (
+    <svg
+      className="observation-image"
+      viewBox={`0 0 ${observation.width} ${observation.height}`}
+      role="img"
+      aria-label={marked
+        ? "Observação RGB com as marcações que sustentam o contexto selecionado"
+        : "Observação RGB original, sem marcações"}
+    >
+      <image href={source} width={observation.width} height={observation.height} />
+      {marked && box && (
+        <rect
+          className="region-box"
+          x={box.x_min}
+          y={box.y_min}
+          width={box.x_max - box.x_min}
+          height={box.y_max - box.y_min}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      {marked && pixel && (
+        <circle
+          className="pixel-marker"
+          cx={pixel[0]}
+          cy={pixel[1]}
+          r={markerRadius}
+          vectorEffect="non-scaling-stroke"
+        >
+          <title>{`Pixel (${pixel[0]}, ${pixel[1]})`}</title>
+        </circle>
+      )}
+    </svg>
+  );
+}
+
+// Mantém a navegação por Tab dentro do modal enquanto ele estiver aberto.
+// Existe para que o diálogo modal não entregue foco aos controles encobertos
+// do mapa ou do inspector.
+function keepDialogFocus(event) {
+  if (event.key !== "Tab") return;
+  const controls = [...event.currentTarget.querySelectorAll("button:not([disabled])")];
+  if (!controls.length) return;
+  const first = controls[0];
+  const last = controls.at(-1);
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 // Exibe a imagem que sustentou o claim e ancora visualmente o pixel e a box da
 // região. O overlay continua sendo evidência 2D, não confirmação geométrica 3D.
 function ObservationPreview({ observation, region, pixel, artifactUrl }) {
   const [showOverlay, setShowOverlay] = useState(true);
-  useEffect(() => setShowOverlay(true), [observation?.observation_id, region?.region_id]);
+  const [expanded, setExpanded] = useState(false);
+  const expandButton = useRef(null);
+  const dialog = useRef(null);
+  useEffect(() => {
+    setShowOverlay(true);
+    setExpanded(false);
+  }, [observation?.observation_id, region?.region_id]);
+  useEffect(() => {
+    if (!expanded) return undefined;
+    dialog.current?.focus();
+    return () => expandButton.current?.focus();
+  }, [expanded]);
   if (!observation) return null;
   const uri = showOverlay ? observation.overlay_image_uri : observation.raw_image_uri;
   const source = resolveAsset(uri, artifactUrl);
-  const box = region?.box;
+  const toggleOverlay = () => setShowOverlay((value) => !value);
+  const closeExpanded = () => setExpanded(false);
   return (
     <div className="evidence-block">
       <div className="block-heading">
         <strong>Frame · {showOverlay ? "Regiões VLM" : "Original"}</strong>
-        <button className="text-action" type="button" onClick={() => setShowOverlay((value) => !value)}>
-          {showOverlay ? "Ver original" : "Ver regiões"}
-        </button>
+        <div className="block-actions">
+          <button className="text-action" type="button" onClick={toggleOverlay}>
+            {showOverlay ? "Ver original" : "Ver regiões"}
+          </button>
+          {source && (
+            <button
+              className="text-action"
+              type="button"
+              ref={expandButton}
+              onClick={() => setExpanded(true)}
+              aria-haspopup="dialog"
+            >
+              Ampliar
+            </button>
+          )}
+        </div>
       </div>
       {source ? (
-        <div className="preview-frame">
-          <img src={source} alt="Observação RGB que sustenta o contexto selecionado" />
-          {box && (
-            <span
-              className="region-box"
-              style={{
-                left: `${(100 * box.x_min) / observation.width}%`,
-                top: `${(100 * box.y_min) / observation.height}%`,
-                width: `${(100 * (box.x_max - box.x_min)) / observation.width}%`,
-                height: `${(100 * (box.y_max - box.y_min)) / observation.height}%`,
-              }}
-            />
-          )}
-          {pixel && (
-            <span
-              className="pixel-marker"
-              style={{
-                left: `${(100 * pixel[0]) / observation.width}%`,
-                top: `${(100 * pixel[1]) / observation.height}%`,
-              }}
-              title={`Pixel (${pixel[0]}, ${pixel[1]})`}
-            />
-          )}
+        <div className="preview-frame" style={{ aspectRatio: `${observation.width} / ${observation.height}` }}>
+          <ObservationImage source={source} observation={observation} region={region} pixel={pixel} marked={showOverlay} />
         </div>
       ) : (
         <p className="empty-copy">A preview requer que o artifact seja aberto pelo servidor.</p>
+      )}
+      {expanded && createPortal(
+        <div
+          className="image-dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeExpanded();
+          }}
+        >
+          <section
+            className="image-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="expanded-frame-title"
+            tabIndex={-1}
+            ref={dialog}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                closeExpanded();
+              } else keepDialogFocus(event);
+            }}
+          >
+            <header className="image-dialog-heading">
+              <strong id="expanded-frame-title">Frame · {showOverlay ? "Regiões VLM" : "Original"}</strong>
+              <div className="block-actions">
+                <button className="text-action" type="button" onClick={toggleOverlay}>
+                  {showOverlay ? "Ver original" : "Ver regiões"}
+                </button>
+                <button className="dialog-close" type="button" onClick={closeExpanded} aria-label="Fechar imagem ampliada">×</button>
+              </div>
+            </header>
+            <div className="image-dialog-stage">
+              <ObservationImage source={source} observation={observation} region={region} pixel={pixel} marked={showOverlay} />
+            </div>
+          </section>
+        </div>,
+        document.body,
       )}
       <div className="technical-line">
         <span>{observation.sensor_id}</span><span>{observation.frame_id}</span>
@@ -164,9 +266,13 @@ export function Inspector({
             )}
             <div className="selection-title">
               <span className={`status-tag ${region ? "contextual" : "neutral"}`}>
-                {region ? "Contexto VLM" : "Sem contexto"}
+                {region
+                  ? "Evidência VLM"
+                  : evidence?.status === "associated"
+                    ? "Sem evidência publicada"
+                    : "Não observado"}
               </span>
-              <h2>{region?.label ?? "Ponto sem contexto"}</h2>
+              <h2>{region?.label ?? "Ponto sem evidência contextual"}</h2>
               <code>{point.geometry_id}</code>
             </div>
 
@@ -178,11 +284,11 @@ export function Inspector({
 
             {!region && (
               <div className="inspector-block warning-block">
-                <strong>Sem classificação contextual</strong>
+                <strong>Sem evidência contextual publicada</strong>
                 <p>
                   {MISSING_CONTEXT_REASON[evidence?.status]
                     ?? (evidence
-                      ? "A câmera observou este ponto, mas nenhuma região do frame o cobriu."
+                      ? "A câmera observou este ponto, mas nenhuma evidência contextual publicada o cobriu."
                       : "Nenhum keyframe deste trecho considerou este ponto.")}
                 </p>
               </div>

@@ -87,14 +87,16 @@ vizinhança geométrica — e a legenda oferece atenuar quem falha nos dois
 claim é reescrito: a atenuação é decisão de desenho, e o inspector mostra os
 dois números e o estado.
 
-Artifacts contextuais expõem geometria, associações RGB e claims do VLM. O
-mapa usa uma única camada de cores contextuais e distingue três estados: pontos
-com label recebem a cor da classe, pontos que a câmera observou sem classificar
-aparecem em cinza neutro, e pontos que nenhuma observação alcançou permanecem em
-cinza discreto. A distinção existe porque os dois últimos casos têm diagnósticos
-diferentes — um aponta para a máscara ou para o reasoner, o outro para cobertura
-de frames. Ao selecionar um ponto observado, o painel mostra o frame de origem,
-o pixel projetado, a região, a confiança, o estado de suporte e a proveniência.
+Artifacts contextuais expõem geometria, associações RGB e claims do VLM. A
+legenda separa a **evidência contextual publicada**, colorida por família, da
+**cobertura visual**. Nesta última, pontos vistos sem evidência publicada
+aparecem em cinza neutro e pontos que nenhum keyframe alcançou permanecem em
+cinza discreto. A distinção evita tratar a ausência legítima de evidência
+contextual como falha de classificação e mantém a falta de cobertura visível.
+Ao selecionar um ponto observado, o painel mostra o frame de origem, o pixel
+projetado, a região, a confiança, o estado de suporte e a proveniência. O frame
+pode ser ampliado em um modal e alternado entre a imagem original, sem qualquer
+marcação, e o overlay das regiões VLM.
 O alvo
 `map-explorer-serve` usa por default o artifact contextual e copia seus previews;
 outro arquivo pode ser selecionado com `MAP_EXPLORER_ARTIFACT=artifacts/outro.json`.

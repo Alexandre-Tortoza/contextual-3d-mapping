@@ -52,6 +52,13 @@ def test_frame_id_usa_o_indice_original_do_bag() -> None:
     assert frame_id_for(0) == "corridor-02-00000"
 
 
+# Bags genéricos precisam preservar sua própria identidade sem alterar a
+# compatibilidade do prefixo histórico usado pelo corridor-02.
+def test_frame_id_aceita_prefixo_da_gravacao() -> None:
+    """Confere a identidade de frame para uma rosbag genérica."""
+    assert frame_id_for(42, "warehouse-run") == "warehouse-run-00042"
+
+
 # A âncora de pose precisa considerar o prefixo reproduzido antes da janela,
 # porque o mapa começa na pose do primeiro scan processado — e não no primeiro
 # frame pedido.
@@ -64,6 +71,17 @@ def test_ancora_de_pose_recua_o_prefixo_da_janela(tmp_path: Path) -> None:
     assert len(keyframes) == 1
     assert missing == ()
     assert anchor_ns == 97 * SECOND_NS
+
+
+# O leitor deve continuar aceitando windows anteriores à inclusão explícita do
+# prefixo, pois artifacts existentes são entradas reproduzíveis do projeto.
+def test_window_legada_mantem_prefixo_corridor02(tmp_path: Path) -> None:
+    """Confere a compatibilidade de uma window sem ``frame_id_prefix``."""
+    window = _write_window(tmp_path, (10,))
+    run = tmp_path / "run"
+    _write_perception(run, "corridor-02-00010")
+    keyframes, _, _ = resolve_keyframe_inputs(window, run)
+    assert keyframes[0].frame_id == "corridor-02-00010"
 
 
 # Uma execução parcial de GPU precisa continuar utilizável, mas o que faltou não

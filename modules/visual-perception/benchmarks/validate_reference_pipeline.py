@@ -53,6 +53,7 @@ from visual_perception.application.pipeline import (  # noqa: E402
     PipelineResult,
     run_canonical_pipeline,
 )
+from visual_perception.application.temporal_prior import prior_from  # noqa: E402
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.config import (  # noqa: E402
     ImageAreaConfig,
@@ -63,7 +64,11 @@ from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
 from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.domain.region_evidence import EvidenceSlot, EvidenceState  # noqa: E402
-from visual_perception.domain.region_reasoning import SceneContextMode  # noqa: E402
+from visual_perception.domain.region_reasoning import (  # noqa: E402
+    SceneContextMode,
+    ScenePrior,
+    TemporalPriorMode,
+)
 from visual_perception.domain.visual_observation import VisualObservation  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
 
@@ -127,6 +132,12 @@ class ValidationOptions:
     #: anterior — ela foi feita antes de os estágios contextuais existirem.
     #: ``None`` mantém o checkpoint da configuração de referência.
     reasoning_checkpoint: str | None = None
+    #: Encadeia o que cada frame afirmou no frame seguinte (prior temporal).
+    #: A ordem dos frames é uma decisão de composição, e por isso vive aqui e
+    #: não no módulo: ``visual_perception`` recebe apenas "isto foi afirmado
+    #: antes", sem timestamp nem pose. ``None`` mantém o default da
+    #: configuração, que é desligado.
+    temporal_prior_mode: str | None = None
     #: Geometria de área da sequência (círculo útil da lente e silhueta do
     #: rig). A exclusão acontece dentro do pipeline, na filtragem de proposals,
     #: e nunca pintando pixels: até a #202 este harness tinha um
@@ -345,6 +356,20 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 config.multimodal_reasoning, checkpoint=options.reasoning_checkpoint
             ),
         )
+    if options.temporal_prior_mode is not None:
+        # A versão do prompt é bumpada **junto** com o modo, e não em separado,
+        # porque o texto dos prompts é um literal no adapter e nada bumpa a
+        # versão sozinho: dois braços com prompts diferentes declarando a mesma
+        # versão seriam indistinguíveis na proveniência de cada claim.
+        enabled = options.temporal_prior_mode != TemporalPriorMode.DISABLED.value
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning,
+                temporal_prior_mode=options.temporal_prior_mode,
+                prompt_version="v9" if enabled else config.multimodal_reasoning.prompt_version,
+            ),
+        )
     if options.scene_context_mode is not None:
         config = dataclasses.replace(
             config,
@@ -393,6 +418,13 @@ def run_validation(
 
     summary_rows: list[str] = []
     frame_reports: list[dict[str, object]] = []
+    # O prior do próximo frame é derivado do resultado deste. Este laço é o
+    # único lugar do sistema que sabe que um frame precede outro: o módulo
+    # recebe um ScenePrior sem nenhum metadado de tempo ou pose.
+    prior_enabled = (
+        config.multimodal_reasoning.temporal_prior_mode != TemporalPriorMode.DISABLED.value
+    )
+    prior: ScenePrior | None = None
 
     for frame_path in frames:
         name = frame_path.stem
@@ -419,7 +451,7 @@ def run_validation(
         observation_input = image_observation(observation_id=name, width=width, height=height)
 
         try:
-            result = run_canonical_pipeline(observation_input, payload, config, ports)
+            result = run_canonical_pipeline(observation_input, payload, config, ports, prior)
         except VisualPerceptionError as error:
             print(f"  FAILED: {error!r}")
             frame_reports.append(
@@ -437,9 +469,16 @@ def run_validation(
                 }
             )
             summary_rows.append(f"## {name}\n\n**FALHOU:** `{error!r}`\n")
+            # Um frame que falhou não deixa herança: manter o prior do frame
+            # anterior faria uma afirmação atravessar um buraco da sequência e
+            # alcançar um viewpoint que ninguém observou.
+            prior = None
             continue
 
         canonical_observation = result.observation
+        prior = (
+            prior_from(canonical_observation, result.visual_embeddings) if prior_enabled else None
+        )
         frame_latency_s = time.monotonic() - frame_start
         diagnostics = diagnose_observation(
             canonical_observation,
@@ -447,6 +486,8 @@ def run_validation(
             kept_proposals=result.proposals,
             proposal_rejections=result.rejected_proposals,
             region_suppressions=result.suppressed_regions,
+            prior_assignments=result.prior_assignments,
+            prior_applied=prior_enabled,
             area_masks=result.area_masks,
             ego_overlap_threshold=config.proposal_filter.max_ego_overlap,
             valid_area_threshold=config.proposal_filter.min_valid_overlap,
@@ -467,6 +508,8 @@ def run_validation(
                 "input_sha256": _sha256(frame_path),
                 "latency_s": frame_latency_s,
                 "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+                "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
+                "prompt_version": config.multimodal_reasoning.prompt_version,
                 "region_views": list(config.multimodal_reasoning.region_views),
             },
         )
@@ -540,6 +583,7 @@ def run_validation(
                 # Sem estes campos, ligar ou desligar qualquer um deles não
                 # mudaria nada de comparável entre dois manifests.
                 "contextual": asdict(diagnostics.contextual),
+                "prior": asdict(diagnostics.prior),
                 "signal_failure_count": len(result.signal_failures),
                 "relation_failure_count": len(result.relation_failures),
                 "refinement": [
@@ -599,6 +643,8 @@ def run_validation(
         "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
         "context_profile": options.context_profile,
         "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+        "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
+        "prompt_version": config.multimodal_reasoning.prompt_version,
         "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
         "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
         "frames": frame_reports,
@@ -661,6 +707,16 @@ def _argument_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--temporal-prior-mode",
+        choices=tuple(mode.value for mode in TemporalPriorMode),
+        default=None,
+        help=(
+            "encadeia o que cada frame afirmou no frame seguinte; box_overlap casa "
+            "por sobreposição de caixa e bumpa prompt_version para v9, porque o "
+            "prompt deixa de ser byte-idêntico ao v8"
+        ),
+    )
+    parser.add_argument(
         "--sequence-masks",
         type=Path,
         default=SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json",
@@ -668,6 +724,11 @@ def _argument_parser() -> argparse.ArgumentParser:
             "geometria de área da sequência (círculo útil da lente e silhueta do rig); "
             "passe um caminho inexistente para rodar sem exclusão declarada"
         ),
+    )
+    parser.add_argument(
+        "--no-sequence-masks",
+        action="store_true",
+        help="roda sem geometria de área declarada para uma sequência genérica",
     )
     return parser
 
@@ -687,7 +748,14 @@ def main(argv: list[str] | None = None) -> None:
             reasoning_checkpoint=arguments.reasoning_checkpoint,
             region_views=tuple(arguments.region_views) or None,
             scene_context_mode=arguments.scene_context_mode,
-            sequence_masks=arguments.sequence_masks if arguments.sequence_masks.is_file() else None,
+            temporal_prior_mode=arguments.temporal_prior_mode,
+            sequence_masks=(
+                None
+                if arguments.no_sequence_masks
+                else arguments.sequence_masks
+                if arguments.sequence_masks.is_file()
+                else None
+            ),
         )
     )
 

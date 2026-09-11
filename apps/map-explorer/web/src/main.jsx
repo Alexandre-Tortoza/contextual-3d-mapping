@@ -157,17 +157,18 @@ function ContextLegend({
         <small>{focusedPointCount.toLocaleString("pt-BR")} em foco / {totalPointCount.toLocaleString("pt-BR")}</small>
       </summary>
       <div className="legend-actions">
-        <span>Contexto</span>
+        <span>Evidência contextual</span>
         <button type="button" onClick={onReset}>Focar tudo</button>
       </div>
       <div className="legend-support">
+        <strong>Sustentação da evidência</strong>
         <label>
           <input
             type="checkbox"
             checked={supportRules.dimWeak}
             onChange={() => onToggleSupport("dimWeak")}
           />
-          <span>Atenuar contexto sem suporte</span>
+          <span>Atenuar evidência com suporte fraco</span>
           <b>{supportCounts.weak.toLocaleString("pt-BR")}</b>
         </label>
         <label>
@@ -176,47 +177,54 @@ function ContextLegend({
             checked={supportRules.dimUncorroborated}
             onChange={() => onToggleSupport("dimUncorroborated")}
           />
-          <span>Atenuar visto por um frame só</span>
+          <span>Atenuar evidência de um único frame</span>
           <b>{supportCounts.uncorroborated.toLocaleString("pt-BR")}</b>
         </label>
       </div>
       <div className="legend-list">
-        {entries.map((entry) => {
+        {entries.map((entry, index) => {
           const keys = legendKeys(entry);
           const enabled = enabledKeys === null || keys.every((key) => enabledKeys.has(key));
           const detailed = entry.members.length > 1;
           const open = expanded.has(entry.key);
           return (
-            <div key={entry.key}>
-              <div className={`legend-row ${enabled ? "" : "disabled"}`}>
-                <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(keys)}>
-                  <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
-                  <span>{entry.label}</span>
-                  <b>{entry.count.toLocaleString("pt-BR")}</b>
-                </button>
-                {detailed && (
-                  <button type="button" className="isolate-action" aria-expanded={open}
-                    aria-label={`Labels de ${entry.label}`} onClick={() => toggleExpanded(entry.key)}>
-                    {open ? "▾" : `${entry.members.length}`}
+            <React.Fragment key={entry.key}>
+              {(index === 0 || entry.semantic !== entries[index - 1].semantic) && (
+                <div className="legend-section">
+                  {entry.semantic ? "Evidência publicada" : "Cobertura visual"}
+                </div>
+              )}
+              <div>
+                <div className={`legend-row ${enabled ? "" : "disabled"}`}>
+                  <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(keys)}>
+                    <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
+                    <span>{entry.label}</span>
+                    <b>{entry.count.toLocaleString("pt-BR")}</b>
                   </button>
-                )}
-                <button type="button" className="isolate-action" onClick={() => onIsolate(keys)}>Isolar</button>
-              </div>
-              {detailed && open && entry.members.map((member) => {
-                const memberEnabled = enabledKeys === null || enabledKeys.has(member.key);
-                return (
-                  <div className={`legend-row legend-member ${memberEnabled ? "" : "disabled"}`} key={member.key}>
-                    <button type="button" className="legend-toggle" aria-pressed={memberEnabled}
-                      onClick={() => onToggle([member.key])}>
-                      <i />
-                      <span>{member.label}</span>
-                      <b>{member.count.toLocaleString("pt-BR")}</b>
+                  {detailed && (
+                    <button type="button" className="isolate-action" aria-expanded={open}
+                      aria-label={`Labels de ${entry.label}`} onClick={() => toggleExpanded(entry.key)}>
+                      {open ? "▾" : `${entry.members.length}`}
                     </button>
-                    <button type="button" className="isolate-action" onClick={() => onIsolate([member.key])}>Isolar</button>
-                  </div>
-                );
-              })}
-            </div>
+                  )}
+                  <button type="button" className="isolate-action" onClick={() => onIsolate(keys)}>Isolar</button>
+                </div>
+                {detailed && open && entry.members.map((member) => {
+                  const memberEnabled = enabledKeys === null || enabledKeys.has(member.key);
+                  return (
+                    <div className={`legend-row legend-member ${memberEnabled ? "" : "disabled"}`} key={member.key}>
+                      <button type="button" className="legend-toggle" aria-pressed={memberEnabled}
+                        onClick={() => onToggle([member.key])}>
+                        <i />
+                        <span>{member.label}</span>
+                        <b>{member.count.toLocaleString("pt-BR")}</b>
+                      </button>
+                      <button type="button" className="isolate-action" onClick={() => onIsolate([member.key])}>Isolar</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </React.Fragment>
           );
         })}
       </div>

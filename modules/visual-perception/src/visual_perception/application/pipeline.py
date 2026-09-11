@@ -81,6 +81,7 @@ from visual_perception.application.semantic_relations import (
     RelationInferenceFailure,
     infer_semantic_relations,
 )
+from visual_perception.application.temporal_prior import PriorAssignment, match_scene_prior
 from visual_perception.application.tiling import build_tiles, remap_to_global
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.audit import AuditResult
@@ -95,7 +96,7 @@ from visual_perception.domain.errors import RegionInterpretationFailure
 from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_reasoning import RegionView
+from visual_perception.domain.region_reasoning import RegionView, ScenePrior
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, RejectedProposal
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 from visual_perception.ports.feature_extraction import DenseFeatureExtractor
@@ -176,6 +177,12 @@ class PipelineResult:
     #: Chamadas de modelo gastas por estágio, para que o custo de cada
     #: capacidade nova seja atribuível no manifest de validação.
     stage_model_calls: Mapping[str, int] = field(default_factory=dict)
+    #: Que região recebeu qual prior temporal, e com que evidência de
+    #: casamento. Existe pelo mesmo motivo que ``suppressed_regions``: sem
+    #: registro, "o modelo repetiu porque o prior sugeriu" seria
+    #: indistinguível de "o modelo diria isso de qualquer jeito". Vazio quando
+    #: o prior está desligado, que é o default.
+    prior_assignments: tuple[PriorAssignment, ...] = ()
 
     # Expõe os grupos propostos pela reconciliação sem obrigar o consumidor a
     # navegar até a observação. Existe porque três consumidores (diagnóstico,
@@ -195,8 +202,15 @@ def run_canonical_pipeline(
     payload: ImagePayload,
     config: ModuleConfig,
     ports: PerceptionPorts,
+    prior: ScenePrior | None = None,
 ) -> PipelineResult:
-    """Transforma uma observação de imagem validada em uma observação visual canônica."""
+    """Transforma uma observação de imagem validada em uma observação visual canônica.
+
+    ``prior`` é o que a observação anterior da mesma cena afirmou. O default
+    ``None`` é o comportamento histórico: cada frame interpretado sozinho.
+    Quem sabe que um frame precede outro é a composição — o módulo recebe
+    apenas "isto foi afirmado antes", nunca quando nem de que pose.
+    """
     area_masks = config.image_area.rasterize(payload.width, payload.height)
     discovered = _discover_regions(payload, config, ports.region_discoverer)
     # A exclusão do rig e da área fora da lente acontece aqui, sobre as
@@ -217,8 +231,15 @@ def run_canonical_pipeline(
     scene_context = analyze_scene(
         payload, ports.multimodal_reasoner, config.multimodal_reasoning, area_masks=area_masks
     )
+    assignments = match_scene_prior(regions, prior, evidence.visual_embeddings, config.multimodal_reasoning)
     regions, failures = interpret_regions(
-        regions, payload, views, scene_context, ports.multimodal_reasoner, config.multimodal_reasoning
+        regions,
+        payload,
+        views,
+        scene_context,
+        ports.multimodal_reasoner,
+        config.multimodal_reasoning,
+        {assignment.region_id: assignment.prior for assignment in assignments},
     )
 
     support = attach_hypothesis_signals(
@@ -324,6 +345,7 @@ def run_canonical_pipeline(
         relation_failures=inferred.failures,
         suppressed_regions=publication.records,
         stage_model_calls=_stage_model_calls(evidence, support, refinement_history, inferred),
+        prior_assignments=assignments,
     )
 
 

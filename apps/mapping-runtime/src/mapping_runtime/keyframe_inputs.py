@@ -18,9 +18,16 @@ FRAME_ARTIFACTS = {
 # Deriva a identidade do frame a partir da posição no stream RGB. Existe porque
 # essa é a única identidade que sobrevive da extração de imagens até a execução
 # de visual-perception, que não retém o índice original do bag.
-def frame_id_for(camera_sequence_index: int) -> str:
-    """Retorna a identidade canônica de um keyframe extraído do bag."""
-    return f"corridor-02-{camera_sequence_index:05d}"
+def frame_id_for(camera_sequence_index: int, frame_id_prefix: str = "corridor-02") -> str:
+    """Retorna a identidade canônica de um keyframe extraído do bag.
+
+    Argumentos:
+        camera_sequence_index: posição original no stream RGB.
+        frame_id_prefix: identidade da gravação usada nos artifacts.
+    Retorna:
+        identidade estável do frame.
+    """
+    return f"{frame_id_prefix}-{camera_sequence_index:05d}"
 
 
 # Casa a janela resolvida com uma execução de visual-perception. Keyframes sem
@@ -40,12 +47,13 @@ def resolve_keyframe_inputs(
         ValueError: se nenhum keyframe da janela tiver percepção disponível.
     """
     payload = json.loads(window.read_text(encoding="utf-8"))
+    frame_id_prefix = str(payload.get("frame_id_prefix", "corridor-02"))
     frames_directory = visual_run / "frames"
     resolved: list[Corridor02Keyframe] = []
     missing: list[str] = []
     for entry in payload["keyframes"]:
         index = int(entry["sequence_index"])
-        frame_id = frame_id_for(index)
+        frame_id = frame_id_for(index, frame_id_prefix)
         directory = frames_directory / frame_id
         artifacts = {name: directory / filename for name, filename in FRAME_ARTIFACTS.items()}
         if not all(path.is_file() for path in artifacts.values()):
@@ -61,8 +69,6 @@ def resolve_keyframe_inputs(
             )
         )
     if not resolved:
-        raise ValueError(
-            f"no keyframe of {window} has visual perception artifacts under {frames_directory}."
-        )
+        raise ValueError(f"no keyframe of {window} has visual perception artifacts under {frames_directory}.")
     anchor_ns = int(payload["start_header_ns"]) - int(float(payload["lead_s"]) * 1_000_000_000)
     return tuple(resolved), tuple(missing), anchor_ns

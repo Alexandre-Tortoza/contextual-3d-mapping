@@ -178,3 +178,62 @@ def test_without_the_override_the_reference_checkpoint_is_untouched() -> None:
     config = resolve_config(ValidationOptions(sequence_masks=None))
 
     assert config.multimodal_reasoning.checkpoint == "Qwen/Qwen2.5-VL-3B-Instruct"
+
+
+# O braço com prior temporal precisa diferir do braço sem ele em exatamente
+# dois campos: o modo e a versão do prompt. Se diferisse em mais, a comparação
+# entre os dois mediria mais de uma variável; se diferisse em menos, dois
+# prompts diferentes declarariam a mesma versão e a proveniência por claim
+# ficaria ambígua.
+def test_o_prior_temporal_muda_apenas_o_modo_e_a_versao_do_prompt() -> None:
+    """Ligar o prior altera dois campos, e nenhum outro."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, temporal_prior_mode="box_overlap")
+    )
+
+    assert candidate.multimodal_reasoning.temporal_prior_mode == "box_overlap"
+    assert candidate.multimodal_reasoning.prompt_version == "v9"
+    assert baseline.multimodal_reasoning.temporal_prior_mode == "disabled"
+    assert baseline.multimodal_reasoning.prompt_version == "v8"
+    assert candidate.fingerprint() != baseline.fingerprint()
+    assert dataclasses.replace(
+        candidate.multimodal_reasoning,
+        temporal_prior_mode=baseline.multimodal_reasoning.temporal_prior_mode,
+        prompt_version=baseline.multimodal_reasoning.prompt_version,
+    ) == baseline.multimodal_reasoning
+    for field in ("region_discovery", "feature_extraction", "language_embedding",
+                  "multi_context", "hypothesis_support", "refinement",
+                  "reconciliation", "semantic_relations", "calibration",
+                  "contextual_publication", "proposal_filter", "tiling", "merge"):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# E omitir a flag preserva exatamente o comportamento histórico: o prompt de
+# região volta a ser byte-idêntico ao v8, porque o bloco do prior só é
+# renderizado quando há prior.
+def test_sem_a_flag_o_prompt_de_regiao_e_identico_ao_historico() -> None:
+    """Sem prior, o prompt não ganha nenhum caractere novo."""
+    from visual_perception.domain.geometry import BoundingBox
+    from visual_perception.domain.image_payload import ImagePayload
+    from visual_perception.domain.region_evidence import EvidenceSlot, SubjectEmphasis
+    from visual_perception.domain.region_reasoning import (
+        CoordinateTransform,
+        RegionReasoningRequest,
+        RegionView,
+    )
+    from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import _region_prompt
+
+    box = BoundingBox(0.0, 0.0, 4.0, 4.0)
+    view = RegionView(
+        slot=EvidenceSlot.MASKED_SUBJECT,
+        payload=ImagePayload(np.zeros((4, 4, 3), dtype=np.uint8), width=4, height=4),
+        crop_box=box,
+        transform=CoordinateTransform.identity(),
+        emphasis=SubjectEmphasis.NEUTRAL_FILL,
+    )
+    request = RegionReasoningRequest(
+        region_id="region-a", region_box=box, image_width=4, image_height=4, views=(view,)
+    )
+
+    assert "PREVIOUS view" not in _region_prompt(request)

@@ -58,6 +58,28 @@ class BoundingBox:
     def height(self) -> float:
         return self.y_max - self.y_min
 
+    # Mede a sobreposição entre duas caixas como interseção sobre união. Existe
+    # como par de ``Mask.iou`` para os consumidores que só têm caixa: comparar
+    # duas regiões de **frames diferentes** por máscara é impossível, porque
+    # ``Mask`` exige resolução idêntica e as máscaras de dois frames descrevem
+    # cenas distintas. Usada por select_region_prior para casar uma região com a
+    # região correspondente do frame anterior.
+    def iou(self, other: BoundingBox) -> float:
+        """Retorna a interseção sobre união entre esta caixa e outra.
+
+        Argumentos:
+            other: a caixa comparada, no mesmo sistema de pixels.
+        Retorna:
+            a razão em ``[0, 1]``; zero quando as caixas não se tocam.
+        """
+        overlap_width = min(self.x_max, other.x_max) - max(self.x_min, other.x_min)
+        overlap_height = min(self.y_max, other.y_max) - max(self.y_min, other.y_min)
+        if overlap_width <= 0.0 or overlap_height <= 0.0:
+            return 0.0
+        intersection = overlap_width * overlap_height
+        union = self.width * self.height + other.width * other.height - intersection
+        return intersection / union if union > 0.0 else 0.0
+
     # Recorta a caixa aos limites de uma imagem de resolução dada. Usada
     # quando uma caixa remapeada de um tile/crop pode extrapolar a imagem
     # original.

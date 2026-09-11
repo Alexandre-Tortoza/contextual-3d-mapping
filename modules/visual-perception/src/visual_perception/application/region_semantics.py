@@ -38,6 +38,7 @@ from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.region_evidence import EvidenceSlot
 from visual_perception.domain.region_reasoning import (
+    PriorHypothesis,
     RegionReasoningRequest,
     RegionView,
     SceneContextMode,
@@ -294,6 +295,7 @@ def interpret_regions(
     scene_context: SceneContext | None,
     reasoner: MultimodalReasoner,
     config: MultimodalReasoningConfig,
+    priors: Mapping[str, PriorHypothesis] | None = None,
 ) -> tuple[tuple[ObservedRegion, ...], tuple[RegionInterpretationFailure, ...]]:
     """Interpreta todas as regions, isolando falhas por region.
 
@@ -310,6 +312,9 @@ def interpret_regions(
         scene_context: o contexto de cena estruturado, ou ``None``.
         reasoner: o backend multimodal que responde a cada region.
         config: a configuração de raciocínio, incluindo quais views enviar.
+        priors: o que a observação anterior afirmou, por ``region_id``, já
+            casado pelo pipeline. ``None`` é o caso histórico: cada frame é
+            interpretado sozinho.
     Retorna:
         as regions com os claims anexados, e as falhas isoladas.
     """
@@ -321,7 +326,14 @@ def interpret_regions(
 
     for region in regions:
         try:
-            request = _build_request(region, image, views.get(region.region_id, ()), scene_claims, config)
+            request = _build_request(
+                region,
+                image,
+                views.get(region.region_id, ()),
+                scene_claims,
+                config,
+                (priors or {}).get(region.region_id),
+            )
             claims = _interpret_one_region(request, reasoner, config)
         except (KeyError, ValueError, TypeError) as error:
             failures.append(RegionInterpretationFailure(region.region_id, str(error)))
@@ -343,6 +355,7 @@ def _build_request(
     available: tuple[RegionView, ...],
     scene_claims: tuple[SemanticClaim, ...],
     config: MultimodalReasoningConfig,
+    prior: PriorHypothesis | None = None,
 ) -> RegionReasoningRequest:
     """Seleciona as views configuradas da region e as empacota com o contexto de cena.
 
@@ -356,6 +369,7 @@ def _build_request(
         available: as views efetivamente construídas para esta region.
         scene_claims: as claims de cena elegíveis, já selecionadas.
         config: a configuração de raciocínio, que declara quais views enviar.
+        prior: o que a observação anterior afirmou sobre esta área, ou ``None``.
     Retorna:
         o :class:`RegionReasoningRequest` desta region.
     Levanta:
@@ -372,6 +386,7 @@ def _build_request(
         image_height=image.height,
         views=selected,
         scene_claims=scene_claims,
+        prior=prior,
     )
 
 

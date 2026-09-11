@@ -240,6 +240,7 @@ def _region_prompt(request: RegionReasoningRequest) -> str:
         '"description": "<one short sentence>", "attributes": ["<adjective>"], '
         '"condition": "<state>", "material": "<material>"}'
         f"{_describe_scene_claims(request)}"
+        f"{_describe_prior(request)}"
     )
 
 
@@ -334,6 +335,26 @@ def _describe_scene_claims(request: RegionReasoningRequest) -> str:
     return (
         "\nScene context, for disambiguation only — these are properties of the SCENE, "
         f"never of the subject region, and must not be repeated as the label: {rendered}"
+    )
+
+
+# Renderiza o que a observação anterior afirmou sobre a mesma área da imagem.
+# Espelha deliberadamente a forma de ``_describe_scene_claims``: um bloco curto,
+# no fim do prompt, que declara o que a informação é e o que ela não autoriza.
+# A sugestão é apresentada como observação anterior **falível** e não como
+# resposta, porque o modo de falha conhecido deste prompt é o modelo copiar o
+# que lhe é oferecido — foi o que a #202 mediu com o exemplo concreto de
+# ``confidence`` e com o inventário de objetos da cena.
+def _describe_prior(request: RegionReasoningRequest) -> str:
+    """Retorna o bloco de observação anterior, ou string vazia se não houver."""
+    if request.prior is None:
+        return ""
+    category = "" if request.prior.category is None else f", category {request.prior.category}"
+    return (
+        "\nA PREVIOUS view of this same area was described as "
+        f"\"{request.prior.concept}\"{category}. That description may be wrong, and the "
+        "viewpoint has changed. Use it only to resolve a genuine ambiguity in what you "
+        "see now; if the pixels disagree with it, describe what you actually see."
     )
 
 
