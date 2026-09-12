@@ -20,11 +20,34 @@ RGB canônico
 O módulo termina no domínio visual 2D. Associação com LiDAR, fusão temporal/3D, mapa,
 memória espacial, scene graph e reasoning contextual pertencem aos módulos downstream.
 
+## Política semântica contextual
+
+O objetivo do módulo não é preencher o mapa com classes estruturais triviais. Uma região
+geométrica pode representar parede, piso ou teto sem que isso precise virar a identidade
+semântica final exportada.
+
+A política normativa está em [contextual-semantics.md](contextual-semantics.md):
+
+```text
+superfície genérica
+    -> geometria preservada
+    -> sem identidade contextual trivial
+
+superfície + evidência relevante
+    -> graffiti / texto / dano / rachadura / umidade / hazard / etc.
+    -> claim contextual localizado
+```
+
+A implementação atual ainda está em transição para essa política. O documento registra
+explicitamente o que já está compatível, o que ainda não está e quais métricas deixam de
+ser diretamente comparáveis após a mudança de prompt.
+
 ## Por onde começar
 
 | Quero entender | Comece por |
 | --- | --- |
 | o pipeline completo e onde alterar cada comportamento | [pipelines.md](pipelines.md) |
+| qual semântica deve ou não chegar ao mapa contextual | [contextual-semantics.md](contextual-semantics.md) |
 | onde cada responsabilidade pertence | [architecture.md](architecture.md) |
 | os tipos que atravessam a API pública | [api-contracts.md](api-contracts.md) |
 | como integrar entrada e consumidores downstream | [integration.md](integration.md) |
@@ -44,6 +67,13 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 2. [architecture.md](architecture.md)
 3. [api-contracts.md](api-contracts.md)
 
+### Quero alterar o que conta como contexto semântico
+
+1. [contextual-semantics.md](contextual-semantics.md)
+2. [pipelines.md](pipelines.md)
+3. [api-contracts.md](api-contracts.md)
+4. [research-traceability.md](research-traceability.md)
+
 ### Quero trocar ou testar um modelo
 
 1. [model-backends.md](model-backends.md)
@@ -59,14 +89,16 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 ### Quero justificar uma decisão no trabalho acadêmico
 
 1. [research-traceability.md](research-traceability.md)
-2. [model-backends.md](model-backends.md)
-3. benchmark/avaliação que sustenta a afirmação
+2. [contextual-semantics.md](contextual-semantics.md), quando a decisão envolver relevância semântica
+3. [model-backends.md](model-backends.md)
+4. benchmark/avaliação que sustenta a afirmação
 
 ## Referência por necessidade
 
 | Necessidade | Página | Seção útil |
 | --- | --- | --- |
 | encontrar o arquivo que controla um comportamento | [pipelines.md](pipelines.md) | `Quero mudar X` |
+| saber se `wall`/`floor`/`ceiling` deve virar claim | [contextual-semantics.md](contextual-semantics.md) | `Superfícies estruturais genéricas não são contexto final` |
 | decidir onde colocar código novo | [architecture.md](architecture.md) | `Quero adicionar X` |
 | entender `ObservedRegion`, claims e confidence | [api-contracts.md](api-contracts.md) | contracts individuais |
 | adaptar `CanonicalObservation` RGB | [integration.md](integration.md) | entrada vinda de adapters |
@@ -83,6 +115,7 @@ memória espacial, scene graph e reasoning contextual pertencem aos módulos dow
 ```mermaid
 flowchart TD
     R[README] --> P[pipelines.md]
+    R --> S[contextual-semantics.md]
     R --> A[architecture.md]
     R --> C[api-contracts.md]
     R --> I[integration.md]
@@ -90,11 +123,13 @@ flowchart TD
     P --> E[execution.md]
     C --> T[artifacts.md]
     A --> Q[research-traceability.md]
+    S --> Q
+    S --> L[known-limitations.md]
     R --> G[glossary.md]
-    R --> L[known-limitations.md]
+    R --> L
     B --> L
-    Q --> S[visual-context-sota-review.md]
-    S --> L
+    Q --> V[visual-context-sota-review.md]
+    V --> L
 ```
 
 ## Estado atual do módulo
@@ -118,11 +153,18 @@ A seleção de referência não é uma afirmação de ótimo universal. Ela repr
 resultado observado sob o hardware, dataset e proxies usados no benchmark documentado.
 Consulte [model-backends.md](model-backends.md) antes de comparar ou trocar checkpoints.
 
+A política de semântica contextual é mais nova que a configuração de referência e não
+muda, por si só, quais checkpoints estão selecionados. Ela muda **o que o pipeline deve
+promover como resultado semântico**. Enquanto a implementação não estiver alinhada, os
+runs atuais devem ser lidos como baseline pré-política.
+
 ## Regra de manutenção da documentação
 
 Quando uma mudança relevante for feita:
 
 - mudança na ordem/semântica dos estágios, atualize `pipelines.md`;
+- mudança no que conta como evidência contextual exportável, atualize
+  `contextual-semantics.md`;
 - mudança de responsabilidade ou fronteira, atualize `architecture.md`;
 - mudança de contract público, atualize `api-contracts.md`;
 - mudança de integração downstream, atualize `integration.md`;
@@ -133,5 +175,6 @@ Quando uma mudança relevante for feita:
 - falha observada em run real que continue aberta, registre em `known-limitations.md`,
   e só a remova de lá quando outro run real mostrar que ela deixou de ocorrer.
 
-A documentação deve descrever o código atual. Não preserve instruções antigas apenas
-porque já foram verdadeiras em uma versão anterior.
+Documentos de implementação devem descrever o código atual. Documentos normativos, como
+`contextual-semantics.md`, podem definir uma política ainda em adoção, mas precisam listar
+explicitamente qualquer divergência entre a política e `main`.
