@@ -16,6 +16,7 @@ Essa documentação local pode descrever algoritmos, escolhas de modelo, procedi
 
 ## Documentação do repositório
 
+- [Pipeline end-to-end](./end-to-end-pipeline.md): guia didático que acompanha a transformação dos pixels RGB até a associação 2D→3D e a fusão semântica, usando os contracts reais e marcando capacidades ainda planejadas.
 - [Arquitetura](./architecture.md): arquitetura de nível de repositório, ownership de capacidades, fronteiras e regras de dependência.
 - [Princípios de engenharia](./engineering-principles.md): decisões de implementação, interpretação de SOLID, limiares de abstração, localidade de integração, testes e diretrizes de review.
 - [Fluxo do sistema](./system-flow.md): fluxo entre módulos e entre aplicações.
@@ -23,6 +24,8 @@ Essa documentação local pode descrever algoritmos, escolhas de modelo, procedi
 - [Ciclo de vida do mapa](./map-lifecycle.md): ciclo de vida desde observações até mapas persistidos e consultáveis.
 - [Política de documentação](./documentation-policy.md): separação entre documentação global e documentação local de módulo.
 - [`AGENTS.md`](../AGENTS.md): regras condensadas do repositório que agentes de código e contribuidores devem ler antes de alterar arquitetura ou código.
+
+O [pipeline end-to-end](./end-to-end-pipeline.md) é uma documentação transversal de ensino e integração. Quando ele explica um estágio interno, o contract e a responsabilidade são apresentados no contexto do fluxo global, enquanto a documentação local do módulo continua sendo a fonte de verdade para algoritmo, configuração, benchmark e implementação.
 
 ## Resumo da arquitetura
 
@@ -51,4 +54,4 @@ O `docs/` raiz responde perguntas como:
 - Onde a persistência se encaixa arquiteturalmente?
 - Quais regras de engenharia devem permanecer estáveis conforme as implementações de pesquisa mudam?
 
-Ele não deve explicar o algoritmo interno de um módulo específico. Esses detalhes pertencem ao `docs/` daquele módulo.
+Detalhes de implementação continuam pertencendo ao `docs/` do módulo responsável. O documento end-to-end pode resumir esses detalhes somente quando necessário para explicar a transformação de dados entre fronteiras.
