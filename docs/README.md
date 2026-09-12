@@ -1,61 +1,133 @@
-# Documentação
+# Pipeline end-to-end do contextual-3d-mapping
 
-Este diretório contém a documentação de nível de repositório do `contextual-3d-mapping`.
+Esta documentação acompanha a informação desde os pixels de um frame RGB até a evidência semântica ancorada em geometria 3D. A pergunta central em cada etapa é:
 
-A documentação aqui descreve o projeto como um sistema: sua intenção arquitetural, fronteiras de módulo, princípios de engenharia, regras de integração, composição de aplicação, fronteiras de persistência e fluxo de ponta a ponta.
+> Que informação existe agora, de onde ela veio, como foi transformada e o que será enviado para a próxima etapa?
 
-O projeto usa intencionalmente uma arquitetura modular simples orientada a capacidades, em vez de Clean Architecture como padrão de nível de repositório.
+A documentação foi reorganizada por estágio da pipeline. O `README.md` é a visão geral; cada arquivo numerado detalha uma transformação específica.
 
-A documentação detalhada de implementação vive ao lado de cada módulo, em:
+## Regra de documentação
+
+A documentação separa explicitamente três coisas:
 
 ```text
-modules/<module>/docs/
+arquitetura pretendida
+        !=
+código implementado
+        !=
+comportamento realmente observado
 ```
 
-Essa documentação local pode descrever algoritmos, escolhas de modelo, procedimentos de treino ou inferência, configuração, arquitetura interna, benchmarks, decisões de implementação, limitações e referências de pesquisa específicas do módulo.
+Sempre que existe evidência versionada, os exemplos usam artifacts reais. Exemplos artificiais não devem ser apresentados como outputs medidos.
 
-## Documentação do repositório
+## Reference run
 
-- [Pipeline end-to-end](./end-to-end-pipeline.md): guia didático que acompanha a transformação dos pixels RGB até a associação 2D→3D e a fusão semântica, usando os contracts reais e marcando capacidades ainda planejadas.
-- [Walkthrough com dados reais](./real-run-walkthrough.md): percorre a pipeline usando o run versionado `20260910T115810Z`, com frames, proposals, máscaras, overlays, claims, embeddings referenciados, sinais CLIP e diagnósticos reais de associação e fusão.
-- [Arquitetura](./architecture.md): arquitetura de nível de repositório, ownership de capacidades, fronteiras e regras de dependência.
-- [Princípios de engenharia](./engineering-principles.md): decisões de implementação, interpretação de SOLID, limiares de abstração, localidade de integração, testes e diretrizes de review.
-- [Fluxo do sistema](./system-flow.md): fluxo entre módulos e entre aplicações.
-- [Aplicações](./applications.md): responsabilidades e fronteiras das aplicações executáveis.
-- [Ciclo de vida do mapa](./map-lifecycle.md): ciclo de vida desde observações até mapas persistidos e consultáveis.
-- [Política de documentação](./documentation-policy.md): separação entre documentação global e documentação local de módulo.
-- [`AGENTS.md`](../AGENTS.md): regras condensadas do repositório que agentes de código e contribuidores devem ler antes de alterar arquitetura ou código.
+A referência visual atual é uma execução real e auditável:
 
-O [pipeline end-to-end](./end-to-end-pipeline.md) é a visão conceitual transversal de ensino e integração. O [walkthrough com dados reais](./real-run-walkthrough.md) é a camada concreta: ele referencia diretamente artifacts versionados dos benchmarks e deixa explícito quando uma etapa possui apenas diagnóstico real, em vez de um artifact ponta a ponta já persistido.
+```text
+run_id: 20260910T115810Z
+git_revision: 7001803
+quality_profile: research_quality
+frames: 3
+reference_frame: corridor-02-000
+resolution: 640 x 480
+reference_region: region-2c84165423b25fc3
+GPU budget: 8.0 GB
+observed peak: 4.57 GB
+```
 
-Quando esses documentos explicam um estágio interno, o contract e a responsabilidade são apresentados no contexto do fluxo global, enquanto a documentação local do módulo continua sendo a fonte de verdade para algoritmo, configuração, benchmark e implementação.
+Modelos usados nesse run:
 
-## Resumo da arquitetura
+| Capacidade | Modelo |
+| --- | --- |
+| Region discovery | SAM ViT-H |
+| Dense visual features | DINOv2-base |
+| Language-aligned evidence | CLIP ViT-L/14 |
+| Scene/region semantics | Qwen2.5-VL-3B-Instruct, 4-bit |
 
-O repositório segue um pequeno conjunto de regras estáveis:
+Esta run é um exemplo do comportamento de uma revisão específica. Ela não é ground truth e não representa garantia de desempenho.
 
-1. cada capacidade tem um dono de módulo óbvio;
-2. módulos expõem APIs públicas pequenas e escondem detalhes de implementação;
-3. aplicações compõem capacidades em vez de possuir algoritmos de pesquisa;
-4. integrações e contracts específicos de capacidade ficam próximos dos módulos que os possuem;
-5. código compartilhado é limitado a primitivas genuinamente de nível de repositório e estáveis;
-6. abstrações são introduzidas para fronteiras concretas ou pontos de variação, não especulativamente;
-7. SOLID guia o design de código e dependências, não a nomenclatura de pastas;
-8. papers, modelos, repositórios e datasets externos podem influenciar implementações sem definir a arquitetura pública.
+Artifacts principais:
 
-## Fronteira da documentação
+- [`summary.md`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/summary.md)
+- [`manifest.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/manifest.json)
+- [`diagnostics.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/diagnostics.json)
+- [`observation.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/observation.json)
+- [`embeddings.npz`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/embeddings.npz)
 
-O `docs/` raiz responde perguntas como:
+## Pipeline geral
 
-- Por que o repositório está organizado desta forma?
-- Como os módulos são compostos?
-- Qual capacidade possui uma determinada responsabilidade?
-- Quais direções de dependência são permitidas?
-- Quando um contract ou abstração compartilhada deve existir?
-- Como a informação se move pelo sistema em alto nível?
-- Qual aplicação constrói mapas e qual aplicação os explora?
-- Onde a persistência se encaixa arquiteturalmente?
-- Quais regras de engenharia devem permanecer estáveis conforme as implementações de pesquisa mudam?
-- Como os dados e erros aparecem em uma execução real versionada?
+```mermaid
+flowchart TD
+    RGB["01 RGB input<br/>ImageObservation + ImagePayload"]
+    RGB --> RD["02 Region Discovery<br/>SAM / RegionProposal"]
+    RD --> RM["03 Region Merge<br/>ObservedRegion"]
+    RGB --> DF["04 Dense Features<br/>DINOv2 / FeatureMap"]
+    RM --> POOL["05 Mask-aware Pooling"]
+    DF --> POOL
+    POOL --> RE["06 Region Evidence"]
+    RM --> LA["07 Language-Aligned Evidence<br/>CLIP"]
+    RGB --> SC["08 Scene Context<br/>Qwen2.5-VL"]
+    RE --> SEM["09 Region Semantics"]
+    LA --> SEM
+    SC --> SEM
+    SEM --> HS["10 Hypothesis Support"]
+    HS --> REF["11 Selective Refinement"]
+    REF --> REC["12 Reconciliation"]
+    REC --> REL["13 Relations"]
+    SC --> VO["14 VisualObservation"]
+    REL --> VO
 
-Detalhes de implementação continuam pertencendo ao `docs/` do módulo responsável. Os documentos transversais podem resumir esses detalhes somente quando necessário para explicar a transformação de dados entre fronteiras ou conectar essa explicação a um artifact real.
+    LIDAR["15 LiDAR / Geometric Map"] --> SA["17 Sensor Association"]
+    PC["16 Pose + Calibration"] --> SA
+    VO --> SA
+    SA --> PVA["18 PointVisualAssociation"]
+    PVA --> SF["19 Semantic Fusion"]
+    SF --> SM["20 Semantic Map / Memory"]
+```
+
+## Estado atual
+
+| Capacidade | Estado | Evidência atual |
+| --- | --- | --- |
+| `visual-perception` | implementado | run `20260910T115810Z`, artifacts por frame |
+| `state-estimation` | primeiro slice implementado | contracts e integração FAST-LIO |
+| `geometric-map` | primeiro slice implementado | geometria persistente e referências estáveis |
+| `sensor-association` | implementado | projeção, suporte válido e oclusão |
+| `semantic-fusion` | implementado no nível de ponto | fusão multi-keyframe e suporte espacial |
+| `semantic-map` | planejado | sem schema público concreto |
+| `semantic-memory` | planejado | capacidade reservada |
+| `scene-graph` | planejado | capacidade reservada |
+| `context-reasoning` | planejado | capacidade reservada |
+| `query-engine` | planejado | capacidade reservada |
+
+A reference run visual possui artifacts reais até `VisualObservation`. Para a parte 3D existem implementação e diagnósticos reais, mas ainda não há um único artifact versionado que acompanhe `region-2c84165423b25fc3` até um `GeometryReference` e depois até uma entidade persistente. A documentação não inventa essa continuidade.
+
+## Documentação por estágio
+
+1. [Entrada RGB](./01-input-rgb.md)
+2. [Region Discovery](./02-region-discovery.md)
+3. [Region Merge / Consolidation](./03-region-merge.md)
+4. [Dense Feature Extraction](./04-dense-features.md)
+5. [Mask-aware Pooling](./05-mask-aware-pooling.md)
+6. [Region Evidence](./06-region-evidence.md)
+7. [Language-Aligned Evidence](./07-language-aligned-evidence.md)
+8. [Scene Context](./08-scene-context.md)
+9. [Region Semantics](./09-region-semantics.md)
+10. [Hypothesis Support](./10-hypothesis-support.md)
+11. [Selective Refinement](./11-selective-refinement.md)
+12. [Reconciliation intra-frame](./12-reconciliation.md)
+13. [Relations](./13-relations.md)
+14. [VisualObservation](./14-visual-observation.md)
+15. [Geometric Map](./15-geometric-map.md)
+16. [Pose + Calibration](./16-pose-calibration.md)
+17. [Sensor Association](./17-sensor-association.md)
+18. [PointVisualAssociation](./18-point-visual-association.md)
+19. [Semantic Fusion](./19-semantic-fusion.md)
+20. [Semantic Map / Memory](./20-semantic-map.md)
+
+## Como cada página deve ser mantida
+
+Cada estágio deve responder, quando aplicável: objetivo, entrada, contract, transformação, tecnologias, exemplo da reference run, artifacts, saída, consumidor, limitações atuais e referências científicas. Quando não houver artifact real, a página deve declarar isso explicitamente.
+
+A documentação anterior foi preservada em [`.old-docs/`](../.old-docs/) para consulta histórica.
