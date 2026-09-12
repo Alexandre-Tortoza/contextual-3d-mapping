@@ -10,10 +10,28 @@ modelo e configuração anexada em todo o processo.
 
 O módulo é testável de forma independente e cada estágio canônico é substituível por
 trás de um port, e cada estágio contextual é desligável por configuração — para que uma
-comparação consiga atribuir um efeito a um estágio só. Ele vem com fakes completos, determinísticos e GPU-free para cada
-backend, para que seus contracts, pipeline, cache e fronteiras de integração possam ser
-totalmente exercitados sem uma GPU ou download de modelo; backends reais são rastreados
-separadamente (veja [docs/model-backends.md](docs/model-backends.md)).
+comparação consiga atribuir um efeito a um estágio só. Ele vem com fakes completos,
+determinísticos e GPU-free para cada backend, para que seus contracts, pipeline, cache e
+fronteiras de integração possam ser totalmente exercitados sem uma GPU ou download de
+modelo; backends reais são rastreados separadamente (veja
+[docs/model-backends.md](docs/model-backends.md)).
+
+## Objetivo semântico
+
+O produto semântico do módulo deve priorizar **evidência contextual**, não classificação
+estrutural trivial.
+
+Uma parede, piso ou teto podem continuar existindo como regiões geométricas descobertas
+pelo pipeline, mas não devem dominar a observação apenas por serem superfícies. O que deve
+chegar ao mapa contextual são entidades e evidências que acrescentam informação, como
+portas, placas, objetos, pichações, textos, símbolos, rachaduras, danos estruturais,
+umidade, tinta descascada, hazards e obstruções.
+
+A política normativa, os exemplos e o estado de adoção estão em
+[docs/contextual-semantics.md](docs/contextual-semantics.md).
+
+A implementação em `main` ainda está em transição para essa política; runs anteriores
+continuam sendo baselines reproduzíveis da política semântica antiga.
 
 ## Responsabilidades
 
@@ -24,6 +42,8 @@ separadamente (veja [docs/model-backends.md](docs/model-backends.md)).
   por região;
 - interpretar semântica em nível de cena e de região como claims auditáveis, não labels
   únicos;
+- distinguir geometria visual de evidência contextual, sem exigir que toda região
+  geométrica receba uma identidade semântica de alto nível;
 - medir, por um canal **independente** do reasoner, se a evidência sustenta cada hipótese
   de identidade;
 - reinterpretar seletivamente as regiões que têm uma razão explícita, sempre com evidência
