@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from visual_perception.domain.contextual_evidence import ContextualEvidenceVerdict
-from visual_perception.domain.semantics import SemanticClaim
 
 __all__ = ["DebugRecorder", "record_partition_stage"]
 
@@ -97,6 +96,15 @@ class DebugRecorder:
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
         logger.debug(f"Debug recorded partition: {path}")
+
+    # Usa o mesmo recorder das decisões de publicação para guardar a trilha
+    # geométrica de cada região, sem depender de um preview do viewer.
+    def record_grounding(self, frame_id: str, regions: list[dict[str, Any]]) -> None:
+        """Grava áreas, componentes, proveniência e falhas de grounding por frame."""
+        if self.root is None:
+            return
+        path = self.root / f"{frame_id}-grounding.json"
+        path.write_text(json.dumps({"frame_id": frame_id, "regions": regions}, indent=2), encoding="utf-8")
 
 
 def record_partition_stage(

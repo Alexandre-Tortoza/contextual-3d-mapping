@@ -1,5 +1,11 @@
 # Visual Perception
 
+Discovery e grounding espacial têm contracts distintos. `ObservedRegion.mask`
+e `box` preservam a descoberta; `ObservedRegion.grounding` contém a predição do
+segmentador, a máscara semântica aceita, as boxes condicionadas ao conceito e
+os diagnostics. Reconhecimento isolado preserva claims sem publicar precisão
+espacial inexistente. Ver [decisão, API e ablações](docs/semantic-grounding.md).
+
 `visual-perception` transforma uma observação de imagem RGB canônica em uma observação
 visual estruturada e auditável: regiões descobertas com masks e boxes, embeddings de
 região densos e alinhados à linguagem, claims semânticos em nível de cena e de região,

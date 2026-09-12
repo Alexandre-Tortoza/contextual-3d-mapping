@@ -8,6 +8,7 @@ escrito em disco só apareceria num run real de GPU. Aqui tudo roda com fakes.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -30,6 +31,10 @@ from visual_perception.config import ModuleConfig, RegionDiscoveryConfig  # noqa
 from visual_perception.domain.geometry import Mask  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.domain.regions import LocalRegionProposal  # noqa: E402
+from visual_perception.infrastructure.embedding_archive import (  # noqa: E402
+    UnresolvableEmbeddingRefError,
+    resolve_embedding_vector,
+)
 
 _FRAME_ID = "synthetic-000"
 
@@ -355,8 +360,8 @@ def test_embeddings_are_persisted_and_resolve_the_slot_references(tmp_path: Path
     """Cada ``artifact_ref`` de slot disponível resolve para um vetor gravado."""
     frame_dir = _run(tmp_path)
 
-    assert (frame_dir / "embeddings.npz").is_file()
-    stored = np.load(frame_dir / "embeddings.npz")
+    embeddings_path = frame_dir / "embeddings.npz"
+    assert embeddings_path.is_file()
     observation = json.loads((frame_dir / "observation.json").read_text())
     referenced = {
         slot["artifact_ref"]
@@ -366,9 +371,13 @@ def test_embeddings_are_persisted_and_resolve_the_slot_references(tmp_path: Path
     }
 
     assert referenced
-    assert referenced <= set(stored.files)
-    for name in stored.files:
-        assert np.isfinite(stored[name]).all()
+    for ref in referenced:
+        vector = resolve_embedding_vector(embeddings_path, ref)
+        assert vector
+        assert all(math.isfinite(component) for component in vector)
+
+    with pytest.raises(UnresolvableEmbeddingRefError):
+        resolve_embedding_vector(embeddings_path, "does-not-exist")
 
 
 # O que a #214/#205/#206 acrescentaram precisa aparecer no diagnóstico do

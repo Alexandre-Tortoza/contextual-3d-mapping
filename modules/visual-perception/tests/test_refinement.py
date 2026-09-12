@@ -310,7 +310,7 @@ def test_refinement_appends_and_records_the_evidence_path() -> None:
     observation = dataclasses.replace(
         result.observation,
         regions=tuple(
-            dataclasses.replace(region, claims=()) for region in result.observation.regions
+            dataclasses.replace(region, claims=(), grounding=None) for region in result.observation.regions
         ),
     )
     reasoning = MultimodalReasoningConfig(region_views=("masked_subject",))

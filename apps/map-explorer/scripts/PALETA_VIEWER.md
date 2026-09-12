@@ -32,9 +32,20 @@ Depois:
    - Famílias interessantes além da 4ª caem no bucket "Outros labels"
 
 3. **`main.jsx` — Default oculto**
-   - `defaultEnabledKeys` calcula: todas as chaves da legenda, menos `STRUCTURAL_KEY`
+   - `defaultEnabledKeys` calcula: todas as chaves da legenda, menos as chaves da
+     linha marcada com `structural: true` — isto é, os labels estruturais brutos
    - Aplicado ao abrir cada artifact (dentro de `openSlice`)
-   - Aplicado ao resetar filtro (`onReset`) — "Focar tudo" agora = "estruturas ocultas + tudo mais"
+   - Aplicado no botão `Padrão` do painel, ao lado de `Tudo`, que traz todas as
+     classes de volta ao foco
+
+   **Correção (12/09/2026)**: `contextKey()` devolvia `STRUCTURAL_KEY` para todo
+   ponto estrutural, mas a legenda alterna as chaves de `legendKeys()`, que são
+   os labels brutos dos membros da família. As duas pontas nunca se encontravam:
+   `defaultEnabledKeys` removia uma chave que não estava no conjunto, e o default
+   caía para `null` — ou seja, as estruturas apareciam. Isolar ou alternar um
+   label estrutural também não tinha efeito. Agora `contextKey()` devolve sempre
+   o label bruto, e é `colorOf()` que decide a cor neutra por
+   `isStructuralLabel()`. Coberto por regressão em `map-data.test.js`.
 
 ### No pipeline de DEBUG
 

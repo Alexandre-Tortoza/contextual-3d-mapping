@@ -13,6 +13,7 @@ referenciados só por id (``visual_embedding_ref`` / ``language_embedding_ref``
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from itertools import groupby
 from typing import Any
 
@@ -26,6 +27,7 @@ from visual_perception.domain.contextual_entities import (
 )
 from visual_perception.domain.embeddings import EmbeddingModality, EmbeddingSpace
 from visual_perception.domain.geometry import BoundingBox, Mask
+from visual_perception.domain.grounding import GroundingPrediction, GroundingStatus, SemanticGrounding
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.region_evidence import evidence_from_dict, evidence_to_dict
@@ -48,13 +50,14 @@ from visual_perception.domain.semantics import (
 )
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
 
-#: Escrita canônica v4; a leitura de v1 a v3 é migrada explicitamente. A v4
+#: Escrita canônica v5: grounding é separado de mask/box de discovery. A leitura
+#: de v1 a v4 é migrada sem fabricar grounding. A v4
 #: acrescenta ``structural_context``: a partição entre evidência contextual
 #: publicada e superfície estrutural preservada como contexto. A v3 havia
 #: acrescentado as hipóteses de entidade contextual (#205) e os sinais de
 #: suporte independentes por claim (#214); um payload anterior simplesmente não
 #: os tem, e desserializa com os campos vazios.
-SUPPORTED_SCHEMA_VERSION = 4
+SUPPORTED_SCHEMA_VERSION = 5
 
 
 # Sinaliza que um payload foi serializado com uma versão de schema que este
@@ -98,7 +101,7 @@ def serialize_observation(observation: VisualObservation) -> dict[str, Any]:
 def deserialize_observation(payload: dict[str, Any]) -> VisualObservation:
     """Reconstrói uma VisualObservation canônica, fazendo o round-trip sem perda de informação."""
     schema_version = payload.get("schema_version")
-    if type(schema_version) is not int or schema_version not in (1, 2, 3, SUPPORTED_SCHEMA_VERSION):
+    if type(schema_version) is not int or schema_version not in (1, 2, 3, 4, SUPPORTED_SCHEMA_VERSION):
         raise UnsupportedSchemaVersionError(
             f"Cannot deserialize schema_version={schema_version!r}; "
             f"this module reads schema_version={SUPPORTED_SCHEMA_VERSION}."
@@ -299,6 +302,7 @@ def _region_to_dict(region: ObservedRegion) -> dict[str, Any]:
         "visual_embedding_ref": region.visual_embedding_ref,
         "language_embedding_ref": region.language_embedding_ref,
         "evidence": [evidence_to_dict(slot) for slot in region.evidence],
+        "grounding": grounding_to_dict(region.grounding),
     }
 
 
@@ -316,6 +320,52 @@ def _region_from_dict(payload: dict[str, Any]) -> ObservedRegion:
         visual_embedding_ref=payload["visual_embedding_ref"],
         language_embedding_ref=payload["language_embedding_ref"],
         evidence=tuple(evidence_from_dict(slot) for slot in payload.get("evidence", ())),
+        grounding=grounding_from_dict(payload.get("grounding")),
+    )
+
+
+# Preserva as máscaras bruta e aceita junto da localização, suporte e falhas.
+# Existe para que auditoria e reprocessamento geométrico dispensem a GPU.
+def grounding_to_dict(grounding: SemanticGrounding | None) -> dict[str, Any] | None:
+    """Serializa grounding sem promover a ausência legada a sucesso."""
+    if grounding is None:
+        return None
+    prediction = grounding.prediction
+    return {
+        "status": grounding.status.value,
+        "semantic_mask": None if grounding.semantic_mask is None else mask_to_dict(grounding.semantic_mask),
+        "support_pixel": None if grounding.support_pixel is None else list(grounding.support_pixel),
+        "diagnostics": grounding.diagnostics,
+        "prediction": {
+            "region_id": prediction.region_id, "concept": prediction.concept,
+            "model_mask": None if prediction.model_mask is None else mask_to_dict(prediction.model_mask),
+            "prompt_box": None if prediction.prompt_box is None else asdict(prediction.prompt_box),
+            "detection_confidence": prediction.detection_confidence,
+            "geometric_confidence": prediction.geometric_confidence,
+            "provenance": [_provenance_to_dict(item) for item in prediction.provenance],
+            "reason": prediction.reason, "status": prediction.status.value,
+            "model_calls": prediction.model_calls, "latency_s": prediction.latency_s,
+            "prompt_boxes": [asdict(box) for box in prediction.prompt_boxes],
+        },
+    }
+
+
+# Lê o registro de grounding e revalida seus tipos; v1–v4 permanecem sem ele.
+def grounding_from_dict(payload: dict[str, Any] | None) -> SemanticGrounding | None:
+    """Reconstrói geometria e proveniência de grounding sem fallback implícito."""
+    if payload is None:
+        return None
+    raw = dict(payload["prediction"])
+    raw["model_mask"] = None if raw["model_mask"] is None else mask_from_dict(raw["model_mask"])
+    raw["prompt_box"] = None if raw["prompt_box"] is None else BoundingBox(**raw["prompt_box"])
+    raw["provenance"] = tuple(_provenance_from_dict(item) for item in raw["provenance"])
+    raw["status"] = GroundingStatus(raw["status"])
+    raw["prompt_boxes"] = tuple(BoundingBox(**box) for box in raw.get("prompt_boxes", ()))
+    support = payload["support_pixel"]
+    return SemanticGrounding(
+        GroundingPrediction(**raw), GroundingStatus(payload["status"]),
+        None if payload["semantic_mask"] is None else mask_from_dict(payload["semantic_mask"]),
+        None if support is None else (int(support[0]), int(support[1])), payload["diagnostics"],
     )
 
 

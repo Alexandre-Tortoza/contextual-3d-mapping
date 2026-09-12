@@ -1,5 +1,7 @@
 """Fronteira pública do módulo sensor-association."""
 
+from .boundary import BoundaryPolicy, boundary_diagnostics, distance_to_mask_boundary
+from .measured_association import SurfaceAssociationResult, associate_measured_map_points
 from .models import (
     AssociationStatus,
     CameraLidarCalibration,
@@ -7,9 +9,12 @@ from .models import (
     MapAnchoredPoint,
     PointVisualAssociation,
     RgbFrame,
+    SemanticAssociationStatus,
+    SurfaceAssociationEvidence,
     VisualRegionEvidence,
 )
 from .projector import associate_map_points, associate_points
+from .surface_visibility import MeasuredSurfaceModel, SurfaceVisibilityConfig
 
 __all__ = [
     "AssociationStatus",
@@ -21,4 +26,13 @@ __all__ = [
     "VisualRegionEvidence",
     "associate_map_points",
     "associate_points",
+    "BoundaryPolicy",
+    "SemanticAssociationStatus",
+    "boundary_diagnostics",
+    "distance_to_mask_boundary",
+    "SurfaceAssociationEvidence",
+    "SurfaceAssociationResult",
+    "MeasuredSurfaceModel",
+    "SurfaceVisibilityConfig",
+    "associate_measured_map_points",
 ]

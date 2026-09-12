@@ -75,6 +75,27 @@ Para toda nova capacidade ou mudança:
 
 Se a posse (ownership) não estiver clara, resolva isso primeiro. Ownership é uma decisão arquitetural.
 
+## Legado
+
+Tudo que já foi rodado é descartável.
+
+Um resultado, artifact, baseline, run de benchmark, schema serializado ou caminho de código que existiu apenas para sustentar uma execução anterior não é um contract: é registro histórico. Este repositório não dá manutenção a legado.
+
+Na prática:
+
+- não escreva código de migração, leitura tolerante ou fallback cuja única razão de existir seja aceitar um formato anterior;
+- quando um schema muda, a versão nova é a única que o código lê e escreve — payloads antigos são regerados, não migrados;
+- quando uma capacidade é substituída, a anterior sai na mesma mudança, junto com seus testes, sua configuração e sua documentação;
+- um braço de comparação histórica vive enquanto a comparação está aberta, e é removido quando ela fecha;
+- resultados de execução são reproduzíveis a partir do código e da configuração versionados; eles não justificam manter código vivo.
+
+O que **não** é legado, e permanece:
+
+- pontos de variação ativos exigidos pela arquitetura, como os estágios contextuais desligáveis por configuração para ablação;
+- validação que recusa uma entrada inválida — recusar um campo não é suportá-lo.
+
+Na dúvida entre manter um caminho antigo e removê-lo: remova. O histórico está no git.
+
 ## Papéis do repositório
 
 Use os diretórios do repositório da seguinte forma:

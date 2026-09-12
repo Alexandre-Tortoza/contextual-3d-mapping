@@ -28,4 +28,6 @@ pythonpath = [
     "../../modules/state-estimation/src",
     "../../modules/geometric-map/src",
     "../../modules/sensor-association/src",
+    "../../modules/semantic-fusion/src",
+    "../../modules/visual-perception/src",
 ]

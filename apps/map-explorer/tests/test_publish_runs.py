@@ -1,0 +1,111 @@
+"""Regressões de persistência e publicação de runs contextuais independentes."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from publish_map_index import publish, save_run
+
+
+# Materializa um mapa pequeno com previews reais para verificar a publicação
+# sem inferência, rosbag ou fixtures volumosas de pesquisa.
+def context_artifact(directory: Path) -> Path:
+    """Cria uma entrada contextual mínima com imagens relativas."""
+    assets = directory / "source-assets"
+    assets.mkdir(parents=True)
+    (assets / "raw.png").write_bytes(b"raw-image")
+    (assets / "overlay.png").write_bytes(b"overlay-image")
+    artifact = directory / "source.json"
+    artifact.write_text(json.dumps({
+        "schema_version": 2, "artifact_type": "contextual_rgb_lidar_slice",
+        "map_id": "shared-map", "map_frame": "map", "points": [], "regions": [],
+        "observations": [{"raw_image_uri": "source-assets/raw.png", "overlay_image_uri": "source-assets/overlay.png"}],
+        "context_summary": {"visual_observation_count": 1, "contextual_point_count": 0},
+    }))
+    return artifact
+
+
+# Um segundo resultado do mesmo mapa deve preservar o primeiro e manter os
+# previews relativos válidos mesmo depois que a origem tiver sido alterada.
+def test_runs_preserve_context_and_previews(tmp_path: Path) -> None:
+    """Confere pastas independentes, fidelidade do conteúdo e índice contextual."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    first = save_run(public, artifact, run_id="first", label="Antes")
+    original = (first / "context.json").read_bytes()
+    payload = json.loads(artifact.read_text())
+    payload["context_summary"]["contextual_point_count"] = 12
+    artifact.write_text(json.dumps(payload))
+    second = save_run(public, artifact, run_id="second", label="Depois")
+    assert first != second
+    assert (first / "context.json").read_bytes() == original
+    assert (second / "context.json").read_bytes() == artifact.read_bytes()
+    assert (first / "source-assets/raw.png").read_bytes() == b"raw-image"
+    maps = public / "maps"
+    maps.mkdir()
+    (maps / "geometry.json").write_text(json.dumps({"schema_version": 1, "map_id": "geometry"}))
+    entries = json.loads(publish(public).read_text())
+    assert [entry["run_id"] for entry in entries] == ["second", "first"]
+    assert all(entry["url"].startswith("/runs/") for entry in entries)
+    assert all(entry["artifact_type"] == "contextual_rgb_lidar_slice" for entry in entries)
+
+
+# Reabrir uma execução não pode duplicar a run nem autorizar sobrescrita quando
+# uma inferência posterior reaproveita o nome com conteúdo diferente.
+def test_repeat_is_idempotent_and_changed_content_cannot_overwrite(tmp_path: Path) -> None:
+    """Protege a identidade imutável inclusive quando apenas o preview muda."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    first = save_run(public, artifact, run_id="stable")
+    assert save_run(public, artifact) == first
+    assert save_run(public, artifact, run_id="stable") == first
+    (artifact.parent / "source-assets/raw.png").write_bytes(b"another-frame")
+    with pytest.raises(FileExistsError):
+        save_run(public, artifact, run_id="stable")
+    assert (first / "source-assets/raw.png").read_bytes() == b"raw-image"
+    assert save_run(public, artifact) != first
+
+
+# Geometria pura e resultados incompletos não são candidatos válidos para a
+# comparação contextual pedida pelo usuário.
+def test_geometry_and_missing_previews_are_not_published(tmp_path: Path) -> None:
+    """Rejeita entradas inválidas antes de publicar uma pasta de run."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    (artifact.parent / "source-assets/raw.png").unlink()
+    with pytest.raises(FileNotFoundError):
+        save_run(public, artifact)
+    artifact.write_text(json.dumps({"schema_version": 1, "map_id": "geometry"}))
+    with pytest.raises(ValueError, match="contexto"):
+        save_run(public, artifact)
+    assert not public.exists()
+
+
+# Um path malformado não pode fazer a publicação copiar arquivos externos ou
+# modificar os metadados reservados de outra run.
+@pytest.mark.parametrize("uri", ["../outside.png", "/tmp/image.png", "https://example.org/image.png", "context.json", ".", "?image"])
+def test_previews_stay_inside_the_run(tmp_path: Path, uri: str) -> None:
+    """Confere a fronteira dos paths de preview."""
+    artifact = context_artifact(tmp_path / "input")
+    (artifact.parent / "context.json").write_text("reserved")
+    payload = json.loads(artifact.read_text())
+    payload["observations"][0]["raw_image_uri"] = uri
+    artifact.write_text(json.dumps(payload))
+    with pytest.raises(ValueError):
+        save_run(tmp_path / "public", artifact)
+
+
+# Pastas temporárias ainda não representam uma run publicada e podem desaparecer
+# durante a renomeação atômica; o catálogo não deve apontar para elas.
+def test_index_ignores_staging_directories(tmp_path: Path) -> None:
+    """Mantém apenas a pasta final da publicação no catálogo."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    saved = save_run(public, artifact, run_id="ready")
+    staging = saved.parent / ".pending"
+    staging.mkdir()
+    (staging / "manifest.json").write_bytes((saved / "manifest.json").read_bytes())
+    (staging / "context.json").write_bytes((saved / "context.json").read_bytes())
+    assert len(json.loads(publish(public).read_text())) == 1

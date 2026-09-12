@@ -70,6 +70,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     context.add_argument("--ground-truth", type=Path, default=None)
     context.add_argument("--output", type=Path, required=True)
+    context.add_argument("--footprint-mode", choices=("semantic_grounding", "legacy_discovery"), default="semantic_grounding")
+    context.add_argument("--disable-boundary-policy", action="store_true", help="ablação explícita da incerteza de boundary")
+    context.add_argument("--registration-sigma-px", type=float, default=0.0)
+    context.add_argument("--visibility-mode", choices=("measured_surfaces", "dense_cells", "legacy_cells"), default="measured_surfaces")
+    context.add_argument("--visibility-geometry", type=Path, help="PCD completo referenciado pelo slice")
+    context.add_argument("--pose-sampling", choices=("interpolated", "nearest"), default="interpolated")
+    context.add_argument("--stuff-discovery-fallback", action="store_true", help="permite discovery de stuff apenas como evidência tentativa")
     window = commands.add_parser(
         "bag-window",
         help="resolve um trecho da rosbag e seus keyframes RGB nos dois relógios do arquivo",
@@ -137,6 +144,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
     elif options.command == "corridor-02-context":
         # Importa dependências opcionais apenas no workflow real, mantendo o
         # demo e os testes mínimos executáveis sem rosbags/Pillow/PyYAML.
+        from sensor_association import BoundaryPolicy
+
         from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
         from .keyframe_inputs import resolve_keyframe_inputs
 
@@ -158,6 +167,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 odometry=odometry,
                 ground_truth=options.ground_truth,
                 pose_anchor_ns=pose_anchor_ns,
+                footprint_mode=options.footprint_mode,
+                boundary_policy=BoundaryPolicy(enabled=not options.disable_boundary_policy,
+                    registration_sigma_px=options.registration_sigma_px,
+                    allow_legacy_discovery=options.footprint_mode == "legacy_discovery"),
+                pose_sampling=options.pose_sampling,
+                visibility_mode=options.visibility_mode,
+                visibility_geometry=options.visibility_geometry,
+                stuff_discovery_fallback=options.stuff_discovery_fallback,
             )
         )
         print(destination)

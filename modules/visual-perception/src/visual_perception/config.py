@@ -16,12 +16,49 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
 from visual_perception.domain.image_area import ImageAreaGeometry, ImageAreaMasks
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
 from visual_perception.domain.region_reasoning import SceneContextMode, TemporalPriorMode
+
+
+# Configura exclusivamente grounding espacial; não altera interpretação, merge,
+# frequência temporal ou a política de incerteza de sensor-association.
+@dataclass(frozen=True)
+class SemanticGroundingConfig:
+    """Localização condicionada ao conceito e segmentação com lifecycle sequencial.
+
+    Os limiares do detector seguem o exemplo oficial do Transformers; não são
+    confiança calibrada. O mínimo de um pixel apenas rejeita máscaras vazias.
+    """
+
+    backend: str = "unavailable"
+    detector_checkpoint: str = "IDEA-Research/grounding-dino-base"
+    segmenter_checkpoint: str = "facebook/sam-vit-huge"
+    device: str = "auto"
+    detection_threshold: float = 0.4
+    text_threshold: float = 0.3
+    duplicate_box_iou: float = 0.85
+    min_mask_area: int = 1
+
+    # Impede configurações silenciosamente inválidas de um stage ablatável.
+    def __post_init__(self) -> None:
+        """Valida backend, unidades e limiares de fronteira."""
+        if self.backend not in {"unavailable", "grounded_sam"}:
+            raise ValueError("semantic_grounding.backend must be unavailable or grounded_sam.")
+        if self.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("semantic_grounding.device must be auto, cpu or cuda.")
+        if not self.detector_checkpoint or not self.segmenter_checkpoint:
+            raise ValueError("Grounding checkpoints must not be empty.")
+        for name in ("detection_threshold", "text_threshold", "duplicate_box_iou"):
+            value = getattr(self, name)
+            if not isfinite(value) or not 0 < value <= 1:
+                raise ValueError(f"semantic_grounding.{name} must be in (0, 1].")
+        if type(self.min_mask_area) is not int or self.min_mask_area < 1:
+            raise ValueError("semantic_grounding.min_mask_area must be a positive integer.")
 
 
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
@@ -745,6 +782,7 @@ class ModuleConfig:
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
     proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
+    semantic_grounding: SemanticGroundingConfig = field(default_factory=SemanticGroundingConfig)
 
     # Valida invariantes que dependem de mais de um campo ao mesmo tempo
     # (o que os ``__post_init__`` das sub-configs não conseguem verificar
@@ -795,6 +833,7 @@ class ModuleConfig:
             ("calibration", CalibrationConfig),
             ("image_area", ImageAreaConfig),
             ("proposal_filter", ProposalFilterConfig),
+            ("semantic_grounding", SemanticGroundingConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
                 payload[key] = config_type(**payload[key])

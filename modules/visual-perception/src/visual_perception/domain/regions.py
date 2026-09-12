@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from visual_perception.domain.geometry import BoundingBox, Mask
+from visual_perception.domain.grounding import SemanticGrounding
 from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.region_evidence import EvidenceSlot, RegionEvidenceSlot
 from visual_perception.domain.semantics import ClaimKind, HypothesisRole, SemanticClaim
@@ -171,6 +172,9 @@ class ObservedRegion:
     visual_embedding_ref: str | None = None
     language_embedding_ref: str | None = None
     evidence: tuple[RegionEvidenceSlot, ...] = field(default_factory=tuple)
+    #: mask/box e embeddings continuam descrevendo discovery. Somente grounding
+    #: autoriza interpretar pixels como suporte espacial do conceito.
+    grounding: SemanticGrounding | None = None
 
     # Valida o region_id, a confiança geométrica em [0, 1], que ao menos
     # uma proposta contribuinte foi preservada (para rastreabilidade até a
@@ -185,6 +189,19 @@ class ObservedRegion:
             )
         if not self.contributing_proposal_ids:
             raise ValueError("ObservedRegion must preserve at least one contributing proposal id.")
+        if self.grounding is not None:
+            prediction = self.grounding.prediction
+            if prediction.region_id != self.region_id:
+                raise ValueError("Grounding must refer to its owning region.")
+            primary = primary_label_claim(self)
+            if primary is None or prediction.concept != primary.value:
+                raise ValueError("Grounding must refer to the current primary concept.")
+            for mask in (prediction.model_mask, self.grounding.semantic_mask):
+                if mask is not None and mask.data.shape != self.mask.data.shape:
+                    raise ValueError("Grounding mask dimensions must match discovery.")
+            semantic_mask = self.grounding.semantic_mask
+            if semantic_mask is not None and (semantic_mask.data & ~self.mask.data).any():
+                raise ValueError("Semantic footprint must be supported by discovery.")
         seen: set[tuple[EvidenceSlot, str | None]] = set()
         for slot in self.evidence:
             if slot.region_id != self.region_id:

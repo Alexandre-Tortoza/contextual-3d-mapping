@@ -19,7 +19,40 @@ const MISSING_CONTEXT_REASON = Object.freeze({
   outside_image: "Projetou-se fora dos limites da imagem.",
   outside_valid_support: "Caiu fora do suporte óptico válido da lente.",
   occluded: "Ficou atrás de uma superfície mais próxima da câmera.",
+  visibility_unconfirmed: "A geometria medida não sustenta uma primeira superfície compatível com este ponto.",
 });
+
+const SURFACE_REASON_COPY = Object.freeze({
+  first_surface_match: "O ponto coincide com a primeira superfície medida.",
+  behind_first_surface: "Outra superfície medida intercepta o raio antes deste ponto.",
+  point_before_measured_surface: "O ponto está antes do suporte que foi possível reconstruir.",
+  no_measured_surface: "Não há suporte medido suficiente neste raio.",
+  contour_anchored_surface: "O contorno da região sustenta este componente 3D.",
+  background_behind_contour: "A superfície está atrás do contorno da região.",
+  insufficient_surface_anchor: "O componente não tem âncora geométrica suficiente no contorno.",
+  no_matching_raster_surface: "O pixel da máscara não confirma a mesma superfície do ponto.",
+});
+
+// Explica separadamente o alcance do raio e o vínculo semântico. Uma paisagem
+// através da janela pode ter RGB válido e continuar sem o label da janela.
+function SurfaceEvidence({ evidence }) {
+  const surface = evidence?.surface_evidence;
+  if (!surface) return null;
+  const meters = (value) => value == null ? "Sem suporte medido" : `${value.toFixed(3)} m`;
+  return (
+    <div className="inspector-block">
+      <h3>Visibilidade e superfície</h3>
+      <div className="classification-grid">
+        <span>Distância do ponto</span><strong>{meters(surface.point_depth_m)}</strong>
+        <span>Primeira superfície</span><strong>{meters(surface.first_surface_depth_m)}</strong>
+        <span>Tolerância geométrica</span><strong>{meters(surface.tolerance_m)}</strong>
+        <span>Vínculo do rótulo</span><strong>{surface.surface_support === "supported" ? "Sustentado em 3D" : surface.surface_support === "uncertain" ? "Incerto · hipótese 2D" : "Não avaliado"}</strong>
+      </div>
+      <p className="empty-copy">{SURFACE_REASON_COPY[surface.reason] ?? surface.reason}</p>
+      {surface.support_reason && <p className="empty-copy">{SURFACE_REASON_COPY[surface.support_reason] ?? surface.support_reason}</p>}
+    </div>
+  );
+}
 
 // Resolve um asset relativo ao JSON servido. Upload local não fornece uma URL
 // de diretório confiável, então esse caso permanece explicitamente indisponível.
@@ -265,14 +298,14 @@ export function Inspector({
               <div className="filter-warning">O ponto selecionado está fora do foco atual da legenda.</div>
             )}
             <div className="selection-title">
-              <span className={`status-tag ${region ? "contextual" : "neutral"}`}>
+              <span className={`status-tag ${evidence?.label ? "contextual" : "neutral"}`}>
                 {region
-                  ? "Evidência VLM"
+                  ? evidence?.label ? "Evidência VLM" : "Hipótese 2D · sem rótulo 3D"
                   : evidence?.status === "associated"
                     ? "Sem evidência publicada"
                     : "Não observado"}
               </span>
-              <h2>{region?.label ?? "Ponto sem evidência contextual"}</h2>
+              <h2>{evidence?.label ?? (evidence?.tentative_label ? `Hipótese: ${evidence.tentative_label}` : "Ponto sem evidência contextual")}</h2>
               <code>{point.geometry_id}</code>
             </div>
 
@@ -304,6 +337,8 @@ export function Inspector({
                 </div>
               </div>
             )}
+
+            <SurfaceEvidence evidence={evidence} />
 
             {evidence && (
               <ObservationPreview observation={observation} region={region} pixel={evidence.pixel} artifactUrl={artifactUrl} />

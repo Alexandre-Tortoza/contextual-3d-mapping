@@ -44,6 +44,17 @@ dominar a ordenação sem que a regra mude.
 evidência: um label sustentado por cinco observações não tem o mesmo peso de um
 sustentado por uma.
 
+Na implementação atual, essa fração é calculada **depois** da escolha e não
+participa do ranking. Uma observação errada com maior confiança pode vencer
+mesmo contra várias outras. Confiança pouco discriminativa transfere a escolha
+aos desempates; `visual_support` e `region_quality` também não comprovam
+grounding espacial. Não há tracking nem consenso temporal robusto nesta regra.
+
+O mapping-runtime agora cria contribuições apenas de associações fortes sobre
+footprints grounded. Tentativas de boundary e falhas de grounding ficam no
+artifact, fora deste ranking. Essa condição melhora a entrada individual;
+não transforma concordância temporal em validação da máscara.
+
 ## Suporte espacial
 
 `measure_spatial_support` mede quanto a vizinhança geométrica concorda com o label

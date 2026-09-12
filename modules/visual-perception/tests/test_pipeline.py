@@ -179,6 +179,7 @@ def test_the_canonical_pipeline_runs_every_context_stage() -> None:
         "hypothesis_support_text",
         "region_refinement",
         "semantic_relations",
+        "semantic_grounding",
     }
     # O audit final observa o estado pós-refinamento, pós-reconciliação e
     # pós-relações: ele é calculado depois de tudo que acrescenta claim ou

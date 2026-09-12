@@ -198,6 +198,7 @@ def compose_command(
     window: Annotated[Path, typer.Option(exists=True, dir_okay=False, help="Artifact de janela.")],
     visual_run: Annotated[Path, typer.Option(exists=True, file_okay=False, help="Run de percepção.")],
     profile_id: Annotated[str, typer.Option(help="Perfil configurado do dataset.")] = "corridor-02",
+    visibility_mode: Annotated[str, typer.Option(help="measured_surfaces, dense_cells ou legacy_cells.")] = "measured_surfaces",
     root: Annotated[Path | None, typer.Option(hidden=True)] = None,
 ) -> None:
     """Compõe percepção e geometria em um artifact contextual."""
@@ -208,23 +209,68 @@ def compose_command(
             segment_id=segment_id,
             window=window,
             visual_run=visual_run,
+            visibility_mode=visibility_mode,
         )
         console.print(f"[green]Artifact contextual:[/green] {artifact}")
     except Exception as error:
         _fail(error)
 
 
-# Inicia o viewer como processo foreground para manter logs e Ctrl+C visíveis.
-@app.command("serve")
-def serve_command(
-    artifact: Annotated[Path, typer.Option(exists=True, dir_okay=False, help="Mapa contextual.")],
-    segment_id: Annotated[str, typer.Option(help="Identidade da geometria.")],
+# Expõe a publicação independente para importar resultados e ablações existentes
+# sem executar inferência ou FAST-LIO outra vez.
+@app.command("publish")
+def publish_command(
+    artifact: Annotated[Path, typer.Option(exists=True, dir_okay=False, help="Mapa com contexto.")],
+    run_id: Annotated[str | None, typer.Option(help="Identidade da run, sem sobrescrever resultados.")] = None,
+    label: Annotated[str | None, typer.Option(help="Nome legível para comparação no viewer.")] = None,
     root: Annotated[Path | None, typer.Option(hidden=True)] = None,
 ) -> None:
-    """Publica um artifact e serve o viewer web em foreground."""
+    """Salva um mapa com contexto e seus previews em uma pasta própria."""
     try:
-        console.print("Viewer: [link=http://localhost:5173]http://localhost:5173[/link]")
-        _workflows(root).serve(artifact, segment_id)
+        entry = _workflows(root).publish_context(artifact, run_id=run_id, label=label)
+        console.print(f"[green]Run salva:[/green] {entry['run_id']}\n{entry['path']}")
+        console.print(f"Viewer: http://localhost:5173/?artifact={entry['url']}")
+    except Exception as error:
+        _fail(error)
+
+
+# Lista o catálogo publicado que também alimenta o seletor web, para que a
+# escolha por run-id use a mesma identidade nas duas interfaces.
+@app.command("runs")
+def runs_command(
+    as_json: Annotated[bool, typer.Option("--json", help="Emite metadados para automação.")] = False,
+    root: Annotated[Path | None, typer.Option(hidden=True)] = None,
+) -> None:
+    """Lista as runs com contexto disponíveis para comparação."""
+    try:
+        entries = Project(root).available_context_runs()
+        if as_json:
+            typer.echo(json.dumps(entries, indent=2, ensure_ascii=False))
+            return
+        if not entries:
+            console.print("Nenhuma run com contexto publicada. Use publish --artifact <mapa.json>.")
+            return
+        table = Table(title="Runs com contexto")
+        for column in ("Run ID", "Nome", "Frames", "Pontos com contexto"):
+            table.add_column(column, overflow="fold")
+        for entry in entries:
+            table.add_row(entry["run_id"], entry["label"], str(entry["frame_count"]), str(entry.get("contextual_point_count", "—")))
+        console.print(table)
+    except Exception as error:
+        _fail(error)
+
+
+# Seleciona uma run salva ou publica um novo artifact antes de abrir o viewer.
+@app.command("serve")
+def serve_command(
+    artifact: Annotated[Path | None, typer.Option(exists=True, dir_okay=False, help="Mapa contextual a publicar.")] = None,
+    segment_id: Annotated[str | None, typer.Option(hidden=True)] = None,
+    run_id: Annotated[str | None, typer.Option(help="Run salva a abrir; use runs para listar.")] = None,
+    root: Annotated[Path | None, typer.Option(hidden=True)] = None,
+) -> None:
+    """Serve as runs com contexto; reutiliza o viewer local quando disponível."""
+    try:
+        _workflows(root).serve(artifact, segment_id, run_id=run_id)
     except Exception as error:
         _fail(error)
 
@@ -436,6 +482,8 @@ def _interactive_menu(root: Path | None = None) -> None:
                 "Extrair keyframes de um trecho ou bag",
                 "Rodar visual-perception em frames existentes",
                 "Compor artifact contextual",
+                "Publicar mapa com contexto",
+                "Comparar runs com contexto",
                 "Servir viewer web",
                 "Validar estrutura do projeto",
                 "Sair",
@@ -488,13 +536,24 @@ def _interactive_menu(root: Path | None = None) -> None:
                 segment_id = window.name.removesuffix("-window.json")
                 artifact = workflows.compose(profile, segment_id=segment_id, window=window, visual_run=run)
                 console.print(f"[green]Artifact contextual:[/green] {artifact}")
-            elif choice == "Servir viewer web":
-                artifacts = sorted((workflows.project.root / "artifacts").glob("*-context.json"))
-                artifact = Path(
-                    questionary.select("Artifact:", choices=[str(item) for item in artifacts]).ask()
-                )
-                segment_id = artifact.name.removesuffix("-context.json")
-                workflows.serve(artifact, segment_id)
+            elif choice == "Publicar mapa com contexto":
+                artifacts = workflows.project.available_context_artifacts()
+                if not artifacts:
+                    raise FileNotFoundError("nenhum mapa de contexto local disponível para publicar")
+                selected = questionary.select("Mapa com contexto:", choices=[str(item) for item in artifacts]).ask()
+                if selected:
+                    entry = workflows.publish_context(Path(selected))
+                    console.print(f"[green]Run salva:[/green] {entry['run_id']}")
+            elif choice in {"Comparar runs com contexto", "Servir viewer web"}:
+                runs = workflows.project.available_context_runs()
+                if not runs:
+                    raise FileNotFoundError("nenhuma run salva; use Publicar mapa com contexto")
+                selected = questionary.select("Run com contexto:", choices=[
+                    questionary.Choice(f"{entry['label']} · {entry['frame_count']} frames · {entry['run_id']}", value=entry["run_id"])
+                    for entry in runs
+                ]).ask()
+                if selected:
+                    workflows.serve(run_id=selected)
             else:
                 issues = workflows.project.validate()
                 if not issues:

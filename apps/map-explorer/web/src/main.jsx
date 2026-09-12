@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import { Canvas } from "@react-three/fiber";
 import { PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
@@ -8,12 +9,12 @@ import { CameraRig } from "./camera-rig.jsx";
 import { Inspector } from "./inspector.jsx";
 import {
   DIMMED_COLOR,
-  STRUCTURAL_KEY,
   StaticArtifactGeometrySource,
   allLegendKeys,
   buildContextPalette,
   contextKey,
   countSupportStates,
+  geometryIdentity,
   legendKeys,
   mapEntriesFromIndex,
   measureMap,
@@ -27,7 +28,7 @@ import "./styles.css";
 
 const DEFAULT_MAP_URL = "/current-map.json";
 const MAP_INDEX_URL = "/maps/index.json";
-const FALLBACK_MAPS = Object.freeze([{ url: DEFAULT_MAP_URL, label: "Mapa atual" }]);
+const FALLBACK_MAPS = Object.freeze([]);
 
 // Cor única da camada atenuada. Fica fora do componente para que o builder de
 // geometria continue memoizável por identidade da função.
@@ -130,11 +131,152 @@ function SpatialReference({ metrics }) {
   );
 }
 
+// Desenha a dica flutuante fora do painel, que recorta o próprio conteúdo.
+// Existe porque a legenda é estreita por design: nomes cortados e ações com
+// ícone precisam de um lugar para dizer o que são sem alargar a coluna.
+function HoverTip({ text, anchor }) {
+  const style = {
+    left: Math.max(8, Math.min(anchor.left, window.innerWidth - 268)),
+    top: anchor.placement === "above" ? anchor.top : anchor.bottom,
+    transform: anchor.placement === "above" ? "translateY(-100%)" : "none",
+  };
+  return createPortal(
+    <span className="hover-tip" role="tooltip" style={style}>{text}</span>,
+    document.body,
+  );
+}
+
+// Só uma dica fica aberta por vez. O registro é de módulo porque cada linha da
+// legenda tem a sua, e o ponteiro pode sair de uma linha sem passar por outra
+// quando a lista rola sob o cursor.
+let openTip = null;
+
+// Controla uma dica ancorada em um elemento da legenda. Com `whenTruncated`,
+// mede o elemento e só arma a dica quando o texto não coube — é o caso dos
+// rótulos, que variam muito de comprimento e não devem ganhar tooltip redundante.
+// Sem ele, a dica vale sempre: é o caso dos botões de ação, que são só ícone.
+function useHoverTip(text, { whenTruncated = false } = {}) {
+  const ref = useRef(null);
+  const [eligible, setEligible] = useState(!whenTruncated);
+  const [anchor, setAnchor] = useState(null);
+  const dismiss = useRef(null);
+  if (!dismiss.current) dismiss.current = () => setAnchor(null);
+
+  useEffect(() => {
+    if (!whenTruncated) return undefined;
+    const node = ref.current;
+    if (!node) return undefined;
+    const measure = () => setEligible(node.scrollWidth > node.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [text, whenTruncated]);
+
+  const place = () => {
+    const node = ref.current;
+    if (!node) return;
+    if (openTip && openTip !== dismiss.current) openTip();
+    openTip = dismiss.current;
+    const box = node.getBoundingClientRect();
+    setAnchor({
+      left: box.left - 9,
+      top: box.top - 8,
+      bottom: box.bottom + 8,
+      placement: box.top > 96 ? "above" : "below",
+    });
+  };
+  const hide = () => {
+    if (openTip === dismiss.current) openTip = null;
+    dismiss.current();
+  };
+
+  // Libera o registro se o elemento sair da tela com a dica aberta: a lista
+  // recolhe famílias e troca de mapa, e a próxima dica não deve ficar presa
+  // atrás de um dono que não existe mais.
+  useEffect(() => () => {
+    if (openTip === dismiss.current) openTip = null;
+  }, []);
+
+  // Reancora enquanto a dica está aberta: a lista da legenda rola, e uma dica
+  // de posição fixa ficaria apontando para a linha errada.
+  useEffect(() => {
+    if (!anchor) return undefined;
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [anchor !== null]);
+
+  const handlers = eligible
+    ? { onMouseEnter: place, onMouseLeave: hide, onFocus: place, onBlur: hide }
+    : {};
+  return { ref, handlers, tip: eligible && anchor ? <HoverTip text={text} anchor={anchor} /> : null };
+}
+
+// Desenha o botão que liga e desliga uma linha da legenda, seja uma família ou
+// um label bruto. Concentra swatch, rótulo, contagem e dica para que os dois
+// níveis da lista tenham exatamente o mesmo comportamento de leitura.
+function LegendToggle({ label, count, state, member = false, onClick }) {
+  const { ref, handlers, tip } = useHoverTip(label, { whenTruncated: true });
+  const pressed = state === "partial" ? "mixed" : state === "on";
+  return (
+    <button
+      type="button"
+      className="legend-toggle"
+      aria-pressed={pressed}
+      aria-label={`${label}, ${count.toLocaleString("pt-BR")} pontos`}
+      onClick={onClick}
+      onFocus={handlers.onFocus}
+      onBlur={handlers.onBlur}
+    >
+      <i className={member ? "legend-dot" : "legend-swatch"} />
+      <span
+        className="legend-label"
+        ref={ref}
+        onMouseEnter={handlers.onMouseEnter}
+        onMouseLeave={handlers.onMouseLeave}
+      >
+        {label}
+      </span>
+      <b>{count.toLocaleString("pt-BR")}</b>
+      {tip}
+    </button>
+  );
+}
+
+// Botão de ação de uma linha: só ícone, com a dica explicando o que ele faz
+// sobre qual classe. Mantém a lista legível quando há muitas linhas, já que a
+// mesma palavra repetida em cada uma competia com os nomes das classes.
+function LegendAction({ hint, className = "", children, ...rest }) {
+  const { ref, handlers, tip } = useHoverTip(hint);
+  return (
+    <button type="button" className={`legend-action ${className}`.trim()} aria-label={hint}
+      ref={ref} {...handlers} {...rest}>
+      {children}
+      {tip}
+    </button>
+  );
+}
+
+// Compara dois recortes de foco. Existe para que os botões do painel saibam
+// quando não têm mais nada a fazer: `null` significa "todas as chaves", e dois
+// conjuntos com as mesmas chaves são o mesmo recorte, ainda que sejam objetos
+// diferentes a cada alternância.
+function sameKeySet(left, right) {
+  if (left === right) return true;
+  if (left === null || right === null) return false;
+  return left.size === right.size && [...left].every((key) => right.has(key));
+}
+
 // Oferece a leitura e os filtros das cores em um painel pequeno e recolhível,
 // mantendo a sidebar reservada à evidência do ponto selecionado.
 function ContextLegend({
   entries,
   enabledKeys,
+  defaultKeys,
   focusedPointCount,
   totalPointCount,
   supportRules,
@@ -142,6 +284,7 @@ function ContextLegend({
   onToggle,
   onIsolate,
   onReset,
+  onFocusAll,
   onToggleSupport,
 }) {
   const [expanded, setExpanded] = useState(new Set());
@@ -151,19 +294,50 @@ function ContextLegend({
     else next.add(key);
     return next;
   });
+
+  // A barra de cada linha compara classes dentro da própria seção. Contra o
+  // total do mapa, ou contra a cobertura visual, toda classe publicada viraria
+  // um traço invisível — e é justamente a classe rara que interessa ler.
+  const peakOf = (semantic) => entries.reduce(
+    (peak, entry) => (entry.semantic === semantic ? Math.max(peak, entry.count) : peak),
+    0,
+  ) || 1;
+  const peaks = { published: peakOf(true), coverage: peakOf(false) };
+  const share = (count, peak) => `${Math.max((count / peak) * 100, 2)}%`;
+  const isOn = (key) => enabledKeys === null || enabledKeys.has(key);
+  const hiddenCount = entries.filter((entry) => !legendKeys(entry).some(isOn)).length;
+  const focusShare = totalPointCount > 0 ? (focusedPointCount / totalPointCount) * 100 : 0;
+  const filtered = focusedPointCount < totalPointCount;
+  const everythingOn = entries.every((entry) => legendKeys(entry).every(isOn));
+  const atDefault = sameKeySet(enabledKeys, defaultKeys);
+
   return (
     <details className="map-overlay context-legend" open>
       <summary>
         <span>Legenda</span>
-        <small>{focusedPointCount.toLocaleString("pt-BR")} em foco / {totalPointCount.toLocaleString("pt-BR")}</small>
+        <small>
+          <b>{focusedPointCount.toLocaleString("pt-BR")}</b>
+          <span className="of-total"> / {totalPointCount.toLocaleString("pt-BR")}</span> pts
+        </small>
+        <b className="legend-caret" aria-hidden="true">›</b>
+        {filtered && <div className="legend-focus-bar" style={{ "--focus-share": `${focusShare}%` }} />}
       </summary>
       <div className="legend-actions">
-        <span>Evidência contextual</span>
-        <button type="button" onClick={onReset}>Focar tudo</button>
+        <span>
+          {hiddenCount > 0
+            ? `${Math.round(focusShare)}% em foco · ${hiddenCount} oculta${hiddenCount > 1 ? "s" : ""}`
+            : filtered ? `${Math.round(focusShare)}% em foco` : "Mapa inteiro em foco"}
+        </span>
+        {defaultKeys !== null && (
+          <LegendAction hint="Padrão: esconde as estruturas genéricas"
+            onClick={onReset} disabled={atDefault}>Padrão</LegendAction>
+        )}
+        <LegendAction hint="Tudo: traz todas as classes de volta ao foco"
+          onClick={onFocusAll} disabled={everythingOn}>Tudo</LegendAction>
       </div>
       <div className="legend-support">
         <strong>Sustentação da evidência</strong>
-        <label>
+        <label className={supportCounts.weak === 0 ? "empty" : ""}>
           <input
             type="checkbox"
             checked={supportRules.dimWeak}
@@ -172,7 +346,7 @@ function ContextLegend({
           <span>Atenuar evidência com suporte fraco</span>
           <b>{supportCounts.weak.toLocaleString("pt-BR")}</b>
         </label>
-        <label>
+        <label className={supportCounts.uncorroborated === 0 ? "empty" : ""}>
           <input
             type="checkbox"
             checked={supportRules.dimUncorroborated}
@@ -185,7 +359,8 @@ function ContextLegend({
       <div className="legend-list">
         {entries.map((entry, index) => {
           const keys = legendKeys(entry);
-          const enabled = enabledKeys === null || keys.every((key) => enabledKeys.has(key));
+          const activeKeys = keys.filter((key) => enabledKeys === null || enabledKeys.has(key)).length;
+          const state = activeKeys === keys.length ? "on" : activeKeys === 0 ? "off" : "partial";
           const detailed = entry.members.length > 1;
           const open = expanded.has(entry.key);
           return (
@@ -195,32 +370,38 @@ function ContextLegend({
                   {entry.semantic ? "Evidência publicada" : "Cobertura visual"}
                 </div>
               )}
-              <div>
-                <div className={`legend-row ${enabled ? "" : "disabled"}`}>
-                  <button type="button" className="legend-toggle" aria-pressed={enabled} onClick={() => onToggle(keys)}>
-                    <i style={{ background: `rgb(${entry.color.join(" ")})` }} />
-                    <span>{entry.label}</span>
-                    <b>{entry.count.toLocaleString("pt-BR")}</b>
-                  </button>
+              <div className="legend-group">
+                <div
+                  className={`legend-row state-${state}`}
+                  style={{
+                    "--tint": entry.color.join(" "),
+                    "--share": share(entry.count, entry.semantic ? peaks.published : peaks.coverage),
+                  }}
+                >
+                  <LegendToggle label={entry.label} count={entry.count} state={state}
+                    onClick={() => onToggle(keys)} />
                   {detailed && (
-                    <button type="button" className="isolate-action" aria-expanded={open}
-                      aria-label={`Labels de ${entry.label}`} onClick={() => toggleExpanded(entry.key)}>
-                      {open ? "▾" : `${entry.members.length}`}
-                    </button>
+                    <LegendAction className={`expand-action ${open ? "" : "closed"}`} aria-expanded={open}
+                      hint={`${open ? "Recolher" : "Ver"} os ${entry.members.length} labels de ${entry.label}`}
+                      onClick={() => toggleExpanded(entry.key)}>
+                      <span>{entry.members.length}</span><b>›</b>
+                    </LegendAction>
                   )}
-                  <button type="button" className="isolate-action" onClick={() => onIsolate(keys)}>Isolar</button>
+                  <LegendAction className="isolate-action" hint={`Focar somente ${entry.label}`}
+                    onClick={() => onIsolate(keys)}>◎</LegendAction>
                 </div>
                 {detailed && open && entry.members.map((member) => {
                   const memberEnabled = enabledKeys === null || enabledKeys.has(member.key);
                   return (
-                    <div className={`legend-row legend-member ${memberEnabled ? "" : "disabled"}`} key={member.key}>
-                      <button type="button" className="legend-toggle" aria-pressed={memberEnabled}
-                        onClick={() => onToggle([member.key])}>
-                        <i />
-                        <span>{member.label}</span>
-                        <b>{member.count.toLocaleString("pt-BR")}</b>
-                      </button>
-                      <button type="button" className="isolate-action" onClick={() => onIsolate([member.key])}>Isolar</button>
+                    <div
+                      className={`legend-row legend-member state-${memberEnabled ? "on" : "off"}`}
+                      key={member.key}
+                      style={{ "--share": share(member.count, entry.members[0].count) }}
+                    >
+                      <LegendToggle label={member.label} count={member.count} member
+                        state={memberEnabled ? "on" : "off"} onClick={() => onToggle([member.key])} />
+                      <LegendAction className="isolate-action" hint={`Focar somente ${member.label}`}
+                        onClick={() => onIsolate([member.key])}>◎</LegendAction>
                     </div>
                   );
                 })}
@@ -240,9 +421,9 @@ function MapSelector({ entries, value, onChange }) {
   const known = entries.some((entry) => entry.url === value);
   return (
     <label className="map-overlay map-selector">
-      <span>Mapa</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        {!known && <option value={value}>Mapa solicitado pela URL</option>}
+      <span>Run</span>
+      <select aria-label="Run com contexto" value={value} onChange={(event) => onChange(event.target.value)}>
+        {!known && <option value={value}>Run aberta pela URL</option>}
         {entries.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}
       </select>
     </label>
@@ -286,7 +467,7 @@ function NavigationHelp({ onClose }) {
 // estados reposicionar ou reconstruir os demais implicitamente.
 function Explorer() {
   const [artifactPath, setArtifactPath] = useState(
-    () => new URLSearchParams(window.location.search).get("artifact") ?? DEFAULT_MAP_URL,
+    () => new URLSearchParams(window.location.search).get("artifact"),
   );
   const [availableMaps, setAvailableMaps] = useState(FALLBACK_MAPS);
   const [supportRules, setSupportRules] = useState({ dimWeak: true, dimUncorroborated: false });
@@ -312,14 +493,16 @@ function Explorer() {
   const palette = useMemo(() => buildContextPalette(points), [points]);
   const supportCounts = useMemo(() => countSupportStates(points), [points]);
 
-  // Calcula o default de enabledContextKeys: todas as chaves exceto estrutural.
-  // Usado em dois contextos: ao abrir o artifact e ao resetar o filtro.
+  // Calcula o default de enabledContextKeys: todas as chaves exceto as da
+  // família estrutural, que são os labels genéricos de superfície. Usado em
+  // dois contextos: ao abrir o artifact e ao resetar o filtro.
   const defaultEnabledKeys = useMemo(() => {
     if (!palette.legend || palette.legend.length === 0) return null;
-    const allKeys = allLegendKeys(palette.legend);
-    const next = new Set(allKeys);
-    next.delete(STRUCTURAL_KEY);
-    return next.size === allKeys.length ? null : next; // null se nada foi excluído
+    const structural = palette.legend.find((entry) => entry.structural);
+    if (!structural) return null; // null quando não há o que esconder
+    const next = new Set(allLegendKeys(palette.legend));
+    legendKeys(structural).forEach((key) => next.delete(key));
+    return next;
   }, [palette.legend]);
 
   const { focused, dimmed } = useMemo(
@@ -336,6 +519,9 @@ function Explorer() {
   // substituir a fonte estática por chunks sem reescrever a interface.
   const openSlice = async (payload, resolvedUrl = null) => {
     const validated = validateSlice(payload);
+    if (validated.artifact_type !== "contextual_rgb_lidar_slice") {
+      throw new Error("Selecione uma run com contexto. Mapas de geometria pura não fazem parte desta comparação.");
+    }
     const source = new StaticArtifactGeometrySource(validated);
     const geometry = await source.getGeometry();
     const loadedPoints = geometry.chunks.flatMap((chunk) => chunk.points);
@@ -353,6 +539,7 @@ function Explorer() {
   // usuário troca de mapa antes do término do download. Após abrir, aplica o
   // default de estrutural oculto.
   useEffect(() => {
+    if (!artifactPath) return undefined;
     const resolvedUrl = new URL(artifactPath, window.location.href).href;
     const controller = new AbortController();
     setError(null);
@@ -378,18 +565,28 @@ function Explorer() {
     }
   }, [defaultEnabledKeys]);
 
-  // Lê o índice publicado uma única vez. A ausência do índice não é erro: um
-  // artifact aberto por URL continua abrindo com o seletor mínimo.
+  // Atualiza o catálogo sem tirar o usuário da run escolhida. Na primeira
+  // abertura, seleciona a mais recente; URLs explícitas continuam estáveis.
   useEffect(() => {
     const controller = new AbortController();
-    fetch(MAP_INDEX_URL, { signal: controller.signal })
+    const refresh = () => fetch(MAP_INDEX_URL, { signal: controller.signal, cache: "no-store" })
       .then((response) => (response.ok ? response.json() : []))
       .then((payload) => {
         const entries = mapEntriesFromIndex(payload);
-        if (entries.length) setAvailableMaps(entries);
+        setAvailableMaps(entries);
+        setArtifactPath((current) => current ?? entries[0]?.url ?? DEFAULT_MAP_URL);
       })
-      .catch(() => undefined);
-    return () => controller.abort();
+      .catch((failure) => {
+        if (failure.name !== "AbortError") setArtifactPath((current) => current ?? DEFAULT_MAP_URL);
+      });
+    refresh();
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   // Mantém a URL compartilhável sincronizada sem recarregar a aplicação nem
@@ -451,6 +648,9 @@ function Explorer() {
   return (
     <main className="app-shell">
       {error && <p role="alert" className="error-banner">{error}</p>}
+      {!slice && error && availableMaps.length > 0 && (
+        <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
+      )}
       {!slice && !error && <div className="loading-stage" aria-label="Carregando mapa" />}
       {slice && (
         <div className={`workspace ${dockOpen ? "with-dock" : ""}`}>
@@ -466,7 +666,7 @@ function Explorer() {
                   onFocus={(point) => cameraActions.current?.focus(point)} />
                 <SelectionMarker point={selected} radius={Math.min(Math.max(metrics.diagonal * 0.0015, 0.04), 0.35)} />
                 <CameraRig ref={cameraActions} metrics={metrics} flyMode={flyMode}
-                  mapKey={slice.map_id} reducedMotion={reducedMotion} />
+                  mapKey={geometryIdentity(slice)} reducedMotion={reducedMotion} />
               </Canvas>
               <CameraToolbar flyMode={flyMode} hasSelection={Boolean(selected)}
                 onReset={() => cameraActions.current?.reset()}
@@ -477,11 +677,13 @@ function Explorer() {
                 onHelp={() => setHelpOpen((value) => !value)} />
               <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
               <ContextLegend entries={palette.legend} enabledKeys={enabledContextKeys}
+                defaultKeys={defaultEnabledKeys}
                 focusedPointCount={focused.length} totalPointCount={points.length}
                 supportRules={supportRules} supportCounts={supportCounts}
                 onToggleSupport={(key) => setSupportRules((current) => ({ ...current, [key]: !current[key] }))}
                 onToggle={toggleContextKeys}
                 onIsolate={(keys) => setEnabledContextKeys(new Set(keys))}
+                onFocusAll={() => setEnabledContextKeys(new Set(allLegendKeys(palette.legend)))}
                 onReset={() => setEnabledContextKeys(defaultEnabledKeys)} />
               {helpOpen && <NavigationHelp onClose={() => setHelpOpen(false)} />}
               {!dockOpen && (

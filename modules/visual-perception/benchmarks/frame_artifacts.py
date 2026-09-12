@@ -38,11 +38,13 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from render_layers import binary_mask_image, blend_masks, draw_boxes, draw_labels
+from render_layers import DrawableShape, binary_mask_image, blend_masks, draw_boxes, draw_labels
 from render_overlay import proposal_shapes, region_shapes, structural_context_shapes
 from visual_perception.application.observation_diagnostics import ObservationDiagnostics
 from visual_perception.application.pipeline import PipelineResult
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.infrastructure.debug_recorder import DebugRecorder
+from visual_perception.infrastructure.embedding_archive import write_embedding_archive
 from visual_perception.infrastructure.serialization import serialize_observation
 
 #: Versão do layout de artifacts por frame, gravada no manifest. Um leitor que
@@ -117,6 +119,9 @@ def write_frame_artifacts(
         mapa de nome lógico do artifact para o caminho relativo a ``frame_dir``.
     """
     frame_dir.mkdir(parents=True, exist_ok=True)
+    DebugRecorder(frame_dir / "DEBUG").record_grounding(
+        frame_dir.name, [region.grounding.diagnostics for region in result.observation.regions if region.grounding is not None]
+    )
     written: dict[str, str] = {}
 
     # Um write_text por artifact, com o nome lógico registrado no mesmo passo,
@@ -132,13 +137,10 @@ def write_frame_artifacts(
     # ``artifact_ref`` de cada slot, e o arquivo abaixo é o artifact que aquela
     # referência resolve. Embutí-los no JSON inflaria a observação canônica em
     # duas ordens de grandeza sem tornar nada mais auditável.
-    embeddings = {
-        embedding.embedding_id: np.asarray(embedding.vector, dtype=np.float32)
-        for embedding in (*result.visual_embeddings, *result.language_embeddings)
-    }
-    if embeddings:
+    all_embeddings = (*result.visual_embeddings, *result.language_embeddings)
+    if all_embeddings:
         embeddings_path = frame_dir / "embeddings.npz"
-        np.savez_compressed(embeddings_path, **embeddings)
+        write_embedding_archive(embeddings_path, all_embeddings)
         _record("embeddings", embeddings_path)
 
     raw_image = _to_image(inputs.raw)
@@ -188,6 +190,19 @@ def write_frame_artifacts(
     draw_labels(draw_boxes(blend_masks(raw_image, regions), regions), regions).save(overlay_path)
     _record("regions_overlay", overlay_path)
 
+    # O preview semântico usa somente a máscara explicitamente grounded. As
+    # camadas anteriores continuam mostrando discovery para comparação.
+    grounded_shapes = [
+        DrawableShape(region.region_id, region.grounding.semantic_mask,
+            region.grounding.semantic_mask.bounding_box(), region.grounding.prediction.concept)
+        for region in result.observation.regions
+        if region.grounding is not None and region.grounding.semantic_mask is not None
+    ]
+    if any(region.grounding is not None for region in result.observation.regions):
+        semantic_path = frame_dir / "semantic-overlay.png"
+        draw_labels(blend_masks(raw_image, grounded_shapes), grounded_shapes).save(semantic_path)
+        _record("semantic_overlay", semantic_path)
+
     # A camada do contexto estrutural usa alpha baixo de propósito: ela existe
     # para responder "o que foi suprimido, e onde", e não para competir
     # visualmente com a evidência que o módulo de fato publica.
@@ -208,6 +223,7 @@ def write_frame_artifacts(
         "ego_vehicle_mask_applied": diagnostics.ego.applied,
         "valid_fisheye_mask": "applied" if diagnostics.fisheye.applied else "unavailable",
         **asdict(diagnostics),
+        "semantic_grounding": [region.grounding.diagnostics for region in result.observation.regions if region.grounding is not None],
         # O histograma por motivo vive em ``diagnostics.suppressed_regions``.
         # Esta lista é a rastreabilidade por região que o histograma não dá:
         # qual região saiu do output público, com que conceito, e por quê.

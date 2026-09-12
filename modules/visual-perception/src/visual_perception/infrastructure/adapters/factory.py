@@ -24,6 +24,7 @@ from visual_perception.infrastructure.adapters.multimodal_reasoning_backend impo
     RealMultimodalReasoningAdapter,
 )
 from visual_perception.infrastructure.adapters.region_discovery_backend import RealRegionDiscoveryAdapter
+from visual_perception.infrastructure.adapters.semantic_grounding_backend import RealSemanticGroundingAdapter
 from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
 from visual_perception.infrastructure.fakes.fake_language_encoder import FakeLanguageAlignedEncoder
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
@@ -46,6 +47,7 @@ def create_perception_ports(
         feature_extractor=_feature_extractor_for(config, lifecycle),
         language_encoder=_language_encoder_for(config, lifecycle),
         multimodal_reasoner=_multimodal_reasoner_for(config, lifecycle),
+        semantic_grounder=(RealSemanticGroundingAdapter(lifecycle) if config.semantic_grounding.backend == "grounded_sam" else None),
     )
 
 

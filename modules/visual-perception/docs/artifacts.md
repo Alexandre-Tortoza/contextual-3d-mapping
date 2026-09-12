@@ -269,6 +269,14 @@ no `PipelineResult` e são persistidos num `.npz` comprimido, indexado exatament
 mesmos identificadores que os slots citam. A observação canônica continua sendo
 referências-only: nenhum vetor é embutido nela.
 
+A escrita e a resolução desse `.npz` são fronteira pública do módulo, não só um detalhe
+de `benchmarks/`: `write_embedding_archive`/`resolve_embedding_vector`
+(`src/visual_perception/infrastructure/embedding_archive.py`, exportadas em
+`visual_perception/__init__.py`) são o único caminho suportado para ir de
+`embedding_id`/`artifact_ref` a vetor. Um consumidor fora do módulo nunca deve abrir o
+`.npz` com `np.load` diretamente — isso o acopla a um detalhe de formato que só
+`visual-perception` tem o direito de mudar.
+
 ### Campos de `diagnostics.json`
 
 `diagnostics.json` responde, sem abrir imagem nenhuma, o que aconteceu entre as proposals

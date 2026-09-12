@@ -15,11 +15,12 @@ dela só apareceram na execução real, com a suíte inteira verde. Leia
 - Data do handoff: 2026-09-10.
 - Branch: `main`.
 - Revisões desta rodada: `39e6888`, `3c546a7`, `4ce4e3c`, `89ed955`.
-- `prompt_version` atual: `v7`. Os prompts de cena e de região são byte-idênticos aos do
-  `v6`; o `v7` acrescentou o prompt de **relação**.
-- `schema_version` da `VisualObservation`: **3**. Ela ganhou `entity_hypotheses` e os
-  sinais de suporte por claim; payloads v1 e v2 continuam legíveis.
-- Layout de artifacts por frame: **`frames/2`**, com `embeddings.npz`.
+- Versões: a fonte da verdade é o código, não este documento —
+  `MultimodalReasoningConfig.prompt_version` (`config.py`),
+  `SUPPORTED_SCHEMA_VERSION` (`infrastructure/serialization.py`) e
+  `FRAME_ARTIFACT_LAYOUT_VERSION` (`benchmarks/frame_artifacts.py`). Na data desta
+  revisão (2026-09-12) são `v8`, **5** e **`frames/3`**. O `v7` acrescentou o prompt de
+  **relação**; o schema 3 acrescentou `entity_hypotheses` e os sinais de suporte por claim.
 - Suíte: 491 verificações determinísticas mais os testes de GPU, todas verdes por
   `make verify`.
 
@@ -47,7 +48,18 @@ Inalterados. Use exatamente estes IDs, nesta ordem, com estes hashes:
 | `corridor-02-008` | `2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b` |
 | `corridor-02-017` | `f7ea622db269c79244af5dfc5ae66bd5d1fbe2b5babee60cb51d71acccd5a20a` |
 
-## Baselines que não devem ser apagadas
+## Runs registrados desta rodada
+
+Registro histórico, sem força normativa. Pela regra de legado do `AGENTS.md`, tudo que já
+foi rodado é descartável: estes runs são reproduzíveis a partir da revisão e da
+configuração indicadas, e não justificam manter código ou formato antigo vivo. O que eles
+ensinaram está no texto abaixo, não nos artifacts.
+
+> **A proveniência destes runs é inválida.** `validate_reference_pipeline.py` constrói a
+> `ImageObservation` de cada frame com o fixture de teste `image_observation()`, que só
+> sobrescreve `observation_id`: todo frame sai com o mesmo `timestamp`, `sequence_index=0`
+> e `uri="mem://frame-0001"`. As conclusões sobre regiões, claims e eco continuam de pé;
+> qualquer uso a jusante que dependa de timestamp ou de origem do artifact não.
 
 ```text
 benchmarks/results/samples/old/20260908T131207Z/   baseline sem estágios contextuais (03ec593)

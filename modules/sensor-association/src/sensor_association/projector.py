@@ -5,10 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from math import atan2, hypot, sqrt
 
-from geometric_map import GeometryPoint, GeometryReference
+import numpy as np
+from geometric_map import GeometryPoint, GeometryReference, PointCloudGeometry
 
 from contextual_mapping_contracts import ObservationReference, RigidTransform
 
+from .boundary import BoundaryPolicy, distance_to_mask_boundary
+from .camera_geometry import project_coordinates, transform_coordinates
 from .models import (
     AssociationStatus,
     CameraLidarCalibration,
@@ -16,6 +19,7 @@ from .models import (
     MapAnchoredPoint,
     PointVisualAssociation,
     RgbFrame,
+    SemanticAssociationStatus,
     VisualRegionEvidence,
 )
 
@@ -96,7 +100,7 @@ def _project(
 # limites e não sobreposição, sem duplicar a validação.
 def _region_index(
     regions: tuple[VisualRegionEvidence, ...], rgb: RgbFrame
-) -> dict[tuple[int, int], VisualRegionEvidence]:
+) -> dict[tuple[int, int], tuple[VisualRegionEvidence, float]]:
     """Valida as regiões visuais e devolve o índice pixel→região."""
     occupied_region_pixels: set[tuple[int, int]] = set()
     region_ids: set[str] = set()
@@ -109,7 +113,14 @@ def _region_index(
         if occupied_region_pixels.intersection(region.pixels):
             raise ValueError("visual regions must not overlap.")
         occupied_region_pixels.update(region.pixels)
-    return {pixel: region for region in regions for pixel in region.pixels}
+    indexed = {}
+    for region in regions:
+        mask = np.zeros((rgb.height, rgb.width), dtype=np.bool_)
+        for x, y in region.pixels:
+            mask[y, x] = True
+        distance = distance_to_mask_boundary(mask)
+        indexed.update({pixel: (region, float(distance[pixel[1], pixel[0]])) for pixel in region.pixels})
+    return indexed
 
 
 # Confere a tolerância temporal antes de qualquer projeção, porque um valor
@@ -199,6 +210,7 @@ def _resolve_visibility(
     occlusion_cell_px: int = 0,
     occlusion_relative_tolerance: float = 0.0,
     occlusion_absolute_margin_m: float = 0.0,
+    reference_camera_points: np.ndarray | None = None,
 ) -> tuple[dict[str, AssociationStatus], dict[str, tuple[int, int]]]:
     """Separa pontos rejeitados de pontos visíveis com o pixel resolvido."""
     rejected: dict[str, AssociationStatus] = {}
@@ -221,6 +233,25 @@ def _resolve_visibility(
             occlusion_relative_tolerance,
             occlusion_absolute_margin_m,
         )
+        if reference_camera_points is not None:
+            from scipy.ndimage import minimum_filter
+
+            projected = project_coordinates(reference_camera_points, calibration)
+            finite = np.isfinite(projected).all(axis=1)
+            pixels = np.rint(np.where(finite[:, None], projected, -1)).astype(int)
+            inside = finite & (pixels[:, 0] >= 0) & (pixels[:, 0] < rgb.width) & (pixels[:, 1] >= 0) & (pixels[:, 1] < rgb.height)
+            valid = np.zeros((rgb.height, rgb.width), dtype=bool)
+            for x, y in rgb.valid_pixels:
+                valid[y, x] = True
+            selected = np.flatnonzero(inside)
+            selected = selected[valid[pixels[selected, 1], pixels[selected, 0]]]
+            buffer = np.full(((rgb.height + occlusion_cell_px - 1) // occlusion_cell_px,
+                              (rgb.width + occlusion_cell_px - 1) // occlusion_cell_px), np.inf)
+            np.minimum.at(buffer, (pixels[selected, 1] // occlusion_cell_px, pixels[selected, 0] // occlusion_cell_px),
+                          reference_camera_points[selected, 2])
+            nearest = minimum_filter(buffer, size=3, mode="constant", cval=np.inf)
+            covered.update(geometry_id for geometry_id, (x, y), _, axial in candidates
+                if axial > nearest[y // occlusion_cell_px, x // occlusion_cell_px] * (1 + occlusion_relative_tolerance) + occlusion_absolute_margin_m)
         for geometry_id in covered:
             rejected[geometry_id] = AssociationStatus.OCCLUDED
         candidates = [item for item in candidates if item[0] not in covered]
@@ -245,7 +276,8 @@ def _result(
     calibration: CameraLidarCalibration,
     status: AssociationStatus | None,
     pixel: tuple[int, int] | None,
-    region: VisualRegionEvidence | None,
+    indexed_region: tuple[VisualRegionEvidence, float] | None,
+    boundary_policy: BoundaryPolicy,
 ) -> PointVisualAssociation:
     """Converte o estado resolvido de um ponto no contract público."""
     if status is not None:
@@ -253,6 +285,24 @@ def _result(
             geometry, lidar_observation, rgb.reference, calibration, status
         )
     assert pixel is not None
+    region, distance = (None, None) if indexed_region is None else indexed_region
+    semantic_status = SemanticAssociationStatus.OUTSIDE
+    label, tentative_label = None, None
+    if region is not None:
+        if region.grounding_status == "refined":
+            semantic_status = (
+                SemanticAssociationStatus.BOUNDARY
+                if boundary_policy.enabled and distance <= boundary_policy.margin_px
+                else SemanticAssociationStatus.INTERIOR
+            )
+        elif region.grounding_status == "legacy_discovery" and boundary_policy.allow_legacy_discovery:
+            semantic_status = SemanticAssociationStatus.LEGACY
+        else:
+            semantic_status = SemanticAssociationStatus.UNGROUNDED
+        if semantic_status in (SemanticAssociationStatus.INTERIOR, SemanticAssociationStatus.LEGACY):
+            label = region.label
+        else:
+            tentative_label = region.label
     return PointVisualAssociation(
         geometry,
         lidar_observation,
@@ -262,8 +312,13 @@ def _result(
         pixel,
         rgb.color_at(pixel),
         region.region_id if region else None,
-        region.label if region else None,
+        label,
         region.feature_reference if region else None,
+        semantic_status=semantic_status,
+        tentative_label=tentative_label,
+        distance_to_boundary_px=distance,
+        boundary_margin_px=boundary_policy.margin_px if region else None,
+        grounding_reference=region.grounding_reference if region else None,
     )
 
 
@@ -276,6 +331,7 @@ def associate_points(
     regions: tuple[VisualRegionEvidence, ...] = (),
     *,
     max_time_delta_ns: int = 50_000_000,
+    boundary_policy: BoundaryPolicy | None = None,
 ) -> tuple[PointVisualAssociation, ...]:
     """Projeta, filtra visibilidade e associa RGB/região a pontos persistidos.
 
@@ -321,6 +377,7 @@ def associate_points(
                 status,
                 pixel,
                 region_by_pixel.get(pixel) if pixel is not None else None,
+                boundary_policy or BoundaryPolicy(),
             )
         )
     return tuple(results)
@@ -342,6 +399,8 @@ def associate_map_points(
     occlusion_cell_px: int = 3,
     occlusion_relative_tolerance: float = 0.05,
     occlusion_absolute_margin_m: float = 0.10,
+    boundary_policy: BoundaryPolicy | None = None,
+    visibility_geometry: PointCloudGeometry | None = None,
 ) -> tuple[PointVisualAssociation, ...]:
     """Projeta o mapa persistente em um frame RGB e associa cor e região.
 
@@ -363,6 +422,8 @@ def associate_map_points(
         occlusion_relative_tolerance: folga proporcional à distância, que
             acomoda a espessura aparente de uma superfície.
         occlusion_absolute_margin_m: folga fixa somada à tolerância relativa.
+        visibility_geometry: geometria completa opcional da ablação dense_cells;
+            mantém a regra legada de células, sem vínculo de superfície.
     Retorna:
         uma tentativa de associação por ponto, na ordem de entrada.
     Levanta:
@@ -380,6 +441,13 @@ def associate_map_points(
         (point.geometry.geometry_id, _to_camera(point.coordinates_m, map_to_camera))
         for point in points
     ]
+    reference = None
+    if visibility_geometry is not None:
+        if visibility_geometry.frame_id != map_to_camera.source_frame or any(
+            point.geometry.map_id != visibility_geometry.map_id for point in points
+        ):
+            raise ValueError("Visibility geometry must match the candidates' map and transform frame.")
+        reference, _ = transform_coordinates(visibility_geometry.coordinates_m, map_to_camera)
     rejected, visible_pixel_by_geometry = _resolve_visibility(
         camera_points,
         rgb,
@@ -387,6 +455,7 @@ def associate_map_points(
         occlusion_cell_px=occlusion_cell_px,
         occlusion_relative_tolerance=occlusion_relative_tolerance,
         occlusion_absolute_margin_m=occlusion_absolute_margin_m,
+        reference_camera_points=reference,
     )
     results: list[PointVisualAssociation] = []
     for point in points:
@@ -402,6 +471,7 @@ def associate_map_points(
                 status,
                 pixel,
                 region_by_pixel.get(pixel) if pixel is not None else None,
+                boundary_policy or BoundaryPolicy(),
             )
         )
     return tuple(results)

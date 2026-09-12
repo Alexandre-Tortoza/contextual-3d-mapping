@@ -1,7 +1,8 @@
 """Partição da observação entre evidência publicada e contexto estrutural.
 
-Este é o último estágio semântico do pipeline canônico, e o único que decide o
-que o módulo **publica**. Ele roda depois de todos os estágios contextuais
+Este é o estágio do pipeline canônico que decide quais claims/regiões o módulo
+**publica**. O grounding espacial roda depois, somente nas candidatas publicadas,
+e pode se abster de associar pixels sem remover suas claims. A partição roda depois dos estágios contextuais
 porque todos eles precisam das superfícies estruturais: a reconciliação agrupa
 fragmentos de parede, as relações usam o conceito reconciliado dos dois lados de
 um par, e o audit mede a coerência entre conceito e natureza declarada.
@@ -32,7 +33,6 @@ auditável — a mesma promessa que ``proposal_filtering`` já faz para a geomet
 from __future__ import annotations
 
 import dataclasses
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 

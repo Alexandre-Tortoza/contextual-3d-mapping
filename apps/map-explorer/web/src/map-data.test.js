@@ -7,6 +7,7 @@ import {
   buildLabelFamilies,
   contextKey,
   countSupportStates,
+  geometryIdentity,
   legendKeys,
   mapEntriesFromIndex,
   measureMap,
@@ -134,8 +135,8 @@ test("nenhuma categoria visível compartilha cor com outra", () => {
 // a quinta família precisa cair no neutro em vez de ganhar uma cor gerada.
 test("apenas as quatro maiores famílias recebem matiz", () => {
   const { legend } = buildContextPalette(CENA);
-  const familias = legend.filter((entry) => entry.semantic);
-  assert.deepEqual(familias.slice(0, 4).map((entry) => entry.label), ["wall", "floor", "ceiling", "door"]);
+  const familias = legend.filter((entry) => entry.semantic && !entry.structural);
+  assert.deepEqual(familias.slice(0, 4).map((entry) => entry.label), ["door", "ceiling tiles", "floor tiles", "wall tiles"]);
   const neutro = [185, 189, 199];
   assert.ok(familias.slice(4).every((entry) => entry.color.join() === neutro.join()));
   assert.equal(new Set(familias.slice(0, 4).map((entry) => entry.color.join())).size, 4);
@@ -144,18 +145,32 @@ test("apenas as quatro maiores famílias recebem matiz", () => {
 // A cor segue a entidade: filtrar não pode repintar o que sobrou no mapa.
 test("cor de uma família não depende do que está filtrado", () => {
   const paleta = buildContextPalette(CENA);
-  const parede = CENA.find((point) => point.context.label === "plain wall");
-  const antes = paleta.colorOf(parede);
-  const soParede = buildContextPalette(CENA.filter((p) => p.context.label.includes("wall")));
-  assert.deepEqual(paleta.colorOf(parede), antes);
-  assert.deepEqual(soParede.colorOf(parede), [57, 135, 229]);
+  const porta = CENA.find((point) => point.context.label === "red door");
+  const antes = paleta.colorOf(porta);
+  const soPorta = buildContextPalette(CENA.filter((p) => p.context.label.includes("door")));
+  assert.deepEqual(paleta.colorOf(porta), antes);
+  assert.deepEqual(soPorta.colorOf(porta), [57, 135, 229]);
+});
+
+// Regressão: a família estrutural agrupava os labels sob uma chave sintética
+// que nenhum ponto carregava, e por isso não dava para escondê-la nem isolá-la.
+test("as chaves da família estrutural classificam os pontos estruturais", () => {
+  const { legend } = buildContextPalette(CENA);
+  const estruturas = legend.find((entry) => entry.structural);
+  const chaves = new Set(legendKeys(estruturas));
+  const alcancados = CENA.filter((point) => chaves.has(contextKey(point)));
+  assert.equal(alcancados.length, estruturas.count);
+
+  const restante = new Set(CENA.map(contextKey).filter((key) => !chaves.has(key)));
+  const { focused } = partitionByFocus(CENA, restante, { dimWeak: false });
+  assert.equal(focused.length, CENA.length - estruturas.count);
 });
 
 // Alternar uma família precisa alcançar todos os labels que ela agrupa.
 test("uma linha de família cobre as chaves de todos os seus labels", () => {
   const { legend } = buildContextPalette(CENA);
-  const parede = legend.find((entry) => entry.label === "wall");
-  assert.deepEqual(legendKeys(parede).sort(), ["plain wall", "wall", "wall tiles"]);
+  const porta = legend.find((entry) => entry.label === "door");
+  assert.deepEqual(legendKeys(porta).sort(), ["door", "red door"]);
   const semContexto = { key: "__unobserved__", members: [] };
   assert.deepEqual(legendKeys(semContexto), ["__unobserved__"]);
 });
@@ -185,14 +200,26 @@ test("conversão sRGB preserva extremos e lineariza meios-tons", () => {
 // malformado: abrir o mapa é mais importante que listar alternativas.
 test("mapEntriesFromIndex aceita entradas válidas e descarta o resto", () => {
   const entries = mapEntriesFromIndex([
-    { url: "/current-map.json", label: "Contexto · 16 frames · trecho" },
+    { url: "/runs/a/context.json", label: "Run A · 16 frames", artifact_type: "contextual_rgb_lidar_slice" },
+    { url: "/maps/geometry.json", label: "Geometria", artifact_type: "geometric_slice" },
     { url: "/maps/x.json" },
     { label: "sem url" },
     "texto",
   ]);
-  assert.deepEqual(entries, [{ url: "/current-map.json", label: "Contexto · 16 frames · trecho" }]);
+  assert.deepEqual(entries, [{ url: "/runs/a/context.json", label: "Run A · 16 frames" }]);
   assert.deepEqual(mapEntriesFromIndex(null), []);
   assert.deepEqual(mapEntriesFromIndex({}), []);
+});
+
+// Alternar evidência sobre a mesma nuvem deve preservar a câmera; mudar a
+// geometria, seu frame ou a amostragem precisa produzir outra identidade.
+test("geometryIdentity preserva a câmera entre runs da mesma geometria", () => {
+  const primeira = { map_id: "m", map_frame: "map", source: { sha256: "cloud-a" }, points: POINTS };
+  const segunda = { ...primeira, points: POINTS.map((point) => ({ ...point, context: { label: "pallet" } })) };
+  assert.equal(geometryIdentity(primeira), geometryIdentity(segunda));
+  assert.notEqual(geometryIdentity(primeira), geometryIdentity({ ...segunda, source: { sha256: "cloud-b" } }));
+  assert.notEqual(geometryIdentity(primeira), geometryIdentity({ ...segunda, points: POINTS.slice(1) }));
+  assert.notEqual(geometryIdentity(primeira), geometryIdentity({ ...segunda, map_frame: "other" }));
 });
 
 // Mantém a fonte estática compatível com a futura fronteira de chunks e com
@@ -205,4 +232,15 @@ test("fonte estática devolve um chunk e respeita cancelamento", async () => {
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(source.getGeometry({ signal: controller.signal }), { name: "AbortError" });
+});
+
+// Uma paisagem visível com hipótese de janela não pode ganhar a cor do label.
+test("hipótese 2D e visibilidade incerta permanecem fora dos labels da legenda", () => {
+  const landscape = { geometry_id: "landscape", context: {
+    status: "associated", tentative_label: "window", semantic_status: "surface_unsupported", color_rgb: [1, 2, 3],
+  } };
+  const unsupported = { geometry_id: "unsupported", context: { status: "visibility_unconfirmed" } };
+  assert.equal(contextKey(landscape), contextKey(POINTS[3]));
+  assert.equal(contextKey(unsupported), contextKey(POINTS[4]));
+  assert.notEqual(contextKey(landscape), "window");
 });

@@ -161,17 +161,14 @@ function isStructuralLabel(label) {
   return headNoun in STRUCTURAL_HEAD_NOUNS;
 }
 
-// Classifica cada ponto em uma de quatro categorias: estrutural (superfície
-// genérica), observado com evidência publicada, observado mas sem label, ou
-// não observado pelos keyframes. Estrutural é um estado especial que agrupa
-// labels diferentes mas que compartilham um núcleo estrutural.
+// Classifica cada ponto pelo label publicado, ou por um dos dois estados de
+// cobertura: observado sem label, ou não observado pelos keyframes. O label
+// bruto é a chave de filtro em todos os casos — agrupar labels estruturais sob
+// uma chave sintética aqui quebraria o foco por label dentro da família, já que
+// a legenda alterna exatamente as chaves que esta função devolve.
 export function contextKey(point) {
   const evidence = visualEvidence(point);
-  if (evidence?.label) {
-    const label = evidence.label.trim().toLowerCase();
-    if (isStructuralLabel(label)) return STRUCTURAL_KEY;
-    return label;
-  }
+  if (evidence?.label) return evidence.label.trim().toLowerCase();
   if (isVisuallyObserved(evidence)) return OBSERVED_UNLABELED_KEY;
   return UNOBSERVED_KEY;
 }
@@ -335,9 +332,9 @@ export function buildContextPalette(points) {
 
   const colorOf = (point) => {
     const key = contextKey(point);
-    if (key === STRUCTURAL_KEY) return STRUCTURAL_COLOR;
     if (key === UNOBSERVED_KEY) return UNOBSERVED_COLOR;
     if (key === OBSERVED_UNLABELED_KEY) return OBSERVED_UNLABELED_COLOR;
+    if (isStructuralLabel(key)) return STRUCTURAL_COLOR;
     return colorByFamily.get(families.get(key) ?? key) ?? OTHER_FAMILY_COLOR;
   };
 
@@ -413,8 +410,15 @@ export function srgbColorToLinear(color) {
 export function mapEntriesFromIndex(payload) {
   if (!Array.isArray(payload)) return [];
   return payload.filter(
-    (entry) => typeof entry?.url === "string" && typeof entry?.label === "string",
+    (entry) => entry?.artifact_type === "contextual_rgb_lidar_slice"
+      && typeof entry.url === "string" && typeof entry.label === "string",
   ).map((entry) => ({ url: entry.url, label: entry.label }));
+}
+
+// Identifica a geometria compartilhada por runs, para que alternar evidência
+// contextual preserve a câmera e comparar outro mapa refaça o enquadramento.
+export function geometryIdentity(slice) {
+  return JSON.stringify([slice.map_frame, slice.source?.sha256 ?? slice.map_id, slice.points.length]);
 }
 
 // Encapsula o artifact atual como uma fonte de geometria estática. A mesma

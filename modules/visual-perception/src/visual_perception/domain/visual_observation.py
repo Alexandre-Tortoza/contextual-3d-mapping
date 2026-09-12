@@ -79,7 +79,7 @@ class VisualObservation:
     #: audit continua medindo-as, e o motivo de cada supressão é registrado no
     #: diagnóstico do frame.
     structural_context: tuple[ObservedRegion, ...] = field(default_factory=tuple)
-    schema_version: int = 4
+    schema_version: int = 5
     coordinate_convention: str = COORDINATE_CONVENTION
 
     # Valida a resolução da imagem, a unicidade de region_id entre as
@@ -88,8 +88,8 @@ class VisualObservation:
     # conhecidas.
     def __post_init__(self) -> None:
         """Valida identidade, geometria e versão da fronteira canônica."""
-        if self.schema_version not in (1, 2, 3, 4):
-            raise ValueError("VisualObservation supports schema versions 1 through 4.")
+        if self.schema_version not in (1, 2, 3, 4, 5):
+            raise ValueError("VisualObservation supports schema versions 1 through 5.")
         if self.coordinate_convention != COORDINATE_CONVENTION:
             raise ValueError("Unsupported image coordinate convention.")
         if self.image_width <= 0 or self.image_height <= 0:

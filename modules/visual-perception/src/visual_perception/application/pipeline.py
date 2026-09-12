@@ -77,6 +77,7 @@ from visual_perception.application.semantic_calibration import (
     build_calibrator,
     calibrate_observation_claims,
 )
+from visual_perception.application.semantic_grounding import ground_regions
 from visual_perception.application.semantic_relations import (
     RelationInferenceFailure,
     infer_semantic_relations,
@@ -103,6 +104,7 @@ from visual_perception.ports.feature_extraction import DenseFeatureExtractor
 from visual_perception.ports.language_embedding import LanguageAlignedEncoder
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 from visual_perception.ports.region_discovery import RegionDiscoverer
+from visual_perception.ports.semantic_grounding import SemanticGrounder
 
 
 # Agrupa os backends substituíveis contra os quais o pipeline canônico é
@@ -116,6 +118,7 @@ class PerceptionPorts:
     feature_extractor: DenseFeatureExtractor
     language_encoder: LanguageAlignedEncoder
     multimodal_reasoner: MultimodalReasoner
+    semantic_grounder: SemanticGrounder | None = None
 
 
 # Agrupa a saída canônica do pipeline com tudo que é necessário para
@@ -316,13 +319,16 @@ def run_canonical_pipeline(
     publication = partition_observation(
         regions, config.contextual_publication, observation_id=image.observation_id
     )
+    grounded = ground_regions(
+        publication.published, payload, ports.semantic_grounder, config.semantic_grounding, area_masks
+    )
 
     observation = VisualObservation(
         source=image.source,
         image_width=image.width,
         image_height=image.height,
         scene_context=scene_context,
-        regions=publication.published,
+        regions=grounded,
         relations=geometric_relations + inferred.relations,
         entity_hypotheses=reconciliation.entities,
         structural_context=publication.structural_context,
@@ -346,7 +352,10 @@ def run_canonical_pipeline(
         reconciliation_records=reconciliation.records,
         relation_failures=inferred.failures,
         suppressed_regions=publication.records,
-        stage_model_calls=_stage_model_calls(evidence, support, refinement_history, inferred),
+        stage_model_calls={
+            **_stage_model_calls(evidence, support, refinement_history, inferred),
+            "semantic_grounding": sum(region.grounding.prediction.model_calls for region in grounded if region.grounding is not None),
+        },
         prior_assignments=assignments,
     )
 

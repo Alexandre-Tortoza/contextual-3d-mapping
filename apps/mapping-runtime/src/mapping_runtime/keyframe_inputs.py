@@ -56,6 +56,8 @@ def resolve_keyframe_inputs(
         frame_id = frame_id_for(index, frame_id_prefix)
         directory = frames_directory / frame_id
         artifacts = {name: directory / filename for name, filename in FRAME_ARTIFACTS.items()}
+        if (directory / "semantic-overlay.png").is_file():
+            artifacts["overlay_image"] = directory / "semantic-overlay.png"
         if not all(path.is_file() for path in artifacts.values()):
             missing.append(frame_id)
             continue
@@ -65,6 +67,7 @@ def resolve_keyframe_inputs(
                 camera_sequence_index=index,
                 header_timestamp_ns=int(entry["header_timestamp_ns"]),
                 bag_timestamp_ns=int(entry["bag_timestamp_ns"]),
+                ego_mask=(directory / "ego-mask.png") if (directory / "ego-mask.png").is_file() else None,
                 **artifacts,
             )
         )

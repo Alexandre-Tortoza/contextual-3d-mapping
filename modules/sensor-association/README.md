@@ -17,56 +17,93 @@ observação de imagem e a geometria 3D, com proveniência de calibração expl�
 - construção do mapa geométrico (`geometric-map`);
 - decisão entre classificações concorrentes de observações diferentes (`semantic-fusion`).
 
-## Duas fronteiras de associação
+## Fronteira pública de associação
 
-O módulo expõe duas entradas, que diferem no frame de partida dos pontos:
+A composição do mapa usa `MeasuredSurfaceModel` e
+`associate_measured_map_points`. O modelo recebe `PointCloudGeometry` completo,
+no frame do mapa, e a configuração tipada `SurfaceVisibilityConfig`. A
+associação recebe os candidatos do viewer, RGB, calibração, transform
+mapa→câmera, âncora temporal LiDAR e footprints visuais congelados.
 
-```text
-associate_points      scan LiDAR recém-chegado -> frame RGB
-associate_map_points  pontos do mapa persistente -> frame RGB
-```
+`SurfaceAssociationResult` devolve uma tentativa por candidato na ordem de
+entrada, diagnostics por região e contagens de visibilidade. A geometria
+inteira constrói oclusores; a seleção dos candidatos apenas determina quais
+resultados serão devolvidos. Subamostrar ou reordenar candidatos preserva a
+decisão de cada ponto comum, inclusive quando vários caem no mesmo pixel.
 
-`associate_map_points` existe porque colorir o scan e anexá-lo ao mapa produzia duas
-amostragens da mesma superfície a poucos centímetros uma da outra — a do mapa, sempre sem
-contexto, e a do scan, colorida. No viewer isso aparecia como pontos cinzas "fantasmas"
-encostados em pontos coloridos, quando na verdade eram pontos diferentes de fontes
-diferentes. Ancorando a associação no mapa, cada ponto persistido passa a ter ou não um
-label, e a ausência passa a declarar seu motivo.
+A API `associate_points` atende scans LiDAR recém-chegados. As comparações
+ativas usam `associate_map_points` para os braços `legacy_cells` (amostra do
+viewer) e `dense_cells` (mesma regra com `visibility_geometry` integral).
+Esses braços mantêm células 3×3, profundidade axial e exclusividade por pixel
+para isolar o efeito de trocar o oclusor e o algoritmo. Não são fallback
+implícito para ausência do PCD no caminho de superfícies.
 
-Ela recebe o transform mapa→câmera derivado da pose estimada no instante da observação.
-Isso desloca a exigência de precisão: com o contexto ancorado no mapa, um erro de pose
-vira pixel errado e, portanto, label errado — e não apenas um ponto deslocado.
+## Visibilidade e vínculo da região
 
-### Oclusão em um mapa esparso
+A visibilidade consulta a primeira interseção positiva do raio óptico com
+patches orientados e limitados, construídos em torno de medições reais. O
+modelo contém suporte local, não planos infinitos. Não usa um alcance máximo
+por objeto nem regras específicas de `pallet`, `window` ou outros labels.
 
-As duas entradas usam regras de oclusão diferentes, e essa é a diferença que importa.
+Uma primeira superfície compatível autoriza RGB. Uma superfície anterior
+produz `occluded`; ausência de patch ou incompatibilidade sem oclusor
+confirmado produz `visibility_unconfirmed`. Rejeições não carregam cor ou
+label, mas podem registrar `SurfaceAssociationEvidence`, com distâncias radiais
+em metros, tolerância, índice original do PCD e motivo da decisão.
 
-Um scan isolado é naturalmente livre de oclusão a partir do seu próprio viewpoint, então
-o z-buffer por pixel exato basta. Um mapa acumulado e subamostrado, não: entre as amostras
-da superfície da frente sobram vazios de pixels, e um ponto de outro cômodo passa por eles
-e recebe o label do que está na imagem. Medido no corridor-02, o efeito era classificar o
-mapa **através das paredes** — pontos na altura da parede recebendo o label `ceiling`.
+A identidade do objeto exige uma decisão adicional. Componentes medidos
+sob a máscara precisam de continuidade local e âncoras geométricas no
+contorno. O único retorno ou o componente dominante não ganha o label por
+esse motivo. Um componente sem âncora conserva `tentative_label` e
+`surface_unsupported`, mesmo quando sua cor RGB é válida.
 
-`associate_map_points` agrega profundidade em células de pixels e consulta a vizinhança
-3×3 da célula do ponto, aproximando a área que cada amostra do mapa realmente cobre.
-A profundidade comparada é a do **eixo óptico**, não a distância radial: em um campo de
-visão largo a distância radial cresce em direção às bordas mesmo sobre uma superfície
-frontal, e compará-la faria a periferia ocluir a si mesma.
+Em uma janela, a moldura medida pode receber o label. A paisagem visível
+através da abertura permanece RGB sem herdar a identidade da janela. Se não
+há suporte medido da janela, o claim e sua máscara permanecem como evidência
+2D: o algoritmo não cria pontos, vidro ou planos virtuais. A mesma regra vale
+para portas abertas e outras aberturas, independentemente do nome do claim.
 
-Os parâmetros (`occlusion_cell_px`, `occlusion_relative_tolerance`,
-`occlusion_absolute_margin_m`) são explícitos porque dependem da densidade do mapa;
-célula zero volta ao z-buffer por pixel exato.
+## Invariantes de fronteira
 
-A regra é conservadora por escolha: em descontinuidades de profundidade ela perde uma
-borda de pontos em vez de rotular o fundo com o label da frente.
+- XYZ em metros; candidatos e PCD completo no mesmo `map_id` e frame;
+- raios unitários no frame óptico da observação RGB;
+- pixels top-left, inteiros por arredondamento determinístico;
+- transform de câmera, `clock_id`, calibração e tolerância RGB/LiDAR validados;
+- ausência de suporte gera abstenção; não há associação forte de fallback;
+- cor visível, suporte semântico e corroboração temporal são estados distintos.
 
-## Invariantes de substituição
+A leitura integral e a validação de SHA-256 pertencem a
+[`geometric-map`](../geometric-map/README.md). Algoritmo, parâmetros, resultados
+e limitações estão em [visibilidade medida](docs/measured-visibility.md) e na
+[validação do trecho](docs/visibility-validation.md).
 
-As duas entradas compartilham projeção, filtro de visibilidade, regra de oclusão e o
-contract de saída. Um ponto físico alcançado pelos dois caminhos produz o mesmo pixel e a
-mesma classificação; isso é verificado por teste.
+## Footprint semântico e boundary
 
-- unidades em metros, pixels inteiros por arredondamento determinístico;
-- frames validados contra a calibração antes de qualquer projeção;
-- LiDAR e RGB precisam compartilhar `clock_id` e respeitar `max_time_delta_ns`;
-- rejeições nunca carregam evidência visual residual.
+`VisualRegionEvidence.pixels` representa a máscara após grounding, clipping à
+área utilizável e ownership. `grounding_status="refined"` e uma
+`grounding_reference` identificam a geometria que autoriza o conceito. O default
+é `grounding_unavailable`; preencher apenas `label` não publica associação forte.
+
+`PointVisualAssociation` separa visibilidade de força semântica. Um ponto visível
+continua com cor RGB mesmo se `semantic_status` for `boundary`, `outside` ou
+`ungrounded` ou `surface_unsupported`. No caminho de superfícies, `label`
+exige interior grounded e componente 3D sustentado; `tentative_label`
+preserva a hipótese em boundary ou footprint não grounded. A ablação histórica
+exige tanto `legacy_discovery` na evidência quanto `allow_legacy_discovery` na política.
+
+`distance_to_mask_boundary` mede distância euclidiana aos centros dos pixels
+fronteiriços. A fronteira tem ao menos um vizinho 8 fora da máscara; buracos e
+bordas do frame contam. A distância é zero nesses pixels e no exterior, que é
+distinguido pela pertença à máscara. A máscara original não é alterada.
+
+`BoundaryPolicy.margin_px` soma o raio máximo de arredondamento de dois eixos,
+`sqrt(0.5)` pixels, a `sigma_multiplier * registration_sigma_px`. O default de
+sigma zero declara ausência de estimativa adicional; não significa calibração
+ou pose perfeitas. A composição deve fornecer a incerteza de registro medida
+quando disponível. Pontos com distância menor ou igual à margem ficam tentativos.
+`enabled=False` permite medir somente o efeito de grounding.
+
+Diagnostics preservam margem, componentes de incerteza, contagens de boundary
+e interior. Cada associação preserva distância, margem e referência ao grounding.
+O buffer de oclusão, projeção MEI e tolerância RGB/LiDAR continuam independentes:
+eles verificam correspondência geométrica, não a identidade dos pixels da máscara.

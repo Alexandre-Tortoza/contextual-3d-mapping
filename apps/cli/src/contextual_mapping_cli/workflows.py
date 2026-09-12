@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
+from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from .models import CostEstimate, DatasetProfile, ExtractionRequest, ExtractionResult
 from .processes import ProcessRunner
@@ -248,6 +253,7 @@ class Workflows:
         segment_id: str,
         window: Path,
         visual_run: Path,
+        visibility_mode: str = "measured_surfaces",
     ) -> Path:
         """Compõe o artifact contextual de um segmento conhecido.
 
@@ -256,16 +262,20 @@ class Workflows:
             segment_id: identidade dos artifacts geométricos.
             window: janela resolvida.
             visual_run: run correspondente de percepção.
+            visibility_mode: superfícies medidas ou uma ablação de células explícita.
         Retorna:
             artifact contextual publicado.
         """
+        if visibility_mode not in {"measured_surfaces", "dense_cells", "legacy_cells"}:
+            raise ValueError("visibility-mode deve ser measured_surfaces, dense_cells ou legacy_cells.")
         segment_id = self.project.validate_segment_id(segment_id)
         geometry = self.project.root / "artifacts" / f"{segment_id}.json"
         for required in (window, visual_run / "manifest.json", geometry):
             if not required.exists():
                 raise FileNotFoundError(f"entrada de composição ausente: {required}")
         python = self.project.root / "modules" / "visual-perception" / ".venv" / "bin" / "python"
-        destination = self.project.root / "artifacts" / f"{segment_id}-context.json"
+        run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%S%fZ}-{segment_id}"
+        destination = self.project.root / "artifacts" / "runs" / run_id / "context.json"
         command = [
             "make",
             profile.context_target,
@@ -274,32 +284,87 @@ class Workflows:
             f"M1_SEGMENT_WINDOW={window}",
             f"M1_VISUAL_RUN={visual_run}",
             f"M1_CONTEXT_ARTIFACT={destination}",
+            f"M1_VISIBILITY_MODE={visibility_mode}",
         ]
         self.runner.run(command, cwd=self.project.root)
         if not destination.is_file():
             raise FileNotFoundError(f"composição não publicou {destination}")
+        shutil.copyfile(window, destination.parent / "window.json")
+        shutil.copyfile(visual_run / "manifest.json", destination.parent / "perception-manifest.json")
+        (destination.parent / "manifest.json").write_text(json.dumps({
+            "run_id": run_id, "created_at": datetime.now(UTC).isoformat(),
+            "segment_id": segment_id, "artifact": "context.json",
+            "visual_run": str(visual_run.resolve()), "geometry": str(geometry),
+            "window": "window.json", "perception_manifest": "perception-manifest.json",
+            "visibility_mode": visibility_mode,
+        }, indent=2), encoding="utf-8")
+        self.publish_context(destination, run_id=run_id)
         return destination
 
-    # Publica e mantém o servidor do viewer no mesmo terminal, seguindo a
-    # escolha de execução foreground e o cancelamento seguro do runner.
-    def serve(self, artifact: Path, segment_id: str) -> None:
-        """Publica um artifact contextual e inicia o viewer.
+    # Delega a cópia atômica ao publisher dono do formato servido. A mesma
+    # operação é usada pelo comando publish e depois da composição contextual.
+    def publish_context(
+        self, artifact: Path, *, run_id: str | None = None, label: str | None = None,
+    ) -> dict:
+        """Salva mapa, imagens e proveniência em uma pasta própria do viewer.
+
+        Retorna:
+            metadados públicos e URL da run publicada.
+        """
+        command = [
+            sys.executable, str(self.project.root / "apps/map-explorer/scripts/publish_map_index.py"),
+            str(self.project.root / "apps/map-explorer/web/public"), "--artifact", str(artifact.resolve()),
+        ]
+        if run_id is not None:
+            command.extend(("--run-id", run_id))
+        if label is not None:
+            command.extend(("--label", label))
+        # A resposta do produtor identifica inclusive uma publicação idempotente
+        # cuja origem atual é uma cópia do mesmo conteúdo em outro diretório.
+        with TemporaryDirectory(prefix="contextual-publication-") as directory:
+            result = Path(directory) / "result.json"
+            command.extend(("--result-file", str(result)))
+            self.runner.run(command, cwd=self.project.root)
+            return json.loads(result.read_text(encoding="utf-8"))
+
+    # Usa o catálogo contextual sem depender de um artifact geométrico separado.
+    # Reutiliza o servidor deste catálogo quando ele já estiver disponível.
+    def serve(
+        self, artifact: Path | None = None, segment_id: str | None = None, *, run_id: str | None = None,
+    ) -> str:
+        """Abre o catálogo ou uma run com contexto, iniciando o servidor se preciso.
 
         Argumentos:
-            artifact: mapa contextual existente.
-            segment_id: identidade da geometria associada.
+            artifact: mapa a publicar, quando ainda não estiver no catálogo.
+            segment_id: opção histórica mantida por compatibilidade.
+            run_id: identidade a publicar ou selecionar no catálogo existente.
+        Retorna:
+            URL compartilhável da run escolhida.
         """
-        if not artifact.is_file():
-            raise FileNotFoundError(f"artifact contextual ausente: {artifact}")
+        if segment_id is not None:
+            self.project.validate_segment_id(segment_id)
+        if artifact is not None:
+            run_id = self.publish_context(artifact, run_id=run_id)["run_id"]
+        entries = self.project.available_context_runs()
+        if not entries:
+            raise FileNotFoundError("nenhuma run com contexto publicada; use publish --artifact <mapa.json>")
+        selected = next((entry for entry in entries if entry["run_id"] == run_id), None) if run_id else entries[0]
+        if selected is None:
+            raise ValueError(f"run desconhecida: {run_id}; use o comando runs para listar as disponíveis")
+        url = "http://localhost:5173/?" + urlencode({"artifact": selected["url"]}, safe="/")
+        print(f"Viewer: {url}", flush=True)
+        index = self.project.root / "apps/map-explorer/web/public/maps/index.json"
+        try:
+            with urlopen("http://127.0.0.1:5173/maps/index.json", timeout=1) as response:
+                if json.load(response) == json.loads(index.read_text(encoding="utf-8")):
+                    return url
+        except (OSError, ValueError):
+            pass
         self.runner.run(
-            [
-                "make",
-                "map-explorer-serve",
-                f"MAP_EXPLORER_ARTIFACT={artifact}",
-                f"SEGMENT_ID={self.project.validate_segment_id(segment_id)}",
-            ],
-            cwd=self.project.root,
+            ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173", "--strictPort"],
+            cwd=self.project.root / "apps/map-explorer/web",
         )
+        return url
 
 
 # Calcula a mediana sem puxar uma dependência estatística para a aplicação.

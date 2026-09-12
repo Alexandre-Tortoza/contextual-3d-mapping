@@ -136,15 +136,20 @@ class VisualRegionEvidence:
 
     Argumentos:
         region_id: identidade estável da região visual.
-        pixels: pixels cobertos pela máscara canônica.
+        pixels: footprint após grounding, validade e ownership; nunca discovery implícita.
         label: claim visual bruto opcional.
         feature_reference: referência opcional a dense feature ou embedding.
+        grounding_status: refined autoriza evidência espacial; outros estados
+            continuam tentativos. legacy_discovery exige ablação explícita.
+        grounding_reference: referência à geometria e proveniência do grounding.
     """
 
     region_id: str
     pixels: frozenset[tuple[int, int]]
     label: str | None = None
     feature_reference: str | None = None
+    grounding_status: str = "grounding_unavailable"
+    grounding_reference: str | None = None
 
     # Mantém a região identificável e evita coordenadas negativas que nunca
     # poderiam pertencer ao suporte de uma imagem.
@@ -154,6 +159,21 @@ class VisualRegionEvidence:
             raise ValueError("region_id must not be empty.")
         if any(x < 0 or y < 0 for x, y in self.pixels):
             raise ValueError("region pixels must be non-negative.")
+        if self.grounding_status == "refined" and not self.grounding_reference:
+            raise ValueError("Refined evidence requires an auditable grounding reference.")
+
+
+# Separa visibilidade geométrica de força semântica: uma boundary ainda tem
+# cor RGB válida, mas seu conceito não deve entrar como contribuição forte.
+class SemanticAssociationStatus(StrEnum):
+    """Relação do pixel projetado com o suporte semântico disponível."""
+
+    INTERIOR = "interior"
+    BOUNDARY = "boundary"
+    OUTSIDE = "outside"
+    UNGROUNDED = "ungrounded"
+    LEGACY = "legacy_discovery"
+    SURFACE_UNSUPPORTED = "surface_unsupported"
 
 
 # Representa um ponto do mapa persistente como entrada de associação. Existe
@@ -192,6 +212,32 @@ class AssociationStatus(StrEnum):
     OUTSIDE_IMAGE = "outside_image"
     OUTSIDE_VALID_SUPPORT = "outside_valid_support"
     OCCLUDED = "occluded"
+    VISIBILITY_UNCONFIRMED = "visibility_unconfirmed"
+
+
+# Explica decisões geométricas mesmo quando não há evidência visual aceita.
+# Distâncias são radiais em metros, no frame óptico da observação RGB.
+@dataclass(frozen=True)
+class SurfaceAssociationEvidence:
+    """Primeira interseção medida e vínculo semântico, sem criar geometria."""
+
+    point_depth_m: float
+    first_surface_depth_m: float | None
+    tolerance_m: float
+    source_index: int | None
+    reason: str
+    surface_support: str = "not_evaluated"
+    component_id: int | None = None
+    support_reason: str | None = None
+
+    # Rejeita medidas não físicas antes da serialização dos diagnostics.
+    def __post_init__(self) -> None:
+        """Valida profundidades, tolerância e índice de origem."""
+        for value in (self.point_depth_m, self.first_surface_depth_m, self.tolerance_m):
+            if value is not None and (not isfinite(value) or value < 0):
+                raise ValueError("Surface depths and tolerance must be finite and non-negative.")
+        if self.source_index is not None and self.source_index < 0:
+            raise ValueError("Surface source_index must be non-negative.")
 
 
 # É a saída pública ancorada em geometria persistente para o primeiro slice.
@@ -223,6 +269,12 @@ class PointVisualAssociation:
     region_id: str | None = None
     label: str | None = None
     feature_reference: str | None = None
+    semantic_status: SemanticAssociationStatus = SemanticAssociationStatus.OUTSIDE
+    tentative_label: str | None = None
+    distance_to_boundary_px: float | None = None
+    boundary_margin_px: float | None = None
+    grounding_reference: str | None = None
+    surface_evidence: SurfaceAssociationEvidence | None = None
 
     # Mantém o payload coerente com o status para que rejeições não carreguem
     # evidência visual residual e associações sempre tenham pixel e cor.
@@ -238,6 +290,21 @@ class PointVisualAssociation:
                 self.region_id,
                 self.label,
                 self.feature_reference,
+                self.tentative_label,
+                self.distance_to_boundary_px,
+                self.boundary_margin_px,
+                self.grounding_reference,
             )
         ):
             raise ValueError("rejected points must not carry visual evidence.")
+        if self.label is not None and self.semantic_status not in (
+            SemanticAssociationStatus.INTERIOR, SemanticAssociationStatus.LEGACY,
+        ):
+            raise ValueError("Strong labels require semantic interior or explicit legacy ablation.")
+        if self.label is not None and self.semantic_status is SemanticAssociationStatus.INTERIOR and not self.grounding_reference:
+            raise ValueError("Semantic interior labels require a grounding reference.")
+        if self.label is not None and self.surface_evidence is not None and self.surface_evidence.surface_support != "supported":
+            raise ValueError("Measured surface labels require explicit surface support.")
+        for value in (self.distance_to_boundary_px, self.boundary_margin_px):
+            if value is not None and (not isfinite(value) or value < 0):
+                raise ValueError("Boundary measurements must be finite and non-negative.")

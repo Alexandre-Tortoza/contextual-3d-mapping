@@ -90,6 +90,34 @@ class Project:
         )
         return tuple(sorted(path.parent for base in roots for path in base.glob("*/manifest.json")))
 
+    # Consome o índice e os manifests públicos do viewer; a CLI não assume o
+    # layout de inferência nem precisa carregar os mapas para listar as runs.
+    def available_context_runs(self) -> tuple[dict, ...]:
+        """Retorna as runs contextuais publicadas, da mais recente para a antiga."""
+        public = self.root / "apps" / "map-explorer" / "web" / "public"
+        index = public / "maps" / "index.json"
+        if not index.is_file():
+            return ()
+        runs = []
+        for entry in json.loads(index.read_text(encoding="utf-8")):
+            if entry.get("artifact_type") != "contextual_rgb_lidar_slice":
+                continue
+            artifact = (public / entry["url"].lstrip("/")).resolve()
+            if not artifact.is_relative_to((public / "runs").resolve()):
+                continue
+            manifest = artifact.parent / "manifest.json"
+            if artifact.is_file() and manifest.is_file():
+                metadata = json.loads(manifest.read_text(encoding="utf-8"))
+                runs.append({**metadata, "url": entry["url"], "path": str(artifact.parent)})
+        return tuple(runs)
+
+    # Lista entradas locais para a ação de publicação do menu, incluindo os
+    # artifacts históricos e a organização por run usada nas composições novas.
+    def available_context_artifacts(self) -> tuple[Path, ...]:
+        """Retorna mapas de contexto candidatos à publicação pelo usuário."""
+        artifacts = self.root / "artifacts"
+        return tuple(sorted((*artifacts.glob("*-context.json"), *artifacts.glob("runs/*/context.json"))))
+
     # Carrega profiles declarativos pertencentes à composição da aplicação.
     # Novos datasets entram por configuração sem alterar os comandos públicos.
     def available_profiles(self) -> tuple[DatasetProfile, ...]:

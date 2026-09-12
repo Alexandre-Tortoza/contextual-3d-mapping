@@ -23,6 +23,7 @@ from visual_perception.config import (
     MultimodalReasoningConfig,
     QualityProfile,
     RegionDiscoveryConfig,
+    SemanticGroundingConfig,
     TilingConfig,
 )
 
@@ -140,4 +141,5 @@ def research_quality_config(
         language_embedding=_REAL_LANGUAGE_EMBEDDING if real_backends else LanguageEmbeddingConfig(),
         multimodal_reasoning=_REAL_MULTIMODAL_REASONING if real_backends else MultimodalReasoningConfig(),
         multi_context=_REAL_MULTI_CONTEXT if real_backends else MultiContextConfig(),
+        semantic_grounding=SemanticGroundingConfig(backend="grounded_sam" if real_backends else "unavailable"),
     )

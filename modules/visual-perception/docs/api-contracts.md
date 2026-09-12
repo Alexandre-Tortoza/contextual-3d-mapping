@@ -137,7 +137,12 @@ result = run_canonical_pipeline(image, payload, config, ports)
 - `visual_embeddings` / `language_embeddings`, os vetores por região que o estágio de
   evidência produziu. Eles existem aqui desde a #217: antes eram calculados — 121
   chamadas de encoder por frame na configuração real — e descartados dentro do pipeline,
-  de modo que o `artifact_ref` gravado em cada slot apontava para nada;
+  de modo que o `artifact_ref` gravado em cada slot apontava para nada. Persistir e
+  resolver esses vetores de volta a partir de `embedding_id`/`artifact_ref` é fronteira
+  pública do módulo — `write_embedding_archive`/`resolve_embedding_vector`
+  (`infrastructure/embedding_archive.py`, exportadas em `visual_perception/__init__.py`) —
+  para que um consumidor fora do módulo (sensor-association, semantic-fusion) não precise
+  conhecer o formato `.npz` do artifact nem reimplementar a leitura;
 - `signal_failures`, `refinement_history`, `reconciliation_records` e `relation_failures`,
   o registro auditável dos estágios contextuais;
 - `stage_model_calls`, quantas chamadas de modelo cada estágio gastou, para que o custo
@@ -156,11 +161,16 @@ Essas falhas usam a hierarquia definida em
 
 ## `VisualObservation`
 
-`VisualObservation` é a saída canônica do módulo. O `schema_version` atual é **4**: ela
-acrescentou `structural_context`, a partição entre evidência contextual publicada e
-superfície estrutural preservada como contexto. A **3** havia acrescentado
-`entity_hypotheses` (#205) e os sinais de suporte por claim (#214). Payloads das versões
-1 a 3 continuam legíveis e desserializam com os campos novos vazios.
+`VisualObservation` é a saída canônica do módulo. O `schema_version` atual é **5**
+(`SUPPORTED_SCHEMA_VERSION` em `infrastructure/serialization.py` é a fonte da verdade): ela
+acrescentou `ObservedRegion.grounding`, separando o grounding espacial da máscara e da box
+de discovery. A **4** havia acrescentado `structural_context`, a partição entre evidência
+contextual publicada e superfície estrutural preservada como contexto; a **3**,
+`entity_hypotheses` (#205) e os sinais de suporte por claim (#214).
+
+O código ainda lê payloads das versões 1 a 4, desserializando-os com os campos novos
+vazios. Pela regra de legado do `AGENTS.md`, essa leitura tolerante é legado a remover:
+payloads antigos devem ser regerados, não migrados.
 
 Código dono:
 [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py)
