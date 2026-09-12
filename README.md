@@ -31,6 +31,8 @@ RGB + LiDAR + IMU
         -> applications
 ```
 
+A documentação didática que acompanha esse fluxo dado a dado, de `ImageObservation`/`ImagePayload` até `PointVisualAssociation`, `SemanticContribution` e `FusedPointContext`, está em [`docs/end-to-end-pipeline.md`](./docs/end-to-end-pipeline.md). Ela distingue explicitamente geometria 2D, dense features, embeddings alinhados à linguagem, claims semânticos, associação 2D→3D e fusão multi-frame.
+
 `apps/mapping-runtime` compõe workflows de construção de mapa. `apps/map-explorer` abre mapas persistidos para visualização 3D, consulta, inspeção de evidências e exploração de grafo. `apps/cli` fornece acesso scriptável a operações de nível de aplicação.
 
 Agentes de código e contribuidores devem ler [`AGENTS.md`](./AGENTS.md) antes de criar ou alterar código, pastas, interfaces, ou arquitetura de nível de repositório.
@@ -72,8 +74,9 @@ rosbag, da calibração e da configuração FAST-LIO do sensor usado.
 
 A documentação de arquitetura e integração de nível de repositório está disponível em [`docs/README.md`](./docs/README.md).
 
-Decisões arquiteturais importantes são documentadas em:
+Decisões e fluxos importantes são documentados em:
 
+- [`docs/end-to-end-pipeline.md`](./docs/end-to-end-pipeline.md)
 - [`docs/architecture.md`](./docs/architecture.md)
 - [`docs/system-flow.md`](./docs/system-flow.md)
 - [`docs/applications.md`](./docs/applications.md)
