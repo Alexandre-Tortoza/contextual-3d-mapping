@@ -17,6 +17,7 @@ Essa documentação local pode descrever algoritmos, escolhas de modelo, procedi
 ## Documentação do repositório
 
 - [Pipeline end-to-end](./end-to-end-pipeline.md): guia didático que acompanha a transformação dos pixels RGB até a associação 2D→3D e a fusão semântica, usando os contracts reais e marcando capacidades ainda planejadas.
+- [Walkthrough com dados reais](./real-run-walkthrough.md): percorre a pipeline usando o run versionado `20260910T115810Z`, com frames, proposals, máscaras, overlays, claims, embeddings referenciados, sinais CLIP e diagnósticos reais de associação e fusão.
 - [Arquitetura](./architecture.md): arquitetura de nível de repositório, ownership de capacidades, fronteiras e regras de dependência.
 - [Princípios de engenharia](./engineering-principles.md): decisões de implementação, interpretação de SOLID, limiares de abstração, localidade de integração, testes e diretrizes de review.
 - [Fluxo do sistema](./system-flow.md): fluxo entre módulos e entre aplicações.
@@ -25,7 +26,9 @@ Essa documentação local pode descrever algoritmos, escolhas de modelo, procedi
 - [Política de documentação](./documentation-policy.md): separação entre documentação global e documentação local de módulo.
 - [`AGENTS.md`](../AGENTS.md): regras condensadas do repositório que agentes de código e contribuidores devem ler antes de alterar arquitetura ou código.
 
-O [pipeline end-to-end](./end-to-end-pipeline.md) é uma documentação transversal de ensino e integração. Quando ele explica um estágio interno, o contract e a responsabilidade são apresentados no contexto do fluxo global, enquanto a documentação local do módulo continua sendo a fonte de verdade para algoritmo, configuração, benchmark e implementação.
+O [pipeline end-to-end](./end-to-end-pipeline.md) é a visão conceitual transversal de ensino e integração. O [walkthrough com dados reais](./real-run-walkthrough.md) é a camada concreta: ele referencia diretamente artifacts versionados dos benchmarks e deixa explícito quando uma etapa possui apenas diagnóstico real, em vez de um artifact ponta a ponta já persistido.
+
+Quando esses documentos explicam um estágio interno, o contract e a responsabilidade são apresentados no contexto do fluxo global, enquanto a documentação local do módulo continua sendo a fonte de verdade para algoritmo, configuração, benchmark e implementação.
 
 ## Resumo da arquitetura
 
@@ -53,5 +56,6 @@ O `docs/` raiz responde perguntas como:
 - Qual aplicação constrói mapas e qual aplicação os explora?
 - Onde a persistência se encaixa arquiteturalmente?
 - Quais regras de engenharia devem permanecer estáveis conforme as implementações de pesquisa mudam?
+- Como os dados e erros aparecem em uma execução real versionada?
 
-Detalhes de implementação continuam pertencendo ao `docs/` do módulo responsável. O documento end-to-end pode resumir esses detalhes somente quando necessário para explicar a transformação de dados entre fronteiras.
+Detalhes de implementação continuam pertencendo ao `docs/` do módulo responsável. Os documentos transversais podem resumir esses detalhes somente quando necessário para explicar a transformação de dados entre fronteiras ou conectar essa explicação a um artifact real.
