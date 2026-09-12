@@ -1,5 +1,47 @@
 # Pipeline end-to-end do contextual-3d-mapping
 
+Este documento acompanha a informação desde os pixels de um frame RGB até a evidência semântica ancorada em geometria 3D. A pergunta central em todas as etapas é:
+
+> Neste ponto da pipeline, que informação existe, de onde ela veio, como foi transformada e o que será enviado para a próxima etapa?
+
+A documentação local de cada módulo continua sendo a fonte de verdade para detalhes internos. Este documento conecta essas fronteiras em um único fluxo e marca explicitamente o que está implementado, o que existe apenas no primeiro slice e o que permanece planejado.
+
+## Sumário
+
+### Pipeline principal
+
+1. [Entrada RGB](#1-entrada-rgb)
+2. [Region Discovery](#2-region-discovery)
+3. [Region Merge / Consolidation](#3-region-merge--consolidation)
+4. [Dense Feature Extraction](#4-dense-feature-extraction)
+5. [Mask + Dense Features / Pooling](#5-mask--dense-features--pooling)
+6. [Region Evidence](#6-region-evidence)
+7. [Language-Aligned Evidence](#7-language-aligned-evidence)
+8. [Scene Context](#8-scene-context)
+9. [Region Semantics](#9-region-semantics)
+10. [Hypothesis Support](#10-hypothesis-support)
+11. [Selective Refinement](#11-selective-refinement)
+12. [Reconciliation intra-frame](#12-reconciliation-intra-frame)
+13. [Relations](#13-relations)
+14. [VisualObservation](#14-visualobservation)
+15. [Geometria 3D / LiDAR / geometric-map](#15-geometria-3d--lidar--geometric-map)
+16. [Pose + Calibration](#16-pose--calibration)
+17. [Sensor Association](#17-sensor-association)
+18. [PointVisualAssociation](#18-pointvisualassociation)
+19. [Semantic Fusion](#19-semantic-fusion)
+20. [Semantic Map / Semantic Memory](#20-semantic-map--semantic-memory)
+
+### Referência e visão transversal
+
+- [Exemplo completo: acompanhando uma porta da imagem até o mapa 3D](#exemplo-completo-acompanhando-uma-porta-da-imagem-até-o-mapa-3d)
+- [Diferenças conceituais que não devem ser misturadas](#diferenças-conceituais-que-não-devem-ser-misturadas)
+- [Responsabilidade por tecnologia](#responsabilidade-por-tecnologia)
+- [Rastreabilidade](#rastreabilidade-como-responder-de-onde-veio-este-conhecimento)
+- [Influência da literatura versus implementação](#influência-da-literatura-versus-implementação-do-projeto)
+- [Onde aprofundar cada parte](#onde-aprofundar-cada-parte)
+
+## Pipeline geral
+
 ```mermaid
 flowchart TD
     RGB["Frame RGB<br/>ImageObservation + ImagePayload"]
@@ -40,16 +82,14 @@ flowchart TD
     POSE --> SA
 
     SA --> PVA["PointVisualAssociation"]
-    PVA --> SF["Semantic Fusion<br/>SemanticContribution -> FusedPointContext"]
+    PVA --> SF["Semantic Fusion<br/>SemanticContribution → FusedPointContext"]
 
     SF --> SM["Semantic Map / Memory 3D<br/>planejado além do primeiro slice"]
 ```
 
-Este documento acompanha a informação desde os pixels de um frame RGB até a evidência semântica ancorada em geometria 3D. O fio condutor é sempre a mesma pergunta:
+## Como ler os diagramas locais
 
-> Neste ponto da pipeline, que informação existe, de onde ela veio, como foi transformada e o que será enviado para a próxima etapa?
-
-A documentação local de cada módulo continua sendo a fonte de verdade para detalhes internos. Este documento conecta essas fronteiras em um único fluxo e marca explicitamente o que está implementado, o que está implementado apenas no primeiro slice e o que permanece planejado.
+Cada etapa abaixo começa com um Mermaid reduzido chamado **Onde esta etapa está na pipeline**. O nó em destaque é a etapa explicada naquela seção. O diagrama mostra pelo menos quem fornece sua entrada e quem consome sua saída, sem repetir toda a pipeline geral.
 
 ## Estado de implementação
 
@@ -60,13 +100,13 @@ A documentação local de cada módulo continua sendo a fonte de verdade para de
 | `geometric-map` | implementado no primeiro slice | geometria persistente e referências estáveis existem |
 | `sensor-association` | implementado | projeção, suporte válido, oclusão, associação de região e rejeições explícitas |
 | `semantic-fusion` | implementado no nível de ponto | fusão determinística de múltiplas contribuições e suporte espacial |
-| `semantic-map` | planejado | o diretório ainda não contém implementação pública além do placeholder |
-| `semantic-memory` | planejado | capacidade arquitetural reservada, ainda sem implementação concreta |
-| `scene-graph` | planejado | capacidade arquitetural reservada, ainda sem implementação concreta |
-| `context-reasoning` | planejado | capacidade arquitetural reservada, ainda sem implementação concreta |
-| `query-engine` | planejado | capacidade arquitetural reservada, ainda sem implementação concreta |
+| `semantic-map` | planejado | ainda sem implementação pública concreta |
+| `semantic-memory` | planejado | capacidade arquitetural reservada |
+| `scene-graph` | planejado | capacidade arquitetural reservada |
+| `context-reasoning` | planejado | capacidade arquitetural reservada |
+| `query-engine` | planejado | capacidade arquitetural reservada |
 
-Os exemplos abaixo usam uma única cena didática para que seja possível seguir a mesma evidência do início ao fim:
+Os exemplos usam uma única cena didática para permitir seguir a mesma evidência de ponta a ponta:
 
 ```text
 frame_152
@@ -78,33 +118,32 @@ corredor interno
 + marca/pichação em uma superfície
 ```
 
-Os ids e valores numéricos do exemplo são ilustrativos. Os nomes de contracts, estágios e responsabilidades correspondem ao código atual.
+Os ids e números são ilustrativos. Os nomes de contracts, estágios e responsabilidades correspondem ao código atual.
 
 ## 1. Entrada RGB
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Dataset / adapter / runtime"] --> B["Entrada RGB<br/>ImageObservation + ImagePayload"]:::current
+    B --> C["Region Discovery"]
+    B --> D["Dense Feature Extraction"]
+    B --> E["Scene Context / Region Views"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-A pipeline não começa com "uma imagem" genérica. Ela começa com duas representações complementares:
+A pipeline não começa com uma imagem genérica. Ela começa com duas representações complementares:
 
 - `ImageObservation`, identidade, resolução, encoding e referência auditável ao artifact de imagem;
 - `ImagePayload`, pixels RGB concretos resolvidos em memória para os modelos processarem.
 
-Essa separação evita que os contracts públicos dependam de NumPy, PIL, Torch ou de um formato de dataset específico.
-
-### Quem produz a entrada
-
-Adapters de dataset, aplicações ou integrações de runtime resolvem uma observação externa e a traduzem para a fronteira canônica de `visual-perception`.
-
-```text
-adapter / dataset / runtime
-        |
-        v
-ImageObservation + ImagePayload
-```
+A separação evita que contracts públicos dependam de NumPy, PIL, Torch ou do formato de um dataset específico.
 
 ### O que recebe
-
-Contract público simplificado:
 
 ```text
 ImageObservation
@@ -115,27 +154,7 @@ ImageObservation
     image: SourceArtifactReference
     source: ObservationReference
 }
-```
 
-`ObservationReference` concentra identidade e proveniência temporal:
-
-```text
-ObservationReference
-{
-    observation_id
-    dataset_id
-    sequence_id
-    sensor_id
-    sequence_index
-    timestamp
-    frame_id
-    calibration_id?
-}
-```
-
-Os pixels resolvidos ficam separados:
-
-```text
 ImagePayload
 {
     pixels: RGB[H, W, 3]
@@ -144,35 +163,16 @@ ImagePayload
 }
 ```
 
-### Representação visual da entrada
+`ObservationReference` concentra identidade, sensor, sequência, timestamp, frame e calibração de origem.
 
-```text
-frame_152, 640 x 480
+### O que acontece
 
-┌──────────────────────────────────────┐
-│                                      │
-│            corridor                  │
-│                        ┌────────┐    │
-│                        │  red   │    │
-│                [ext]   │  door  │    │
-│                        │        │    │
-│                        └────────┘    │
-│      graffiti / mark                 │
-│                                      │
-└──────────────────────────────────────┘
-```
+1. resolução e encoding são validados;
+2. o payload precisa ter shape `(H, W, 3)`;
+3. identidade, timestamp, sensor e frame permanecem ligados ao dado visual;
+4. o artifact original continua rastreável pela proveniência.
 
-### O que acontece internamente
-
-Nesta etapa ainda não há segmentação nem semântica. O sistema apenas valida que:
-
-1. a resolução declarada é válida;
-2. o encoding é suportado;
-3. o payload tem shape `(H, W, 3)`;
-4. identidade, timestamp, sensor e frame permanecem associados ao dado visual;
-5. o artifact original pode ser recuperado posteriormente pela proveniência.
-
-### Exemplo concreto
+### Exemplo
 
 ```text
 ImageObservation
@@ -192,31 +192,11 @@ ImagePayload
 }
 ```
 
-### O que esta etapa sabe
+### O que sabe e o que ainda não sabe
 
-```text
-SABE:
-qual observação está sendo processada
-qual sensor a produziu
-quando foi produzida
-em qual frame de coordenadas ela existe
-qual é a resolução e quais são os pixels RGB
-```
+Sabe qual observação está sendo processada, de qual sensor veio, quando ocorreu, em qual frame existe e quais são seus pixels. Ainda não sabe onde estão os objetos, qual região é uma porta, qual pixel corresponde a qual ponto LiDAR ou onde qualquer coisa está em XYZ.
 
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-onde estão os objetos
-qual região é uma porta
-qual pixel corresponde a qual ponto LiDAR
-posição XYZ
-identidade persistente no mapa
-```
-
-### Payload de saída
-
-A saída é a própria entrada canônica. Ela se divide para caminhos diferentes da percepção:
+### Saída
 
 ```text
 ImagePayload
@@ -225,59 +205,37 @@ ImagePayload
     └──> Scene Context / Region Views
 ```
 
-### Por que a próxima etapa precisa disso
-
-Region discovery precisa dos pixels para propor geometria 2D. DINOv2 precisa dos mesmos pixels para produzir representações visuais densas. O VLM de cena precisa do frame completo para produzir contexto global.
-
 ## 2. Region Discovery
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Entrada RGB<br/>ImagePayload"] --> B["Region Discovery<br/>SAM / RegionDiscoverer"]:::current
+    B --> C["RegionProposal[]"]
+    C --> D["Region Merge / Consolidation"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Region discovery responde uma pergunta geométrica:
+Responder uma pergunta geométrica:
 
 > Quais áreas visuais coerentes podem valer a pena analisar separadamente?
 
-Ele não responde "isto é uma porta". No perfil real de referência, o port `RegionDiscoverer` é atendido por SAM ViT-H (`facebook/sam-vit-huge`). O resultado é class-agnostic.
+Ele não responde "isto é uma porta". No perfil real de referência, `RegionDiscoverer` é atendido por SAM ViT-H e produz propostas class-agnostic.
 
-### Quem produz a entrada
+### O que acontece
 
-```text
-ImagePayload
-    ↓
-RegionDiscoverer
-```
+1. a imagem pode ser dividida em tiles e escalas;
+2. o backend produz candidatos locais;
+3. cada candidato possui `mask`, `bounding box` e confiança geométrica;
+4. coordenadas locais são remapeadas para a imagem original;
+5. propostas inválidas podem ser rejeitadas;
+6. as restantes tornam-se `RegionProposal`.
 
-### O que recebe
-
-Pixels de uma imagem inteira ou de tiles, dependendo da configuração de tiling.
-
-### Representação visual da entrada e saída
-
-```text
-RGB                                 propostas
-
-┌───────────────────┐              ┌───────────────────┐
-│        wall       │              │  AAAAA            │
-│            door   │      ->      │        BBBBB      │
-│       exting.     │              │      CC BBBB      │
-│                   │              │                   │
-└───────────────────┘              └───────────────────┘
-```
-
-Cada letra representa uma proposta de máscara independente.
-
-### O que acontece internamente
-
-1. A imagem pode ser dividida em tiles e escalas.
-2. O backend de segmentação produz candidatos locais.
-3. Cada candidato tem uma máscara, bounding box e confiança geométrica.
-4. A fronteira de tiling remapeia coordenadas locais para a imagem original.
-5. Propostas inválidas podem ser rejeitadas antes do merge, por exemplo por área válida, ego-veículo ou tamanho relativo.
-6. As propostas remanescentes seguem como `RegionProposal`.
-
-Uma proposta é apenas evidência geométrica candidata. SAM pode separar um objeto em partes, propor partes de uma superfície ou produzir propostas parcialmente redundantes.
-
-### Exemplo concreto
+### Exemplo
 
 ```text
 RegionProposal
@@ -291,55 +249,9 @@ RegionProposal
 }
 ```
 
-Pode existir outra proposta sobreposta:
+Duas proposals sobrepostas ainda não significam duas entidades físicas.
 
-```text
-proposal_31
-    mask: porta + batente
-
-proposal_27
-    mask: folha da porta
-```
-
-Isso ainda não significa duas portas.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-geometria 2D candidata
-quais pixels pertencem a cada proposta
-bounding box
-confiança geométrica do produtor
-proveniência do tile/escala
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-label textual
-se proposal_27 e proposal_31 são o mesmo objeto físico
-posição 3D
-identidade temporal
-se a região é semanticamente útil
-```
-
-### Payload de saída
-
-```text
-RegionProposal
-{
-    proposal_id
-    mask
-    box
-    geometric_confidence
-    source
-    tile
-}
-```
-
-### Para quem envia
+### Saída
 
 ```text
 RegionProposal[]
@@ -347,29 +259,27 @@ RegionProposal[]
 Region Merge / Consolidation
 ```
 
-### Por que a próxima etapa precisa disso
-
-O restante do pipeline precisa de uma unidade de região estável. Enquanto houver propostas redundantes, nenhum embedding ou claim semântico deve assumir que cada proposal é uma entidade distinta.
-
 ## 3. Region Merge / Consolidation
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Region Discovery"] --> B["RegionProposal[]"]
+    B --> C["Region Merge / Consolidation"]:::current
+    C --> D["ObservedRegion[]"]
+    D --> E["Mask-aware Pooling"]
+    D --> F["Region Views"]
+    D --> G["Region Semantics"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Consolidar propostas geométricas sobrepostas em `ObservedRegion`, preservando de quais propostas cada região surgiu.
+Consolidar propostas geométricas redundantes ou sobrepostas em uma unidade 2D canônica chamada `ObservedRegion`, preservando de quais proposals ela surgiu.
 
-### Quem produz a entrada
-
-```text
-Region Discovery
-      ↓
-RegionProposal[]
-```
-
-### O que recebe
-
-Máscaras e boxes remapeados para a mesma convenção de coordenadas da imagem original.
-
-### Representação visual
+### Exemplo visual
 
 ```text
 proposal_27        proposal_31
@@ -386,57 +296,7 @@ proposal_27        proposal_31
          █████
 ```
 
-### O que acontece internamente
-
-1. As propostas são comparadas geometricamente.
-2. Regras de sobreposição/IoU determinam quais propostas devem ser consolidadas.
-3. A geometria canônica da região é criada.
-4. `contributing_proposal_ids` preserva a rastreabilidade até as propostas originais.
-5. A confiança geométrica permanece separada de qualquer confiança semântica futura.
-
-### Exemplo concreto
-
-```text
-ObservedRegion
-{
-    region_id: "region_12"
-    mask: <máscara consolidada>
-    box: (304, 78, 424, 392)
-    geometric_confidence: 0.93
-    contributing_proposal_ids: (
-        "proposal_27",
-        "proposal_31"
-    )
-    claims: ()
-    evidence: ()
-}
-```
-
-Neste momento `claims` e `evidence` ainda podem estar vazios.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-qual é a geometria 2D canônica da região
-quais proposals contribuíram
-qual a confiança geométrica
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-"door"
-"red"
-"closed"
-posição XYZ
-mesma entidade em outro frame
-```
-
-### Payload de saída
-
-O contract real é `ObservedRegion`:
+### Payload
 
 ```text
 ObservedRegion
@@ -453,74 +313,28 @@ ObservedRegion
 }
 ```
 
-### Para quem envia
-
-A mesma região alimenta múltiplos estágios:
-
-```text
-ObservedRegion
-    ├──> mask-aware pooling
-    ├──> Region Views
-    └──> Region Semantics
-```
+Neste ponto, `claims` e `evidence` ainda podem estar vazios. A região é uma unidade geométrica estável, não uma entidade 3D.
 
 ## 4. Dense Feature Extraction
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Entrada RGB<br/>ImagePayload"] --> B["Dense Feature Extraction<br/>DINOv2"]:::current
+    B --> C["FeatureMap<br/>Hf × Wf × C"]
+    C --> D["Mask-aware Pooling"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-DINOv2 não tenta responder "isso é uma porta". Seu papel é transformar posições visuais da imagem em vetores que preservam aparência e estrutura visual.
+DINOv2 transforma posições visuais da imagem em vetores que preservam aparência e estrutura visual. Ele não retorna labels como `door`, `wall` ou `chair`.
 
-A configuração real de referência usa:
+A configuração de referência usa DINOv2-base, com maior aresta 448 e patch size 14 no input efetivamente processado.
 
-```text
-backend: dinov2
-checkpoint: facebook/dinov2-base
-input_resolution: maior aresta 448
-patch size: 14 px no input efetivamente processado
-```
-
-### Quem produz a entrada
-
-```text
-ImagePayload
-    ↓
-DenseFeatureExtractor
-```
-
-### O que recebe
-
-O frame RGB completo.
-
-### Representação visual da entrada
-
-Para simplificar, imagine uma grade de patches:
-
-```text
-RGB processado
-
-┌────┬────┬────┬────┐
-│ p1 │ p2 │ p3 │ p4 │
-├────┼────┼────┼────┤
-│ p5 │ p6 │ p7 │ p8 │
-├────┼────┼────┼────┤
-│ p9 │ pA │ pB │ pC │
-└────┴────┴────┴────┘
-```
-
-No modelo real há muito mais posições. A grade depende da resolução efetivamente entregue ao processor e do patch size do checkpoint.
-
-### O que acontece internamente
-
-1. O `ImagePayload` é convertido para a representação aceita pelo processor do modelo.
-2. O resize preserva aspect ratio e alinha as dimensões ao patch size 14.
-3. A imagem é dividida implicitamente pelo ViT em patches.
-4. Cada patch vira um token visual.
-5. Self-attention permite que o token de uma posição seja condicionado também pelo restante da imagem.
-6. O adapter remove tokens de prefixo, como CLS e register tokens.
-7. Os tokens espaciais são reorganizados em uma grade `Hf x Wf x C`.
-8. O contract `FeatureMap` registra stride, dimensão, checkpoint, preprocessing e regra de amostragem.
-
-Visualmente:
+### Transformação
 
 ```text
 patches                      embeddings DINOv2
@@ -530,38 +344,15 @@ patches                      embeddings DINOv2
 [p9][pA][pB][pC]             [e9][eA][eB][eC]
 ```
 
-Cada `eN` é um vetor C-dimensional.
+Cada `eN` é um vetor C-dimensional:
 
 ```text
 e7 = [0.12, -0.74, 0.31, ..., 0.08]
 ```
 
-`e7` não significa literalmente `"door"`. Ele codifica características visuais daquela posição condicionadas pelo contexto da imagem.
+Esse vetor descreve visualmente aquela posição condicionada pelo contexto do frame, não uma classe explícita.
 
-### Exemplo concreto
-
-A porta vermelha ocupa vários patches próximos. Cada um terá um vetor diferente, mas vetores da mesma estrutura visual podem apresentar similaridade útil.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-representação visual densa por posição
-estrutura de aparência
-contexto visual capturado pelo backbone
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-label textual garantido
-qual máscara define o objeto
-posição XYZ
-instância persistente
-```
-
-### Payload de saída
+### Saída
 
 ```text
 FeatureMap
@@ -579,29 +370,25 @@ FeatureMap
 }
 ```
 
-### Para quem envia
-
-```text
-FeatureMap
-    ↓
-Mask + Dense Features / Pooling
-```
-
 ## 5. Mask + Dense Features / Pooling
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["ObservedRegion.mask"] --> C["Mask-aware Pooling"]:::current
+    B["FeatureMap DINOv2"] --> C
+    C --> D["foreground_dense<br/>RegionEvidenceSlot"]
+    D --> E["Region Evidence"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-A máscara diz "onde está a região". O dense feature map diz "como cada posição é representada visualmente". O pooling combina os dois para produzir uma representação visual da região.
+A máscara responde "onde está a região". O dense feature map responde "como cada posição é representada visualmente". O pooling combina os dois para produzir uma representação visual agregada da região.
 
-### Quem produz a entrada
-
-```text
-ObservedRegion.mask ─┐
-                     ├──> pooling
-FeatureMap ──────────┘
-```
-
-### Representação visual
+### Exemplo
 
 ```text
 Dense feature map
@@ -610,61 +397,22 @@ Dense feature map
 [e5][e6][e7][e8]
 [e9][eA][eB][eC]
 
-Mask da region_12, reamostrada/alinhada à grade
+Mask da region_12
 
  0   0   1   1
  0   0   1   1
  0   0   0   0
 
-Features selecionadas:
-
-e3, e4, e7, e8
-
+seleciona e3, e4, e7, e8
         ↓ pooling
 
 region_embedding
 [0.18, -0.72, 0.31, ..., 0.45]
 ```
 
-### O que acontece internamente
+O vetor pesado fica em artifact; a região guarda referência para ele.
 
-1. A máscara em resolução de imagem é alinhada à grade de features.
-2. A regra de sampling do `FeatureMap` determina como consultar posições intermediárias.
-3. Apenas posições suportadas pela máscara contribuem para o pooling.
-4. As features selecionadas são agregadas em um vetor de região.
-5. O vetor pesado é armazenado como artifact.
-6. A região guarda uma referência ao artifact, não precisa serializar centenas de floats dentro de `VisualObservation`.
-
-### Exemplo concreto
-
-```text
-region_12
-    mask -> pixels da porta
-    dense features -> DINOv2-base
-    pooled artifact -> "artifact://.../region_12/foreground_dense"
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-assinatura visual agregada da área da máscara
-qual modelo produziu o espaço vetorial
-qual máscara deu suporte ao pooling
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-label textual por si só
-se a máscara está semanticamente correta
-se a região é a mesma porta em outro frame
-```
-
-### Payload de saída
-
-O resultado canônico entra em evidência de região, normalmente no slot `foreground_dense`.
+### Saída
 
 ```text
 RegionEvidenceSlot
@@ -681,20 +429,27 @@ RegionEvidenceSlot
 }
 ```
 
-### Por que a próxima etapa precisa disso
-
-Sem uma representação agregada da região, consumidores teriam de carregar o feature map inteiro e refazer a seleção de patches para cada comparação.
-
 ## 6. Region Evidence
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Mask-aware Pooling"] --> B["Region Evidence"]:::current
+    C["Region Views"] --> B
+    D["CLIP / Language-Aligned Encoder"] --> B
+    B --> E["Region Semantics"]
+    B --> F["Hypothesis Support"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Uma única representação visual é insuficiente. Uma máscara apertada favorece o sujeito, mas perde contexto. Um crop amplo contém contexto, mas pode diluir o sujeito. O projeto preserva múltiplos slots complementares.
+Uma região não é bem representada por um único vetor. Uma máscara apertada favorece o sujeito, mas perde contexto. Um crop amplo preserva o entorno, mas pode diluir o sujeito. O projeto preserva múltiplos slots complementares.
 
 ### Slots reais
 
-O enum `EvidenceSlot` contém:
-
 ```text
 foreground_dense
 masked_subject
@@ -703,102 +458,44 @@ contextual_crop
 scene_conditioned
 ```
 
-### Representação visual
+### Intuição
 
 ```text
 foreground_dense
-    máscara sobre dense features
-    sujeito visual isolado em feature space DINOv2
+    máscara sobre dense features DINOv2
 
 masked_subject
-    pixels do sujeito, fundo suprimido
-
-┌────────────┐
-│            │
-│   PORTA    │
-│            │
-└────────────┘
-
+    sujeito isolado, fundo suprimido
 
 tight_crop
-    crop justo ao redor da região
-
-┌────────────┐
-│  batente   │
-│   PORTA    │
-└────────────┘
+    objeto + entorno imediato
 
 contextual_crop
-    crop expandido
-
-┌──────────────────────┐
-│ parede      extintor │
-│        PORTA         │
-│ corredor             │
-└──────────────────────┘
+    objeto + região mais ampla da cena
 
 scene_conditioned
-    evidência que carrega ou considera o contexto global da cena
+    evidência condicionada ao contexto global
 ```
 
-### O que acontece internamente
-
-Cada slot registra seu próprio estado:
-
-```text
-available
-missing
-failed
-```
-
-Um slot `missing` ou `failed` não desaparece silenciosamente. Ele carrega um `reason`. Isso é importante para rastreabilidade: ausência de contexto não pode ser confundida com evidência neutra.
-
-Cada slot também declara o `EmbeddingSpace`. O projeto impede comparar silenciosamente vetores incompatíveis.
-
-### Exemplo concreto
-
-Para `region_12`:
-
-```text
-foreground_dense
-    DINOv2 visual space
-    artifact_ref = dino://frame_152/region_12
-
-masked_subject
-    CLIP language-aligned space
-    artifact_ref = clip://frame_152/region_12/masked
-
-tight_crop
-    CLIP language-aligned space
-
-contextual_crop
-    CLIP language-aligned space
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-quais visões complementares da região existem
-qual espaço vetorial cada uma usa
-qual preprocessing produziu cada artifact
-qual geometria/crop corresponde a cada evidência
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-qual evidência está semanticamente correta em absoluto
-identidade 3D
-persistência temporal
-```
+Cada slot declara seu estado `available`, `missing` ou `failed`, seu preprocessing, geometria, artifact e `EmbeddingSpace`. Espaços incompatíveis não devem ser comparados silenciosamente.
 
 ## 7. Language-Aligned Evidence
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Region Views"] --> B["Language-Aligned Evidence<br/>CLIP"]:::current
+    B --> C["RegionEvidenceSlot<br/>masked/tight/contextual"]
+    C --> D["Region Semantics"]
+    C --> E["Hypothesis Support"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-DINOv2 e CLIP resolvem problemas diferentes.
+DINOv2 e CLIP resolvem problemas diferentes:
 
 ```text
 DINOv2
@@ -809,25 +506,7 @@ CLIP
     texto       -> mesmo espaço compartilhado
 ```
 
-A configuração real de referência usa `openai/clip-vit-large-patch14`.
-
-### Quem produz a entrada
-
-```text
-Region Views
-    ↓
-LanguageAlignedEncoder
-```
-
-### O que acontece internamente
-
-1. Uma view da região é codificada pelo encoder visual CLIP.
-2. O vetor é normalizado de acordo com o contract do espaço.
-3. O artifact registra modelo, checkpoint, dimensão e modalidade `language_aligned`.
-4. Quando uma hipótese textual precisa ser verificada, o texto também é codificado no mesmo espaço.
-5. Similaridade de cosseno pode então medir alinhamento entre a evidência visual e a hipótese textual.
-
-### Representação visual
+### Exemplo
 
 ```text
 crop da porta
@@ -838,45 +517,32 @@ crop da porta
     ↓ CLIP text encoder
 [0.05, -0.19, ..., 0.14]
 
-           cosine similarity
+           ↓ cosine similarity
 ```
 
-O valor de similaridade não é automaticamente uma probabilidade nem uma confiança calibrada.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-quão alinhada uma evidência visual está a uma hipótese textual
-em um espaço específico e declarado
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-probabilidade calibrada da hipótese
-posição 3D
-mesma instância em outro frame
-```
+A similaridade de cosseno é uma medida no espaço declarado, não uma probabilidade nem uma confiança calibrada.
 
 ## 8. Scene Context
 
-### Objetivo
+### Onde esta etapa está na pipeline
 
-Scene context interpreta o frame completo para produzir claims de nível de cena. Esse contexto ajuda a interpretar regiões ambíguas, mas não substitui a geometria de uma região.
+```mermaid
+flowchart LR
+    A["Frame RGB completo"] --> B["Scene Context<br/>VLM"]:::current
+    B --> C["SceneContext<br/>SemanticClaim[]"]
+    C --> D["Region Semantics"]
+    C --> E["VisualObservation"]
 
-A configuração real de referência usa Qwen2.5-VL-3B-Instruct em 4-bit.
-
-### Quem produz a entrada
-
-```text
-frame RGB completo
-    ↓
-MultimodalReasoner
+    classDef current stroke-width:3px,font-weight:bold;
 ```
 
-### Representação
+### Objetivo
+
+Interpretar o frame completo e produzir claims globais que ajudem a desambiguar regiões sem fingir que esses claims possuem geometria 2D ou 3D própria.
+
+A configuração de referência usa Qwen2.5-VL-3B-Instruct em 4-bit.
+
+### Exemplo
 
 ```text
 frame_152
@@ -888,16 +554,7 @@ layout: ...
 visibility: ...
 ```
 
-O contract atual evita tratar prosa livre como geometria de região.
-
-### O que acontece internamente
-
-1. O frame inteiro é enviado ao reasoner multimodal.
-2. A resposta estruturada é parseada para `SemanticClaim` de nível de cena.
-3. Cada claim mantém evidência e proveniência do modelo.
-4. O resultado é agrupado em `SceneContext`.
-
-### Payload de saída
+### Saída
 
 ```text
 SceneContext
@@ -906,55 +563,27 @@ SceneContext
 }
 ```
 
-### O que esta etapa sabe
-
-```text
-SABE:
-tipo e contexto global provável da cena
-condições globais que podem ajudar a desambiguar regiões
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-qual pixel específico corresponde a uma afirmação global
-posição XYZ de uma porta
-identidade persistente de uma entidade
-```
-
 ## 9. Region Semantics
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["ObservedRegion"] --> E["Region Semantics<br/>VLM"]:::current
+    B["Region Views"] --> E
+    C["Region Evidence"] --> E
+    D["SceneContext"] --> E
+    E --> F["SemanticClaim[]"]
+    F --> G["Hypothesis Support"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Transformar `ObservedRegion` de geometria 2D em uma região com interpretações semânticas auditáveis.
+Adicionar interpretações semânticas auditáveis à geometria 2D da região.
 
-### Quem produz a entrada
-
-```text
-ObservedRegion
-+ Region Views
-+ Region Evidence
-+ SceneContext
-        ↓
-Region Semantics
-```
-
-### O que recebe
-
-O reasoner recebe a geometria da região de forma indireta pelas views, múltiplas evidências visuais e o contexto global relevante.
-
-### O que acontece internamente
-
-1. As views configuradas são selecionadas.
-2. O contexto de cena é anexado ao request de região.
-3. O VLM produz uma interpretação estruturada.
-4. O parser converte a resposta em `SemanticClaim`.
-5. Claims de identidade (`LABEL`) declaram `role`, `category` e `RegionKind`.
-6. Claims descritivos, como atributo, material ou condição, permanecem separados da identidade.
-7. Confiança semântica nunca é confundida com `geometric_confidence`.
-
-### Exemplo concreto
+### Exemplo
 
 ```text
 region_12
@@ -977,85 +606,40 @@ condition:
     value = "closed"
 ```
 
-### `None` versus `0`
-
-```text
-confidence = None
-    produtor não forneceu score
-
-confidence = 0.0
-    produtor forneceu explicitamente score zero
-```
-
-A ausência não deve ser convertida em zero.
-
-### Geometria versus semântica
+### Distinções importantes
 
 ```text
 ObservedRegion.geometric_confidence
-    qualidade da máscara/box
+    qualidade geométrica da máscara/box
 
 SemanticClaim.confidence
-    score bruto do produtor semântico, quando existe
+    score bruto informado pelo produtor semântico
 
 SemanticSupport.calibrated_confidence
     score calibrado, apenas quando existe calibração válida
 ```
 
-### Payload de saída
-
-A região continua sendo `ObservedRegion`, agora com `claims` anexados.
-
-```text
-ObservedRegion
-{
-    region_id: region_12
-    mask: ...
-    box: ...
-    claims: [
-        LABEL("door", primary),
-        LABEL("doorway", alternative),
-        ATTRIBUTE("red"),
-        CONDITION("closed")
-    ]
-    evidence: [...]
-}
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-interpretações semânticas prováveis da região
-alternativas registradas pelo produtor
-atributos e condições observados
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-se region_12 é a mesma porta de frame_158
-posição XYZ
-se a hipótese sobreviverá à evidência multi-view
-```
+`confidence=None` significa que nenhum score foi fornecido. Não equivale a zero.
 
 ## 10. Hypothesis Support
 
-### Objetivo
+### Onde esta etapa está na pipeline
 
-Uma hipótese do VLM não deve se tornar verdade apenas porque foi escrita como label. O estágio de support mede sinais independentes usando evidência language-aligned.
+```mermaid
+flowchart LR
+    A["SemanticClaim primary + alternatives"] --> C["Hypothesis Support"]:::current
+    B["Language-Aligned Evidence"] --> C
+    C --> D["supports / contradicts / indistinguishable / unavailable"]
+    D --> E["Selective Refinement"]
 
-### Estados reais do sinal
-
-```text
-supports
-contradicts
-indistinguishable
-unavailable
+    classDef current stroke-width:3px,font-weight:bold;
 ```
 
-### Representação
+### Objetivo
+
+Evitar que uma hipótese do VLM vire verdade simplesmente porque foi escrita como label. O estágio mede sinais independentes usando evidência language-aligned.
+
+### Exemplo
 
 ```text
 hipótese primary: "door"
@@ -1068,23 +652,11 @@ contextual_crop -> CLIP image embedding
 score(door)    = 0.241
 score(doorway) = 0.228
 margin         = 0.013
-
-se margem < piso configurado:
-    status = indistinguishable
 ```
 
-Os números são ilustrativos. O ponto conceitual é que `0.241` não é 24,1% de probabilidade.
+Se a margem ficar abaixo do piso configurado, o sinal pode ser `indistinguishable`. Isso evita transformar ruído de similaridade em uma decisão falsa.
 
-### O que acontece internamente
-
-1. As hipóteses concorrentes de uma região são reunidas.
-2. O texto de cada hipótese é codificado pelo language-aligned encoder.
-3. Evidências de slots compatíveis são comparadas no mesmo `EmbeddingSpace`.
-4. Score e margem são preservados como medidas brutas.
-5. O status expressa se a evidência apoia, contradiz, não distingue ou não está disponível.
-6. A calibração, quando disponível, produz `SemanticSupport`; caso contrário os sinais continuam explícitos sem fingir uma confiança calibrada.
-
-### Payload relevante
+### Payload
 
 ```text
 HypothesisSupportSignal
@@ -1100,33 +672,25 @@ HypothesisSupportSignal
 }
 ```
 
-### O que esta etapa sabe
-
-```text
-SABE:
-se uma fonte independente favorece ou contradiz uma hipótese
-se o sinal é inconclusivo
-se o sinal não pôde ser produzido
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-verdade final do mundo
-identidade 3D
-probabilidade calibrada, a menos que exista calibration artifact válido
-```
-
 ## 11. Selective Refinement
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Hypothesis Support"] --> B["Selective Refinement"]:::current
+    C["Claims / Evidence / Structural checks"] --> B
+    B --> D["Claims adicionais<br/>RefinementStep[]"]
+    D --> E["Intra-frame Reconciliation"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Reanalisar somente regiões para as quais existe uma razão explícita de evidência, e somente quando o novo passe oferece evidência diferente da que já foi usada.
+Reanalisar somente regiões que têm uma razão explícita de evidência e somente quando o novo passe oferece evidência diferente da usada anteriormente.
 
 ### Razões implementadas
-
-O código atual define, entre outras:
 
 ```text
 missing_semantics
@@ -1141,77 +705,51 @@ insufficient_foreground
 small_region
 ```
 
-`small_region` é um modificador de risco e não justifica uma chamada sozinho.
+`small_region` é um modificador de risco e não deve disparar um novo passe sozinho.
 
-### Exemplo concreto
+### Exemplo
 
 ```text
-VLM:
-    "wooden pallet"
-
-mask:
-    cobre pallet + grande parte da parede
-
-foreground evidence:
-    máscara ocupa pouco do bounding box
-
+VLM: "wooden pallet"
+mask: pallet + grande área de parede
+mask_fill_ratio baixo
         ↓
-
 reason = insufficient_foreground
-
         ↓
-
-novo passe com escalation_views
-
+escalation_views adicionam nova evidência
         ↓
-
-nova interpretação anexada, sem apagar a anterior
+nova interpretação é anexada
 ```
 
-### O que acontece internamente
-
-1. `region_refinement_reasons` inspeciona claims, sinais, support, estrutura e slots.
-2. `select_refinement_targets` prioriza alvos dentro do orçamento.
-3. O pipeline verifica se `escalation_views` adiciona evidência nova.
-4. As regiões selecionadas são reinterpretadas.
-5. O histórico é append-only em `RefinementStep`.
-6. Claims anteriores não são apagados.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-por que uma região precisa de outro passe
-qual evidência anterior existia
-qual evidência nova foi oferecida
-qual produtor executou o refinamento
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-se a hipótese refinada representa uma entidade persistente no mapa
-```
+Nada é sobrescrito silenciosamente. O histórico permanece append-only.
 
 ## 12. Reconciliation intra-frame
 
-### Objetivo
+### Onde esta etapa está na pipeline
 
-Resolver redundância semântica dentro do mesmo frame sem declarar identidade 3D persistente.
+```mermaid
+flowchart LR
+    A["Selective Refinement"] --> B["Reconciliation intra-frame"]:::current
+    C["ObservedRegion[] + claims"] --> B
+    B --> D["ContextualEntityHypothesis[]"]
+    B --> E["Relations"]
+    D --> F["VisualObservation"]
 
-### Intuição
-
-Duas regiões do mesmo frame podem ser manifestações de uma mesma superfície ou entidade visual:
-
-```text
-region_12  -> "door"
-region_17  -> "red door panel"
+    classDef current stroke-width:3px,font-weight:bold;
 ```
 
-A reconciliação pode formar uma hipótese contextual de agrupamento.
+### Objetivo
 
-### Regra conceitual obrigatória
+Resolver redundância semântica dentro do mesmo frame sem declarar identidade persistente em 3D.
+
+Exemplo:
+
+```text
+region_12 -> "door"
+region_17 -> "red door panel"
+```
+
+Essas regiões podem formar uma hipótese contextual conjunta, mas:
 
 ```text
 mesmo frame
@@ -1219,83 +757,55 @@ mesmo frame
 mesma entidade física confirmada em 3D
 ```
 
-### O que acontece internamente
-
-1. Conceitos podem ser canonicalizados para comparação local.
-2. Consistência estrutural e grupos de superfície podem ser avaliados.
-3. O resultado pode gerar `ContextualEntityHypothesis` em `VisualObservation.entity_hypotheses`.
-4. Nenhuma região original é removida.
-5. Nenhuma geometria é alterada para fingir fusão 3D.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-que duas ou mais regiões do mesmo frame são candidatas a uma interpretação conjunta
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-identidade persistente entre frames
-posição 3D compartilhada confirmada
-```
+Nenhuma região precisa ser removida e nenhuma geometria 3D é inventada nesta etapa.
 
 ## 13. Relations
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Reconciliation / Region pairs"] --> B["Candidate Relations"]:::current
+    C["2D geometry + VLM reasoning"] --> B
+    B --> D["CandidateRelation[]"]
+    D --> E["VisualObservation"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-Registrar relações candidatas entre regiões da mesma observação sem promover essas relações diretamente a verdade 3D.
+Registrar relações candidatas entre regiões do mesmo frame sem promovê-las diretamente a relações métricas 3D.
 
-### Exemplos
-
-```text
-fire extinguisher
-       |
-       | near
-       v
-      door
-```
+Exemplos:
 
 ```text
-graffiti
-    |
-    | on
-    v
-surface
+fire extinguisher --near--> door
+
+graffiti --on--> surface
 ```
 
-### O que acontece internamente
-
-O pipeline pode combinar relações derivadas de geometria 2D com relações candidatas consultadas ao reasoner multimodal. O vocabulário de relação é controlado e existe saída explícita para nenhuma relação.
-
-Relações como profundidade física não devem ser inferidas apenas da imagem quando a geometria 3D ainda não foi consultada.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-relações candidatas observáveis no frame
-quais region_ids participam
-proveniência da relação
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-relação métrica 3D validada
-persistência temporal da relação
-```
+Relações de profundidade física não devem ser inferidas apenas da imagem quando a geometria 3D ainda não foi consultada.
 
 ## 14. VisualObservation
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["SceneContext"] --> D["VisualObservation"]:::current
+    B["ObservedRegion[] + Entity hypotheses"] --> D
+    C["CandidateRelation[]"] --> D
+    D --> E["Sensor Association"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-`VisualObservation` é a saída 2D canônica do módulo `visual-perception`. Ela reúne tudo que foi inferido sobre uma única imagem sem fingir que essa imagem já virou mapa 3D.
+`VisualObservation` é a saída canônica 2D de `visual-perception`. Ela reúne tudo que foi inferido sobre um único frame sem fingir que a imagem já virou mapa 3D.
 
-### Contract real
+### Contract
 
 ```text
 VisualObservation
@@ -1314,34 +824,7 @@ VisualObservation
 
 A versão atual do schema é `3`.
 
-### Exemplo simplificado
-
-```text
-VisualObservation frame_152
-
-scene_context:
-    scene_type = "indoor corridor"
-
-regions:
-
-    region_12
-        mask -> porta
-        box -> (304, 78, 424, 392)
-        foreground_dense -> artifact DINOv2
-        contextual_crop -> artifact CLIP
-        primary label -> door
-        attribute -> red
-        condition -> closed
-
-    region_13
-        mask -> extintor
-        primary label -> fire extinguisher
-
-relations:
-    region_13 near region_12
-```
-
-### Ponto conceitual central
+### Ponto central
 
 ```text
 VisualObservation
@@ -1351,41 +834,24 @@ VisualObservation
     ≠ mapa semântico 3D
 ```
 
-### Para quem envia
-
-A fronteira de integração traduz as regiões canônicas para evidência consumível por `sensor-association`.
-
-```text
-VisualObservation
-      ↓
-sensor-association
-```
-
-### Por que a próxima etapa precisa disso
-
-A associação 2D→3D precisa, no mínimo, da geometria das máscaras, do `region_id`, do label selecionado e de referências de feature. Esses elementos permitem dizer qual evidência visual corresponde ao pixel no qual um ponto 3D foi projetado.
-
 ## 15. Geometria 3D / LiDAR / geometric-map
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["LiDAR + IMU"] --> B["state-estimation"]
+    B --> C["MotionCorrectedLidarFrame + StateEstimate"]
+    C --> D["geometric-map"]:::current
+    D --> E["GeometryPoint / MapAnchoredPoint"]
+    E --> F["Sensor Association"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
-Fornecer a geometria autoritativa do mundo. `visual-perception` não cria XYZ.
-
-### De onde vêm os pontos
-
-O fluxo geométrico começa com `state-estimation`:
-
-```text
-LiDAR + IMU
-    ↓
-state-estimation
-    ↓
-MotionCorrectedLidarFrame + StateEstimate
-    ↓
-geometric-map
-    ↓
-GeometryPoint
-```
+Fornecer a geometria autoritativa do mundo. `visual-perception` não cria coordenadas XYZ.
 
 ### Contract de ponto persistente
 
@@ -1393,90 +859,44 @@ GeometryPoint
 GeometryPoint
 {
     reference: GeometryReference
-    coordinates_m: (x, y, z) no frame do mapa
+    coordinates_m: (x, y, z)
     source_coordinates_m
     source_observation
     provenance
 }
 ```
 
-`GeometryReference` preserva uma identidade estável dentro de um mapa:
+`GeometryReference` fornece uma identidade estável dentro do mapa.
 
-```text
-GeometryReference
-{
-    map_id
-    geometry_id
-}
-```
-
-### Scan recém-adquirido versus ponto persistente
-
-O `sensor-association` suporta duas fronteiras:
-
-```text
-associate_points
-    scan LiDAR recém-chegado -> RGB
-
-associate_map_points
-    pontos já persistidos no geometric-map -> RGB
-```
-
-O segundo caminho existe para anexar contexto diretamente à geometria autoritativa, evitando manter duas amostragens concorrentes da mesma superfície no viewer.
-
-### Exemplo concreto
+### Exemplo
 
 ```text
 map_point_92814
 
-GeometryReference:
-    map_id = corridor_02_map
-    geometry_id = map_point_92814
-
-coordinates_m:
-    (4.21, 1.33, 0.87)
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-posição 3D
-identidade geométrica persistente
-origem LiDAR e proveniência
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-label visual
-qual região RGB cobre o ponto
-embedding semântico da imagem
+map_id = corridor_02_map
+geometry_id = map_point_92814
+coordinates_m = (4.21, 1.33, 0.87)
 ```
 
 ## 16. Pose + Calibration
 
-### Objetivo
+### Onde esta etapa está na pipeline
 
-Criar a ponte matemática entre as coordenadas 3D do ponto e o sistema de pixels da câmera.
+```mermaid
+flowchart LR
+    A["state-estimation"] --> B["StateEstimate / transforms"]:::current
+    C["Calibration artifact"] --> D["CameraLidarCalibration"]:::current
+    B --> E["Sensor Association"]
+    D --> E
 
-### Pose
-
-`StateEstimate` publica a pose no mesmo instante da observação que a ancora.
-
-```text
-StateEstimate
-{
-    pose
-    reference
-    provenance
-}
+    classDef current stroke-width:3px,font-weight:bold;
 ```
 
-### Calibração
+### Objetivo
 
-O contract real de associação é `CameraLidarCalibration`:
+Criar a ponte matemática entre um ponto 3D e o sistema de pixels da câmera.
+
+### Calibração
 
 ```text
 CameraLidarCalibration
@@ -1493,7 +913,7 @@ CameraLidarCalibration
 }
 ```
 
-Modelos de câmera suportados:
+Modelos suportados:
 
 ```text
 pinhole
@@ -1501,89 +921,54 @@ equidistant_fisheye
 mei
 ```
 
-### Intrinsics versus extrinsics
-
-```text
-intrinsics
-    descrevem como raios no frame da câmera viram pixels
-
-extrinsics
-    descrevem a transformação rígida LiDAR -> câmera
-
-pose
-    relaciona o frame do mapa/veículo no instante da observação
-```
-
-### Exemplo visual
+### Transformação
 
 ```text
 P_world = (4.21, 1.33, 0.87)
-
-        ↓ transform map -> camera
-
+        ↓ map -> camera
 P_camera = (x_c, y_c, z_c)
-
         ↓ camera model + intrinsics
-
 (u, v) = (354, 221)
 ```
 
-### Timestamp e sincronização
-
-Uma associação válida também depende de alinhamento temporal. RGB e LiDAR devem compartilhar o clock esperado e respeitar a tolerância temporal configurada. Uma excelente calibração espacial não corrige um par de observações capturadas em instantes incompatíveis.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-como transformar coordenadas entre frames
-como projetar um raio 3D para pixel
-qual artifact de calibração foi utilizado
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-qual região semântica contém o pixel
-se o ponto está ocluído por outro ponto
-```
+A sincronização temporal também é parte da validade da associação. Uma boa calibração espacial não corrige frames capturados em instantes incompatíveis.
 
 ## 17. Sensor Association
+
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["VisualObservation / RgbFrame"] --> D["Sensor Association"]:::current
+    B["GeometryPoint / MapAnchoredPoint"] --> D
+    C["Pose + CameraLidarCalibration"] --> D
+    D --> E["PointVisualAssociation"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
 
 ### Objetivo
 
 Responder, para cada ponto 3D candidato:
 
-> Se este ponto fosse observado por esta câmera neste instante, onde ele cairia na imagem e qual evidência visual válida o cobre?
+> Se este ponto fosse observado por esta câmera neste instante, onde cairia na imagem e qual evidência visual válida o cobre?
 
-### Quem produz as entradas
-
-```text
-VisualObservation / RgbFrame
-GeometryPoint / MapAnchoredPoint
-StateEstimate / transforms
-CameraLidarCalibration
-```
-
-### Fluxo visual
+### Fluxo
 
 ```text
 ponto XYZ
     ↓
-transformação para o frame da câmera
-    ↓
-P_camera
+transform para frame da câmera
     ↓
 projeção pelo modelo calibrado
     ↓
 pixel (u,v)
     ↓
-checagem: está na frente da câmera?
+frente da câmera?
     ↓
-checagem: está dentro da imagem?
+dentro da imagem?
     ↓
-checagem: pertence ao suporte óptico válido?
+suporte óptico válido?
     ↓
 oclusão
     ↓
@@ -1594,8 +979,6 @@ cor + region_id + label + feature_reference
 
 ### Rejeições explícitas
 
-`AssociationStatus` contém:
-
 ```text
 associated
 behind_camera
@@ -1604,65 +987,26 @@ outside_valid_support
 occluded
 ```
 
-Exemplo:
-
-```text
-point XYZ
-    ↓
-P_camera.z <= 0
-    ↓
-status = behind_camera
-```
-
-Uma rejeição não pode carregar pixel, cor, região ou feature residual.
-
-### Oclusão
-
-Para scan recém-adquirido, z-buffer por pixel exato pode ser suficiente.
-
-Para mapa acumulado e esparso, `associate_map_points` usa células de pixel e consulta vizinhança 3x3. Isso reduz vazamento de contexto através de buracos na amostragem da superfície frontal. A profundidade comparada é a do eixo óptico, não a distância radial.
-
-### Membership de máscara
-
-Depois que o ponto sobrevive à projeção e à oclusão:
-
-```text
-pixel = (354, 221)
-
-region_12.mask contém (354, 221)?
-    sim
-
-region_id = region_12
-label = door
-feature_reference = ...
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-qual ponto 3D é visível no frame
-qual pixel corresponde ao ponto
-qual cor existe naquele pixel
-qual região visual cobre o pixel
-qual evidência semântica/feature é referenciada pela região
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-qual label deve vencer entre vários frames
-entidade semântica persistente final
-```
+Depois da projeção e da oclusão, o membership de máscara liga o ponto à região visual que cobre o pixel.
 
 ## 18. PointVisualAssociation
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["Sensor Association"] --> B["PointVisualAssociation"]:::current
+    B --> C["SemanticContribution"]
+    C --> D["Semantic Fusion"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-Materializar a ligação auditável entre geometria persistente e evidência RGB.
+Materializar a ligação auditável entre geometria persistente e evidência RGB de uma observação específica.
 
-### Contract real
+### Contract
 
 ```text
 PointVisualAssociation
@@ -1680,81 +1024,54 @@ PointVisualAssociation
 }
 ```
 
-### Exemplo concreto
-
-```text
-PointVisualAssociation
-{
-    geometry: map_point_92814
-    rgb_observation: frame_152
-    status: associated
-    pixel: (354, 221)
-    color_rgb: (151, 34, 31)
-    region_id: region_12
-    label: "door"
-    feature_reference: "artifact://.../region_12/..."
-}
-```
-
-A mudança de domínio é importante:
+### Mudança de domínio
 
 ```text
 antes:
-    region_12 está em pixels
+    region_12 existe em pixels
 
 agora:
-    map_point_92814, em XYZ, recebeu evidência proveniente de region_12
-```
-
-### O que esta etapa sabe
-
-```text
-SABE:
-qual geometria recebeu qual evidência de qual frame
-qual calibração sustentou a projeção
-qual pixel e região originaram a associação
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-se "door" deve vencer "doorway" em observações futuras
+    map_point_92814 existe em XYZ
+    e recebeu evidência proveniente de region_12
 ```
 
 ## 19. Semantic Fusion
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["PointVisualAssociation frame_152"] --> D["Semantic Fusion"]:::current
+    B["PointVisualAssociation frame_158"] --> D
+    C["PointVisualAssociation frame_165"] --> D
+    D --> E["FusedPointContext"]
+    E --> F["Semantic Map / Memory<br/>planejado"]
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Objetivo
 
-Transformar várias classificações independentes do mesmo ponto persistente em um contexto semântico fundido, preservando os concorrentes.
+Transformar várias classificações do mesmo ponto persistente em um contexto semântico fundido, preservando as contribuições concorrentes.
 
-Esta etapa já está implementada no nível de ponto.
-
-### Mudança conceitual
-
-Antes da fusão:
+### Exemplo
 
 ```text
-frame_152 diz:
-    map_point_92814 -> door
+frame_152 -> map_point_92814 -> door
+frame_158 -> map_point_92814 -> doorway
+frame_165 -> map_point_92814 -> door
 
-frame_158 diz:
-    map_point_92814 -> doorway
+            ↓ semantic fusion
 
-frame_165 diz:
-    map_point_92814 -> door
+FusedPointContext
+{
+    label: door
+    agreement: 2 / 3
+    contributions: 3
+}
 ```
 
-Depois da fusão:
-
-```text
-map_point_92814
-    primary label = door
-    agreement = 2 / 3
-    contributions = [todas preservadas]
-```
-
-### Contract de entrada
+### Entrada
 
 ```text
 SemanticContribution
@@ -1771,104 +1088,35 @@ SemanticContribution
 }
 ```
 
-### Regra atual
-
-As contribuições são ordenadas deterministicamente usando, nesta ordem de finalidade:
-
-1. confiança calibrada, quando existe;
-2. confiança bruta, como fallback;
-3. `visual_support`;
-4. `region_quality`;
-5. timestamp e `region_id` como desempate estável.
-
-Os sinais de support não são somados arbitrariamente. Isso evita fingir uma calibração que o sistema ainda não possui.
-
-### Contract de saída
-
-```text
-FusedPointContext
-{
-    label
-    observation_id
-    region_id
-    confidence?
-    agreement
-    contributions[]
-}
-```
+A regra atual prioriza confiança calibrada, depois confiança bruta, `visual_support`, `region_quality` e desempates determinísticos. Os sinais não são combinados arbitrariamente como se já houvesse uma calibração universal.
 
 ### Suporte espacial
 
-`measure_spatial_support` adiciona uma segunda fonte de evidência: a vizinhança geométrica 3D.
-
-```text
-ponto rotulado como door
-        ↓
-3x3x3 voxels ao redor
-        ↓
-quantos vizinhos rotulados concordam?
-```
-
-Se houver vizinhos insuficientes, o resultado é `None`, não zero. Ausência de evidência não é contradição.
-
-### DINO similarity não confirma identidade
-
-Mesmo se dois frames gerarem embeddings muito parecidos:
-
-```text
-embedding A ≈ embedding B
-```
-
-isso não prova:
-
-```text
-mesma instância física
-```
-
-Na evolução do sistema, identidade persistente pode combinar:
-
-```text
-posição 3D
-+ geometria
-+ semântica
-+ tempo
-+ histórico de observações
-+ consistência entre sensores
-+ similaridade de representações
-```
-
-O primeiro slice atual funde contribuições por `GeometryReference`, ou seja, as contribuições já chegam ancoradas na mesma identidade geométrica de ponto.
-
-### O que esta etapa sabe
-
-```text
-SABE:
-qual classificação vence segundo a regra atual
-quantas observações concordam
-quais observações discordam
-qual região de cada frame contribuiu
-```
-
-### O que esta etapa NÃO sabe
-
-```text
-NÃO SABE:
-um modelo completo de entidade 3D persistente
-hierarquia de objetos/salas
-memória contextual consultável de alto nível
-```
+`measure_spatial_support` mede quanto a vizinhança 3D concorda com o label do ponto. Se faltarem vizinhos suficientes, retorna `None`, não zero.
 
 ## 20. Semantic Map / Semantic Memory
 
+### Onde esta etapa está na pipeline
+
+```mermaid
+flowchart LR
+    A["FusedPointContext"] --> B["Semantic Map"]:::current
+    C["Geometric Map"] --> B
+    B --> D["Semantic Memory"]
+    B --> E["Scene Graph"]
+    D --> F["Context Reasoning / Query Engine"]
+    E --> F
+
+    classDef current stroke-width:3px,font-weight:bold;
+```
+
 ### Estado atual
 
-A arquitetura reserva `semantic-map` para informação semântica persistente vinculada à geometria do mundo, mas esse módulo ainda não possui implementação pública concreta. Portanto, o formato abaixo é conceitual e não deve ser tratado como schema existente.
+`semantic-map`, `semantic-memory`, `scene-graph`, `context-reasoning` e `query-engine` ainda são capacidades planejadas. O diagrama mostra a posição arquitetural pretendida, não um schema já implementado.
 
 ### Objetivo planejado
 
-A próxima mudança de nível é deixar de pensar em "classificações de frames" e passar a representar conhecimento persistente do ambiente.
-
-Conceitualmente:
+Deixar de pensar apenas em classificações de frames e pontos isolados e passar a representar conhecimento persistente do ambiente.
 
 ```text
 observações 2D independentes
@@ -1882,48 +1130,51 @@ estado semântico persistente
 memória / entidades / relações / consulta
 ```
 
-Uma futura entidade poderia precisar responder perguntas como:
+Uma futura representação persistente deve continuar respondendo:
 
 ```text
 qual posição ocupa?
-quais pontos geométricos a suportam?
+quais pontos geométricos a sustentam?
 quais frames a observaram?
-quais regiões 2D deram origem à hipótese?
+quais regiões 2D originaram a hipótese?
 quais labels concorreram?
 quais evidências contradisseram?
-qual calibração foi usada em cada associação?
+qual calibração foi usada?
 ```
-
-Não existe hoje um contract `entity_42` implementado que deva ser documentado como definitivo. Qualquer schema de entidade persistente deve ser criado apenas quando `semantic-map` implementar essa responsabilidade.
 
 ## Exemplo completo: acompanhando uma porta da imagem até o mapa 3D
 
-Esta seção acompanha a mesma evidência sem trocar de exemplo.
+```mermaid
+flowchart TD
+    A["frame_152 RGB"] --> B["SAM proposals"]
+    B --> C["region_12"]
+    A --> D["DINOv2 FeatureMap"]
+    C --> E["Mask-aware pooling"]
+    D --> E
+    E --> F["foreground_dense"]
+    C --> G["Region Views"]
+    G --> H["CLIP evidence"]
+    A --> I["SceneContext / VLM"]
+    F --> J["Region Semantics"]
+    H --> J
+    I --> J
+    J --> K["Hypothesis Support / Refinement"]
+    K --> L["VisualObservation"]
 
-### A. Frame RGB
+    M["map_point_92814 XYZ"] --> N["Sensor Association"]
+    O["Pose + Calibration"] --> N
+    L --> N
+    N --> P["PointVisualAssociation"]
+    P --> Q["SemanticContribution"]
+    Q --> R["FusedPointContext"]
+```
+
+### A. Entrada
 
 ```text
 frame_152
 640 x 480
-
-┌──────────────────────────────────────┐
-│                                      │
-│               corridor               │
-│                         ┌───────┐    │
-│               [ext]     │ door  │    │
-│                         │ red   │    │
-│                         └───────┘    │
-│                                      │
-└──────────────────────────────────────┘
-```
-
-Payload:
-
-```text
-{
-    source: frame_152,
-    RGB: pixels[480,640,3]
-}
+corredor + porta vermelha + extintor
 ```
 
 ### B. Region discovery
@@ -1935,18 +1186,7 @@ proposal_27
 proposal_31
 ```
 
-Payload cresce para:
-
-```text
-{
-    proposal_id,
-    mask,
-    bbox,
-    geometric_confidence
-}
-```
-
-### C. Region merge
+### C. Merge
 
 ```text
 proposal_27 + proposal_31
@@ -1954,47 +1194,20 @@ proposal_27 + proposal_31
      region_12
 ```
 
-Payload:
-
-```text
-{
-    region_id: region_12,
-    mask,
-    bbox,
-    geometric_confidence,
-    contributing_proposal_ids
-}
-```
-
-### D. DINOv2
+### D. Dense features
 
 ```text
 frame RGB
-    ↓ patches
-DINOv2 dense feature map
-
-[e1][e2][e3]...
+    ↓ DINOv2
+FeatureMap [Hf, Wf, C]
 ```
 
-### E. Mask pooling
+### E. Pooling
 
 ```text
-region_12.mask
-      +
-dense feature map
-      ↓
+region_12.mask + FeatureMap
+        ↓
 foreground_dense embedding
-```
-
-Payload lógico:
-
-```text
-{
-    region_id: region_12,
-    mask,
-    bbox,
-    visual_embedding_ref
-}
 ```
 
 ### F. Language-aligned evidence
@@ -2005,7 +1218,7 @@ masked_subject / tight_crop / contextual_crop
 language-aligned artifacts
 ```
 
-### G. Semantic interpretation
+### G. Semântica
 
 ```text
 Region Views
@@ -2019,31 +1232,16 @@ attribute = red
 condition = closed
 ```
 
-Payload:
-
-```text
-{
-    region_id: region_12,
-    mask,
-    bbox,
-    evidence[],
-    semantic_claims[]
-}
-```
-
-### H. Hypothesis support
+### H. Support
 
 ```text
 "door" vs "doorway"
-        +
-CLIP evidence
+        + CLIP evidence
         ↓
-support signals
+HypothesisSupportSignal[]
 ```
 
-Nenhum cosseno vira confiança automaticamente.
-
-### I. VisualObservation
+### I. Saída 2D
 
 ```text
 VisualObservation frame_152
@@ -2080,9 +1278,10 @@ region_12.mask contém (354,221)
 sim
 ```
 
-### M. PointVisualAssociation
+### M. Associação
 
 ```text
+PointVisualAssociation
 {
     geometry: map_point_92814,
     rgb_observation: frame_152,
@@ -2094,7 +1293,7 @@ sim
 }
 ```
 
-### N. Próximos frames
+### N. Novas observações
 
 ```text
 frame_152 -> door
@@ -2102,9 +1301,7 @@ frame_158 -> doorway
 frame_165 -> door
 ```
 
-Todos podem contribuir para a mesma `GeometryReference` quando o ponto persistente é reobservado.
-
-### O. Semantic fusion
+### O. Fusão
 
 ```text
 SemanticContribution(frame_152, door)
@@ -2119,15 +1316,11 @@ FusedPointContext
 }
 ```
 
-### P. Estado persistente futuro
-
-Hoje o primeiro slice termina com contexto semântico fundido por geometria e artifacts de integração. A promoção disso para entidades e memória 3D persistentes pertence aos módulos ainda planejados.
-
 ## Diferenças conceituais que não devem ser misturadas
 
 ### Pixel
 
-Uma amostra discreta da imagem.
+Amostra discreta da imagem.
 
 ```text
 (u,v) = (354,221)
@@ -2143,19 +1336,9 @@ Bloco de pixels usado pelo Vision Transformer para gerar um token visual.
 1 token espacial
 ```
 
-O patch é definido no input efetivamente processado pelo backbone, não necessariamente em escala 1:1 com os pixels do frame original.
-
 ### Mask
 
-Conjunto de pixels pertencentes a uma proposta/região 2D.
-
-```text
-0000000
-0011100
-0011100
-0011100
-0000000
-```
+Conjunto de pixels pertencentes a uma proposal ou região 2D.
 
 ### Region
 
@@ -2167,35 +1350,19 @@ ObservedRegion
 
 ### Dense feature
 
-Vetor visual associado a uma posição da grade produzida pelo backbone.
-
-```text
-e7 = [ ... ]
-```
+Vetor visual associado a uma posição do `FeatureMap`.
 
 ### Region embedding
 
 Agregação de várias dense features ou codificação de uma view da região.
 
-```text
-mask + e3,e4,e7,e8
-        ↓
-pooling
-        ↓
-region embedding
-```
-
 ### Language-aligned embedding
 
-Vetor em espaço no qual evidência visual e texto podem ser comparados, como CLIP.
-
-```text
-image vector ↔ text vector
-```
+Vetor em um espaço no qual imagem e texto podem ser comparados.
 
 ### SemanticClaim
 
-Afirmação auditável, textual e tipada sobre uma região ou cena.
+Afirmação auditável e tipada sobre uma região ou cena.
 
 ```text
 LABEL("door")
@@ -2207,13 +1374,9 @@ CONDITION("closed")
 
 Pacote 2D completo de um único frame.
 
-```text
-scene + regions + relations + intra-frame hypotheses
-```
-
 ### PointVisualAssociation
 
-Ligação rastreável entre um `GeometryReference` 3D e evidência visual de um frame específico.
+Ligação rastreável entre uma `GeometryReference` 3D e evidência visual de uma observação específica.
 
 ### FusedPointContext
 
@@ -2221,7 +1384,7 @@ Escolha semântica atual para um ponto persistente depois de considerar múltipl
 
 ### Entidade 3D persistente
 
-Conceito futuro de nível mais alto. Não é equivalente a region, point association nem fused point context, e ainda não possui schema implementado no `semantic-map`.
+Conceito futuro de nível superior. Não é equivalente a `ObservedRegion`, `PointVisualAssociation` nem `FusedPointContext`.
 
 ## Responsabilidade por tecnologia
 
@@ -2242,13 +1405,13 @@ Qwen2.5-VL / MultimodalReasoner
     = interpretação e contexto semântico
 
 Hypothesis Support
-    = verificação independente das hipóteses sem transformar similaridade em probabilidade
+    = verificação independente de hipóteses
 
 sensor-association
     = ligação geométrica 2D ↔ 3D
 
 semantic-fusion
-    = integração de classificações de múltiplas observações sobre a mesma geometria
+    = integração de múltiplas observações sobre a mesma geometria
 
 semantic-map
     = persistência semântica de alto nível, ainda planejada
@@ -2256,47 +1419,22 @@ semantic-map
 
 ## Rastreabilidade: como responder "de onde veio este conhecimento?"
 
-Para uma evidência que chegou até um ponto 3D, o caminho auditável esperado é:
-
-```text
-GeometryReference
-    ↓
-PointVisualAssociation
-    ├── rgb_observation
-    ├── lidar_observation
-    ├── calibration
-    ├── pixel
-    ├── region_id
-    └── feature_reference
-          ↓
-VisualObservation
-    ↓
-ObservedRegion
-    ├── contributing_proposal_ids
-    ├── mask
-    ├── box
-    ├── claims
-    └── evidence slots
-          ↓
-RegionEvidenceSlot
-    ├── artifact_ref
-    ├── EmbeddingSpace
-    ├── preprocessing
-    ├── crop geometry
-    └── source_artifact_refs
+```mermaid
+flowchart TD
+    A["FusedPointContext"] --> B["SemanticContribution"]
+    B --> C["PointVisualAssociation"]
+    C --> D["GeometryReference"]
+    C --> E["rgb_observation + lidar_observation"]
+    C --> F["calibration + pixel + region_id"]
+    F --> G["VisualObservation"]
+    G --> H["ObservedRegion"]
+    H --> I["SemanticClaim[]"]
+    H --> J["RegionEvidenceSlot[]"]
+    J --> K["artifact_ref + EmbeddingSpace + preprocessing"]
+    H --> L["contributing_proposal_ids"]
 ```
 
-Depois da fusão:
-
-```text
-FusedPointContext
-    ↓
-contributions[]
-    ↓
-observation_id + region_id + confidence/support
-```
-
-Assim, para o que já está implementado, é possível rastrear:
+Para o que já está implementado, deve ser possível rastrear:
 
 ```text
 qual frame contribuiu
@@ -2310,65 +1448,54 @@ quantas contribuições sustentam o label fundido
 quais contribuições discordam
 ```
 
-A rastreabilidade de uma futura entidade de alto nível deverá preservar essa cadeia em vez de copiá-la para um novo schema sem proveniência.
+A futura entidade de alto nível deve preservar essa cadeia, não substituí-la por um novo schema opaco.
 
 ## Influência da literatura versus implementação do projeto
 
-A arquitetura pública do projeto não é definida por um paper específico. As referências abaixo influenciam ideias e avaliações, mas os contracts documentados neste arquivo são decisões do próprio repositório.
+A arquitetura pública do projeto não é definida por um único paper. As referências influenciam ideias e avaliações, mas os contracts documentados são decisões do próprio repositório.
 
 ### VLMaps
 
-Referência: `Visual Language Maps for Robot Navigation`, arXiv:2210.05714.
+`Visual Language Maps for Robot Navigation`, arXiv:2210.05714.
 
 Ideia relevante:
 
 ```text
 features visuais/linguísticas 2D
-    +
-geometria 3D
+    + geometria 3D
     ↓
 representação espacial consultável
 ```
 
-No VLMaps, embeddings visual-language por pixel são associados à reconstrução e agregados no mapa. O projeto atual compartilha a motivação de ancorar evidência visual em geometria, mas não implementa a grade top-down VLMap nem copia seu schema.
+O projeto compartilha a motivação de ancorar evidência visual em geometria, mas não implementa a grade top-down de VLMaps.
 
 ### CLIP-Fields
 
-Referência: `CLIP-Fields: Weakly Supervised Semantic Fields for Robotic Memory`, RSS 2023.
+`CLIP-Fields: Weakly Supervised Semantic Fields for Robotic Memory`, RSS 2023.
 
-Ideia relevante:
-
-```text
-múltiplas observações
-    ↓
-semântica ligada ao espaço 3D
-    ↓
-memória consultável
-```
-
-O projeto atual não implementa o neural field implícito de CLIP-Fields. A influência conceitual está na separação entre observações 2D, evidência visual/linguística e memória espacial persistente.
+A influência conceitual está na separação entre observações 2D, evidência visual/linguística e memória espacial persistente. O projeto não implementa o neural field de CLIP-Fields.
 
 ### Online Knowledge Integration for 3D Semantic Mapping
 
-Referência: arXiv:2411.18147.
+arXiv:2411.18147.
 
-A decomposição clássica entre geometria, aquisição semântica e integração de conhecimento ajuda a justificar a separação de ownership entre `geometric-map`, percepção, fusão, scene graph e raciocínio. O projeto mantém essas capacidades substituíveis em módulos distintos.
+A decomposição entre geometria, aquisição semântica e integração de conhecimento ajuda a justificar a separação de ownership entre `geometric-map`, percepção, fusão, scene graph e raciocínio.
 
 ### Vernata
 
-Referência: `Vernata: Self-Supervised Learning of LiDAR Point Representations`, arXiv:2608.06919.
+`Vernata: Self-Supervised Learning of LiDAR Point Representations`, arXiv:2608.06919.
 
-O trabalho mostra o valor de associar features 2D densas a pontos LiDAR para supervisão cross-modal. O projeto atual não implementa o treinamento Vernata. A relação com a pipeline é conceitual: calibração e projeção corretas são a ponte necessária para qualquer transferência consistente de evidência 2D para 3D.
+O trabalho mostra o valor de associar features 2D densas a pontos LiDAR para supervisão cross-modal. O projeto atual não implementa o treinamento Vernata, mas calibração e projeção corretas são a ponte necessária para qualquer transferência consistente de evidência 2D para 3D.
 
 ## Onde aprofundar cada parte
 
-- `modules/visual-perception/docs/pipelines.md`, pipeline interno de percepção visual.
+- `modules/visual-perception/docs/pipelines.md`, pipeline interna de percepção visual.
 - `modules/visual-perception/docs/model-backends.md`, SAM, DINOv2, CLIP e Qwen de referência.
 - `modules/visual-perception/docs/dense-evidence.md`, resolução e evidência densa.
-- `modules/visual-perception/docs/artifacts.md`, referências de vetores e artifacts pesados.
-- `modules/visual-perception/docs/api-contracts.md`, contracts públicos e distinções conceituais.
+- `modules/visual-perception/docs/artifacts.md`, vetores e artifacts pesados.
+- `modules/visual-perception/docs/api-contracts.md`, contracts públicos.
 - `modules/visual-perception/docs/integration.md`, tradução de `VisualObservation` para consumidores downstream.
-- `modules/sensor-association/README.md`, projeção, suporte válido, oclusão e fronteiras scan/map.
+- `modules/sensor-association/README.md`, projeção, suporte válido e oclusão.
 - `modules/semantic-fusion/README.md`, ranking de contribuições e suporte espacial.
-- `docs/system-flow.md`, composição de módulos sem entrar nos algoritmos internos.
-- `docs/architecture.md`, ownership de capacidades e regras arquiteturais.
+- `docs/system-flow.md`, composição entre módulos.
+- `docs/architecture.md`, ownership e regras arquiteturais.
