@@ -2,6 +2,8 @@
 
 `geometric-map` possui a geometria persistente do mundo, montada a partir de estimativas de movimento e observações LiDAR compatíveis com o contract.
 
+> Documentação detalhada: [`docs/`](docs/README.md).
+
 ## Responsabilidades
 
 - consumir pose, trajectory e observações LiDAR através de contracts públicos;
@@ -20,23 +22,30 @@
 - memória semântica, scene graphs ou raciocínio contextual;
 - renderização voltada ao usuário.
 
-`state-estimation` fornece o contexto de movimento. `semantic-map` enriquece a geometria através de referências estáveis, em vez de duplicar o ownership geométrico.
+`state-estimation` fornece o contexto de movimento. A capacidade futura de `semantic-map` deverá enriquecer a geometria através de referências estáveis, em vez de duplicar o ownership geométrico.
 
-## Estrutura inicial
+## Implementação atual
+
+O primeiro slice usa `InMemoryGeometricMap` e contracts explícitos em `models.py`.
 
 ```text
 geometric-map/
 ├── README.md
-├── configs/
 ├── docs/
+│   └── README.md
 ├── src/
 │   └── geometric_map/
-│       ├── application/
-│       ├── domain/
-│       ├── ports/
-│       └── infrastructure/
+│       ├── __init__.py
+│       ├── models.py
+│       └── in_memory.py
 ├── tests/
-└── benchmarks/
+│   ├── README.md
+│   └── test_in_memory.py
+├── benchmarks/
+│   └── README.md
+└── pyproject.toml
 ```
 
-Estruturas de dados concretas, índices, estratégias de reconstrução, formatos de persistência e implementações devem ser introduzidos por issues de implementação, mantendo os contracts públicos independentes de implementação.
+Diretórios vazios reservados para `application`, `domain`, `ports`, `infrastructure` e `configs` foram removidos. Eles só devem voltar quando houver uma responsabilidade e conteúdo concretos.
+
+Estruturas de índice, estratégias de reconstrução, formatos de persistência e novos backends podem evoluir sem alterar os contracts públicos consumidos pelos demais módulos.
