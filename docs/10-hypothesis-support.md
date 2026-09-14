@@ -62,3 +62,8 @@ O sujeito isolado e o tight crop favorecem `wooden door`; o contexto mais amplo 
 ## Saída
 
 Sinais de suporte entram no refinement e na reconciliation preservando a proveniência da hipótese e da view usada.
+
+## Próxima leitura
+
+- [11. Selective Refinement](./11-selective-refinement.md)
+- [07. Language-Aligned Evidence](./07-language-aligned-evidence.md)
