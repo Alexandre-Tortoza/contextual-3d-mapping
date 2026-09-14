@@ -69,3 +69,9 @@ Os testes de `tests/test_in_memory.py` são a referência executável para inser
 - [`docs/17-sensor-association.md`](../../../docs/17-sensor-association.md), consumidor da geometria persistente.
 
 A documentação deste diretório deve explicar decisões internas de `geometric-map`. Fluxos que atravessam múltiplos módulos permanecem em [`docs/`](../../../docs/README.md).
+
+## Próxima leitura
+
+- [16. Pose + Calibration](../../../docs/16-pose-calibration.md)
+- [17. Sensor Association](../../../docs/17-sensor-association.md)
+- [Documentação de `sensor-association`](../../sensor-association/docs/README.md)
