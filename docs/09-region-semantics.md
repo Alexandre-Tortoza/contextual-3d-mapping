@@ -56,3 +56,8 @@ Nesse run, a confiança bruta `0.9` não discrimina regiões. Portanto não pode
 ## Regra importante
 
 `confidence=None` significa ausência de score, não zero. `geometric_confidence`, `SemanticClaim.confidence` e confiança calibrada são conceitos distintos e não devem ser combinados sem política explícita.
+
+## Próxima leitura
+
+- [10. Hypothesis Support](./10-hypothesis-support.md)
+- [Política de semântica contextual](../modules/visual-perception/docs/contextual-semantics.md)
