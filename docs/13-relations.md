@@ -44,3 +44,8 @@ As `210` relações geométricas mais `8` relações semânticas correspondem à
 ## Influência no mapa contextual
 
 Estas relações são sementes de contexto estrutural, mas só podem virar relações persistentes do mundo depois de validação geométrica e temporal. O futuro `scene-graph` deve preservar a diferença entre relação observada em 2D, relação confirmada em 3D e relação inferida.
+
+## Próxima leitura
+
+- [14. VisualObservation](./14-visual-observation.md)
+- [12. Reconciliation intra-frame](./12-reconciliation.md)
