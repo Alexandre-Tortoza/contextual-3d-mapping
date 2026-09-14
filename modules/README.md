@@ -1,101 +1,94 @@
 # Módulos
 
-Cada módulo representa uma capacidade independentemente compreensível, desenvolvível, testável, avaliável (benchmarkable) e substituível.
+`modules/` contém as capacidades centrais do sistema. Cada módulo deve ser independentemente compreensível, testável e substituível através de uma fronteira pública pequena.
 
-O repositório é orientado a capacidades. Prefira a menor estrutura interna que deixe clara a capacidade, suas entradas, saídas e pontos de variação.
+A estrutura física do repositório acompanha o código real. Capacidades apenas planejadas não precisam existir como diretórios vazios.
 
-## Ownership de capacidades
+## Módulos implementados
 
-- `state-estimation`: observações LiDAR/IMU convertidas em pose, trajetória e frames LiDAR corrigidos por movimento.
-- `geometric-map`: geometria persistente do mundo construída a partir de poses e observações geométricas.
-- `visual-perception`: observações de imagem convertidas em features visuais e semânticas estruturadas.
-- `point-representation`: pontos LiDAR convertidos em representações 3D aprendidas.
-- `sensor-association`: associação geométrica e temporal entre observações de sensor.
-- `semantic-fusion`: fusão multi-fonte, temporal e multi-view em observações 3D semânticas.
-- `semantic-map`: informação semântica persistente de vocabulário aberto vinculada à geometria do mundo.
-- `semantic-memory`: recuperação semântica e espacial sobre a informação mapeada.
-- `scene-graph`: entidades, hierarquia e relações extraídas do mapa.
-- `context-reasoning`: inferência contextual com proveniência explícita.
-- `query-engine`: interface unificada de consulta semântica, espacial e contextual.
+| Módulo | Responsabilidade | Documentação local |
+| --- | --- | --- |
+| `visual-perception` | RGB para evidência visual e semântica estruturada | [`visual-perception/docs/`](./visual-perception/docs/README.md) |
+| `state-estimation` | LiDAR/IMU para pose, trajetória e contexto de movimento | [`state-estimation/docs/`](./state-estimation/docs/README.md) |
+| `geometric-map` | geometria persistente e referências estáveis | [`geometric-map/docs/`](./geometric-map/docs/README.md) |
+| `sensor-association` | projeção e associação entre geometria 3D e evidência visual | [`sensor-association/docs/`](./sensor-association/docs/README.md) |
+| `semantic-fusion` | fusão multi-view e suporte espacial de claims por ponto | [`semantic-fusion/docs/`](./semantic-fusion/docs/README.md) |
 
-A reconstrução geométrica persistente é de posse de `geometric-map`.
+A reconstrução geométrica persistente pertence a `geometric-map`. Implementações concretas de odometria pertencem a `state-estimation`. Percepção visual não deve assumir ownership de geometria 3D persistente.
 
-Implementações concretas de odometria são de posse de `state-estimation`. Módulos semânticos referenciam a geometria através de tipos públicos documentados, para que o sistema mantenha uma única representação geométrica autoritativa.
+## Capacidades planejadas
+
+As capacidades abaixo continuam fazendo parte da arquitetura pretendida, mas não possuem implementação suficiente para justificar um diretório próprio neste momento:
+
+- `point-representation`;
+- `semantic-map`;
+- `semantic-memory`;
+- `scene-graph`;
+- `context-reasoning`;
+- `query-engine`.
+
+Elas devem ser materializadas em `modules/<capability>/` quando houver uma issue implementando contract, código, teste ou documentação concreta. Não use `.gitkeep` apenas para representar arquitetura futura.
 
 ## Fronteira pública
 
-Cada módulo expõe uma pequena API pública documentada.
-
-Consumidores dependem de:
+Consumidores devem depender de:
 
 - tipos de dados públicos;
 - funções ou classes públicas;
 - pontos de entrada estáveis;
-- protocolos que representam pontos de variação reais.
+- protocols apenas quando existe substituição real.
 
-Objetos de modelo específicos de implementação, caches, layout de armazenamento, estruturas de treino e representações de backend permanecem locais ao módulo dono.
+Caches, layout de armazenamento, estruturas de treino, objetos específicos de modelo e detalhes de backend permanecem internos ao módulo dono.
 
-Contracts específicos de capacidade pertencem à capacidade que os define.
+Contracts específicos de uma capacidade pertencem ao módulo que os define, mesmo quando são consumidos por outro módulo.
 
-Por exemplo, um contract de representação de ponto aprendida pertence a `point-representation`, mesmo quando `sensor-association` o consome.
+## Estrutura
 
-## Estrutura interna
-
-Um módulo pode evoluir para:
+Use a menor estrutura que represente o código existente. Um módulo pode evoluir para:
 
 ```text
 modules/<module>/
 ├── README.md
+├── docs/
+│   └── README.md
 ├── src/
 │   └── <package>/
-│       ├── __init__.py
-│       ├── models.py
-│       ├── config.py
-│       └── <arquivos de capacidade>.py
 ├── tests/
 ├── configs/
-├── benchmarks/
-└── docs/
+└── benchmarks/
 ```
 
-Crie cada diretório quando ele tiver uma responsabilidade e conteúdo concretos.
-
-Mantenha integrações externas específicas de capacidade próximas do módulo que as possui. Por exemplo, um backend de odometria LiDAR-inercial pertence a `state-estimation`, e um backend de point-cloud usado apenas para reconstrução pertence a `geometric-map`.
-
-## Sequência de implementação
-
-Ao desenvolver um módulo:
-
-1. declare a responsabilidade da capacidade no `README.md`;
-2. defina entradas e saídas públicas;
-3. documente unidades, frames, timestamps, shapes, proveniência e outros invariantes de fronteira;
-4. implemente o comportamento funcional mais simples localmente;
-5. introduza protocolos apenas para pontos reais de substituição ou comparação;
-6. teste o comportamento local e os contracts públicos;
-7. adicione benchmarks para comportamento sensível a performance;
-8. documente decisões algorítmicas e de pesquisa não óbvias em `docs/`.
-
-## Abstrações
-
-Use protocolos, interfaces, strategies, factories ou registries quando representarem um ponto de variação concreto, como:
-
-- múltiplas implementações;
-- substituibilidade intencional;
-- comparações de pesquisa;
-- isolamento de dependência de terceiros;
-- estabilidade de fronteira de módulo;
-- testes em nível de contract com substitutos.
-
-Para comportamento local direto com uma única implementação, construção e chamadas diretas são preferidas porque tornam o caminho do código mais fácil de ler.
+Nenhum desses diretórios é obrigatório por antecipação. Crie `configs/`, `benchmarks/`, subcamadas internas ou adapters apenas quando houver conteúdo concreto.
 
 ## Documentação
 
-Comportamento detalhado de módulo, algoritmos, justificativa de implementação, escolhas de modelo, benchmarks, limitações e referências de pesquisa pertencem a:
+A documentação é dividida em dois níveis:
 
 ```text
+docs/
+    visão end-to-end e decisões que atravessam módulos
+
 modules/<module>/docs/
+    contracts, algoritmos, backends, limitações e decisões locais
 ```
 
-Decisões arquiteturais de nível de repositório pertencem ao `docs/` raiz.
+A documentação principal deve apontar para a documentação especializada em vez de duplicar detalhes internos. A documentação local, por sua vez, deve apontar para o estágio correspondente da pipeline quando o assunto atravessar módulos.
 
-Antes de implementar um módulo, leia o [`AGENTS.md`](../AGENTS.md) raiz, [`docs/architecture.md`](../docs/architecture.md) e [`docs/engineering-principles.md`](../docs/engineering-principles.md).
+Comece por [`../docs/README.md`](../docs/README.md).
+
+A documentação histórica anterior à reorganização está preservada em [`../.old-docs/`](../.old-docs/) e não deve ser tratada automaticamente como descrição do código atual.
+
+## Sequência de implementação
+
+Ao materializar ou ampliar um módulo:
+
+1. declare sua responsabilidade no `README.md`;
+2. defina entradas, saídas, unidades, frames, timestamps e proveniência;
+3. implemente o caminho funcional mínimo;
+4. introduza interfaces somente em pontos reais de variação;
+5. teste contracts e comportamento local;
+6. adicione benchmarks quando performance ou qualidade precisarem ser comparadas;
+7. documente decisões não óbvias em `docs/`;
+8. atualize [`../docs/README.md`](../docs/README.md) quando a mudança afetar a pipeline global.
+
+Antes de alterar fronteiras de módulo ou arquitetura do repositório, leia [`../AGENTS.md`](../AGENTS.md) e a documentação ativa em [`../docs/`](../docs/README.md).
