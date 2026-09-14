@@ -63,3 +63,8 @@ Artifacts:
 ## Limitação central
 
 Consolidar regiões 2D não prova identidade física. Duas regiões que parecem partes do mesmo objeto ainda precisam de geometria e observações temporais para se tornarem uma entidade persistente.
+
+## Próxima leitura
+
+- [04. Dense Feature Extraction](./04-dense-features.md)
+- [Documentação de `visual-perception`](../modules/visual-perception/docs/README.md)
