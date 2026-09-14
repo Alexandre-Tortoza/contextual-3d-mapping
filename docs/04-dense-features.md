@@ -12,20 +12,140 @@ flowchart LR
 
 ## Objetivo
 
-Transformar a imagem em uma grade espacial de vetores visuais densos. DINOv2 não retorna labels. Cada posição da feature map contém um embedding que representa aparência e estrutura visual condicionadas pelo frame.
+Transformar a imagem em uma grade espacial de vetores visuais densos. DINOv2 não retorna labels. Cada posição da feature map contém um embedding que representa aparência e estrutura visual aprendidas pelo backbone.
 
-## Transformação
+Uma forma útil de pensar no DINO é:
 
 ```text
-RGB
- -> resize/preprocess
- -> patches
- -> DINOv2
- -> tokens espaciais
- -> FeatureMap [Hf, Wf, C]
+imagem
+ -> pequenos blocos visuais (patches)
+ -> um vetor para cada patch
+ -> grade espacial de vetores
 ```
 
-Os tokens especiais são separados dos tokens espaciais antes da reconstrução da grade. A feature map declara stride, dimensão, checkpoint, representação, interpolação e suporte válido.
+## Patches na configuração atual
+
+O checkpoint da reference run é `facebook/dinov2-base`. Esse modelo usa patch size `14 x 14` no espaço processado.
+
+O frame real possui:
+
+```text
+640 x 480 pixels
+```
+
+A configuração usa `input_resolution: 448`. O adapter preserva aspect ratio, limita a maior aresta a aproximadamente 448 e força dimensões múltiplas de 14.
+
+Para esse frame:
+
+```text
+original:    640 x 480
+processado:  448 x 336
+patch size:   14 x 14
+```
+
+Logo:
+
+```text
+448 / 14 = 32 patches na largura
+336 / 14 = 24 patches na altura
+```
+
+A grade espacial produzida pelo DINO é, portanto, conceitualmente:
+
+```text
+24 x 32 patches
+```
+
+DINOv2-base produz um embedding de `768` dimensões por patch.
+
+Então o tensor final tem shape:
+
+```text
+FeatureMap.shape = [24, 32, 768]
+```
+
+Esse é um tensor 3D no sentido:
+
+```text
+[altura espacial, largura espacial, dimensão do vetor]
+```
+
+Não significa XYZ do mundo físico.
+
+## Como é um vetor de feature
+
+Para uma posição específica da grade:
+
+```text
+FeatureMap[8, 17]
+```
+
+podemos imaginar algo como:
+
+```text
+[0.031, -0.182, 0.044, 0.217, ..., 0.092]
+```
+
+com `768` números.
+
+Esses valores não correspondem diretamente a campos humanos como:
+
+```text
+[door=0.8, wall=0.1, floor=0.1]
+```
+
+O vetor representa uma posição em um espaço aprendido. Patches com aparência e estrutura visual semelhantes tendem a ficar mais próximos nesse espaço.
+
+## O token CLS não entra na grade
+
+O modelo também pode produzir tokens prefixados, como CLS e register tokens. O adapter separa esses tokens dos tokens espaciais antes de reconstruir a grade.
+
+```text
+output do transformer
+├── prefix tokens
+└── spatial tokens
+       |
+       v
+reshape -> [24, 32, 768]
+```
+
+Isso é importante porque o pipeline precisa preservar a correspondência espacial entre posição da imagem e posição da feature map.
+
+## Relação com a máscara do SAM
+
+DINO analisa a imagem inteira. SAM, em paralelo, define regiões.
+
+Depois os dois sinais se encontram:
+
+```text
+SAM
+ -> máscara da região
+
+DINO
+ -> FeatureMap [24, 32, 768]
+
+máscara + FeatureMap
+ -> Mask-aware Pooling
+ -> embedding visual da região [768]
+```
+
+Ou seja, o SAM responde **onde está a região** e o DINO responde **como as partes visuais dessa região são representadas**.
+
+## DINO não fornece a label ao Qwen
+
+Na pipeline atual, o vetor DINO não é enviado diretamente ao Qwen para que o Qwen gere a label.
+
+O Qwen interpreta views em pixels derivadas da máscara do SAM e recebe contexto estruturado da cena. O DINO permanece como uma fonte separada de evidência visual densa.
+
+Isso é importante para entender a arquitetura:
+
+```text
+SAM mask -> views em pixels -> Qwen -> hipóteses semânticas
+
+RGB -> DINO -> dense features -> pooling -> evidência visual densa
+```
+
+Mais tarde essas evidências podem ser usadas para coerência, reconciliação e futura projeção 2D para 3D.
 
 ## Reference run
 
@@ -39,11 +159,25 @@ modality: visual_dense
 normalized: true
 ```
 
-O run de referência usa DINOv2-base. A região acompanhada é `region-2c84165423b25fc3`.
+A região acompanhada é `region-2c84165423b25fc3`.
 
 ## O que high-resolution significa hoje
 
-O caminho observado nesta run usa `pixel_nearest_highres`: a máscara é consultada contra a feature map densa, mas isso não equivale a reconstruir informação visual inexistente entre patches. Outros caminhos do código podem usar sampling/interpolação ou learned upsampling, mas a referência acima deve refletir o run efetivamente medido.
+O caminho observado nessa run usa `pixel_nearest_highres`: a máscara é consultada contra a feature map densa usando alinhamento espacial e nearest sampling.
+
+Isso **não cria detalhes novos entre patches**. O DINO continua tendo sua resolução nativa de tokens. Upsampling apenas oferece uma forma mais conveniente de consultar a representação em coordenadas de imagem.
+
+Exemplo conceitual:
+
+```text
+patch DINO representa uma área de imagem
+        |
+nearest/bilinear
+        |
+consultas em posições mais densas
+```
+
+O conteúdo semântico do vetor continua vindo do backbone, não da interpolação.
 
 ## Saída
 
@@ -51,13 +185,22 @@ O caminho observado nesta run usa `pixel_nearest_highres`: a máscara é consult
 
 ## Impacto no mapa contextual
 
-Quanto melhor a granularidade e estabilidade das features, mais precisa pode ser a associação entre evidência visual e uma região. Para futura supervisão 2D -> 3D, a granularidade por posição é ainda mais importante porque o alvo deixa de ser apenas um embedding agregado da região e pode se tornar uma feature alinhada a cada ponto LiDAR.
+Quanto melhor a granularidade e estabilidade das features, mais precisa pode ser a associação entre evidência visual e uma região.
 
-## Referências científicas
+No futuro, em vez de usar apenas um embedding agregado da região, o sistema poderá projetar uma feature visual próxima ao pixel de cada ponto LiDAR:
 
-DINOv2 é a base atual das dense visual features. A documentação histórica sobre comparação de alta resolução e literatura relacionada foi preservada em `.old-docs/`.
+```text
+ponto XYZ
+ -> pixel (u,v)
+ -> posição na FeatureMap DINO
+ -> vetor 768D associado ao ponto
+```
+
+Isso permitiria comparar coerência visual e estrutural diretamente no mapa 3D.
+
+Para o fluxo completo, consulte [Pipeline detalhada de Visual Perception](../modules/visual-perception/docs/pipeline.md).
 
 ## Próxima leitura
 
 - [05. Mask-aware Pooling](./05-mask-aware-pooling.md)
-- [Backends de `visual-perception`](../modules/visual-perception/docs/model-backends.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
