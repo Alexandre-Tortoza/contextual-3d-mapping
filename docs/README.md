@@ -20,6 +20,39 @@ comportamento realmente observado
 
 Sempre que existe evidência versionada, os exemplos usam artifacts reais. Exemplos artificiais não devem ser apresentados como outputs medidos.
 
+## Padrão descritivo das páginas
+
+As páginas devem explicar o estágio como uma transformação concreta, não apenas listar nomes de classes. Sempre que aplicável, uma página deve mostrar:
+
+- quem produz a entrada;
+- shape, estrutura ou contract do payload;
+- como a informação é transformada;
+- qual modelo ou algoritmo participa;
+- um exemplo real da reference run;
+- quando não houver artifact real, um exemplo explicitamente marcado como conceitual;
+- quem consome a saída;
+- como erros nesta etapa afetam as seguintes;
+- links de **Próxima leitura** no fim da página.
+
+Quando houver embeddings, patches, máscaras, transforms ou relações entre modelos, a documentação deve mostrar visualmente a passagem de informação. Por exemplo:
+
+```text
+SAM mask
+    -> RegionView
+    -> Qwen semantic hypotheses
+
+RegionView
+    -> CLIP image embedding
+
+Qwen hypothesis text
+    -> CLIP text embedding
+
+image embedding + text embedding
+    -> hypothesis support
+```
+
+O objetivo é permitir que alguém leia as docs e consiga reconstruir mentalmente o que acontece com os dados sem precisar inferir o fluxo a partir do código.
+
 ## Reference run
 
 A referência visual atual é uma execução real e auditável:
@@ -148,3 +181,9 @@ Cada estágio deve responder, quando aplicável: objetivo, entrada, contract, tr
 Detalhes que pertencem exclusivamente a um módulo devem ser movidos ou referenciados a partir de `modules/<module>/docs/`, evitando duas fontes de verdade.
 
 A documentação anterior foi preservada em [`.old-docs/`](../.old-docs/) para consulta histórica.
+
+## Próxima leitura
+
+- [01. Entrada RGB](./01-input-rgb.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
+- [Documentação dos módulos](../modules/README.md)
