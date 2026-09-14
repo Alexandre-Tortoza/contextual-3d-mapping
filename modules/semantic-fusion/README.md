@@ -1,7 +1,8 @@
 # Semantic Fusion
 
-`semantic-fusion` decide qual classificação um ponto do mapa persistente carrega quando
-várias observações visuais o classificam, e preserva todas as propostas concorrentes.
+`semantic-fusion` decide qual classificação um ponto do mapa persistente carrega quando várias observações visuais o classificam, e preserva todas as propostas concorrentes.
+
+> Documentação detalhada: [`docs/`](docs/README.md).
 
 ## Responsabilidades
 
@@ -13,17 +14,12 @@ várias observações visuais o classificam, e preserva todas as propostas conco
 ## Não-responsabilidades
 
 - projeção, visibilidade e oclusão (`sensor-association`);
-- persistência das entidades semânticas resultantes (`semantic-map`);
+- persistência das entidades semânticas resultantes, capacidade futura de `semantic-map`;
 - calibração da confiança dos claims (`visual-perception`).
 
 ## Por que o módulo existe
 
-Enquanto um trecho era contextualizado por um único keyframe, nenhum ponto recebia duas
-classificações e a fusão não tinha o que decidir. Com múltiplos keyframes cobrindo o
-mesmo trecho, a mesma superfície é observada de vários ângulos e distâncias, e as
-propostas divergem. Sem uma regra explícita, a última gravação venceria por acidente de
-ordem de execução — o que tornaria o mapa dependente da ordem em que os frames foram
-processados.
+Com múltiplos keyframes cobrindo o mesmo trecho, a mesma superfície pode receber propostas diferentes. Sem uma regra explícita, a última gravação venceria por ordem de execução e o mapa deixaria de ser determinístico.
 
 ## Regra de fusão
 
@@ -35,42 +31,25 @@ processados.
 4. qualidade geométrica da máscara (`region_quality`);
 5. instante da observação e identificador da região, como desempate determinístico.
 
-Os sinais de suporte entram apenas como desempate, e não como soma ponderada, porque uma
-combinação arbitrária deles fingiria uma calibração que o pipeline visual ainda não tem
-(veja as issues de calibração semântica). Quando a calibração existir, ela passa a
-dominar a ordenação sem que a regra mude.
+Os sinais de suporte entram como desempate, e não como uma soma ponderada que fingiria uma calibração ainda inexistente.
 
-`agreement` é a fração de contribuições que concordam com o label primário. Ela é
-evidência: um label sustentado por cinco observações não tem o mesmo peso de um
-sustentado por uma.
+`agreement` é a fração de contribuições que concordam com o label primário. Nenhuma contribuição é descartada.
 
 ## Suporte espacial
 
-`measure_spatial_support` mede quanto a vizinhança geométrica concorda com o label
-de cada ponto, em uma grade de voxels com aresta configurável.
+`measure_spatial_support` mede quanto a vizinhança geométrica concorda com o label de cada ponto em uma grade de voxels configurável.
 
-Existe porque um label pode estar geometricamente deslocado sem que nada na imagem
-o denuncie: um ponto atrás de uma parede que escapa do teste de oclusão recebe o
-label da superfície da frente e fica cercado de pontos que afirmam outra coisa. A
-concordância entre keyframes não pega esse caso quando todos os keyframes cometem o
-mesmo erro de projeção; a vizinhança 3D, sim.
+Uma vizinhança com poucos vizinhos rotulados devolve `None`, e não zero. Isso preserva a diferença entre ausência de evidência e evidência contrária.
 
-Uma vizinhança com poucos vizinhos rotulados devolve `None`, e não zero. A distinção
-importa: um ponto isolado não foi contradito por ninguém, e tratá-lo como sem suporte
-confundiria ausência de evidência com evidência contrária.
-
-Medido no trecho de 30 s do corridor-02, contra o subconjunto comprovadamente
-incoerente (pontos `ceiling` abaixo da altura em que estão os `ceiling tiles`):
+No trecho de 30 s do corridor-02, contra o subconjunto comprovadamente incoerente, os sinais observados foram:
 
 | Sinal | Marca | Alcança dos incoerentes | Razão |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | suporte espacial < 34% | 20,3% | 35,2% | 1,73 |
 | concordância entre keyframes < 50% | 12,3% | 34,4% | 2,80 |
-| **ambos abaixo de 50%** | **9,7%** | **33,2%** | **3,42** |
+| ambos abaixo de 50% | 9,7% | 33,2% | 3,42 |
 
-Exigir os dois é o que dá precisão, e há uma razão física: uma fronteira legítima
-entre duas superfícies tem suporte espacial baixo mas concordância alta entre
-keyframes; um vazamento real falha nos dois.
+Esses números são evidência de um experimento específico, não thresholds universais.
 
 ## Fronteira pública
 
@@ -83,5 +62,4 @@ SpatialNeighbourhood     parâmetros da grade de vizinhança
 measure_spatial_support
 ```
 
-Nenhuma contribuição é descartada pela fusão. O label primário é uma escolha, não um
-apagamento das alternativas, e o artifact preserva as duas coisas para inspeção.
+O label primário é uma escolha para consumo downstream, não um apagamento das alternativas.
