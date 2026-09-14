@@ -82,3 +82,9 @@ modules/sensor-association/
 - [`docs/19-semantic-fusion.md`](../../../docs/19-semantic-fusion.md), consumidor da associação.
 
 Detalhes de projeção e políticas do módulo pertencem a este diretório. A narrativa entre módulos permanece em [`docs/`](../../../docs/README.md).
+
+## Próxima leitura
+
+- [17. Sensor Association](../../../docs/17-sensor-association.md)
+- [18. PointVisualAssociation](../../../docs/18-point-visual-association.md)
+- [Documentação de `semantic-fusion`](../../semantic-fusion/docs/README.md)
