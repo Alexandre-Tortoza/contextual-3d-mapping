@@ -76,3 +76,9 @@ A calibração dos scores de percepção permanece com `visual-perception`; `sem
 - [`docs/20-semantic-map.md`](../../../docs/20-semantic-map.md), consumidor planejado do contexto fundido.
 
 Decisões sobre ranking, concordância e suporte espacial pertencem a este diretório. O fluxo entre módulos permanece em [`docs/`](../../../docs/README.md).
+
+## Próxima leitura
+
+- [19. Semantic Fusion](../../../docs/19-semantic-fusion.md)
+- [20. Semantic Map / Semantic Memory](../../../docs/20-semantic-map.md)
+- [Pipeline end-to-end](../../../docs/README.md)
