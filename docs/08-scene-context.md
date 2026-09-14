@@ -47,3 +47,8 @@ O trecho `some obstacles like a suitcase` é output do modelo, não ground truth
 ## Influência no mapa contextual
 
 Esta etapa fornece contexto explícito de cena, por exemplo tipo de ambiente, layout e condições. Ela ajuda a interpretar regiões, mas não deve sobrescrever evidência local nem criar posição XYZ. O contexto global precisa permanecer auditável e separado da geometria.
+
+## Próxima leitura
+
+- [09. Region Semantics](./09-region-semantics.md)
+- [Política de semântica contextual](../modules/visual-perception/docs/contextual-semantics.md)
