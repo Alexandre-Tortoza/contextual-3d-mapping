@@ -46,3 +46,8 @@ Esses grupos continuam sendo hipóteses intra-frame.
 ## Limitação
 
 Reconciliation 2D não substitui associação temporal/geométrica. A persistência de uma entidade ao longo de frames deve ser decidida downstream, usando geometria, múltiplas observações e proveniência.
+
+## Próxima leitura
+
+- [13. Relations](./13-relations.md)
+- [14. VisualObservation](./14-visual-observation.md)
