@@ -494,6 +494,47 @@ mudou.
 `prompt_version`, seguido de nova comparação. Mudar prompt e modelo juntos tornaria as duas
 mudanças ininterpretáveis, então isso é trabalho de outra rodada.
 
+## 9. Vazamento região→região via `contextual_crop`: teto rotulado como o objeto vizinho
+
+**Status: aberto.** Sem issue própria ainda.
+
+Medido em `corridor-02-dist-03` (sample `20260914T165808Z`), frame `corridor-02-04292`: das
+18 regiões cujo box cai na metade superior do frame (`y_max < 150px`, a faixa do teto — ver
+`regions-masks.png`, onde aparecem como azulejos individuais bem segmentados pelo SAM2),
+**16 saíram rotuladas `wooden pallet`** pelo Qwen2.5-VL, e só 1 saiu `ceiling`. A geometria
+está correta (cada azulejo é uma mask própria, limpa); a semântica está errada.
+
+Isso **não é** o vazamento cena→região que a `#202` fechou (limitação 1): `scene_echo_label_count`
+deste frame é 0, e a claim de cena não é `wooden pallet`. É um vazamento diferente,
+**região→região**: existem paletes de madeira reais na mesma imagem (parede direita), e a
+view `contextual_crop` — que mantém o entorno intacto, só contornando o sujeito em verde
+(ver `region_views.py`) — parece fazer o modelo ancorar na resposta "dominante" da cena em
+vez de responder sobre a região contornada especificamente. O comentário original no código
+argumenta o oposto ("o contexto serve para desambiguar"); esta medição sugere que, para
+regiões pequenas/ambíguas que dividem o frame com um objeto distinto e saliente, o efeito
+pode ser o inverso.
+
+Sinal concreto de que o próprio pipeline já desconfia da claim: `visual_support = 0.0` em
+praticamente todas as 16 claims erradas (o canal independente de suporte já rejeita a
+hipótese), contra valores maiores que zero nas regiões corretas ou parcialmente corretas
+(`wooden plank`, `corner of a wall`). O sinal existe e está correto — mas não está barrando
+a publicação: as 16 regiões erradas aparecem normalmente em `published_region_count`,
+mesmo com `min_visual_support` configurado em `0.2` (`config.py`,
+`HypothesisSupportConfig`). O `claim_status` do run inteiro fica `"predição VLM não
+verificada"`, o que sugere que a calibração está anotando a claim sem impedir a publicação
+do label bruto — precisa confirmar lendo `semantic_calibration.py` e o ponto onde o label
+publicado é escolhido.
+
+Hipóteses a testar, nenhuma confirmada ainda:
+
+- `contextual_crop` reforça viés de conteúdo dominante da cena em vez de desambiguar, pelo
+  menos quando um objeto saliente divide o frame com superfícies estruturais pequenas;
+- falta um gate de publicação que use `visual_support`/`min_visual_support` para suprimir
+  (ou rebaixar a `generic_structural_surface`) uma claim já marcada como sem suporte, em vez
+  de só anotá-la.
+
+Reproduzir: `benchmarks/results/samples/20260914T165808Z/frames/corridor-02-04292/{observation.json,diagnostics.json,proposals.png,regions-masks.png}`.
+
 ## 7. Alimentar a cena ao refinamento reintroduz o vazamento que a #202 fechou
 
 **Status: fechado por configuração, e registrado porque a lição é geral.**

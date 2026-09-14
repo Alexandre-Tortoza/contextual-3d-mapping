@@ -17,7 +17,10 @@ from fixtures import image_observation  # noqa: E402
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
 from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
 from visual_perception.application.pipeline import run_canonical_pipeline  # noqa: E402
+from visual_perception.domain.geometry import Mask  # noqa: E402
+from visual_perception.domain.grounding import GroundingRequest, GroundingStatus  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
+from visual_perception.domain.semantics import RegionKind  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
 
 requires_gpu = pytest.mark.skipif(
@@ -115,6 +118,86 @@ def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
     assert "scene_type" in response
     assert "environment" in response
     assert "description" not in response
+
+
+@requires_gpu
+def test_real_semantic_grounding_adapter_grounds_regions_on_gpu() -> None:
+    """O adapter real de semantic_grounding roda SAM2 promptado de verdade e refina a região.
+
+    Regressão: o mesmo checkpoint SAM1 que quebrava region_discovery
+    (facebook/sam-vit-huge, ver test_real_region_discovery_adapter_finds_regions_on_gpu)
+    também era usado aqui via ``transformers.SamModel``, saturando numericamente e
+    devolvendo score/mask NaN — capturado pelo guard de ``_segment`` (a claim vira
+    ``status=grounding_failed`` com o motivo "scores devem ser valores finitos", em vez
+    de propagar a exception crua). O guard funciona, mas o efeito observável era o
+    mesmo de um bug silencioso: **toda** claim saía ``grounding_failed`` por esse
+    motivo, com um conceito trivialmente localizável (bloco verde saturado sobre
+    gradiente). Por isso a asserção central aqui é ``status is REFINED`` — não
+    condicional: um teste que só checa "se refinou, os números são finitos" passa
+    mesmo quando nada nunca refina, que foi exatamente como esta regressão escapou na
+    primeira versão deste teste.
+    """
+    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    lifecycle = ModelLifecycleManager()
+    ports = create_perception_ports(config, lifecycle)
+    payload = _real_test_payload()
+
+    discovery_mask = np.zeros((payload.height, payload.width), dtype=np.bool_)
+    discovery_mask[16:48, 16:48] = True
+    request = GroundingRequest(
+        region_id="region-green-square",
+        concept="green square",
+        region_kind=RegionKind.THING,
+        discovery_mask=Mask(discovery_mask, payload.width, payload.height),
+    )
+
+    predictions = ports.semantic_grounder.ground(payload, (request,), config.semantic_grounding)
+    lifecycle.release_all()
+
+    assert len(predictions) == 1
+    prediction = predictions[0]
+    assert prediction.status is GroundingStatus.REFINED, prediction.reason
+    assert prediction.model_mask is not None
+    assert prediction.model_mask.data.any()
+    assert prediction.geometric_confidence is not None
+    assert np.isfinite(prediction.geometric_confidence)
+    assert 0.0 <= prediction.geometric_confidence <= 1.0
+
+
+# Regressão da mitigação de thrashing de VRAM (ver semantic_grounding_backend.py):
+# grounding é o último estágio do pipeline canônico por frame, então libera os
+# modelos residentes dos estágios anteriores antes de carregar os seus próprios.
+# Sem isso, os 6 modelos reais (4 canônicos + grounding-dino + SAM2 promptado) não
+# cabem nos 8GB de referência ao mesmo tempo, e a eviction reativa por LRU
+# thrasheava várias recargas completas por frame em vez de uma por estágio.
+@requires_gpu
+def test_semantic_grounding_releases_prior_residency_before_loading_its_own() -> None:
+    """`ground()` libera os modelos residentes de outros estágios antes de carregar os seus."""
+    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    lifecycle = ModelLifecycleManager()
+    ports = create_perception_ports(config, lifecycle)
+    payload = _real_test_payload()
+
+    ports.region_discoverer.discover(payload, config.region_discovery)
+    assert lifecycle.resident_keys, "region_discovery deveria deixar seu modelo residente"
+
+    discovery_mask = np.zeros((payload.height, payload.width), dtype=np.bool_)
+    discovery_mask[16:48, 16:48] = True
+    request = GroundingRequest(
+        region_id="region-green-square",
+        concept="green square",
+        region_kind=RegionKind.THING,
+        discovery_mask=Mask(discovery_mask, payload.width, payload.height),
+    )
+    ports.semantic_grounder.ground(payload, (request,), config.semantic_grounding)
+
+    resident_after = lifecycle.resident_keys
+    lifecycle.release_all()
+
+    assert not any(key.startswith("region_discovery:") for key in resident_after), (
+        f"region_discovery deveria ter sido liberado antes do grounding carregar o seu, "
+        f"residentes: {resident_after}"
+    )
 
 
 @requires_gpu
