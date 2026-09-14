@@ -53,3 +53,8 @@ Embeddings language-aligned por view, consumidos principalmente por `Hypothesis 
 ## Limitação
 
 Uma view isolada pode favorecer uma hipótese errada. O run real mostra divergência entre `masked_subject`, `tight_crop` e `contextual_crop`; por isso a pipeline preserva múltiplas views e não promove um único score a verdade.
+
+## Próxima leitura
+
+- [08. Scene Context](./08-scene-context.md)
+- [10. Hypothesis Support](./10-hypothesis-support.md)
