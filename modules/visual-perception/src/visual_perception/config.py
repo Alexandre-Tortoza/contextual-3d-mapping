@@ -37,7 +37,10 @@ class SemanticGroundingConfig:
 
     backend: str = "unavailable"
     detector_checkpoint: str = "IDEA-Research/grounding-dino-base"
-    segmenter_checkpoint: str = "facebook/sam-vit-huge"
+    # SAM2 (não SAM1): o checkpoint SAM1 satura numericamente sob a stack
+    # atual de torch/transformers (ver region_discovery_backend.py e
+    # semantic_grounding_backend.py._segment).
+    segmenter_checkpoint: str = "facebook/sam2.1-hiera-large"
     device: str = "auto"
     detection_threshold: float = 0.4
     text_threshold: float = 0.3

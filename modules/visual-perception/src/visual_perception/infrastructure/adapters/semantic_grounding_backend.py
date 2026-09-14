@@ -47,6 +47,17 @@ class RealSemanticGroundingAdapter:
         """Localiza e segmenta requests."""
         if not requests:
             return ()
+        # Grounding é o último estágio do pipeline canônico para este frame
+        # (ver run_canonical_pipeline): region_discovery, feature_extraction,
+        # language_embedding e multimodal_reasoning já terminaram de usar seus
+        # modelos. Liberar aqui, antes de carregar detector+segmenter, troca
+        # residência permanente (e eviction reativa sob contenção real) por um
+        # reload previsível por frame — sem isso, os 6 modelos (4 do canônico
+        # + grounding-dino + SAM2 promptado) não cabem nos 8GB de referência
+        # ao mesmo tempo, e a eviction por LRU thrasheava a cada troca de
+        # estágio em vez de uma vez por frame (visto na prática: ~4 reloads
+        # completos por frame).
+        self._lifecycle.release_all()
         provenance = (
             ModelProvenance("semantic_localization", "grounding_dino", fingerprint_of(config), checkpoint=config.detector_checkpoint),
             ModelProvenance("prompted_segmentation", "sam", fingerprint_of(config), checkpoint=config.segmenter_checkpoint),
@@ -141,12 +152,19 @@ class RealSemanticGroundingAdapter:
         device = resolve_device(torch, config.device, "grounded_sam")
 
         # Residente junto do detector no lifecycle compartilhado; a eviction,
-        # se precisar liberar VRAM, é decidida pelo próprio manager.
+        # se precisar liberar VRAM, é decidida pelo próprio manager. SAM2 (não
+        # SAM1/SamModel): o ViT-H do SAM1 satura numericamente sob a stack
+        # atual de torch/transformers (mesmo bug corrigido em
+        # region_discovery_backend.py). get_image_embeddings do SAM2 devolve
+        # uma lista de feature maps multi-escala (FPN da Hiera), não um
+        # tensor único como no SAM1 — model(image_embeddings=...) aceita essa
+        # lista diretamente (indexa [-1] para o decoder e [:-1] como
+        # high_resolution_features).
         def factory() -> Any:
-            """Carrega o mesmo SAM disponível para discovery, agora com prompts."""
+            """Carrega o SAM2 disponível para discovery, agora com prompts."""
             return (
-                transformers.SamModel.from_pretrained(config.segmenter_checkpoint).to(device).eval(),
-                transformers.SamProcessor.from_pretrained(config.segmenter_checkpoint),
+                transformers.Sam2Model.from_pretrained(config.segmenter_checkpoint).to(device).eval(),
+                transformers.Sam2Processor.from_pretrained(config.segmenter_checkpoint),
             )
 
         started = time.perf_counter()
@@ -164,8 +182,12 @@ class RealSemanticGroundingAdapter:
                 prompts = processor(images=pil, input_boxes=[coordinates], return_tensors="pt").to(device)
                 with torch.inference_mode():
                     output = model(image_embeddings=embeddings, input_boxes=prompts.input_boxes, multimask_output=False)
+                # Sam2ImageProcessor.post_process_masks não recebe
+                # reshaped_input_sizes (diferente do SAM1): o SAM2 não faz
+                # letterboxing do input, então não há tamanho intermediário a
+                # desfazer.
                 masks = processor.image_processor.post_process_masks(
-                    output.pred_masks.cpu(), prompts.original_sizes.cpu(), prompts.reshaped_input_sizes.cpu(),
+                    output.pred_masks.cpu(), prompts.original_sizes.cpu(),
                 )[0][:, 0].numpy().astype(np.bool_)
                 # Stuff pode ter várias localizações independentes. A união
                 # envolve somente segmentos já condicionados ao mesmo conceito.
