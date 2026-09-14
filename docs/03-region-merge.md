@@ -16,6 +16,78 @@ flowchart LR
 
 Consolidar proposals redundantes ou sobrepostas em uma unidade 2D canônica, `ObservedRegion`, sem confundir essa unidade com uma entidade física persistente.
 
+SAM pode produzir várias máscaras para praticamente o mesmo conteúdo, principalmente quando existem tiles, escalas diferentes ou regiões parcialmente contidas umas nas outras.
+
+Sem merge, uma única porta poderia entrar na pipeline como várias regiões independentes.
+
+## Entrada
+
+A entrada é uma coleção de `RegionProposal`:
+
+```text
+proposal A
+├── mask
+├── box
+├── geometric_confidence
+└── source
+
+proposal B
+├── mask
+├── box
+├── geometric_confidence
+└── source
+```
+
+Essas proposals já passaram pelos filtros de área válida, ego-veículo e tamanho.
+
+## Como duas proposals podem representar a mesma região
+
+Exemplo conceitual:
+
+```text
+proposal A
++------------------+
+|      porta       |
+|      porta       |
++------------------+
+
+proposal B
+  +--------------+
+  |    porta     |
+  |    porta     |
+  +--------------+
+```
+
+As máscaras possuem grande sobreposição. O merge usa critérios como IoU e containment para decidir se devem ser consolidadas.
+
+```text
+IoU alta
+ou
+containment alto
+        |
+        v
+mesma região canônica
+```
+
+## Por que não simplesmente descartar duplicatas antes
+
+O pipeline preserva `contributing_proposal_ids`.
+
+Isso permite saber que a região final foi sustentada por mais de uma proposal em vez de apagar essa proveniência.
+
+```text
+ObservedRegion
+├── region_id
+├── mask
+├── box
+├── geometric_confidence
+└── contributing_proposal_ids
+    ├── sam-12
+    └── sam-37
+```
+
+A região canônica é a unidade que os estágios seguintes passam a usar.
+
 ## Contract conceitual
 
 ```text
@@ -33,11 +105,27 @@ ObservedRegion
 }
 ```
 
-A região preserva quais proposals contribuíram para ela. Claims e evidências podem ainda estar vazios neste ponto.
+Neste ponto, normalmente:
+
+```text
+claims = []
+evidence = []
+```
+
+A geometria existe antes da interpretação semântica.
 
 ## Reference run
 
-O frame `corridor-02-000` terminou com `40` regiões canônicas, originadas de `75` proposals iniciais e `47` proposals após o estágio de merge/filtros.
+O frame `corridor-02-000` terminou com:
+
+```text
+75 proposals iniciais
+47 proposals após filtros/merge intermediário
+40 regiões canônicas
+5 regiões formadas por múltiplas proposals
+```
+
+Para as 40 regiões finais:
 
 ```text
 geometric_confidence
@@ -56,15 +144,40 @@ Artifacts:
 | --- | --- | --- |
 | ![masks](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-masks.png) | ![boxes](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-boxes.png) | ![overlay](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-overlay.png) |
 
-## Saída
+## O que acontece depois
 
-`ObservedRegion[]` é consumido por pooling DINOv2, geração de views, CLIP e reasoner semântico.
+A mesma `ObservedRegion.mask` passa a alimentar caminhos paralelos:
+
+```text
+ObservedRegion
+├── mask + DINO FeatureMap
+│      -> mask-aware pooling
+│
+├── mask + RGB
+│      -> RegionView[]
+│      -> Qwen
+│      -> CLIP image encoder
+│
+└── depois, no 3D
+       -> membership do pixel projetado
+```
+
+Por isso um erro de merge pode contaminar mais de um estágio ao mesmo tempo.
 
 ## Limitação central
 
-Consolidar regiões 2D não prova identidade física. Duas regiões que parecem partes do mesmo objeto ainda precisam de geometria e observações temporais para se tornarem uma entidade persistente.
+Consolidar regiões 2D não prova identidade física.
+
+```text
+mesma região 2D no frame
+    !=
+mesma entidade persistente no mundo
+```
+
+Duas regiões semelhantes em frames diferentes ainda precisam de geometria, pose e associação temporal antes de poderem ser tratadas como a mesma entidade.
 
 ## Próxima leitura
 
 - [04. Dense Feature Extraction](./04-dense-features.md)
-- [Documentação de `visual-perception`](../modules/visual-perception/docs/README.md)
+- [05. Mask-aware Pooling](./05-mask-aware-pooling.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
