@@ -72,3 +72,8 @@ O mesmo payload alimenta `Region Discovery`, `Dense Feature Extraction`, `Scene 
 ## Limitações atuais
 
 A referência visual possui `calibration_id: null`. Isso não impede a percepção 2D, mas significa que a continuidade até uma associação RGB-LiDAR precisa usar a calibração fornecida pelo workflow 3D correspondente, não inferir uma calibração a partir deste JSON.
+
+## Próxima leitura
+
+- [02. Region Discovery](./02-region-discovery.md)
+- [Documentação de `visual-perception`](../modules/visual-perception/docs/README.md)
