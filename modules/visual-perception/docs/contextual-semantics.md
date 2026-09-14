@@ -66,6 +66,24 @@ região com evidência suficiente para uma entidade ou anomalia específica
 
 Isso reduz o incentivo para a pipeline substituir um erro de objeto por uma classificação estrutural pouco informativa.
 
+A resposta desejada para uma região ambígua pode ser, conceitualmente:
+
+```text
+mask válida
++ evidência insuficiente para uma entidade contextual
+    -> sem claim forte de identidade
+```
+
+em vez de:
+
+```text
+mask válida
++ Qwen escolhe refrigerator por aparência parcial
+    -> refrigerator vira verdade
+```
+
+O canal CLIP de hypothesis support existe justamente para permitir que a hipótese do Qwen seja contestada antes de chegar ao mapa.
+
 ## Estado de adoção
 
 Esta política é normativa para a direção atual do módulo, mas o comportamento implementado ainda está em transição. Runs anteriores continuam válidas como baselines reproduzíveis e podem conter labels estruturais que esta política pretende reduzir.
@@ -88,3 +106,9 @@ Além de acurácia de identidade, benchmarks devem observar:
 - preservação de ambiguidade quando a evidência não permite decisão forte.
 
 A reference run e os artifacts usados pela documentação principal estão indexados em [`docs/README.md`](../../../docs/README.md).
+
+## Próxima leitura
+
+- [Pipeline detalhada de Visual Perception](./pipeline.md)
+- [09. Region Semantics](../../../docs/09-region-semantics.md)
+- [10. Hypothesis Support](../../../docs/10-hypothesis-support.md)
