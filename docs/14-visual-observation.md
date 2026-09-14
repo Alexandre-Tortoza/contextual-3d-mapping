@@ -61,3 +61,8 @@ VisualObservation != mapa semântico 3D
 ```
 
 A partir daqui a geometria 3D passa a ser necessária para ancorar evidência visual no mundo.
+
+## Próxima leitura
+
+- [15. Geometric Map](./15-geometric-map.md)
+- [Documentação de `visual-perception`](../modules/visual-perception/docs/README.md)
