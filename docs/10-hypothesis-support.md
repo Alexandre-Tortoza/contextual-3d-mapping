@@ -56,37 +56,53 @@ O custo adicional principal é codificar os **textos das hipóteses**.
 
 ## Relação Qwen -> CLIP text encoder
 
-O Qwen produz algo como:
+O Qwen produz conceitos como:
 
 ```text
 primary: wooden panel
 alternative: wooden door
 ```
 
-O support stage pega esses conceitos e chama:
+O support stage não envia essas strings nuas ao CLIP. A configuração atual usa um template textual versionado:
 
 ```text
-CLIP.encode_text("wooden panel")
-CLIP.encode_text("wooden door")
+prompt_template: "a photo of {concept}"
+template_version: align/v1
 ```
 
-Cada texto vira um vetor de `768` dimensões no mesmo espaço dos embeddings CLIP das imagens.
+Portanto:
 
 ```text
-image vector [768]
-text vector  [768]
-        |
-        v
-dot product / cosine similarity
+wooden panel
+    -> "a photo of wooden panel"
+    -> CLIP text encoder
+    -> text_panel[768]
+
+wooden door
+    -> "a photo of wooden door"
+    -> CLIP text encoder
+    -> text_door[768]
 ```
 
-## Exemplo numérico simplificado
+O template faz parte do sinal. Alterar a frase pode alterar o embedding textual e, consequentemente, o resultado do suporte. Por isso template e versão entram no fingerprint da configuração.
 
-Suponha o slot `masked_subject`:
+## Comparação imagem-texto
+
+Os embeddings de imagem e de texto pertencem ao mesmo `EmbeddingSpace` CLIP e são normalizados.
+
+Então o pipeline calcula:
 
 ```text
-score("wooden panel") = 0.154
-score("wooden door")  = 0.193
+score = image_vector @ text_vector
+```
+
+que, para vetores normalizados, equivale à similaridade de cosseno.
+
+Exemplo usando os scores observados no slot `masked_subject`:
+
+```text
+score(wooden panel) = 0.154
+score(wooden door)  = 0.193
 ```
 
 Para `wooden door`:
@@ -110,18 +126,20 @@ wooden door  -> supports
 wooden panel -> contradicts
 ```
 
+Os nomes `wooden door` e `wooden panel` são os conceitos registrados nas claims. Internamente, os vetores de texto vêm das frases templated `a photo of ...`.
+
 ## Por que usar margem e não apenas score absoluto
 
-Um score CLIP isolado depende de muitos fatores e não é uma probabilidade calibrada.
+Um score CLIP isolado depende de crop, contexto, especificidade do texto e distribuição do espaço de embeddings. Ele não é uma probabilidade calibrada.
 
 O que interessa aqui é a competição local entre as hipóteses registradas para a mesma região:
 
 ```text
-esta imagem parece mais com "door"
-ou mais com "panel"?
+esta evidência visual combina mais com "door"
+ou com "panel"?
 ```
 
-Então a pipeline calcula:
+A regra é:
 
 ```text
 margin(hypothesis)
@@ -131,9 +149,15 @@ margin(hypothesis)
 
 ## Estado `indistinguishable`
 
-Diferenças muito pequenas não devem ser convertidas em decisão forte.
+A configuração atual usa:
 
-Exemplo:
+```text
+indistinguishable_margin: 0.01
+```
+
+Diferenças menores que esse piso não viram vitória de nenhuma hipótese.
+
+Exemplo conceitual:
 
 ```text
 door  = 0.221
@@ -141,19 +165,13 @@ panel = 0.219
 margin = 0.002
 ```
 
-Se esse valor estiver abaixo do piso configurado:
+Como `0.002 < 0.01`:
 
 ```text
 status = indistinguishable
 ```
 
-Isso significa:
-
-```text
-a evidência CLIP não separa as hipóteses com margem suficiente
-```
-
-em vez de escolher arbitrariamente uma delas.
+Isso significa que o CLIP não separou as hipóteses com margem suficiente.
 
 ## Reference run real
 
@@ -181,7 +199,7 @@ contextual crop
     -> panel
 ```
 
-O entorno influencia a interpretação.
+O entorno influencia a compatibilidade imagem-texto.
 
 ## O que o support stage não faz
 
@@ -197,7 +215,7 @@ por:
 primary = wooden door
 ```
 
-Ele anexa sinais à claim.
+Ele anexa sinais à claim:
 
 ```text
 SemanticClaim("wooden panel")
@@ -209,23 +227,19 @@ Quem decide como reagir à contradição são estágios posteriores, como calibr
 
 ## Por que isso é mais robusto que usar apenas Qwen
 
-Qwen e CLIP cometem erros diferentes.
+Qwen e CLIP exercem papéis diferentes.
 
-Qwen possui capacidade forte de interpretação contextual, mas pode alucinar ou ser influenciado pelo entorno.
+Qwen possui capacidade forte de interpretação contextual, mas pode alucinar ou ser influenciado pelo entorno. CLIP fornece uma medida imagem-texto separada, mais restrita, capaz de contestar as hipóteses do reasoner.
 
-CLIP é mais restrito, mas fornece uma comparação imagem-texto independente.
-
-A arquitetura tenta aproveitar essa diferença:
+A arquitetura usa essa diferença assim:
 
 ```text
 Qwen
     propõe significado
 
 CLIP
-    testa compatibilidade visual das hipóteses
+    mede compatibilidade visual das hipóteses
 ```
-
-A independência não é perfeita porque ambos são modelos visuais treinados em grandes datasets, mas é estruturalmente melhor do que confiar em um único score do VLM.
 
 ## Métricas do frame de referência
 
