@@ -50,9 +50,10 @@ Use benchmarks para responder perguntas mensuráveis, por exemplo:
 
 Não use o diretório para esconder lógica necessária ao runtime. Comportamento canônico deve viver em `src/`; o benchmark apenas o exercita ou compara com candidatos.
 
-## Documentação relacionada
+## Próxima leitura
 
 - [`../docs/README.md`](../docs/README.md), arquitetura local do módulo;
+- [`../docs/pipeline.md`](../docs/pipeline.md), fluxo entre SAM, DINO, Qwen e CLIP;
 - [`../docs/model-backends.md`](../docs/model-backends.md), backends canônicos e pontos de substituição;
 - [`../docs/contextual-semantics.md`](../docs/contextual-semantics.md), política semântica a ser avaliada;
 - [`../../../docs/README.md`](../../../docs/README.md), reference run e pipeline global.
