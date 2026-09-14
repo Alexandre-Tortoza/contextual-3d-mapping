@@ -40,3 +40,8 @@ Contexto visual não é um único vetor. Separar sujeito e entorno permite detec
 ## Saída
 
 Os slots alimentam `Region Semantics`, `Hypothesis Support` e auditoria.
+
+## Próxima leitura
+
+- [07. Language-Aligned Evidence](./07-language-aligned-evidence.md)
+- [09. Region Semantics](./09-region-semantics.md)
