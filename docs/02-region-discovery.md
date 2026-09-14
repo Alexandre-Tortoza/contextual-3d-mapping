@@ -60,3 +60,8 @@ Erros aqui se propagam. Uma proposal que inclui objeto e fundo pode fazer uma hi
 ## Referência científica
 
 A implementação usa Segment Anything como mecanismo de proposta/segmentação class-agnostic. A semântica é adicionada somente em estágios posteriores.
+
+## Próxima leitura
+
+- [03. Region Merge / Consolidation](./03-region-merge.md)
+- [Backends de `visual-perception`](../modules/visual-perception/docs/model-backends.md)
