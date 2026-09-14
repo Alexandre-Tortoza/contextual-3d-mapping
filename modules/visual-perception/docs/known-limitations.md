@@ -494,46 +494,83 @@ mudou.
 `prompt_version`, seguido de nova comparação. Mudar prompt e modelo juntos tornaria as duas
 mudanças ininterpretáveis, então isso é trabalho de outra rodada.
 
-## 9. Vazamento região→região via `contextual_crop`: teto rotulado como o objeto vizinho
+## 9. Prosa livre dentro de uma claim de cena permitida reabre o vazamento que a `#202` fechou
 
-**Status: aberto.** Sem issue própria ainda.
+**Status: aberto.** Sem issue própria ainda. Causa confirmada por ablation controlada
+(uma variável por vez, mesma metodologia da limitação 1); a hipótese inicial foi
+descartada pela própria medição.
 
-Medido em `corridor-02-dist-03` (sample `20260914T165808Z`), frame `corridor-02-04292`: das
-18 regiões cujo box cai na metade superior do frame (`y_max < 150px`, a faixa do teto — ver
-`regions-masks.png`, onde aparecem como azulejos individuais bem segmentados pelo SAM2),
-**16 saíram rotuladas `wooden pallet`** pelo Qwen2.5-VL, e só 1 saiu `ceiling`. A geometria
-está correta (cada azulejo é uma mask própria, limpa); a semântica está errada.
+Medido em `corridor-02-dist-03`, frame `corridor-02-04292`: das 18 regiões cujo box cai na
+metade superior do frame (`y_max < 150px`, a faixa do teto — ver `regions-masks.png`, onde
+aparecem como azulejos individuais bem segmentados pelo SAM2), **16 saíram rotuladas
+`wooden pallet`** pelo Qwen2.5-VL, e só 1-2 saíram `ceiling`. A geometria está correta (cada
+azulejo é uma mask própria, limpa); a semântica está errada.
 
-Isso **não é** o vazamento cena→região que a `#202` fechou (limitação 1): `scene_echo_label_count`
-deste frame é 0, e a claim de cena não é `wooden pallet`. É um vazamento diferente,
-**região→região**: existem paletes de madeira reais na mesma imagem (parede direita), e a
-view `contextual_crop` — que mantém o entorno intacto, só contornando o sujeito em verde
-(ver `region_views.py`) — parece fazer o modelo ancorar na resposta "dominante" da cena em
-vez de responder sobre a região contornada especificamente. O comentário original no código
-argumenta o oposto ("o contexto serve para desambiguar"); esta medição sugere que, para
-regiões pequenas/ambíguas que dividem o frame com um objeto distinto e saliente, o efeito
-pode ser o inverso.
+### O que foi descartado
 
-Sinal concreto de que o próprio pipeline já desconfia da claim: `visual_support = 0.0` em
-praticamente todas as 16 claims erradas (o canal independente de suporte já rejeita a
-hipótese), contra valores maiores que zero nas regiões corretas ou parcialmente corretas
-(`wooden plank`, `corner of a wall`). O sinal existe e está correto — mas não está barrando
-a publicação: as 16 regiões erradas aparecem normalmente em `published_region_count`,
-mesmo com `min_visual_support` configurado em `0.2` (`config.py`,
-`HypothesisSupportConfig`). O `claim_status` do run inteiro fica `"predição VLM não
-verificada"`, o que sugere que a calibração está anotando a claim sem impedir a publicação
-do label bruto — precisa confirmar lendo `semantic_calibration.py` e o ponto onde o label
-publicado é escolhido.
+- **Hipótese "vazamento via `contextual_crop`" — descartada.** Rodando o mesmo frame só com
+  `masked_subject` + `tight_crop` (`--region-view masked_subject --region-view tight_crop`,
+  sem `contextual_crop`), o padrão continua quase idêntico: `dominant_fraction` cai de 0,82
+  para apenas 0,77, e os mesmos 16/18 azulejos do teto continuam saindo `wooden pallet`. Se
+  fosse vazamento visual via contexto, removê-lo deveria ter reduzido bem mais o eco — a
+  medição não confirma.
+- **`scene_echo_label_count` não capta isso** — é 0 neste frame, porque essa métrica só
+  compara o label da região contra o valor **inteiro** de uma claim de cena por igualdade
+  exata. É o mesmo ponto cego que a limitação 7 já registrou de outro ângulo (a métrica lê
+  só a primeira hipótese afirmada e pode reportar 1 onde 8 regiões estão afetadas).
 
-Hipóteses a testar, nenhuma confirmada ainda:
+### O que confirmou a causa
 
-- `contextual_crop` reforça viés de conteúdo dominante da cena em vez de desambiguar, pelo
-  menos quando um objeto saliente divide o frame com superfícies estruturais pequenas;
-- falta um gate de publicação que use `visual_support`/`min_visual_support` para suprimir
-  (ou rebaixar a `generic_structural_surface`) uma claim já marcada como sem suporte, em vez
-  de só anotá-la.
+Rodando o mesmo frame com `--scene-context-mode local_first` (as claims de cena deixam de
+ir ao prompt do reasoner, só o canal visual continua) o resultado inverte por completo:
+`dominant_label` vira `plain surface`, `dominant_fraction` cai para 0,59, e
+**`published_region_count` cai de 21 para 0** — as 22 regiões saem todas
+`generic_structural_surface`, corretamente.
 
-Reproduzir: `benchmarks/results/samples/20260914T165808Z/frames/corridor-02-04292/{observation.json,diagnostics.json,proposals.png,regions-masks.png}`.
+A claim de cena `layout` deste frame, gerada pelo próprio Qwen2.5-VL no estágio
+`scene_context`, é:
+
+```text
+"layout": "narrow hallway with wooden pallets on the right side"
+```
+
+`layout` está em `REGION_SCENE_CLAIM_KINDS` — a lista de tipos de claim que a `#202`
+decidiu que é seguro mandar para o reasoner de região (`scene_type`, `environment`,
+`layout`, `lighting`, `visibility`, `navigability`). A `#202` fechou o vazamento
+restringindo **quais tipos** de claim podem chegar à região; não restringiu o **conteúdo**
+de um tipo permitido. `layout` é prosa livre, e nada impede o modelo de nomear um objeto
+específico dentro dela — "wooden pallets" nesta claim é exatamente esse caso. O texto do
+prompt (`_describe_scene_claims`) já avisa que aquilo é "propriedade da CENA, nunca da
+região", mas — a mesma lição já registrada na limitação 1 — instrução textual sozinha não é
+garantia estrutural.
+
+Sinal concreto de que o próprio pipeline já desconfiava da claim, mesmo antes desta
+investigação: `visual_support = 0.0` em praticamente todas as 16 claims erradas (o canal
+independente de suporte já rejeita a hipótese), contra valores maiores que zero nas regiões
+corretas ou parcialmente corretas (`wooden plank`, `corner of a wall`). O sinal existe e
+está correto — mas não barra a publicação: as 16 regiões erradas aparecem normalmente em
+`published_region_count`, mesmo com `min_visual_support` configurado em `0.2` (`config.py`,
+`HypothesisSupportConfig`). `contextual_evidence_verdict` (`domain/contextual_evidence.py`),
+o gate que decide `CONTEXT_BEARING` vs. `GENERIC_STRUCTURAL_SURFACE`, é puramente lexical —
+olha só se o substantivo núcleo do label está numa lista fixa de palavras estruturais — e
+não consulta `visual_support` em nenhum momento.
+
+### Duas frentes de correção, independentes
+
+- **Na origem**: impedir que uma claim de cena de tipo permitido carregue identidade de
+  objeto em prosa livre — ex.: um passe de sanitização sobre `layout`/`visibility`/etc. antes
+  de `_describe_scene_claims` montar o prompt, ou restringir esses campos a vocabulário
+  fechado em vez de texto livre do VLM.
+- **No gate de publicação**: fazer `contextual_evidence_verdict` considerar `visual_support`
+  (ou o estado de calibração) além do substantivo do label — uma claim `thing` sem suporte
+  mínimo não devia virar `CONTEXT_BEARING` só por não estar na lista de palavras estruturais.
+  Esta frente é o sintoma final, medido, e resolve a classe inteira de "claim que o próprio
+  pipeline já desconfia mas publica assim mesmo" — não só este caso específico.
+
+Reproduzir: `benchmarks/results/samples/20260914T194013Z/` (baseline, `context_assisted`),
+`benchmarks/results/samples/20260914T194407Z/` (sem `contextual_crop`, mesmo padrão),
+`benchmarks/results/samples/20260914T194913Z/` (`local_first`, padrão desaparece) — todas do
+frame `corridor-02-04292`.
 
 ## 7. Alimentar a cena ao refinamento reintroduz o vazamento que a #202 fechou
 
