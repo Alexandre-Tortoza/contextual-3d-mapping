@@ -2,6 +2,8 @@
 
 `state-estimation` fornece estimativas de movimento e pose necessárias para posicionar observações LiDAR em uma referência espacial consistente antes do mapeamento persistente e do processamento semântico.
 
+> Documentação detalhada: [`docs/`](docs/README.md).
+
 O módulo é independentemente executável, testável, avaliável (benchmarkable) e substituível. Módulos downstream dependem de seus contracts públicos, não de uma implementação específica de odometria.
 
 ## Responsabilidades
@@ -20,13 +22,13 @@ O módulo é independentemente executável, testável, avaliável (benchmarkable
 - construção de mapa geométrico ou semântico persistente;
 - scene graphs, memória semântica ou raciocínio contextual.
 
-A associação câmera-LiDAR permanece de posse de `sensor-association`. Features LiDAR aprendidas permanecem de posse de `point-representation`. A reconstrução geométrica persistente é de posse de `geometric-map`.
+A associação câmera-LiDAR permanece de posse de `sensor-association`. A capacidade planejada de point representation permanece separada. A reconstrução geométrica persistente é de posse de `geometric-map`.
 
 ## Implementações externas
 
-Sistemas concretos de odometria LiDAR-inercial são integrados por trás de adapters. O alvo inicial de integração é o FAST-LIO, mas os contracts públicos do módulo permanecem independentes de implementação, para que outros estimators, ground truth de simulador, ou poses fornecidas por dataset possam ser substituídos mais tarde.
+Sistemas concretos de odometria LiDAR-inercial são integrados por trás de adapters. O alvo inicial de integração é o FAST-LIO, mas os contracts públicos do módulo permanecem independentes de implementação, para que outros estimators, ground truth de simulador ou poses fornecidas por dataset possam ser substituídos mais tarde.
 
-## Estrutura inicial
+## Estrutura atual
 
 ```text
 state-estimation/
@@ -37,6 +39,7 @@ state-estimation/
 │   └── state_estimation/
 │       ├── application/
 │       ├── domain/
+│       ├── ports.py
 │       ├── ports/
 │       ├── infrastructure/
 │       │   └── fast_lio/
@@ -45,4 +48,4 @@ state-estimation/
 └── benchmarks/
 ```
 
-O manifest do pacote e os arquivos de implementação concreta devem ser introduzidos apenas quando as issues de implementação correspondentes forem tratadas.
+Nem toda subpasta representa uma camada com código ativo. A documentação local distingue o que está implementado de estruturas ainda usadas apenas para organizar responsabilidades futuras.
