@@ -43,13 +43,13 @@ CLIP text encoder
     text -> [768]
 ```
 
-Exemplo:
+Exemplo ilustrativo:
 
 ```text
 imagem da região
  -> [ 0.012, -0.044, 0.091, ..., 0.031 ]
 
-"wooden door"
+texto da hipótese
  -> [ 0.019, -0.051, 0.087, ..., 0.040 ]
 ```
 
@@ -61,8 +61,8 @@ Antes de o Qwen ter sua hipótese validada, o pipeline já criou views da regiã
 
 ```text
 masked_subject
- tight_crop
- contextual_crop
+tight_crop
+contextual_crop
 ```
 
 Cada view passa pelo image encoder do CLIP:
@@ -90,17 +90,28 @@ alternative: wooden door
 
 Nesse momento o CLIP não aceita simplesmente a escolha do Qwen.
 
-O estágio de `Hypothesis Support` pega as strings das hipóteses e usa o **text encoder do mesmo CLIP**:
+O estágio de `Hypothesis Support` pega cada conceito e aplica o template textual versionado atual:
 
 ```text
-"wooden panel"
- -> CLIP text encoder
- -> text_panel[768]
-
-"wooden door"
- -> CLIP text encoder
- -> text_door[768]
+prompt_template: "a photo of {concept}"
+template_version: align/v1
 ```
+
+Portanto o que entra efetivamente no text encoder é:
+
+```text
+wooden panel
+    -> "a photo of wooden panel"
+    -> CLIP text encoder
+    -> text_panel[768]
+
+wooden door
+    -> "a photo of wooden door"
+    -> CLIP text encoder
+    -> text_door[768]
+```
+
+O template faz parte do sinal. Mudar a frase pode mudar o embedding textual e, por consequência, as margens de suporte. Por isso ele é versionado e participa do fingerprint de configuração.
 
 ## Como imagem e texto são comparados
 
@@ -110,13 +121,15 @@ Como os vetores são normalizados e pertencem ao mesmo espaço, o dot product po
 score = image_embedding dot text_embedding
 ```
 
-Exemplo simplificado:
+Exemplo simplificado usando os scores observados:
 
 ```text
 masked_subject
     score("wooden panel") = 0.154
     score("wooden door")  = 0.193
 ```
+
+Os nomes na tabela representam as hipóteses originais. Os embeddings de texto foram gerados a partir do template `a photo of {concept}`.
 
 Então:
 
@@ -201,10 +214,12 @@ SAM mask
    |
    v
 RegionView
-   |                         
+   |
    +--> Qwen ----------------------> "wooden panel", "wooden door"
    |                                      |
    |                                      v
+   |                          "a photo of {concept}"
+   |                                      |
    |                               CLIP text encoder
    |
    +--> CLIP image encoder
@@ -228,6 +243,8 @@ model: openai/clip-vit-large-patch14
 dimension: 768
 modality: language_aligned
 context_expansion: 0.25
+hypothesis prompt: a photo of {concept}
+indistinguishable_margin: 0.01
 ```
 
 Os vetores completos ficam nos artifacts de embedding, enquanto `observation.json` e diagnósticos preservam referências e sinais derivados.
