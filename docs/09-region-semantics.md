@@ -40,23 +40,66 @@ views[]
 scene_claims[]
 ```
 
-As `views[]` são derivadas da máscara do SAM e podem incluir:
+Na configuração atual do primeiro passe, `MultimodalReasoningConfig.region_views` seleciona exatamente:
 
 ```text
 masked_subject
-    sujeito isolado, fundo neutralizado
-
 tight_crop
-    recorte justo
-
 contextual_crop
-    região + entorno, com o sujeito contornado
-
-scene_conditioned
-    view global quando configurada
 ```
 
-Assim, a máscara do SAM influencia o Qwen **indiretamente pelos pixels que são mostrados ao modelo**.
+Portanto o request visual normal do Qwen de região é:
+
+```text
+SAM mask
+   |
+   v
+build_region_views()
+   |
+   +--> masked_subject
+   +--> tight_crop
+   +--> contextual_crop
+            |
+            v
+      Qwen region semantics
+```
+
+`scene_conditioned` pode existir como slot de evidência multi-contexto na configuração `research_quality`, mas **não está no conjunto padrão `region_views` do primeiro passe de interpretação**.
+
+O contexto global da cena chega por outro canal, como `scene_claims[]`, controlado por `scene_context_mode`. O modo atual é `context_assisted`.
+
+Assim existem dois canais distintos:
+
+```text
+canal visual local
+    masked_subject + tight_crop + contextual_crop
+
+canal textual/contextual
+    SceneContext claims
+```
+
+Essa separação é deliberada para evitar que a imagem inteira da cena domine a identidade local de uma região.
+
+## Como cada view é construída
+
+As `views[]` são derivadas da máscara do SAM:
+
+```text
+masked_subject
+    sujeito isolado
+    fundo neutralizado com cinza médio
+
+tight_crop
+    recorte justo da bounding box
+    na configuração atual, sem mascarar o fundo interno
+
+contextual_crop
+    bounding box expandida
+    contexto preservado
+    sujeito marcado por contorno verde
+```
+
+A mesma geometria de view também é usada pelo CLIP, o que permite comparar a hipótese do Qwen com evidência visual produzida a partir dos mesmos pixels.
 
 ## Relação SAM -> Qwen
 
@@ -68,7 +111,7 @@ SAM
  -> hipótese textual
 ```
 
-A máscara booleana não é usada como label e não diz ao Qwen o que existe. Ela apenas define o sujeito visual.
+A máscara booleana não é usada como label e não diz ao Qwen o que existe. Ela apenas define o sujeito visual e como os pixels são apresentados ao modelo.
 
 Exemplo:
 
@@ -170,6 +213,34 @@ contextual_crop -> wooden panel combina mais
 ```
 
 Se a alternativa tivesse sido descartada, o pipeline não teria uma hipótese concorrente explícita para comparar.
+
+## Relação exata Qwen -> CLIP
+
+O Qwen não envia embeddings ao CLIP. Ele produz **conceitos textuais**.
+
+O estágio seguinte pega esses conceitos e constrói os textos CLIP com o template versionado:
+
+```text
+wooden panel
+ -> "a photo of wooden panel"
+ -> CLIP text encoder
+
+wooden door
+ -> "a photo of wooden door"
+ -> CLIP text encoder
+```
+
+Esses vetores de texto são comparados com os embeddings CLIP das mesmas views de imagem que participaram da construção da evidência regional.
+
+Portanto:
+
+```text
+Qwen
+    propõe o significado
+
+CLIP
+    mede se a imagem é compatível com as hipóteses propostas
+```
 
 ## Confidence do Qwen não é qualidade geométrica
 
