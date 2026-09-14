@@ -15,7 +15,22 @@ flowchart LR
 
 Reanalisar somente regiões que apresentam motivo explícito de risco ou inconsistência e somente quando o novo passe oferece evidência diferente da usada anteriormente.
 
-## Razões implementadas
+A ideia é evitar dois extremos:
+
+```text
+nunca revisar uma hipótese ruim
+```
+
+ou:
+
+```text
+rodar o VLM repetidamente em todas as regiões
+sem informação nova
+```
+
+## O que dispara refinement
+
+Razões implementadas incluem:
 
 ```text
 missing_semantics
@@ -32,39 +47,158 @@ small_region
 
 `small_region` é modificador de risco e não deve iniciar um novo passe sozinho.
 
-## Transformação
+## Exemplo: Qwen e CLIP discordam
+
+Considere a região real acompanhada nas páginas anteriores:
+
+```text
+Qwen primary:
+    wooden panel
+
+Qwen alternative:
+    wooden door
+
+CLIP masked_subject:
+    door > panel
+
+CLIP tight_crop:
+    door > panel
+```
+
+Isso pode produzir uma razão como:
+
+```text
+unsupported_primary
+ou
+competing_hypotheses
+```
+
+A região passa a ser candidata a refinement em vez de a label inicial ser aceita silenciosamente.
+
+## Evidência nova é obrigatória
+
+Refinement não deve fazer:
+
+```text
+mesmo prompt
++ mesmas imagens
++ temperature = 0
+        |
+        v
+perguntar novamente esperando outra resposta
+```
+
+O estágio possui `escalation_views` para usar uma combinação diferente ou mais rica de evidência.
+
+Na configuração atual:
+
+```text
+foreground_dense
+masked_subject
+tight_crop
+contextual_crop
+```
+
+O refinamento só faz sentido quando existe um caminho de evidência novo em relação ao passe anterior.
+
+## Por que a cena inteira não é simplesmente adicionada
+
+Uma versão anterior do escalonamento acrescentava `scene_conditioned`, isto é, o frame completo.
+
+Em `corridor-02-008`, isso fez regiões locais começarem a repetir uma claim global de layout, como `rows of crops`.
+
+O mecanismo era:
+
+```text
+região ambígua
++ frame inteiro muito saliente
+        |
+        v
+Qwen descreve a cena
+em vez da região
+```
+
+Por isso a configuração atual prioriza evidência local e contextual da região, sem usar a imagem global como atalho automático de refinement.
+
+## Exemplo de máscara ruim
+
+```text
+Qwen: wooden pallet
+mask: pallet + grande área de parede
+mask_fill_ratio baixo
+        |
+        v
+insufficient_foreground
+        |
+        v
+refinement solicitado
+```
+
+Entretanto, reanalisar semanticamente não corrige a geometria da máscara.
+
+Se a proposal realmente inclui parede demais, a solução pode precisar acontecer antes:
+
+```text
+region discovery
+merge
+mask geometry
+```
+
+ou downstream reduzindo o suporte espacial da claim.
+
+## Histórico append-only
+
+Refinement não apaga silenciosamente a interpretação anterior.
+
+Conceitualmente:
 
 ```text
 claim inicial
- + support signals
- + structural checks
-        -> precisa refinar?
-        -> novas views/evidências quando justificadas
-        -> novas claims anexadas
+    PRIMARY wooden panel
+
+refinement
+    nova hipótese / nova evidência
+
+histórico
+    preserva ambas + proveniência
 ```
 
-O histórico deve permanecer append-only. Refinement não apaga silenciosamente a hipótese anterior.
-
-## Exemplo de falha que esta etapa deve atacar
+Isso permite responder depois:
 
 ```text
-VLM: wooden pallet
-mask: pallet + grande área de parede
-mask_fill_ratio baixo
-        -> insufficient_foreground
-        -> nova evidência
-        -> nova interpretação auditável
+qual modelo produziu a primeira hipótese?
+por que a região foi reprocessada?
+qual evidência nova foi usada?
+o resultado mudou?
 ```
+
+## Orçamento computacional
+
+Refinement é seletivo também por custo.
+
+A configuração possui limites como:
+
+```text
+max_iterations
+max_regions_per_iteration
+```
+
+O objetivo é concentrar chamadas caras do Qwen nas regiões que realmente apresentam risco, em vez de multiplicar a latência de todos os frames.
 
 ## Reference run
 
-A run `20260910T115810Z` possui sinais de hipóteses concorrentes e regiões com primary não suportada, mas a documentação atual não isola um `RefinementStep` específico para `region-2c84165423b25fc3` como exemplo canônico. Não inventamos um.
+A run `20260910T115810Z` possui sinais de hipóteses concorrentes e regiões com primary não suportada, mas a documentação atual não isola um `RefinementStep` específico para `region-2c84165423b25fc3` como exemplo canônico.
 
-## Influência no mapa
+Não inventamos um artifact de refinement para preencher essa lacuna.
 
-O refinement melhora a qualidade da evidência antes da projeção 3D. Ele não corrige sozinho uma máscara geometricamente ampla; quando a geometria da evidência está errada, a correção precisa atingir a proposta/máscara ou reduzir o suporte espacial da claim.
+## Saída
+
+A saída continua sendo regiões com claims e evidências, mas agora acompanhadas do histórico das reinterpretações realizadas.
+
+Esse estado segue para reconciliation intra-frame.
 
 ## Próxima leitura
 
 - [12. Reconciliation intra-frame](./12-reconciliation.md)
 - [10. Hypothesis Support](./10-hypothesis-support.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
