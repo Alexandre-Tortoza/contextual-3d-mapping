@@ -20,10 +20,14 @@ from typer.testing import CliRunner
 # as duas aplicações sem depender do catálogo ou de servidores do checkout.
 def publication_project(tmp_path: Path) -> Project:
     """Cria um projeto temporário com o ponto de entrada real do publisher."""
-    source = Path(__file__).resolve().parents[2] / "map-explorer/scripts/publish_map_index.py"
+    repository = Path(__file__).resolve().parents[3]
+    source = repository / "apps/map-explorer/scripts/publish_map_index.py"
     target = tmp_path / "apps/map-explorer/scripts/publish_map_index.py"
     target.parent.mkdir(parents=True)
     shutil.copyfile(source, target)
+    for module in ("semantic-map", "semantic-fusion"):
+        shutil.copytree(repository / "modules" / module, tmp_path / "modules" / module,
+                        ignore=shutil.ignore_patterns("__pycache__"))
     return Project(tmp_path)
 
 

@@ -235,17 +235,19 @@ function SceneClaims({ claims }) {
 // Mostra quantas observações classificaram o mesmo ponto e o quanto elas
 // concordam. Com vários keyframes, a concordância é evidência: um label
 // sustentado por cinco frames não tem o mesmo peso de um sustentado por um.
-function FusionSummary({ evidence }) {
+function FusionSummary({ evidence, activeContribution, onSelectContribution }) {
   const contributions = evidence?.contributions ?? [];
   const state = evidence?.support_state;
-  if (contributions.length < 2 && !state) return null;
+  if (contributions.length < 2 && !state && !evidence?.consolidation) return null;
   return (
     <div className="inspector-block">
       <h3>Sustentação do label</h3>
       <div className="classification-grid">
+        {evidence?.consolidation?.resolution === "quality_tiebreak" && <><span>Decisão</span><strong>Desempate por qualidade</strong></>}
+        {evidence?.consolidation?.resolution === "majority" && <><span>Decisão</span><strong>Maioria entre runs</strong></>}
         {state && <><span>Estado</span><strong>{state}</strong></>}
-        <span>Observações</span><strong>{Math.max(contributions.length, 1)}</strong>
-        <span>Concordância entre frames</span>
+        <span>{evidence?.consolidation ? "Runs com evidência" : "Observações"}</span><strong>{Math.max(contributions.length, 1)}</strong>
+        <span>{evidence?.consolidation ? "Concordância entre runs" : "Concordância entre frames"}</span>
         <strong>{evidence.agreement == null ? "Sem corroboração" : `${(evidence.agreement * 100).toFixed(0)}%`}</strong>
         <span>Suporte da vizinhança 3D</span>
         <strong>{evidence.spatial_support == null ? "Indefinido" : `${(evidence.spatial_support * 100).toFixed(0)}%`}</strong>
@@ -254,7 +256,11 @@ function FusionSummary({ evidence }) {
       <ul className="claim-list">
         {contributions.length > 1 && contributions.map((item) => (
           <li key={`${item.observation_id}:${item.region_id}`}>
-            <span>{item.observation_id}</span><strong>{item.label}</strong>
+            <button className="text-action" type="button" onClick={() => onSelectContribution(item)}
+              aria-pressed={activeContribution?.observation_id === item.observation_id && activeContribution?.region_id === item.region_id}>
+              {item.source_run_id ?? item.observation_id}
+            </button>
+            <strong>{item.raw_label ?? item.label}</strong>
             {item.confidence != null && <small>{(item.confidence * 100).toFixed(0)}%</small>}
           </li>
         ))}
@@ -274,10 +280,13 @@ export function Inspector({
   outOfFocus = false,
 }) {
   const evidence = point ? visualEvidence(point) : null;
+  const [activeContribution, setActiveContribution] = useState(null);
+  useEffect(() => setActiveContribution(null), [point?.geometry_id]);
+  const displayedEvidence = activeContribution ?? evidence;
   const observation = slice.observations?.find(
-    (item) => item.observation_id === observationIdOf(evidence),
+    (item) => item.observation_id === observationIdOf(displayedEvidence),
   );
-  const region = slice.regions?.find((item) => item.region_id === evidence?.region_id);
+  const region = slice.regions?.find((item) => item.region_id === displayedEvidence?.region_id);
   const confidence = region?.confidence?.value;
   const supportState = region?.support?.state;
   return (
@@ -338,13 +347,13 @@ export function Inspector({
               </div>
             )}
 
-            <SurfaceEvidence evidence={evidence} />
+            <SurfaceEvidence evidence={displayedEvidence} />
 
             {evidence && (
-              <ObservationPreview observation={observation} region={region} pixel={evidence.pixel} artifactUrl={artifactUrl} />
+              <ObservationPreview observation={observation} region={region} pixel={displayedEvidence.pixel} artifactUrl={artifactUrl} />
             )}
 
-            <FusionSummary evidence={evidence} />
+            <FusionSummary evidence={evidence} activeContribution={activeContribution} onSelectContribution={setActiveContribution} />
 
             {region?.claims?.length > 0 && (
               <div className="inspector-block">

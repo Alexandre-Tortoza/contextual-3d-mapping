@@ -7,6 +7,8 @@ const STRUCTURAL_COLOR = [150, 150, 150];
 const OTHER_FAMILY_KEY = "__other__";
 const OTHER_FAMILY_COLOR = [185, 189, 199];
 const DIMMED_COLOR = [70, 74, 84];
+const CONTEXT_ARTIFACT_TYPE = "contextual_rgb_lidar_slice";
+const CONSOLIDATED_ARTIFACT_TYPE = "consolidated_contextual_map";
 
 // Substantivos estruturais genéricos espelhados de
 // modules/visual-perception/src/visual_perception/domain/structural_consistency.py
@@ -62,8 +64,8 @@ const NEUTRAL_LABELS = Object.freeze({
 // Valida a fronteira mínima consumida pelo viewer antes de qualquer estado de
 // câmera ou renderização ser criado.
 export function validateSlice(value) {
-  if (![1, 2].includes(value?.schema_version)) {
-    throw new Error("O artifact precisa usar schema_version 1 ou 2.");
+  if (!Number.isInteger(value?.schema_version)) {
+    throw new Error("O artifact precisa declarar schema_version inteiro.");
   }
   if (typeof value.map_id !== "string" || typeof value.map_frame !== "string") {
     throw new Error("O artifact precisa declarar map_id e map_frame.");
@@ -79,10 +81,11 @@ export function validateSlice(value) {
       throw new Error(`O ponto ${index} possui coordenadas não finitas.`);
     }
   });
-  if (
-    value.schema_version === 2
-    && (!Array.isArray(value.observations) || !Array.isArray(value.regions))
-  ) {
+  if (value.artifact_type == null) return value;
+  if (![CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(value.artifact_type)) {
+    throw new Error("O artifact precisa ser uma run contextual ou um mapa consolidado.");
+  }
+  if (!Array.isArray(value.observations) || !Array.isArray(value.regions)) {
     throw new Error("O artifact contextual precisa declarar observations e regions.");
   }
   return value;
@@ -410,9 +413,9 @@ export function srgbColorToLinear(color) {
 export function mapEntriesFromIndex(payload) {
   if (!Array.isArray(payload)) return [];
   return payload.filter(
-    (entry) => entry?.artifact_type === "contextual_rgb_lidar_slice"
+    (entry) => [CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(entry?.artifact_type)
       && typeof entry.url === "string" && typeof entry.label === "string",
-  ).map((entry) => ({ url: entry.url, label: entry.label }));
+  ).map((entry) => ({ url: entry.url, label: entry.label, artifactType: entry.artifact_type }));
 }
 
 // Identifica a geometria compartilhada por runs, para que alternar evidência
@@ -443,3 +446,4 @@ export class StaticArtifactGeometrySource {
 }
 
 export { DIMMED_COLOR, OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY, STRUCTURAL_KEY };
+export { CONSOLIDATED_ARTIFACT_TYPE, CONTEXT_ARTIFACT_TYPE };

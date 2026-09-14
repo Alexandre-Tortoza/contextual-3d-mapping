@@ -10,6 +10,8 @@ import { Inspector } from "./inspector.jsx";
 import {
   DIMMED_COLOR,
   StaticArtifactGeometrySource,
+  CONSOLIDATED_ARTIFACT_TYPE,
+  CONTEXT_ARTIFACT_TYPE,
   allLegendKeys,
   buildContextPalette,
   contextKey,
@@ -419,12 +421,15 @@ function ContextLegend({
 // que um trecho novo apareça no seletor sem alterar o viewer.
 function MapSelector({ entries, value, onChange }) {
   const known = entries.some((entry) => entry.url === value);
+  const runs = entries.filter((entry) => entry.artifactType === CONTEXT_ARTIFACT_TYPE);
+  const consolidated = entries.filter((entry) => entry.artifactType === CONSOLIDATED_ARTIFACT_TYPE);
   return (
     <label className="map-overlay map-selector">
       <span>Run</span>
       <select aria-label="Run com contexto" value={value} onChange={(event) => onChange(event.target.value)}>
         {!known && <option value={value}>Run aberta pela URL</option>}
-        {entries.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}
+        {runs.length > 0 && <optgroup label="Runs">{runs.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}</optgroup>}
+        {consolidated.length > 0 && <optgroup label="Mapas consolidados">{consolidated.map((entry) => <option value={entry.url} key={entry.url}>{entry.label}</option>)}</optgroup>}
       </select>
     </label>
   );
@@ -519,8 +524,8 @@ function Explorer() {
   // substituir a fonte estática por chunks sem reescrever a interface.
   const openSlice = async (payload, resolvedUrl = null) => {
     const validated = validateSlice(payload);
-    if (validated.artifact_type !== "contextual_rgb_lidar_slice") {
-      throw new Error("Selecione uma run com contexto. Mapas de geometria pura não fazem parte desta comparação.");
+    if (![CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(validated.artifact_type)) {
+      throw new Error("Selecione uma run com contexto ou um mapa consolidado.");
     }
     const source = new StaticArtifactGeometrySource(validated);
     const geometry = await source.getGeometry();

@@ -63,6 +63,7 @@ class Project:
             self.root / "modules" / "geometric-map" / "src",
             self.root / "modules" / "sensor-association" / "src",
             self.root / "modules" / "semantic-fusion" / "src",
+            self.root / "modules" / "semantic-map" / "src",
             self.root / "apps" / "mapping-runtime" / "src",
         )
         for path in reversed(paths):

@@ -65,6 +65,13 @@ test("validateSlice aceita v1/v2 e rejeita coordenadas inválidas", () => {
     () => validateSlice({ schema_version: 1, map_id: "m", map_frame: "map", points: [{ coordinates_m: [0, Number.NaN, 0] }] }),
     /não finitas/,
   );
+  assert.equal(
+    validateSlice({
+      schema_version: 1, artifact_type: "consolidated_contextual_map", map_id: "m", map_frame: "map",
+      points: POINTS, observations: [], regions: [],
+    }).artifact_type,
+    "consolidated_contextual_map",
+  );
 });
 
 // Garante que a câmera enquadre os bounds do mapa completo, não o subconjunto
@@ -201,12 +208,16 @@ test("conversão sRGB preserva extremos e lineariza meios-tons", () => {
 test("mapEntriesFromIndex aceita entradas válidas e descarta o resto", () => {
   const entries = mapEntriesFromIndex([
     { url: "/runs/a/context.json", label: "Run A · 16 frames", artifact_type: "contextual_rgb_lidar_slice" },
+    { url: "/maps/consolidated/a/context.json", label: "Mapa consolidado · m", artifact_type: "consolidated_contextual_map" },
     { url: "/maps/geometry.json", label: "Geometria", artifact_type: "geometric_slice" },
     { url: "/maps/x.json" },
     { label: "sem url" },
     "texto",
   ]);
-  assert.deepEqual(entries, [{ url: "/runs/a/context.json", label: "Run A · 16 frames" }]);
+  assert.deepEqual(entries, [
+    { url: "/runs/a/context.json", label: "Run A · 16 frames", artifactType: "contextual_rgb_lidar_slice" },
+    { url: "/maps/consolidated/a/context.json", label: "Mapa consolidado · m", artifactType: "consolidated_contextual_map" },
+  ]);
   assert.deepEqual(mapEntriesFromIndex(null), []);
   assert.deepEqual(mapEntriesFromIndex({}), []);
 });

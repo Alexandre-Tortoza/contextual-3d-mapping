@@ -47,9 +47,13 @@ def test_runs_preserve_context_and_previews(tmp_path: Path) -> None:
     maps.mkdir()
     (maps / "geometry.json").write_text(json.dumps({"schema_version": 1, "map_id": "geometry"}))
     entries = json.loads(publish(public).read_text())
-    assert [entry["run_id"] for entry in entries] == ["second", "first"]
-    assert all(entry["url"].startswith("/runs/") for entry in entries)
-    assert all(entry["artifact_type"] == "contextual_rgb_lidar_slice" for entry in entries)
+    runs = [entry for entry in entries if entry["artifact_type"] == "contextual_rgb_lidar_slice"]
+    consolidated = [entry for entry in entries if entry["artifact_type"] == "consolidated_contextual_map"]
+    assert [entry["run_id"] for entry in runs] == ["second", "first"]
+    assert all(entry["url"].startswith("/runs/") for entry in runs)
+    assert len(consolidated) == 1
+    assert consolidated[0]["source_run_count"] == 2
+    assert consolidated[0]["url"].startswith("/maps/consolidated/")
 
 
 # Reabrir uma execução não pode duplicar a run nem autorizar sobrescrita quando
@@ -108,4 +112,6 @@ def test_index_ignores_staging_directories(tmp_path: Path) -> None:
     staging.mkdir()
     (staging / "manifest.json").write_bytes((saved / "manifest.json").read_bytes())
     (staging / "context.json").write_bytes((saved / "context.json").read_bytes())
-    assert len(json.loads(publish(public).read_text())) == 1
+    entries = json.loads(publish(public).read_text())
+    assert [entry["run_id"] for entry in entries if entry["artifact_type"] == "contextual_rgb_lidar_slice"] == ["ready"]
+    assert len([entry for entry in entries if entry["artifact_type"] == "consolidated_contextual_map"]) == 1

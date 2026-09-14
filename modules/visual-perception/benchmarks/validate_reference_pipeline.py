@@ -764,7 +764,15 @@ def run_validation(
                             for target in step.targets
                         ],
                         "refined_region_ids": list(step.refined_region_ids),
-                        "failures": [asdict(failure) for failure in step.failures],
+                        # `RegionInterpretationFailure` é uma exception (#165), não um
+                        # dataclass — `asdict()` levanta TypeError nela. Isso derrubava
+                        # o run inteiro sempre que a etapa de refinement isolava uma
+                        # falha por região (ex: OOM real do backend durante o retry),
+                        # o oposto do propósito da isolação por região.
+                        "failures": [
+                            {"region_id": failure.region_id, "reason": failure.reason}
+                            for failure in step.failures
+                        ],
                     }
                     for step in result.refinement_history
                 ],

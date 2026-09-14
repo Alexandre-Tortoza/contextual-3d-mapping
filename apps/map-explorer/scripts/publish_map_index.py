@@ -7,10 +7,26 @@ import hashlib
 import json
 import re
 import shutil
+import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+for _source_root in (
+    _REPOSITORY_ROOT / "modules" / "semantic-map" / "src",
+    _REPOSITORY_ROOT / "modules" / "semantic-fusion" / "src",
+):
+    if _source_root.is_dir() and str(_source_root) not in sys.path:
+        sys.path.insert(0, str(_source_root))
+
+from semantic_map import (
+    CONSOLIDATED_ARTIFACT_TYPE,
+    PublishedContextRun,
+    consolidate_context_runs,
+    geometry_fingerprint,
+)
 
 INDEX_NAME = "index.json"
 CONTEXT_TYPE = "contextual_rgb_lidar_slice"
@@ -141,6 +157,97 @@ def save_run(
     return destination
 
 
+# Lê as runs estáticas já validadas pelo publisher. Existe para que o mapa
+# consolidado use somente conteúdo imutável e previews que o viewer consegue
+# abrir, em vez de varrer artifacts de trabalho ainda mutáveis.
+def published_context_runs(public_directory: Path) -> tuple[PublishedContextRun, ...]:
+    """Retorna as runs contextuais completas disponíveis no catálogo estático."""
+    runs = []
+    for manifest_path in sorted((public_directory / "runs").glob("*/manifest.json")):
+        if manifest_path.parent.name.startswith("."):
+            continue
+        artifact = manifest_path.parent / "context.json"
+        if not artifact.is_file():
+            continue
+        metadata = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload = json.loads(artifact.read_text(encoding="utf-8"))
+        if metadata.get("artifact_type") != CONTEXT_TYPE or payload.get("artifact_type") != CONTEXT_TYPE:
+            continue
+        run_id = metadata.get("run_id")
+        if not isinstance(run_id, str) or run_id != manifest_path.parent.name:
+            continue
+        digest = metadata.get("artifact_sha256")
+        if not isinstance(digest, str):
+            digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        runs.append(PublishedContextRun(
+            run_id=run_id,
+            label=str(metadata.get("label") or run_id),
+            artifact_url=f"/runs/{quote(run_id)}/context.json",
+            artifact_sha256=digest,
+            payload=payload,
+        ))
+    return tuple(runs)
+
+
+# Escreve um documento derivado sem expor ao viewer um arquivo parcial durante
+# a reconstrução do catálogo. O conteúdo pode ser regenerado integralmente das
+# runs imutáveis de origem.
+def _write_json_atomic(destination: Path, payload: dict) -> None:
+    """Grava JSON em arquivo temporário e o promove atomicamente."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(destination)
+
+
+# Reconstrói um mapa derivado por fingerprint geométrico. A separação por
+# fingerprint impede que duas runs de mesmo nome lógico, mas nuvens diferentes,
+# sejam fundidas por acidente.
+def publish_consolidated_maps(public_directory: Path) -> list[dict]:
+    """Atualiza os mapas consolidados derivados das runs publicadas.
+
+    Retorna:
+        entradas prontas para o índice estático do viewer.
+    """
+    grouped: dict[str, list[PublishedContextRun]] = {}
+    for run in published_context_runs(public_directory):
+        fingerprint = geometry_fingerprint(run.payload)
+        grouped.setdefault(fingerprint, []).append(run)
+    entries = []
+    for fingerprint, runs in sorted(grouped.items()):
+        consolidated = consolidate_context_runs(runs)
+        destination = public_directory / "maps" / "consolidated" / fingerprint / "context.json"
+        _write_json_atomic(destination, consolidated.to_payload())
+        source_metadata = [
+            json.loads((public_directory / "runs" / run.run_id / "manifest.json").read_text(encoding="utf-8"))
+            for run in runs
+        ]
+        created_at = max(str(item.get("created_at", "")) for item in source_metadata)
+        manifest = {
+            "schema_version": 1,
+            "artifact_type": CONSOLIDATED_ARTIFACT_TYPE,
+            "geometry_fingerprint": fingerprint,
+            "map_id": consolidated.payload["map_id"],
+            "map_frame": consolidated.payload["map_frame"],
+            "source_run_ids": [run.run_id for run in sorted(runs, key=lambda item: item.run_id)],
+            "source_run_count": len(runs),
+            "artifact_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+        }
+        _write_json_atomic(destination.with_name("manifest.json"), manifest)
+        entries.append({
+            "url": f"/maps/consolidated/{quote(fingerprint)}/context.json",
+            "label": f"Mapa consolidado · {consolidated.payload['map_id']} · {len(runs)} {'run' if len(runs) == 1 else 'runs'}",
+            "artifact_type": CONSOLIDATED_ARTIFACT_TYPE,
+            "map_id": consolidated.payload["map_id"],
+            "created_at": created_at,
+            "source_run_count": len(runs),
+            "geometry_fingerprint": fingerprint,
+            "frame_count": sum(int(item.get("frame_count", 0)) for item in source_metadata),
+            "contextual_point_count": consolidated.payload["context_summary"]["contextual_point_count"],
+        })
+    return entries
+
+
 # Indexa apenas as pastas publicadas de contexto. Arquivos antigos de geometria
 # podem continuar no disco sem ocupar o seletor de comparação de runs.
 def publish(public_directory: Path) -> Path:
@@ -173,6 +280,7 @@ def publish(public_directory: Path) -> Path:
             "frame_count": frames, "contextual_point_count": metadata.get("contextual_point_count"),
         })
     entries.sort(key=lambda item: (item["created_at"], item["run_id"]), reverse=True)
+    entries.extend(publish_consolidated_maps(public_directory))
     destination = maps_directory / INDEX_NAME
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     temporary.write_text(json.dumps(entries, indent=2), encoding="utf-8")

@@ -106,6 +106,23 @@ Ao alternar versões com o mesmo frame, origem geométrica e quantidade de ponto
 a câmera permanece na posição escolhida. Uma geometria diferente é enquadrada
 automaticamente. A comparação ocorre pela alternância no mesmo viewport.
 
+## Mapas consolidados
+
+Depois de cada publicação, o catálogo reconstrói automaticamente um mapa
+consolidado para cada grupo de runs com geometria idêntica. Esse artifact é
+derivado das pastas imutáveis em `runs/`: não altera nenhuma run de origem e
+preserva a identidade, o hash, as observações e as regiões que contribuíram.
+
+O seletor separa **Runs** de **Mapas consolidados**. Cada ponto consolidado
+recebe no máximo um voto por run; variantes como `pallet` e `wooden pallet`
+formam a mesma família textual. Uma maioria estrita decide o label. Quando não
+há maioria, o claim de maior qualidade vence, mas aparece atenuado e identificado
+como desempate por qualidade no inspector. O painel permite abrir a evidência de
+cada run contribuinte sem duplicar suas previews.
+
+Runs com `map_id` igual, mas pontos ou coordenadas diferentes, não são unidas.
+O viewer não faz registro espacial entre aquisições distintas.
+
 ## Cores e sustentação
 
 O reasoner produz vocabulário aberto e cheio de quase-sinônimos: `wall`,

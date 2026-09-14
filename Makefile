@@ -21,7 +21,7 @@ M1_VISIBILITY_MODE ?= measured_surfaces
 M1_VISUAL_RUN ?= modules/visual-perception/benchmarks/results/samples/old/20260909T135428Z
 MAP_EXPLORER_ARTIFACT ?=
 MAP_EXPLORER_RUN_ID ?=
-M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/modules/visual-perception/src:$(CURDIR)/apps/mapping-runtime/src
+M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/modules/semantic-map/src:$(CURDIR)/modules/visual-perception/src:$(CURDIR)/apps/mapping-runtime/src
 
 .PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-map-from-window corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-publish map-explorer-serve
 
