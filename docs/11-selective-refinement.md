@@ -63,3 +63,8 @@ A run `20260910T115810Z` possui sinais de hipóteses concorrentes e regiões com
 ## Influência no mapa
 
 O refinement melhora a qualidade da evidência antes da projeção 3D. Ele não corrige sozinho uma máscara geometricamente ampla; quando a geometria da evidência está errada, a correção precisa atingir a proposta/máscara ou reduzir o suporte espacial da claim.
+
+## Próxima leitura
+
+- [12. Reconciliation intra-frame](./12-reconciliation.md)
+- [10. Hypothesis Support](./10-hypothesis-support.md)
