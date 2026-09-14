@@ -74,3 +74,9 @@ Alguns diretórios ainda contêm apenas notas de responsabilidade para evoluçã
 - [`docs/17-sensor-association.md`](../../../docs/17-sensor-association.md), uso de pose para alinhar mapa e câmera.
 
 Decisões internas do estimator ficam neste diretório. A narrativa que atravessa sensores e módulos permanece em [`docs/`](../../../docs/README.md).
+
+## Próxima leitura
+
+- [15. Geometric Map](../../../docs/15-geometric-map.md)
+- [16. Pose + Calibration](../../../docs/16-pose-calibration.md)
+- [Documentação de `geometric-map`](../../geometric-map/docs/README.md)
