@@ -50,3 +50,8 @@ Um `RegionEvidenceSlot` denominado `foreground_dense` com referência ao artifac
 ## Limitação
 
 Pooling reduz várias posições a um vetor. Isso é útil para representar a região, mas perde detalhes internos. Para cross-modal distillation por ponto, a pipeline futura precisa preservar feature 2D alinhada ao pixel projetado do ponto LiDAR, não depender apenas do embedding agregado da região.
+
+## Próxima leitura
+
+- [06. Region Evidence](./06-region-evidence.md)
+- [04. Dense Feature Extraction](./04-dense-features.md)
