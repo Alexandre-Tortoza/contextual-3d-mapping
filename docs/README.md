@@ -4,7 +4,7 @@ Esta documentação acompanha a informação desde os pixels de um frame RGB at�
 
 > Que informação existe agora, de onde ela veio, como foi transformada e o que será enviado para a próxima etapa?
 
-A documentação foi reorganizada por estágio da pipeline. O `README.md` é a visão geral; cada arquivo numerado detalha uma transformação específica.
+A documentação é dividida em dois níveis: este diretório descreve o fluxo entre capacidades; detalhes internos pertencem a `modules/<module>/docs/`.
 
 ## Regra de documentação
 
@@ -95,13 +95,28 @@ flowchart TD
 | `geometric-map` | primeiro slice implementado | geometria persistente e referências estáveis |
 | `sensor-association` | implementado | projeção, suporte válido e oclusão |
 | `semantic-fusion` | implementado no nível de ponto | fusão multi-keyframe e suporte espacial |
-| `semantic-map` | planejado | sem schema público concreto |
-| `semantic-memory` | planejado | capacidade reservada |
-| `scene-graph` | planejado | capacidade reservada |
-| `context-reasoning` | planejado | capacidade reservada |
-| `query-engine` | planejado | capacidade reservada |
+| `point-representation` | planejado | capacidade ainda não materializada em módulo |
+| `semantic-map` | planejado | sem schema público concreto e sem módulo materializado |
+| `semantic-memory` | planejado | capacidade ainda não materializada em módulo |
+| `scene-graph` | planejado | capacidade ainda não materializada em módulo |
+| `context-reasoning` | planejado | capacidade ainda não materializada em módulo |
+| `query-engine` | planejado | capacidade ainda não materializada em módulo |
+
+Capacidades apenas planejadas não mantêm diretórios vazios em `modules/`. Elas passam a existir fisicamente quando houver contract, implementação, teste ou documentação concreta que justifique o módulo.
 
 A reference run visual possui artifacts reais até `VisualObservation`. Para a parte 3D existem implementação e diagnósticos reais, mas ainda não há um único artifact versionado que acompanhe `region-2c84165423b25fc3` até um `GeometryReference` e depois até uma entidade persistente. A documentação não inventa essa continuidade.
+
+## Documentação especializada por módulo
+
+A documentação local descreve o código e as decisões internas das capacidades já materializadas:
+
+- [`visual-perception`](../modules/visual-perception/docs/README.md), arquitetura interna, backends e política semântica;
+- [`state-estimation`](../modules/state-estimation/docs/README.md), contracts de movimento e integração FAST-LIO;
+- [`geometric-map`](../modules/geometric-map/docs/README.md), geometria persistente e referências estáveis;
+- [`sensor-association`](../modules/sensor-association/docs/README.md), projeção, visibilidade e oclusão;
+- [`semantic-fusion`](../modules/semantic-fusion/docs/README.md), fusão multi-view e suporte espacial.
+
+Use estas páginas para perguntas sobre como um módulo funciona internamente. Use os documentos numerados abaixo para seguir a transformação da informação entre módulos.
 
 ## Documentação por estágio
 
@@ -129,5 +144,7 @@ A reference run visual possui artifacts reais até `VisualObservation`. Para a p
 ## Como cada página deve ser mantida
 
 Cada estágio deve responder, quando aplicável: objetivo, entrada, contract, transformação, tecnologias, exemplo da reference run, artifacts, saída, consumidor, limitações atuais e referências científicas. Quando não houver artifact real, a página deve declarar isso explicitamente.
+
+Detalhes que pertencem exclusivamente a um módulo devem ser movidos ou referenciados a partir de `modules/<module>/docs/`, evitando duas fontes de verdade.
 
 A documentação anterior foi preservada em [`.old-docs/`](../.old-docs/) para consulta histórica.
