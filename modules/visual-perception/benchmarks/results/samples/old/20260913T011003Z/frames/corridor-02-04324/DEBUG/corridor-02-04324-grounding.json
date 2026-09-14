@@ -1,0 +1,48 @@
+{
+  "frame_id": "corridor-02-04324",
+  "regions": [
+    {
+      "region_id": "region-4dea7a3e916cf1d9",
+      "label": "floor",
+      "region_kind": "thing",
+      "discovery_area": 54622,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 4.0,
+        "x_max": 632.0,
+        "y_max": 402.0
+      },
+      "component_count_before": 9,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 8.71171175100244,
+      "model_mask_area": 75634,
+      "clipped_pixel_count": 75633,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1,
+          "box": {
+            "x_min": 48.0,
+            "y_min": 401.0,
+            "x_max": 49.0,
+            "y_max": 402.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 276.82950503542446
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

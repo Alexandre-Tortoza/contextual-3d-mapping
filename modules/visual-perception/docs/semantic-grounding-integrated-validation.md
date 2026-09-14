@@ -27,7 +27,7 @@ efeito do grounding. As quatro ablações abaixo usam as mesmas observações da
 **nova** percepção, preservando geometria, calibração, exclusão do rig e
 política de oclusão. Não houve ajuste de threshold por frame ou conceito.
 
-O diretório [da execução](../../../artifacts/integrated-grounding-6s-20260912T050652Z/README.md)
+O diretório [da execução](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/README.md)
 preserva código, hashes, patch do checkout, checkpoints, configuração,
 entradas, logs e manifests. O HEAD de referência é
 `3596e90f975472d3a521d59005e556c7376f044c`, com alterações locais arquivadas.
@@ -62,8 +62,8 @@ contribuições fortes e 133 tentativas com nearest; com interpolação, são 2.
 fortes e 142 tentativas. Contribuições contam pares ponto/observação, enquanto
 a tabela conta pontos únicos.
 
-Dados completos: [métricas de revisão](../../../artifacts/integrated-grounding-6s-20260912T050652Z/review-metrics.json)
-e [comparação entre braços](../../../artifacts/integrated-grounding-6s-20260912T050652Z/comparison.json).
+Dados completos: [métricas de revisão](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/review-metrics.json)
+e [comparação entre braços](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/comparison.json).
 
 ## Revisão visual
 
@@ -74,16 +74,16 @@ chamada `wooden pallet`, perde o footprint forte: **48.326 → 0 pixels**, com
 parede. As contribuições `wooden pallet` desse frame passam de 1.464 para 394
 com grounding, 382 com boundary e 379 com interpolação.
 
-![Parede rejeitada como footprint do pallet](../../../artifacts/integrated-grounding-6s-20260912T050652Z/masks/corridor-02-04288/region-b99bcbe3220f5df9/comparison.png)
+![Parede rejeitada como footprint do pallet](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/masks/corridor-02-04288/region-b99bcbe3220f5df9/comparison.png)
 
-![Pallet preservado e redução da projeção sobre a parede](../../../artifacts/integrated-grounding-6s-20260912T050652Z/projections/corridor-02-04288/projection-02.png)
+![Pallet preservado e redução da projeção sobre a parede](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/projections/corridor-02-04288/projection-02.png)
 
 No frame `04258`, a porta corretamente localizada permanece associada como
 `wooden door`: 380 contribuições em discovery, 379 com grounding, 347 com
 boundary e 371 com interpolação. Os pontos distantes em 3D continuam visíveis
 nas figuras e requerem revisão da associação/oclusão.
 
-![Porta preservada nos quatro braços](../../../artifacts/integrated-grounding-6s-20260912T050652Z/projections/corridor-02-04258/projection-01.png)
+![Porta preservada nos quatro braços](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/projections/corridor-02-04258/projection-01.png)
 
 A região `region-af034aba16490177` do frame `04246`, antes chamada `door`, é
 agora interpretada como `ceiling`, com alternativa `wall`, e permanece em
@@ -98,7 +98,7 @@ não demonstra cobertura espacial de dano. No frame `04282`, o segmentador de
 `cracked tile` cobre uma faixa extensa do chão, sem produzir suporte semântico
 aceito para a região de origem.
 
-![Ausência de footprint forte para cracked tile](../../../artifacts/integrated-grounding-6s-20260912T050652Z/masks/corridor-02-04282/region-f4b8fe9f282e4845/comparison.png)
+![Ausência de footprint forte para cracked tile](../../../artifacts/old/integrated-grounding-6s-20260912T050652Z/masks/corridor-02-04282/region-f4b8fe9f282e4845/comparison.png)
 
 ## Falhas e custo
 

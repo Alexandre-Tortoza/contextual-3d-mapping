@@ -32,21 +32,30 @@ from typing import Any
 
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(_MODULE_ROOT / "tests"))
 for relative in ("src", "../../contracts", "../../adapters/datasets", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / relative).resolve()))
 
 import numpy as np  # noqa: E402
+from contextual_mapping_adapters import (  # noqa: E402
+    ROSBAG_CLOCK_ID,
+    ExtractedFrameProvenance,
+    read_frame_provenance,
+)
+from contextual_mapping_contracts import (  # noqa: E402
+    FrameId,
+    ObservationReference,
+    SourceArtifactReference,
+    Timestamp,
+)
 from PIL import Image  # noqa: E402
 
-from fixtures import image_observation  # noqa: E402
 from frame_artifacts import (  # noqa: E402
     FRAME_ARTIFACT_LAYOUT_VERSION,
     FrameInputs,
     write_frame_artifacts,
 )
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
-from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
+from visual_perception.application.lifecycle import ModelLifecycleManager, StageMetrics  # noqa: E402
 from visual_perception.application.observation_diagnostics import diagnose_observation  # noqa: E402
 from visual_perception.application.pipeline import (  # noqa: E402
     PerceptionPorts,
@@ -62,6 +71,7 @@ from visual_perception.config import (  # noqa: E402
 )
 from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
 from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry  # noqa: E402
+from visual_perception.domain.image_observation import ImageObservation  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.domain.region_evidence import EvidenceSlot, EvidenceState  # noqa: E402
 from visual_perception.domain.region_reasoning import (  # noqa: E402
@@ -217,6 +227,51 @@ def _geometry_from_dict(payload: dict[str, Any] | None) -> ImageAreaGeometry | N
     )
 
 
+# Recusa uma geometria de área pedida que não existe. Existe porque a CLI
+# convertia um caminho inexistente em "sem geometria", e um erro de digitação
+# rodava o frame inteiro sem exclusão do rig e da vinheta, sem nada no
+# manifest que denunciasse. Rodar sem geometria é pedido explícito
+# (``--no-sequence-masks``), nunca consequência de um caminho errado.
+def require_sequence_masks(path: Path | None) -> None:
+    """Valida que a geometria de área pedida existe.
+
+    Argumentos:
+        path: arquivo de geometria, ou ``None`` quando o run não declara nenhuma.
+    Levanta:
+        ValueError: se um caminho foi pedido e não é um arquivo.
+    """
+    if path is not None and not path.is_file():
+        raise ValueError(
+            f"sequence masks file not found: {path}. Pass --no-sequence-masks to run without "
+            "declared area geometry."
+        )
+
+
+# Pico de VRAM de um conjunto de estágios, ou ``None`` quando nenhum mediu GPU.
+# Existe para que o manifest não registre zero onde não houve medida.
+def _peak_vram_bytes(metrics: tuple[StageMetrics, ...]) -> int | None:
+    """Retorna o maior pico de VRAM medido, ou ``None`` sem medida de GPU."""
+    measured = [metric.peak_vram_bytes for metric in metrics if metric.peak_vram_bytes is not None]
+    return max(measured, default=None)
+
+
+# Resume a memória do run para o summary e o terminal, com GPU e host sob
+# nomes distintos. Antes, o "pico de VRAM" do summary vinha de
+# ``peak_memory_bytes``, que é RSS do host quando não há CUDA, e discordava do
+# manifest do mesmo run.
+def _memory_summary(metrics: tuple[StageMetrics, ...], budget_gb: float) -> str:
+    """Retorna a linha de memória do run, sem apresentar RSS do host como VRAM."""
+    vram = _peak_vram_bytes(metrics)
+    vram_text = (
+        "Pico de VRAM: não medido (nenhum estágio rodou em CUDA)"
+        if vram is None
+        else f"Pico de VRAM: {vram / 1024**3:.2f} GB (budget: {budget_gb} GB)"
+    )
+    host = max((metric.peak_cpu_rss_bytes for metric in metrics), default=None)
+    host_text = "" if host is None else f" · Pico de RSS do host: {host / 1024**3:.2f} GB"
+    return vram_text + host_text
+
+
 # Retorna o hash curto do commit atual, ou "unknown" fora de um git worktree;
 # usado no manifest para amarrar as amostras à revisão de código que as gerou.
 def _git_revision() -> str:
@@ -239,6 +294,24 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+# Resume no manifest a proveniência com que a observação do frame foi montada,
+# para que o run registre de onde vieram timestamp, sensor e artifact.
+def _provenance_record(observation: ImageObservation) -> dict[str, object]:
+    """Retorna a proveniência da observação de entrada em forma serializável."""
+    source = observation.source
+    return {
+        "observation_id": source.observation_id,
+        "dataset_id": source.dataset_id,
+        "sequence_id": source.sequence_id,
+        "sensor_id": source.sensor_id,
+        "sequence_index": source.sequence_index,
+        "timestamp_ns": source.timestamp.nanoseconds,
+        "clock_id": source.timestamp.clock_id,
+        "frame_id": source.frame_id.value,
+        "artifact_uri": observation.image.uri,
+    }
 
 
 # Resolve IDs explícitos contra o diretório de frames e preserva sua ordem;
@@ -273,6 +346,68 @@ def select_frame_paths(
     if not selected:
         raise ValueError(f"No frames selected from {frames_dir}.")
     return selected
+
+
+# Lê a proveniência registrada na extração de cada frame selecionado, antes de
+# qualquer modelo ser carregado. Existe porque o PNG não carrega timestamp nem
+# posição no stream: sem o registro, a validação antiga montava a observação
+# com valores fixos de um fixture de teste, e todos os frames saíam com o
+# mesmo instante (#239). Um frame sem registro interrompe o run.
+def load_frame_provenance(frames: tuple[Path, ...]) -> dict[Path, ExtractedFrameProvenance]:
+    """Lê e valida a proveniência de todos os frames selecionados.
+
+    Argumentos:
+        frames: PNGs selecionados para o run.
+    Retorna:
+        a proveniência de cada frame, indexada pelo caminho.
+    Levanta:
+        ValueError: se algum frame não tiver registro, tiver registro inválido
+            ou não declarar frame de coordenadas.
+    """
+    provenance: dict[Path, ExtractedFrameProvenance] = {}
+    for frame_path in frames:
+        try:
+            record = read_frame_provenance(frame_path)
+        except (FileNotFoundError, ValueError) as error:
+            raise ValueError(f"{frame_path.stem}: {error}") from error
+        if record.frame_id is None:
+            raise ValueError(
+                f"{frame_path.stem}: the source message declares no header.frame_id, so the "
+                "observation has no coordinate frame to carry."
+            )
+        provenance[frame_path] = record
+    return provenance
+
+
+# Monta a observação canônica de um frame a partir do que a extração
+# registrou, sem nenhum valor inventado: identidade pelo nome do frame,
+# gravação como dataset e sequência, tópico como sensor, e o artifact
+# apontando para o próprio PNG processado.
+def observation_from_frame(
+    frame_path: Path, provenance: ExtractedFrameProvenance, *, width: int, height: int
+) -> ImageObservation:
+    """Constrói a ``ImageObservation`` de um frame com sua proveniência real.
+
+    Argumentos:
+        frame_path: PNG processado.
+        provenance: registro lido por ``load_frame_provenance``.
+        width: largura dos pixels carregados.
+        height: altura dos pixels carregados.
+    Retorna:
+        a observação de entrada do pipeline.
+    """
+    assert provenance.frame_id is not None, "load_frame_provenance rejects frames without frame_id"
+    source = ObservationReference(
+        observation_id=frame_path.stem,
+        dataset_id=provenance.recording_id,
+        sequence_id=provenance.recording_id,
+        sensor_id=provenance.topic,
+        sequence_index=provenance.sequence_index,
+        timestamp=Timestamp(nanoseconds=provenance.timestamp_ns, clock_id=ROSBAG_CLOCK_ID),
+        frame_id=FrameId(provenance.frame_id),
+    )
+    image = SourceArtifactReference(uri=frame_path.resolve().as_uri(), media_type="image/png")
+    return ImageObservation(width=width, height=height, encoding="rgb8", image=image, source=source)
 
 
 # Resume o estado observado de cada slot sem confundir slot desabilitado
@@ -333,6 +468,18 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
         config, image_area=load_image_area_config(options.sequence_masks)
     )
     if options.context_profile == "baseline":
+        # Desligar o crop contextual exige tirá-lo também de quem o consome: a
+        # config recusa pedir um slot que não é produzido.
+        without_context = tuple(
+            name
+            for name in config.hypothesis_support.slots
+            if name != EvidenceSlot.CONTEXTUAL_CROP.value
+        )
+        escalation_without_context = tuple(
+            name
+            for name in config.refinement.escalation_views
+            if name != EvidenceSlot.CONTEXTUAL_CROP.value
+        )
         config = dataclasses.replace(
             config,
             multi_context=MultiContextConfig(
@@ -340,6 +487,10 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 tight_crop_enabled=True,
                 contextual_crop_enabled=False,
                 scene_conditioned_enabled=False,
+            ),
+            hypothesis_support=dataclasses.replace(config.hypothesis_support, slots=without_context),
+            refinement=dataclasses.replace(
+                config.refinement, escalation_views=escalation_without_context
             ),
         )
     if options.region_views is not None:
@@ -398,6 +549,8 @@ def run_validation(
     """
     try:
         frames = select_frame_paths(options.frames_dir, options.frame_ids, options.limit)
+        frame_provenance = load_frame_provenance(frames)
+        require_sequence_masks(options.sequence_masks)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     if not frames:
@@ -447,8 +600,14 @@ def run_validation(
         ego_mask = None if area_masks.ego_vehicle is None else area_masks.ego_vehicle.data
         valid_mask = None if area_masks.valid_area is None else area_masks.valid_area.data
         payload = ImagePayload(raw_pixels, width=width, height=height)
-        raw_payload = ImagePayload(raw_pixels, width=width, height=height)
-        observation_input = image_observation(observation_id=name, width=width, height=height)
+        # Cópia independente: a garantia "o pipeline recebeu os pixels de
+        # origem" só é verificável contra um buffer que o pipeline não alcança.
+        # Com o mesmo array nos dois lados a comparação era verdadeira por
+        # identidade, e um pré-processamento destrutivo passava em silêncio.
+        raw_payload = ImagePayload(raw_pixels.copy(), width=width, height=height)
+        observation_input = observation_from_frame(
+            frame_path, frame_provenance[frame_path], width=width, height=height
+        )
 
         try:
             result = run_canonical_pipeline(observation_input, payload, config, ports, prior)
@@ -462,6 +621,7 @@ def run_validation(
                         "sha256": _sha256(frame_path),
                         "width": width,
                         "height": height,
+                        "provenance": _provenance_record(observation_input),
                     },
                     "failed": True,
                     "reason": repr(error),
@@ -544,6 +704,7 @@ def run_validation(
                     "sha256": _sha256(frame_path),
                     "width": width,
                     "height": height,
+                    "provenance": _provenance_record(observation_input),
                 },
                 "failed": False,
                 # Continua contando a observação inteira, para que a série
@@ -571,8 +732,11 @@ def run_validation(
                 "audit_warning_count": len(result.audit.warnings),
                 "latency_s": frame_latency_s,
                 "model_lifecycle_events": len(frame_metrics),
-                "peak_vram_bytes": max(
-                    (metric.peak_vram_bytes or 0 for metric in frame_metrics), default=0
+                # ``None`` quando nenhum estágio mediu GPU: zero seria uma medida
+                # que não aconteceu. A memória do host fica num campo próprio.
+                "peak_vram_bytes": _peak_vram_bytes(frame_metrics),
+                "peak_host_rss_bytes": max(
+                    (metric.peak_cpu_rss_bytes for metric in frame_metrics), default=None
                 ),
                 "proposal_count": diagnostics.proposal_count,
                 "dominant_label": diagnostics.mode_collapse.dominant_label,
@@ -588,7 +752,6 @@ def run_validation(
                 "relation_failure_count": len(result.relation_failures),
                 "refinement": [
                     {
-                        "iteration": step.iteration,
                         "previous_evidence": list(step.previous_evidence),
                         "new_evidence": list(step.new_evidence),
                         "producer": step.producer,
@@ -626,7 +789,7 @@ def run_validation(
             f"({len(result.audit.warnings)} warnings)\n"
         )
 
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     manifest = {
         "run_id": run_id,
@@ -649,20 +812,18 @@ def run_validation(
         "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
         "frames": frame_reports,
     }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-    peak_vram_gb = max((m.peak_memory_bytes / (1024**3) for m in lifecycle.metrics), default=0.0)
+    memory_line = _memory_summary(lifecycle.metrics, config.gpu_memory_budget_gb)
     summary_header = (
         f"# Validação do pipeline real — {run_id}\n\n"
-        f"Revisão: `{manifest['git_revision']}` · Frames: {len(frames)} · "
-        f"Pico de VRAM observado: {peak_vram_gb:.2f} GB "
-        f"(budget: {config.gpu_memory_budget_gb} GB)\n\n"
+        f"Revisão: `{manifest['git_revision']}` · Frames: {len(frames)} · {memory_line}\n\n"
         "Ver `manifest.json` para configuração completa e log de estágios.\n\n"
     )
-    (out_dir / "summary.md").write_text(summary_header + "\n".join(summary_rows))
+    (out_dir / "summary.md").write_text(summary_header + "\n".join(summary_rows), encoding="utf-8")
 
     print(f"\nWrote samples to {out_dir}")
-    print(f"Peak VRAM across the run: {peak_vram_gb:.2f} GB (budget {config.gpu_memory_budget_gb} GB)")
+    print(memory_line)
     return out_dir
 
 
@@ -722,7 +883,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         default=SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json",
         help=(
             "geometria de área da sequência (círculo útil da lente e silhueta do rig); "
-            "passe um caminho inexistente para rodar sem exclusão declarada"
+            "um caminho inexistente interrompe o run — use --no-sequence-masks para rodar sem"
         ),
     )
     parser.add_argument(
@@ -749,13 +910,7 @@ def main(argv: list[str] | None = None) -> None:
             region_views=tuple(arguments.region_views) or None,
             scene_context_mode=arguments.scene_context_mode,
             temporal_prior_mode=arguments.temporal_prior_mode,
-            sequence_masks=(
-                None
-                if arguments.no_sequence_masks
-                else arguments.sequence_masks
-                if arguments.sequence_masks.is_file()
-                else None
-            ),
+            sequence_masks=None if arguments.no_sequence_masks else arguments.sequence_masks,
         )
     )
 

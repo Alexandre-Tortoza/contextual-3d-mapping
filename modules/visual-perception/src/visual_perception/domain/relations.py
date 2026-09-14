@@ -133,6 +133,14 @@ class CandidateRelation:
             raise ValueError(
                 f"CandidateRelation({self.relation_id!r}) must reference at least one Evidence."
             )
+        # O vocabulário fechado da #206 vale para qualquer produtor de relação
+        # inferida, e não só para o estágio que o aplica: sem isto um produtor
+        # alternativo emitia ``above``, excluído justamente por exigir 3D.
+        if self.source is RelationSource.MODEL_INFERRED and self.predicate not in SEMANTIC_RELATION_PREDICATES:
+            raise ValueError(
+                f"CandidateRelation({self.relation_id!r}) is model-inferred with predicate "
+                f"{self.predicate!r}, outside {sorted(SEMANTIC_RELATION_PREDICATES)}."
+            )
 
 
 # Rejeita relações que referenciam regiões fora do conjunto conhecido.

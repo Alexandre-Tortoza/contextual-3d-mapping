@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from visual_perception.application.relation_generation import generate_relations
 from visual_perception.config import RegionMergeConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.regions import ObservedRegion
-from visual_perception.domain.relations import RelationSource
 
 
 # Constrói uma ObservedRegion cuja mask preenche exatamente a caixa (box) dada,
@@ -59,25 +57,3 @@ def test_disjoint_far_regions_generate_no_relation() -> None:
     b = _region("b", (28, 28, 30, 30))
     relations = generate_relations((a, b), RegionMergeConfig())
     assert relations == ()
-
-
-# Relações inferidas por modelo (fora da geometria pura) devem ser incluídas no
-# resultado e marcadas com source=MODEL_INFERRED, distinguindo-as das geométricas.
-def test_inferred_relations_are_included_and_tagged() -> None:
-    a = _region("a", (0, 0, 2, 2))
-    b = _region("b", (28, 28, 30, 30))
-    inferred = (
-        {"subject_region_id": "a", "predicate": "next_to", "object_region_id": "b", "confidence": 0.7},
-    )
-    relations = generate_relations((a, b), RegionMergeConfig(), inferred_relations=inferred)
-    inferred_relation = next(r for r in relations if r.predicate == "next_to")
-    assert inferred_relation.source is RelationSource.MODEL_INFERRED
-
-
-# Uma relação inferida que referencia um region_id inexistente deve ser rejeitada
-# cedo, em vez de produzir uma referência pendurada (dangling) no resultado.
-def test_relations_referencing_unknown_region_are_rejected() -> None:
-    a = _region("a", (0, 0, 2, 2))
-    inferred = ({"subject_region_id": "a", "predicate": "next_to", "object_region_id": "ghost"},)
-    with pytest.raises(ValueError):
-        generate_relations((a,), RegionMergeConfig(), inferred_relations=inferred)

@@ -199,6 +199,7 @@ def compose_command(
     visual_run: Annotated[Path, typer.Option(exists=True, file_okay=False, help="Run de percepção.")],
     profile_id: Annotated[str, typer.Option(help="Perfil configurado do dataset.")] = "corridor-02",
     visibility_mode: Annotated[str, typer.Option(help="measured_surfaces, dense_cells ou legacy_cells.")] = "measured_surfaces",
+    run_name: Annotated[str | None, typer.Option(help="Sufixo legível da run publicada.")] = None,
     root: Annotated[Path | None, typer.Option(hidden=True)] = None,
 ) -> None:
     """Compõe percepção e geometria em um artifact contextual."""
@@ -210,6 +211,7 @@ def compose_command(
             window=window,
             visual_run=visual_run,
             visibility_mode=visibility_mode,
+            run_name=run_name,
         )
         console.print(f"[green]Artifact contextual:[/green] {artifact}")
     except Exception as error:

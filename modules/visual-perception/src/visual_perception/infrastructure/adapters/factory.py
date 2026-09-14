@@ -35,8 +35,9 @@ from visual_perception.infrastructure.fakes.fake_region_discoverer import FakeRe
 # alterar o fluxo canônico. Cada seleção é independente para permitir
 # benchmark. Quando ao menos um backend real é selecionado, os 4 adapters
 # reais compartilham um único ``ModelLifecycleManager`` (``lifecycle``, opcional
-# — criado automaticamente se omitido) para que no máximo um modelo pesado
-# fique residente em VRAM por vez, mesmo com os 4 ports já construídos (#171).
+# — criado automaticamente se omitido), que mantém residentes os modelos que
+# couberem em VRAM e libera por LRU apenas quando um load novo esgota a
+# memória de fato (#171).
 def create_perception_ports(
     config: ModuleConfig, lifecycle: ModelLifecycleManager | None = None
 ) -> PerceptionPorts:

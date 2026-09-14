@@ -1,0 +1,518 @@
+{
+  "frame_id": "corridor-02-09795",
+  "regions": [
+    {
+      "region_id": "region-24f440b886c8992f",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 2252,
+      "box_before": {
+        "x_min": 70.0,
+        "y_min": 175.0,
+        "x_max": 124.0,
+        "y_max": 233.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.960532546043396,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 9.138041042002442,
+      "model_mask_area": 2263,
+      "clipped_pixel_count": 21,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2242,
+          "box": {
+            "x_min": 70.0,
+            "y_min": 175.0,
+            "x_max": 123.0,
+            "y_max": 233.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 2242,
+          "refined_overlap": 2242,
+          "detector_box_overlap": 2242,
+          "distance_to_box_center_px": 0.4496135173878602
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 2242,
+      "area_ratio": 0.9955595026642984,
+      "area_reduction_ratio": 0.004440497335701621,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 70.0,
+        "y_min": 175.0,
+        "x_max": 123.0,
+        "y_max": 233.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-44022a7ab17c262e",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 665,
+      "box_before": {
+        "x_min": 350.0,
+        "y_min": 214.0,
+        "x_max": 384.0,
+        "y_max": 241.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9614781141281128,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.01543301300262101,
+      "model_mask_area": 685,
+      "clipped_pixel_count": 20,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 665,
+          "box": {
+            "x_min": 350.0,
+            "y_min": 214.0,
+            "x_max": 384.0,
+            "y_max": 241.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 665,
+          "refined_overlap": 665,
+          "detector_box_overlap": 665,
+          "distance_to_box_center_px": 0.4939349104042224
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 665,
+      "area_ratio": 1.0,
+      "area_reduction_ratio": 0.0,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 350.0,
+        "y_min": 214.0,
+        "x_max": 384.0,
+        "y_max": 241.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-45941c7aa027aeef",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1972,
+      "box_before": {
+        "x_min": 143.0,
+        "y_min": 190.0,
+        "x_max": 220.0,
+        "y_max": 236.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.882431149482727,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.016237933999946108,
+      "model_mask_area": 1465,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1462,
+          "box": {
+            "x_min": 165.0,
+            "y_min": 190.0,
+            "x_max": 219.0,
+            "y_max": 236.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1462,
+          "refined_overlap": 1462,
+          "detector_box_overlap": 1462,
+          "distance_to_box_center_px": 0.05719241510453994
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1462,
+      "area_ratio": 0.7413793103448276,
+      "area_reduction_ratio": 0.2586206896551724,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 165.0,
+        "y_min": 190.0,
+        "x_max": 219.0,
+        "y_max": 236.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-b1b721f4e689bb09",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 19826,
+      "box_before": {
+        "x_min": 2.0,
+        "y_min": 238.0,
+        "x_max": 553.0,
+        "y_max": 312.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.5013694389999728,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-bda62f8a05207883",
+      "label": "field of crops",
+      "region_kind": "thing",
+      "discovery_area": 76026,
+      "box_before": {
+        "x_min": 4.0,
+        "y_min": 246.0,
+        "x_max": 640.0,
+        "y_max": 463.0
+      },
+      "component_count_before": 8,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.5196856969996588,
+      "model_mask_area": 96635,
+      "clipped_pixel_count": 26632,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 68,
+          "box": {
+            "x_min": 348.0,
+            "y_min": 246.0,
+            "x_max": 371.0,
+            "y_max": 250.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 68,
+          "refined_overlap": 68,
+          "detector_box_overlap": 68,
+          "distance_to_box_center_px": 111.79187202698564
+        },
+        {
+          "component_id": 2,
+          "area": 26,
+          "box": {
+            "x_min": 372.0,
+            "y_min": 247.0,
+            "x_max": 390.0,
+            "y_max": 250.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 26,
+          "refined_overlap": 26,
+          "detector_box_overlap": 26,
+          "distance_to_box_center_px": 119.6424700776988
+        },
+        {
+          "component_id": 3,
+          "area": 2,
+          "box": {
+            "x_min": 393.0,
+            "y_min": 248.0,
+            "x_max": 395.0,
+            "y_max": 249.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 130.59680665132484
+        },
+        {
+          "component_id": 4,
+          "area": 10,
+          "box": {
+            "x_min": 399.0,
+            "y_min": 248.0,
+            "x_max": 409.0,
+            "y_max": 249.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 10,
+          "refined_overlap": 10,
+          "detector_box_overlap": 10,
+          "distance_to_box_center_px": 134.04951700156775
+        },
+        {
+          "component_id": 5,
+          "area": 1,
+          "box": {
+            "x_min": 418.0,
+            "y_min": 248.0,
+            "x_max": 419.0,
+            "y_max": 249.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 146.07465726235853
+        },
+        {
+          "component_id": 6,
+          "area": 3,
+          "box": {
+            "x_min": 427.0,
+            "y_min": 248.0,
+            "x_max": 430.0,
+            "y_max": 249.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 152.26761358069757
+        },
+        {
+          "component_id": 7,
+          "area": 69333,
+          "box": {
+            "x_min": 10.0,
+            "y_min": 253.0,
+            "x_max": 638.0,
+            "y_max": 424.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 69333,
+          "refined_overlap": 69333,
+          "detector_box_overlap": 69333,
+          "distance_to_box_center_px": 0.24000005917797532
+        },
+        {
+          "component_id": 8,
+          "area": 560,
+          "box": {
+            "x_min": 5.0,
+            "y_min": 287.0,
+            "x_max": 49.0,
+            "y_max": 309.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 560,
+          "refined_overlap": 560,
+          "detector_box_overlap": 560,
+          "distance_to_box_center_px": 279.10194549471464
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 69333,
+      "area_ratio": 0.911964327993055,
+      "area_reduction_ratio": 0.08803567200694495,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 10.0,
+        "y_min": 253.0,
+        "x_max": 638.0,
+        "y_max": 424.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-df413208b6273e3a",
+      "label": "purple tree",
+      "region_kind": "thing",
+      "discovery_area": 823,
+      "box_before": {
+        "x_min": 132.0,
+        "y_min": 195.0,
+        "x_max": 162.0,
+        "y_max": 233.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.958112359046936,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.5030517909981427,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e56ebe33b84a544e",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1473,
+      "box_before": {
+        "x_min": 165.0,
+        "y_min": 190.0,
+        "x_max": 219.0,
+        "y_max": 236.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9658205509185791,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.016993691999232396,
+      "model_mask_area": 1465,
+      "clipped_pixel_count": 1,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1464,
+          "box": {
+            "x_min": 165.0,
+            "y_min": 190.0,
+            "x_max": 219.0,
+            "y_max": 236.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1464,
+          "refined_overlap": 1464,
+          "detector_box_overlap": 1464,
+          "distance_to_box_center_px": 0.05719241510453994
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1464,
+      "area_ratio": 0.9938900203665988,
+      "area_reduction_ratio": 0.006109979633401208,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 165.0,
+        "y_min": 190.0,
+        "x_max": 219.0,
+        "y_max": 236.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-f2e88f58b0c34879",
+      "label": "pole",
+      "region_kind": "thing",
+      "discovery_area": 1199,
+      "box_before": {
+        "x_min": 552.0,
+        "y_min": 52.0,
+        "x_max": 616.0,
+        "y_max": 260.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9501255750656128,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.5182315020028909,
+      "model_mask_area": 1236,
+      "clipped_pixel_count": 60,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1176,
+          "box": {
+            "x_min": 552.0,
+            "y_min": 52.0,
+            "x_max": 616.0,
+            "y_max": 259.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1176,
+          "refined_overlap": 1176,
+          "detector_box_overlap": 1176,
+          "distance_to_box_center_px": 18.510818138800985
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1176,
+      "area_ratio": 0.9808173477898249,
+      "area_reduction_ratio": 0.019182652210175122,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 552.0,
+        "y_min": 52.0,
+        "x_max": 616.0,
+        "y_max": 259.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-f39ac82749bb5939",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1808,
+      "box_before": {
+        "x_min": 528.0,
+        "y_min": 188.0,
+        "x_max": 584.0,
+        "y_max": 252.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.985480546951294,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.01686952599993674,
+      "model_mask_area": 1754,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1751,
+          "box": {
+            "x_min": 528.0,
+            "y_min": 188.0,
+            "x_max": 584.0,
+            "y_max": 252.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1751,
+          "refined_overlap": 1751,
+          "detector_box_overlap": 1751,
+          "distance_to_box_center_px": 0.3834942494196993
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1751,
+      "area_ratio": 0.9684734513274337,
+      "area_reduction_ratio": 0.031526548672566324,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 528.0,
+        "y_min": 188.0,
+        "x_max": 584.0,
+        "y_max": 252.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-f6b75a49222c43f8",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 111268,
+      "box_before": {
+        "x_min": 9.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 359.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

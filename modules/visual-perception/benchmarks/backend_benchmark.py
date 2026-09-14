@@ -2,15 +2,17 @@
 
 Issue: #174, executado na RTX 3060 8GB de referência (veja
 ``docs/model-backends.md``). ``benchmark_candidate`` mede o pico real de VRAM
-CUDA quando torch com uma GPU visível está disponível, e cai para CPU-RSS
-caso contrário (ex: ao fazer benchmark de um candidato CPU-only, ou em um
-ambiente de dev GPU-free), para que este módulo continue importável sem os
-extras ``ml``.
+CUDA de cada candidato e se recusa a rodar sem CUDA: o orçamento que decide a
+seleção é de VRAM, e todo candidato de ``candidates/`` roda na GPU. Até a #249
+havia um fallback para o RSS do processo, que é monotônico — como todos os
+candidatos rodam no mesmo processo, o pico de um candidato herdava o do
+anterior e a seleção podia rejeitar um backend pelo consumo de outro. O módulo
+continua importável sem os extras ``ml``.
 """
 
 from __future__ import annotations
 
-import resource
+import gc
 import time
 from collections.abc import Callable
 
@@ -22,15 +24,17 @@ except ImportError:
     torch = None  # type: ignore[assignment]
 
 
-# Mede o pico de uso de memória do processo atual: usa o pico real de VRAM CUDA
-# quando torch com GPU está disponível, senão cai para o pico de RSS da CPU (via
-# resource.getrusage) como proxy. Usada por benchmark_candidate para reportar
-# peak_vram_gb de cada candidato.
-def _peak_memory_gb() -> float:
-    if torch is not None and torch.cuda.is_available():
-        return torch.cuda.max_memory_allocated() / (1024**3)
-    peak_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
-    return peak_bytes / (1024**3)
+# Exige CUDA antes de qualquer medição. Existe porque um pico de VRAM que não
+# pode ser medido não pode ser comparado ao orçamento: reportar outra grandeza
+# com o mesmo nome era o que tornava a seleção dependente da ordem dos
+# candidatos.
+def _require_cuda() -> None:
+    """Levanta quando não há GPU CUDA para medir VRAM."""
+    if torch is None or not torch.cuda.is_available():
+        raise RuntimeError(
+            "benchmark_candidate measures peak CUDA memory against a VRAM budget; "
+            "no CUDA device is available."
+        )
 
 
 # Executa uma rodada de warmup e medição para um candidato de backend (definido
@@ -59,9 +63,9 @@ def benchmark_candidate[T](
     combinando com a forma como um chamador real experimentaria o pior caso de
     uso de memória.
     """
-    if torch is not None and torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats()
+    _require_cuda()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
 
     model = factory()
     for _ in range(warmup_runs):
@@ -72,10 +76,17 @@ def benchmark_candidate[T](
     for _ in range(measured_runs):
         quality_scores.append(run_once(model))
     latency_s = (time.monotonic() - start) / max(measured_runs, 1)
+    peak_vram_gb = torch.cuda.max_memory_allocated() / (1024**3)
+
+    # Libera o modelo antes de devolver, para que o próximo candidato comece a
+    # medir sem nenhuma alocação herdada deste.
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
 
     return BackendCandidate(
         name=name,
         quality_score=sum(quality_scores) / len(quality_scores),
-        peak_vram_gb=_peak_memory_gb(),
+        peak_vram_gb=peak_vram_gb,
         latency_s=latency_s,
     )

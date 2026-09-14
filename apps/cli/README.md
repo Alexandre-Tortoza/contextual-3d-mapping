@@ -83,6 +83,9 @@ de forma segura com `Ctrl+C`.
 ## Salvar e comparar runs com contexto
 
 Cada composição por `compose` salva uma nova pasta e a publica automaticamente.
+Use `--run-name` para distinguir braços que reutilizam o mesmo mapa geométrico,
+como uma comparação entre `no-prior` e `box-overlap`; o nome publicado preserva
+o prefixo sequencial `AAAA-MM-DD-run-NNN-`.
 Para importar um resultado ou uma ablação já existente:
 
 ```bash
@@ -158,8 +161,8 @@ dependências, não baixa datasets e não sobrescreve artifacts.
 ```bash
 apps/cli/.venv/bin/contextual-3d-mapping-cli compose \
   --segment-id corridor-02-176s-30s \
-  --window artifacts/integrated-grounding-6s-20260912T050652Z/window.json \
-  --visual-run artifacts/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
+  --window artifacts/old/integrated-grounding-6s-20260912T050652Z/window.json \
+  --visual-run artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
   --visibility-mode measured_surfaces
 ```
 

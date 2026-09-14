@@ -44,10 +44,32 @@ GPU_MEMORY_BUDGET_GB = 8.0
 # prepare_corridor02_frames.py ainda não foi rodado. Chamada por main() para
 # montar o conjunto de entrada do benchmark.
 def _load_frames(limit: int | None) -> list[Path]:
+    """Retorna os frames ordenados, limitados a ``limit`` quando informado."""
     frames = sorted(FRAMES_DIR.glob("*.png"))
     if not frames:
         raise SystemExit(f"No frames found in {FRAMES_DIR}. Run prepare_corridor02_frames.py first.")
-    return frames[:limit] if limit else frames
+    return frames if limit is None else frames[:limit]
+
+
+# Converte o argumento ``--frames`` exigindo um inteiro positivo. Existe porque
+# ``0`` era falso e virava "todos os frames", e ``-1`` virava "todos menos um".
+def positive_frame_count(value: str) -> int:
+    """Converte o texto em quantidade positiva de frames.
+
+    Argumentos:
+        value: texto recebido na linha de comando.
+    Retorna:
+        a quantidade de frames.
+    Levanta:
+        argparse.ArgumentTypeError: se o valor não for um inteiro positivo.
+    """
+    try:
+        count = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"--frames must be a positive integer, got {value!r}.") from error
+    if count <= 0:
+        raise argparse.ArgumentTypeError(f"--frames must be a positive integer, got {value!r}.")
+    return count
 
 
 # Resolve, por nome de estágio, qual módulo de benchmarks/candidates/
@@ -82,7 +104,9 @@ def main() -> None:
         required=True,
         choices=["region_discovery", "feature_extraction", "language_embedding", "multimodal_reasoning"],
     )
-    parser.add_argument("--frames", type=int, default=None, help="Cap the number of frames used.")
+    parser.add_argument(
+        "--frames", type=positive_frame_count, default=None, help="Cap the number of frames used."
+    )
     parser.add_argument("--warmup-runs", type=int, default=1)
     args = parser.parse_args()
 

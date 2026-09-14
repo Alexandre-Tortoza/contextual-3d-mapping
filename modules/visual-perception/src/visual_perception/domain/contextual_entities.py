@@ -26,12 +26,11 @@ superfície — que é estritamente mais do que ele recebia antes.
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 from visual_perception.domain.embeddings import EmbeddingSpace
-from visual_perception.domain.identifiers import validate_identifier
+from visual_perception.domain.identifiers import derive_stable_identifier, validate_identifier
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.semantics import Evidence, RegionKind
 
@@ -91,9 +90,7 @@ def derive_entity_id(observation_id: str, member_region_ids: tuple[str, ...]) ->
     """
     if not member_region_ids:
         raise ValueError("A contextual entity must be derived from at least one region.")
-    canonical = "|".join(sorted(member_region_ids))
-    digest = hashlib.sha256(f"{observation_id}:{canonical}".encode()).hexdigest()[:16]
-    return f"entity-{digest}"
+    return derive_stable_identifier("entity", observation_id, member_region_ids)
 
 
 # Agrupa regiões que provavelmente são manifestações da mesma entidade dentro

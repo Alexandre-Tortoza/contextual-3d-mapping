@@ -217,9 +217,9 @@ def test_stuff_multiple_prompt_boxes_do_not_ground_the_gap() -> None:
     assert deserialize_observation(serialize_observation(observation)) == observation
 
 
-# Falhas de carregamento reais precisam liberar o lifecycle e se tornar uma
-# abstenção da capacidade, sem escapar como erro de IO ou mudar a claim.
-def test_model_load_failure_releases_lifecycle_and_preserves_claim(monkeypatch) -> None:
+# Falhas de carregamento reais precisam se tornar uma abstenção da
+# capacidade, sem escapar como erro de IO ou mudar a claim.
+def test_model_load_failure_preserves_claim(monkeypatch) -> None:
     """O port real transforma checkpoint ausente em grounding indisponível."""
     from visual_perception.application.lifecycle import ModelLifecycleManager
     from visual_perception.infrastructure.adapters.semantic_grounding_backend import (
@@ -228,7 +228,6 @@ def test_model_load_failure_releases_lifecycle_and_preserves_claim(monkeypatch) 
 
     lifecycle = ModelLifecycleManager()
     backend = RealSemanticGroundingAdapter(lifecycle)
-    released = []
 
     # Simula ausência dos pesos no ponto em que o adapter consultaria o cache.
     def fail(*args):
@@ -236,9 +235,7 @@ def test_model_load_failure_releases_lifecycle_and_preserves_claim(monkeypatch) 
         raise OSError("Checkpoint unavailable")
 
     monkeypatch.setattr(backend, "_detect", fail)
-    monkeypatch.setattr(lifecycle, "release_active", lambda: released.append(True))
     grounded = _ground(_region(_mask((2, 2, 28, 28))), backend)
-    assert released
     assert grounded.grounding.status is GroundingStatus.UNAVAILABLE
     assert grounded.grounding.semantic_mask is None
     assert primary_label_claim(grounded).value == "door"

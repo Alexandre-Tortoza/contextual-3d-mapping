@@ -38,6 +38,15 @@ class BackendExecutionError(VisualPerceptionError):
     """
 
 
+# Sinaliza que a resposta do modelo foi cortada no teto de tokens gerados.
+# Existe para que "a resposta não coube" não seja registrada como "o modelo
+# devolveu lixo": as duas pedem correções diferentes (orçamento de tokens vs.
+# prompt ou modelo). Também é ``ValueError`` para ser isolada por região como
+# qualquer resposta inutilizável, sem abortar o frame.
+class TruncatedResponseError(VisualPerceptionError, ValueError):
+    """A resposta do modelo atingiu ``max_new_tokens`` e não pôde ser interpretada."""
+
+
 # Sinaliza que a interpretação semântica de uma região específica falhou,
 # isolada das demais. Existe para que uma falha pontual (#165) não invalide
 # a observação inteira.

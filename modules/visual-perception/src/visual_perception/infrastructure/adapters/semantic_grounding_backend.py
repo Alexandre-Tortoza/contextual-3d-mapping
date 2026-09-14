@@ -21,33 +21,30 @@ from visual_perception.infrastructure.adapters._runtime import payload_to_pil, r
 
 
 # Contém as duas bibliotecas de modelo atrás de um único port de capacidade.
-# Detector e SAM nunca ficam residentes simultaneamente; o embedding da imagem
-# só permanece durante a etapa de segmentação daquele frame.
+# Detector e SAM ficam residentes no lifecycle compartilhado entre frames;
+# a eviction, se necessária, é decidida pelo próprio ModelLifecycleManager.
 class RealSemanticGroundingAdapter:
     """Localiza o conceito, segmenta suas boxes e devolve geometria auditável."""
 
     # Compartilha o lifecycle dos backends existentes sem carregar pesos.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
-        """Recebe o dono da residência sequencial de modelos."""
+        """Recebe o dono da residência de modelos compartilhada entre adapters."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
 
     # Localiza todos os conceitos antes de carregar SAM. Esse agrupamento
-    # evita uma troca de modelos a cada região em máquinas com 8 GB de VRAM.
+    # evita uma troca de modelos a cada região.
     def ground(
         self, image: ImagePayload, requests: tuple[GroundingRequest, ...], config: SemanticGroundingConfig,
     ) -> tuple[GroundingPrediction, ...]:
         """Produz uma predição ou falha por request, sem fallback de discovery."""
-        try:
-            return self._ground_frame(image, requests, config)
-        finally:
-            self._lifecycle.release_active()
+        return self._ground_frame(image, requests, config)
 
     # Mantém referências locais de modelos fora da pilha que os libera,
     # inclusive se carregamento ou inferência falharem no meio do frame.
     def _ground_frame(
         self, image: ImagePayload, requests: tuple[GroundingRequest, ...], config: SemanticGroundingConfig,
     ) -> tuple[GroundingPrediction, ...]:
-        """Localiza e segmenta requests; ground garante a liberação final."""
+        """Localiza e segmenta requests."""
         if not requests:
             return ()
         provenance = (
@@ -76,14 +73,8 @@ class RealSemanticGroundingAdapter:
             )
             if reason is None:
                 selected.append((request, matching))
-        # _detect retorna somente objetos CPU. Sua pilha e referências ao
-        # modelo terminaram antes da liberação, inclusive em caso de falha.
-        self._lifecycle.release_active()
         if selected:
-            try:
-                self._segment(image, selected, results, config)
-            finally:
-                self._lifecycle.release_active()
+            self._segment(image, selected, results, config)
         return tuple(results[item.region_id] for item in requests)
 
     # Um único conceito por consulta impede que labels concatenados sejam
@@ -125,9 +116,8 @@ class RealSemanticGroundingAdapter:
                 for coordinates, score in sorted(zip(result["boxes"].cpu().tolist(), result["scores"].cpu().tolist(), strict=True), key=lambda item: -item[1]):
                     if not np.isfinite(coordinates).all():
                         continue
-                    try:
-                        box = BoundingBox(*coordinates).clipped_to(width=image.width, height=image.height)
-                    except ValueError:
+                    box = BoundingBox(*coordinates).clipped_to(width=image.width, height=image.height)
+                    if box is None:
                         continue
                     if all(box.iou(previous) < config.duplicate_box_iou for previous, _ in boxes):
                         boxes.append((box, float(score)))
@@ -150,7 +140,8 @@ class RealSemanticGroundingAdapter:
         transformers = require_module("transformers", "grounded_sam")
         device = resolve_device(torch, config.device, "grounded_sam")
 
-        # Um segundo slot substitui o detector já liberado; não coexistem pesos.
+        # Residente junto do detector no lifecycle compartilhado; a eviction,
+        # se precisar liberar VRAM, é decidida pelo próprio manager.
         def factory() -> Any:
             """Carrega o mesmo SAM disponível para discovery, agora com prompts."""
             return (

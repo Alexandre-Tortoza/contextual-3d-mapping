@@ -111,6 +111,21 @@ class Project:
                 runs.append({**metadata, "url": entry["url"], "path": str(artifact.parent)})
         return tuple(runs)
 
+    # Reúne as identidades de trabalho e as já publicadas porque a publicação
+    # pode sobreviver à limpeza de artifacts locais. É consumida pela composição
+    # para manter a numeração absoluta das runs visível no viewer.
+    def context_run_ids(self) -> tuple[str, ...]:
+        """Retorna IDs de runs contextuais locais e publicados sem repetição.
+
+        Retorna:
+            identidades de pastas de run conhecidas, em ordem estável.
+        """
+        roots = (
+            self.root / "artifacts" / "runs",
+            self.root / "apps" / "map-explorer" / "web" / "public" / "runs",
+        )
+        return tuple(sorted({path.name for root in roots if root.is_dir() for path in root.iterdir() if path.is_dir()}))
+
     # Lista entradas locais para a ação de publicação do menu, incluindo os
     # artifacts históricos e a organização por run usada nas composições novas.
     def available_context_artifacts(self) -> tuple[Path, ...]:

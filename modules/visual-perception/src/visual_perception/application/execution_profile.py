@@ -17,15 +17,18 @@ from dataclasses import dataclass
 
 from visual_perception.config import (
     FeatureExtractionConfig,
+    HypothesisSupportConfig,
     LanguageEmbeddingConfig,
     ModuleConfig,
     MultiContextConfig,
     MultimodalReasoningConfig,
     QualityProfile,
+    RefinementConfig,
     RegionDiscoveryConfig,
     SemanticGroundingConfig,
     TilingConfig,
 )
+from visual_perception.domain.region_evidence import EvidenceSlot
 
 
 # Representa uma opção de backend já avaliada por benchmark para um dado
@@ -89,8 +92,13 @@ def additional_compute_is_justified(
 # que dão pouco sinal visual ao VLM e inflam o over-segmentation sem
 # agregar conteúdo distinto (visto na prática em #190: ~82% de falha de
 # interpretação antes de ajustar o prompt, muitas delas em crops <30x30px).
+# checkpoint é SAM2 (não SAM 1 "sam-vit-huge"): o ViT-H do SAM 1 satura
+# numericamente por volta da camada 6-7 do encoder sob a stack atual de
+# torch/transformers (ativações ~1e36, LayerNorm do neck vira NaN — reproduzido
+# isolado do pipeline do módulo, em CPU e GPU, em qualquer dtype), zerando
+# canonical_regions em toda run. SAM2 hiera-large não apresenta o problema.
 _REAL_REGION_DISCOVERY = RegionDiscoveryConfig(
-    backend="sam", checkpoint="facebook/sam-vit-huge", min_mask_area=500
+    backend="sam", checkpoint="facebook/sam2.1-hiera-large", min_mask_area=500
 )
 _REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(
     backend="dinov2",
@@ -110,6 +118,25 @@ _REAL_MULTI_CONTEXT = MultiContextConfig(
     scene_conditioned_enabled=True,
     context_expansion=0.25,
     masked_tight_crop=False,
+)
+#: Com o crop contextual habilitado no perfil real, o suporte de hipótese e o
+#: escalonamento do refinamento também o consomem. Ficam declarados aqui, ao
+#: lado do ``multi_context`` que os habilita, porque a config recusa pedir um
+#: slot que não é produzido.
+_REAL_HYPOTHESIS_SUPPORT = HypothesisSupportConfig(
+    slots=(
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
+)
+_REAL_REFINEMENT = RefinementConfig(
+    escalation_views=(
+        EvidenceSlot.FOREGROUND_DENSE.value,
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
 )
 
 
@@ -141,5 +168,7 @@ def research_quality_config(
         language_embedding=_REAL_LANGUAGE_EMBEDDING if real_backends else LanguageEmbeddingConfig(),
         multimodal_reasoning=_REAL_MULTIMODAL_REASONING if real_backends else MultimodalReasoningConfig(),
         multi_context=_REAL_MULTI_CONTEXT if real_backends else MultiContextConfig(),
+        hypothesis_support=_REAL_HYPOTHESIS_SUPPORT if real_backends else HypothesisSupportConfig(),
+        refinement=_REAL_REFINEMENT if real_backends else RefinementConfig(),
         semantic_grounding=SemanticGroundingConfig(backend="grounded_sam" if real_backends else "unavailable"),
     )

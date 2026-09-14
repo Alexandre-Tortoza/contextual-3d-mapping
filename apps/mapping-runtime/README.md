@@ -142,8 +142,10 @@ proveniência; não são promovidos a ground truth. Os previews de cada keyframe
 ficam no diretório homônimo com sufixo `-assets`.
 
 O alvo Make `corridor-02-context` grava por default em
-`artifacts/runs/<data-UTC>-<segment-id>/context.json`, preservando versões do
-mesmo segmento. `M1_CONTEXT_ARTIFACT` permite escolher o destino explicitamente.
+`artifacts/runs/<AAAA-MM-DD>-run-<número>-<segment-id>/context.json`, preservando
+versões do mesmo segmento. Por exemplo, `2026-09-12-run-010-corridor-02`. O
+número sequencial absoluto facilita identificar a última run no catálogo local.
+`M1_CONTEXT_ARTIFACT` permite escolher o destino explicitamente.
 A [CLI](../cli/README.md#salvar-e-comparar-runs-com-contexto) também preserva
 uma cópia da janela e do manifest de percepção em cada composição e publica
 automaticamente o resultado para comparação no viewer. O publisher de

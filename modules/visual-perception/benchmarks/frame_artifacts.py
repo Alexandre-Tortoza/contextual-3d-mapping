@@ -19,8 +19,11 @@ frames/<frame-id>/
     regions-labels.png    labels no centróide, sem caixas
     regions-overlay.png   tudo junto
     structural-context.png  as superfícies não publicadas, esmaecidas
+    semantic-overlay.png  máscaras grounded, só quando alguma região tem uma
+    valid-area-mask.png   área útil do sensor, quando declarada
     ego-mask.png          máscara de exclusão, quando existe
     pipeline-input.png    só quando difere de raw.png
+    DEBUG/<frame-id>-grounding.json  trilha de grounding, só quando houve grounding
 ```
 
 As views por região (foreground, tight, contextual) não são persistidas aqui:
@@ -119,9 +122,15 @@ def write_frame_artifacts(
         mapa de nome lógico do artifact para o caminho relativo a ``frame_dir``.
     """
     frame_dir.mkdir(parents=True, exist_ok=True)
-    DebugRecorder(frame_dir / "DEBUG").record_grounding(
-        frame_dir.name, [region.grounding.diagnostics for region in result.observation.regions if region.grounding is not None]
-    )
+    grounding_diagnostics = [
+        dict(region.grounding.diagnostics)
+        for region in result.observation.regions
+        if region.grounding is not None
+    ]
+    # A trilha de grounding só existe quando houve grounding: um arquivo com a
+    # lista vazia por frame não informa nada e poluía o run versionado.
+    if grounding_diagnostics:
+        DebugRecorder(frame_dir / "DEBUG").record_grounding(frame_dir.name, grounding_diagnostics)
     written: dict[str, str] = {}
 
     # Um write_text por artifact, com o nome lógico registrado no mesmo passo,
@@ -130,7 +139,9 @@ def write_frame_artifacts(
         written[name] = str(path.relative_to(frame_dir))
 
     observation_path = frame_dir / "observation.json"
-    observation_path.write_text(json.dumps(serialize_observation(result.observation), indent=2))
+    observation_path.write_text(
+        json.dumps(serialize_observation(result.observation), indent=2), encoding="utf-8"
+    )
     _record("observation", observation_path)
 
     # Os vetores viajam **por referência**: a observação guarda o
@@ -198,7 +209,11 @@ def write_frame_artifacts(
         for region in result.observation.regions
         if region.grounding is not None and region.grounding.semantic_mask is not None
     ]
-    if any(region.grounding is not None for region in result.observation.regions):
+    # Escrito só quando há o que desenhar: sem nenhuma máscara grounded o PNG
+    # saía idêntico a raw.png e era registrado como artifact de grounding, e
+    # "o grounding falhou" ficava igual a "não havia nada". O motivo de cada
+    # falha continua em ``semantic_grounding`` no diagnóstico.
+    if grounded_shapes:
         semantic_path = frame_dir / "semantic-overlay.png"
         draw_labels(blend_masks(raw_image, grounded_shapes), grounded_shapes).save(semantic_path)
         _record("semantic_overlay", semantic_path)
@@ -223,7 +238,8 @@ def write_frame_artifacts(
         "ego_vehicle_mask_applied": diagnostics.ego.applied,
         "valid_fisheye_mask": "applied" if diagnostics.fisheye.applied else "unavailable",
         **asdict(diagnostics),
-        "semantic_grounding": [region.grounding.diagnostics for region in result.observation.regions if region.grounding is not None],
+        "semantic_grounding": grounding_diagnostics,
+        "semantic_overlay_written": bool(grounded_shapes),
         # O histograma por motivo vive em ``diagnostics.suppressed_regions``.
         # Esta lista é a rastreabilidade por região que o histograma não dá:
         # qual região saiu do output público, com que conceito, e por quê.
@@ -237,7 +253,7 @@ def write_frame_artifacts(
         ],
     }
     diagnostics_path = frame_dir / "diagnostics.json"
-    diagnostics_path.write_text(json.dumps(payload, indent=2))
+    diagnostics_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     _record("diagnostics", diagnostics_path)
 
     return written

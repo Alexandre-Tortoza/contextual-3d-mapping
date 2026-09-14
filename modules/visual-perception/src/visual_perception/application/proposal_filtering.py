@@ -79,9 +79,8 @@ def _invalid_reason(
     proposal: RegionProposal, *, area_masks: ImageAreaMasks, config: ProposalFilterConfig
 ) -> RejectedProposal | None:
     """Retorna o descarte da proposal, ou ``None`` se ela é evidência válida."""
+    # ``RegionProposal`` já recusa máscara vazia, então ``area`` é positiva aqui.
     area = proposal.mask.area()
-    if area == 0:
-        return None
     if area_masks.valid_area is not None:
         inside = _overlap_ratio(proposal.mask, area_masks.valid_area)
         if inside < config.min_valid_overlap:

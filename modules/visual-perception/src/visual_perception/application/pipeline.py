@@ -214,6 +214,14 @@ def run_canonical_pipeline(
     Quem sabe que um frame precede outro é a composição — o módulo recebe
     apenas "isto foi afirmado antes", nunca quando nem de que pose.
     """
+    # Payload e observação precisam descrever a mesma imagem. Validado aqui,
+    # antes de qualquer port: a divergência só aparecia no fim, depois de
+    # discovery, features densas, embeddings e todas as chamadas ao reasoner.
+    if (payload.width, payload.height) != (image.width, image.height):
+        raise ValueError(
+            f"payload resolution {payload.width}x{payload.height} does not match the image "
+            f"observation {image.width}x{image.height}."
+        )
     area_masks = config.image_area.rasterize(payload.width, payload.height)
     discovered = _discover_regions(payload, config, ports.region_discoverer)
     # A exclusão do rig e da área fora da lente acontece aqui, sobre as

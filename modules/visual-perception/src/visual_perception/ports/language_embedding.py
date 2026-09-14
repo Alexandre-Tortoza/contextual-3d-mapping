@@ -21,7 +21,18 @@ from visual_perception.domain.image_payload import ImagePayload
 # vocabulário aberto depende de imagem e texto projetados no mesmo espaço,
 # e esse espaço é específico do backend escolhido.
 class LanguageAlignedEncoder(Protocol):
-    """Codifica evidência de imagem de região e texto em um espaço compartilhado documentado."""
+    """Codifica evidência de imagem de região e texto em um espaço compartilhado documentado.
+
+    Garantias que toda implementação precisa cumprir:
+
+    - o vetor tem exatamente ``config.dimension`` componentes finitos;
+    - com ``config.normalize`` verdadeiro, o vetor tem norma L2 unitária; falso,
+      é o vetor bruto do backend. Consumidores tratam o produto escalar como
+      cosseno apenas no primeiro caso, e ``LanguageEmbedding`` recusa um vetor
+      declarado normalizado que não seja;
+    - ``encode_image`` e ``encode_text`` projetam no mesmo espaço, com a mesma
+      regra de normalização.
+    """
 
     # Projeta um crop de região no espaço de embedding compartilhado. Usado
     # pelo estágio de region semantics do pipeline para permitir busca por

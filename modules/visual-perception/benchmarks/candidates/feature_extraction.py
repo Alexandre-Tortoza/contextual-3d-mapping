@@ -36,29 +36,45 @@ def _frame_cycle(frames: Iterable[Path]) -> Iterable[Image.Image]:
         yield Image.open(path).convert("RGB")
 
 
-# Calcula a coerência espacial (connected-component) do primeiro componente
-# PCA (PC1) da grade de patch-tokens: mede que fração da região "acima da
-# mediana" do PC1 forma um único blob conectado, em vez de ruído espalhado.
-# É o proxy de qualidade usado por run_once para pontuar um candidato de
-# dense feature extraction sem precisar de labels ground-truth.
-def _pc1_coherence(patch_tokens: np.ndarray, grid_h: int, grid_w: int) -> float:
+# Calcula a coerência espacial do primeiro componente principal da grade de
+# patch-tokens: que fração de uma metade da grade, separada pela mediana do
+# componente, forma um único blob conectado. É o proxy de qualidade usado por
+# run_once para pontuar extração densa sem labels. O sinal de um componente
+# principal é arbitrário — ``(u, s, v)`` e ``(-u, s, -v)`` são decomposições
+# igualmente válidas —, então a métrica mede as duas metades e fica com a mais
+# coerente: antes ela media o objeto para um backbone e o fundo para outro.
+def first_component_coherence(patch_tokens: np.ndarray, grid_height: int, grid_width: int) -> float:
+    """Retorna a coerência espacial do primeiro componente principal, independente do sinal.
+
+    Argumentos:
+        patch_tokens: tokens de patch ``(grid_height * grid_width, dimensão)``.
+        grid_height: linhas da grade de patches.
+        grid_width: colunas da grade de patches.
+    Retorna:
+        a maior fração ocupada por um único componente conectado, entre as duas
+        metades da grade.
+    """
     centered = patch_tokens - patch_tokens.mean(axis=0, keepdims=True)
-    u, singular_values, _ = np.linalg.svd(centered, full_matrices=False)
-    pc1 = (u[:, 0] * singular_values[0]).reshape(grid_h, grid_w)
-    mask = pc1 > np.median(pc1)
+    left_singular_vectors, singular_values, _ = np.linalg.svd(centered, full_matrices=False)
+    component = (left_singular_vectors[:, 0] * singular_values[0]).reshape(grid_height, grid_width)
+    median = np.median(component)
+    return max(_largest_blob_fraction(component > median), _largest_blob_fraction(component < median))
+
+
+# Fração de uma máscara ocupada pelo seu maior componente conectado.
+def _largest_blob_fraction(mask: np.ndarray) -> float:
+    """Retorna a fração da máscara coberta pelo maior componente conectado, ou 0."""
     if not mask.any():
         return 0.0
-    labeled, num_components = ndimage.label(mask)
-    if num_components == 0:
-        return 0.0
-    component_sizes = ndimage.sum(mask, labeled, index=range(1, num_components + 1))
-    return float(component_sizes.max() / mask.sum())
+    labeled, component_count = ndimage.label(mask)
+    component_sizes = ndimage.sum(mask, labeled, index=range(1, component_count + 1))
+    return float(np.max(component_sizes) / mask.sum())
 
 
 # Constrói um candidato de benchmark (nome, factory, run_once) para um
 # checkpoint da família DINOv2: factory carrega o processor/modelo na GPU, e
-# run_once extrai os patch-tokens de um frame e retorna a coerência do PC1
-# (via _pc1_coherence) como score de qualidade. Chamada por candidates() para
+# run_once extrai os patch-tokens de um frame e retorna a coerência do primeiro componente principal
+# (via first_component_coherence) como score de qualidade. Chamada por candidates() para
 # montar a lista de candidatos comparados por backend_benchmark.py.
 def _dinov2_candidate(name: str, checkpoint: str, frames: list[Path]) -> Candidate:
     frame_iter = _frame_cycle(frames)
@@ -74,7 +90,7 @@ def _dinov2_candidate(name: str, checkpoint: str, frames: list[Path]) -> Candida
         return (processor, model)
 
     # Roda uma inferência do DINOv2 sobre o próximo frame do ciclo e reduz os
-    # patch-tokens resultantes à métrica de coerência do PC1; é o run_once
+    # patch-tokens resultantes à métrica de coerência do primeiro componente principal; é o run_once
     # exigido pelo contrato de benchmark_candidate.
     def run_once(bundle: object) -> float:
         processor, model = bundle  # type: ignore[misc]
@@ -82,12 +98,12 @@ def _dinov2_candidate(name: str, checkpoint: str, frames: list[Path]) -> Candida
         inputs = processor(images=image, return_tensors="pt").to("cuda")
         with torch.inference_mode():
             outputs = model(**inputs)
-        num_register_tokens = getattr(model.config, "num_register_tokens", 0)
-        patch_tokens = outputs.last_hidden_state[0, 1 + num_register_tokens :, :]
+        register_token_count = getattr(model.config, "num_register_tokens", 0)
+        patch_tokens = outputs.last_hidden_state[0, 1 + register_token_count :, :]
         patch_size = model.config.patch_size
-        grid_h = inputs["pixel_values"].shape[-2] // patch_size
-        grid_w = inputs["pixel_values"].shape[-1] // patch_size
-        return _pc1_coherence(patch_tokens.float().cpu().numpy(), grid_h, grid_w)
+        grid_height = inputs["pixel_values"].shape[-2] // patch_size
+        grid_width = inputs["pixel_values"].shape[-1] // patch_size
+        return first_component_coherence(patch_tokens.float().cpu().numpy(), grid_height, grid_width)
 
     return (name, factory, run_once)
 

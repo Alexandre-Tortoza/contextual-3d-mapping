@@ -41,7 +41,7 @@ def encode_regions(
                 dimension=len(vector),
                 model_id=config.backend,
                 checkpoint=config.checkpoint,
-                normalized=True,
+                normalized=config.normalize,
             )
         )
     return tuple(embeddings)

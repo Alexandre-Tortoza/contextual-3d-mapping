@@ -25,8 +25,10 @@ from visual_perception.infrastructure.adapters._runtime import (
 )
 
 #: Limita o número de tokens visuais que encoders de resolução dinâmica (ex:
-#: Qwen2.5-VL) produzem por imagem. Ver uso em ``_get_runtime``.
-_MAX_PIXELS = 640 * 480
+#: Qwen2.5-VL) produzem por imagem: sem isso, uma imagem de 640x480 já estoura
+#: os ~7,6 GB úteis da 3060 de referência. Público porque o benchmark de
+#: candidatos precisa medir o custo sob exatamente o mesmo limite.
+MAXIMUM_VISUAL_PIXELS = 640 * 480
 
 
 # Implementa o port MultimodalReasoner com um VLM compatível com Transformers,
@@ -38,12 +40,13 @@ class RealMultimodalReasoningAdapter:
     converte transporte e JSON; a validação semântica permanece em application.
     """
 
-    # Recebe (ou cria, se omitido) o lifecycle manager que carrega/libera o
-    # VLM sob demanda. Compartilhar o mesmo manager entre os 4 adapters
-    # reais (ver ``factory.py``) garante que no máximo um modelo pesado
-    # fica residente por vez — inclusive entre chamadas repetidas de
-    # analyze_scene/analyze_region dentro do mesmo pipeline, que reusam o
-    # VLM já carregado via o cache do próprio manager.
+    # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
+    # residente o VLM sob demanda. Compartilhar o mesmo manager entre os 4
+    # adapters reais (ver ``factory.py``) permite reaproveitar modelos já
+    # residentes entre estágios intercalados no mesmo frame — inclusive
+    # entre chamadas repetidas de analyze_scene/analyze_region dentro do
+    # mesmo pipeline, que reusam o VLM já carregado via o cache do próprio
+    # manager.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
         """Inicializa o adapter sem carregar VLM ou checkpoint."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
@@ -53,33 +56,7 @@ class RealMultimodalReasoningAdapter:
     # permanece bruta para que scene_context faça sua própria validação.
     def analyze_scene(self, image: ImagePayload, config: MultimodalReasoningConfig) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para o contexto da cena."""
-        # O prompt descreve o **ambiente**, e nunca pede um inventário de
-        # objetos. Medido em corridor-02-002 com o contract anterior: o modelo
-        # devolveu ``attributes: ["fisheye lens", "carpeted floor", "suitcase"]``,
-        # onde a "mala" era o próprio quad que carrega a câmera — e aquele texto
-        # ia para o prompt de cada uma das 60 regiões. Não há frase que conserte
-        # isso: o campo que pedia objetos precisou sair (#202).
-        #
-        # O ``confidence`` do exemplo é deliberadamente não redondo, pela mesma
-        # razão que o do prompt de região virou 0,71 e o do de relação virou
-        # 0,42: um valor plausível no exemplo é copiado de volta. Este era o
-        # último dos três prompts que ainda embutia ``0.9``, e escapou das duas
-        # correções anteriores por só ser consultado uma vez por frame — o
-        # sintoma dele nunca aparecia como distribuição degenerada.
-        prompt = (
-            "Describe the ENVIRONMENT shown in this image. Do NOT list or name individual "
-            "objects. Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
-            "fences) with exactly these keys: scene_type (string), environment (string), layout "
-            "(string), lighting (string), visibility (string), navigability (string), confidence "
-            "(float between 0 and 1). Example of the exact shape required:\n"
-            '{"scene_type": "<one noun naming the kind of place>", '
-            '"environment": "<indoor or outdoor>", '
-            '"layout": "<how the space is arranged, in one clause>", '
-            '"lighting": "<how the space is lit>", '
-            '"visibility": "<how far and how clearly one can see>", '
-            '"navigability": "<how traversable the space is>", "confidence": 0.63}'
-        )
-        return self._generate_json((image,), prompt, config)
+        return self._generate_json((image,), scene_prompt(), config)
 
     # Analisa uma região a partir das suas views mask-aware, apresentadas ao
     # VLM como imagens numeradas e rotuladas pelo seu papel, seguidas do
@@ -133,7 +110,7 @@ class RealMultimodalReasoningAdapter:
         self, images: tuple[ImagePayload, ...], prompt: str, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Gera e extrai um objeto JSON de uma consulta multimodal ao VLM."""
-        torch, processor, model, device = self._get_runtime(config)
+        torch, processor, model, device, key = self._get_runtime(config)
         try:
             content: list[dict[str, Any]] = [
                 {"type": "image", "image": payload_to_pil(image, config.backend)}
@@ -150,11 +127,15 @@ class RealMultimodalReasoningAdapter:
                 generation_kwargs.update({"do_sample": True, "temperature": config.temperature})
             else:
                 generation_kwargs["do_sample"] = False
-            with torch.inference_mode():
-                generated = model.generate(**inputs, **generation_kwargs)
+
+            def _run() -> Any:
+                with torch.inference_mode():
+                    return model.generate(**inputs, **generation_kwargs)
+
+            generated = self._lifecycle.call_with_eviction(key, _run)
             prompt_tokens = int(inputs["input_ids"].shape[1])
             text = processor.batch_decode(generated[:, prompt_tokens:], skip_special_tokens=True)[0]
-            return _parse_json_object(text)
+            return parse_json_object(text)
         except BackendExecutionError:
             raise
         except Exception as error:
@@ -163,8 +144,8 @@ class RealMultimodalReasoningAdapter:
     # Carrega o VLM e seu processor apenas quando o backend real é composto,
     # delegando residência ao lifecycle manager compartilhado. O modo 4-bit
     # delega o posicionamento de layers ao Transformers.
-    def _get_runtime(self, config: MultimodalReasoningConfig) -> tuple[Any, Any, Any, str]:
-        """Retorna torch, processor, modelo e device para a configuração solicitada."""
+    def _get_runtime(self, config: MultimodalReasoningConfig) -> tuple[Any, Any, Any, str, str]:
+        """Retorna torch, processor, modelo, device e a key residente para a configuração solicitada."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
         torch = require_module("torch", config.backend)
         device = resolve_device(torch, config.device, config.backend)
@@ -172,12 +153,12 @@ class RealMultimodalReasoningAdapter:
         def factory() -> tuple[Any, Any]:
             try:
                 transformers = require_module("transformers", config.backend)
-                # _MAX_PIXELS limita o encoder de resolução dinâmica de
+                # MAXIMUM_VISUAL_PIXELS limita o encoder de resolução dinâmica de
                 # modelos como o Qwen2.5-VL: sem isso, uma única imagem já
                 # é o suficiente para estourar os ~7.6GB úteis da 3060 de
                 # referência (visto na prática durante o benchmark #174).
                 processor = transformers.AutoProcessor.from_pretrained(
-                    checkpoint, max_pixels=_MAX_PIXELS
+                    checkpoint, max_pixels=MAXIMUM_VISUAL_PIXELS
                 )
                 model_kwargs: dict[str, Any] = {}
                 if config.load_in_4bit:
@@ -187,6 +168,11 @@ class RealMultimodalReasoningAdapter:
                         bnb_4bit_compute_dtype=torch.float16,
                     )
                     model_kwargs["device_map"] = device
+                    # Sem isso, a conversão para 4-bit materializa os pesos
+                    # fp16 inteiros na GPU antes de quantizar, dobrando o
+                    # pico de VRAM só durante o load (visto na prática: OOM
+                    # no carregamento mesmo sem nenhum outro modelo residente).
+                    model_kwargs["low_cpu_mem_usage"] = True
                 model = transformers.AutoModelForImageTextToText.from_pretrained(
                     checkpoint, **model_kwargs
                 )
@@ -196,13 +182,18 @@ class RealMultimodalReasoningAdapter:
                 return processor, model
             except BackendUnavailableError:
                 raise
+            except (MemoryError, torch.cuda.OutOfMemoryError):
+                # Ver comentário equivalente em feature_extraction_backend.py:
+                # preserva o tipo de OOM para que _load_with_eviction possa
+                # liberar residentes por LRU e tentar de novo.
+                raise
             except Exception as error:
                 raise_backend_execution_error(config.backend, "o carregamento do VLM", error)
 
         key = f"multimodal_reasoning:{checkpoint}:{device}:{config.load_in_4bit}"
         processor, model = self._lifecycle.get_or_load(key, factory)
         self._device = device
-        return torch, processor, model, device
+        return torch, processor, model, device, key
 
 
 # Monta o prompt de região a partir do request. É uma função pura: não toca
@@ -358,10 +349,42 @@ def _describe_prior(request: RegionReasoningRequest) -> str:
     )
 
 
+# Monta o prompt de análise de cena. É função pura, como os prompts de região e
+# de relação, para que o contrato textual seja testável sem GPU e para que o
+# benchmark de candidatos meça exatamente o prompt de produção.
+#
+# O prompt descreve o **ambiente**, e nunca pede um inventário de objetos.
+# Medido em corridor-02-002 com o contract anterior: o modelo devolveu
+# ``attributes: ["fisheye lens", "carpeted floor", "suitcase"]``, onde a "mala"
+# era o próprio quad que carrega a câmera — e aquele texto ia para o prompt de
+# cada uma das 60 regiões. Não há frase que conserte isso: o campo que pedia
+# objetos precisou sair (#202).
+#
+# O ``confidence`` do exemplo é deliberadamente não redondo, pela mesma razão
+# que o do prompt de região virou 0,71 e o do de relação virou 0,42: um valor
+# plausível no exemplo é copiado de volta.
+def scene_prompt() -> str:
+    """Retorna o prompt de análise de ambiente enviado com a imagem inteira."""
+    return (
+        "Describe the ENVIRONMENT shown in this image. Do NOT list or name individual "
+        "objects. Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
+        "fences) with exactly these keys: scene_type (string), environment (string), layout "
+        "(string), lighting (string), visibility (string), navigability (string), confidence "
+        "(float between 0 and 1). Example of the exact shape required:\n"
+        '{"scene_type": "<one noun naming the kind of place>", '
+        '"environment": "<indoor or outdoor>", '
+        '"layout": "<how the space is arranged, in one clause>", '
+        '"lighting": "<how the space is lit>", '
+        '"visibility": "<how far and how clearly one can see>", '
+        '"navigability": "<how traversable the space is>", "confidence": 0.63}'
+    )
+
+
 # Extrai um único objeto JSON de uma resposta textual, tolerando fences de
 # markdown e texto residual produzido pelo modelo. Respostas inválidas ficam
-# vazias para a validação de schema da camada application.
-def _parse_json_object(text: str) -> dict[str, Any]:
+# vazias para a validação de schema da camada application. Pública porque o
+# benchmark de candidatos precisa pontuar com o mesmo parser da produção.
+def parse_json_object(text: str) -> dict[str, Any]:
     """Extrai um objeto JSON de texto do VLM ou retorna objeto vazio."""
     stripped = text.strip()
     candidates = [stripped]

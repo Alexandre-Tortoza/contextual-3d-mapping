@@ -1,0 +1,32 @@
+{
+  "frame_id": "corridor-02-04234",
+  "regions": [
+    {
+      "region_id": "region-b90067c5549a1700",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 6725,
+      "box_before": {
+        "x_min": 170.0,
+        "y_min": 81.0,
+        "x_max": 253.0,
+        "y_max": 257.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9942740201950073,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 9.075871032999203,
+      "model_mask_area": 4798,
+      "clipped_pixel_count": 4798,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

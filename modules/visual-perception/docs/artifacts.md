@@ -222,9 +222,11 @@ benchmarks/results/samples/<run-id>/
     ├── regions-labels.png    labels no centróide, sem caixas
     ├── regions-overlay.png   masks + boxes + labels das regiões publicadas
     ├── structural-context.png as superfícies não publicadas, esmaecidas
+    ├── semantic-overlay.png  máscaras grounded, só quando alguma região tem uma
     ├── ego-mask.png          silhueta do rig, quando a sequência a declara
     ├── valid-area-mask.png   área útil do sensor, quando declarada
-    └── pipeline-input.png    só quando difere de raw.png
+    ├── pipeline-input.png    só quando difere de raw.png
+    └── DEBUG/<frame-id>-grounding.json  trilha de grounding, quando houve grounding
 ```
 
 Uma camada por pergunta. Um overlay único com dezenas de caixas não distingue "o SAM
@@ -239,9 +241,17 @@ Duas regras que o layout codifica:
   opção altera os pixels: as máscaras de exclusão são geometria declarada em
   `benchmarks/sequence-masks/<sequence>.json`, aplicadas na filtragem de proposals e
   persistidas como artifacts;
+  Até a #240 o validador comparava o array de entrada consigo mesmo, então essa afirmação
+  era verdadeira por identidade; hoje `raw.png` sai de uma cópia independente;
 - **os dois eixos de confiança são nomeados.** O overlay escreve `sem=0.90 geom=0.97`, com
   `sem=?` quando o produtor não pontuou. Um número solto ao lado de um label era lido como
-  certeza semântica quando descrevia a qualidade da máscara.
+  certeza semântica quando descrevia a qualidade da máscara;
+- **nada é apresentado como medida que não aconteceu.** `semantic-overlay.png` só existe
+  quando ao menos uma região tem máscara grounded (`diagnostics.json` registra
+  `semantic_overlay_written` e o motivo de cada falha em `semantic_grounding`); antes, um
+  frame sem nenhuma máscara aceita gravava uma cópia de `raw.png` com esse nome. No
+  `manifest.json`, `peak_vram_bytes` é `null` quando nenhum estágio rodou em CUDA, e a
+  memória do host fica em `peak_host_rss_bytes` — o summary nomeia as duas separadamente.
 
 As views por região (foreground mask-aware, tight crop, contextual crop) **não** são
 persistidas pelo run: são função pura da observação, dos pixels e da config, todos já

@@ -8,7 +8,7 @@ com células densas. A retenção próxima continua uma limitação mensurada.
 ## Entradas congeladas
 
 - 25 frames, de `corridor-02-04210` a `corridor-02-04354`, aproximadamente 6 s;
-- percepção em `artifacts/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z`;
+- percepção em `artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z`;
 - mapa `corridor-02-176s-30s`, frame `map`, metros;
 - PCD com 1.093.011 registros; viewer com 136.627 pontos (stride 8);
 - SHA-256 do PCD: `50ea48916331e5e5061b0993c353eca7bf90ec5507079637e2d83eef7e923760`;
@@ -99,7 +99,7 @@ sintética. A máscara e o claim 2D são preservados quando falta suporte 3D.
 
 ## Artifacts e reprodução
 
-A run final fica em `artifacts/visibility-validation-20260912-v2/`:
+A run histórica fica em `artifacts/old/visibility-validation-20260912-v2/`:
 
 ```text
 manifest.json                         hashes de entradas/código, política e tempos
@@ -117,15 +117,15 @@ Com os pacotes locais no `PYTHONPATH`, o ponto de entrada é:
 
 ```bash
 modules/visual-perception/.venv/bin/python -m visual_perception_experiments.visibility_validation \
-  --geometry artifacts/corridor-02-176s-30s.json \
+  --geometry artifacts/old/corridor-02-176s-30s.json \
   --bag datasets/raw/corridor-02/corridor-02.bag \
   --intrinsics datasets/raw/corridor-02/corridor-02-Intrinsics.yaml \
   --extrinsics datasets/raw/corridor-02/corridor-02-extrinsics.yaml \
-  --odometry artifacts/corridor-02-176s-30s-odometry.csv \
-  --window artifacts/integrated-grounding-6s-20260912T050652Z/window.json \
-  --visual-run artifacts/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
-  --baseline artifacts/integrated-grounding-6s-20260912T050652Z/pose.json \
-  --regression-ids artifacts/visibility-validation-20260912-v2/regression-ids.json \
+  --odometry artifacts/old/corridor-02-176s-30s-odometry.csv \
+  --window artifacts/old/integrated-grounding-6s-20260912T050652Z/window.json \
+  --visual-run artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
+  --baseline artifacts/old/integrated-grounding-6s-20260912T050652Z/pose.json \
+  --regression-ids artifacts/old/visibility-validation-20260912-v2/regression-ids.json \
   --output artifacts/visibility-validation-NOVA-RUN
 ```
 

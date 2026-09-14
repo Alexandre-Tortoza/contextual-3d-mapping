@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from visual_perception.application.region_views import build_region_views
+from visual_perception.application.region_views import build_region_views, crop_payload
 from visual_perception.config import ModuleConfig, MultiContextConfig
-from visual_perception.domain.geometry import Mask
+from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
+from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot, SubjectEmphasis
 from visual_perception.domain.regions import ObservedRegion
 
 _WIDTH = 40
@@ -153,3 +153,50 @@ def test_building_views_never_mutates_the_source_image() -> None:
     build_region_views((_region(), _region(diagonal=True)), image, _config())
 
     assert np.array_equal(image.pixels, before)
+
+
+# Desenha o contorno de uma máscara 6x8 pela API pública e devolve onde os
+# pixels mudaram: fundo e sujeito são da mesma cor, então todo pixel alterado é
+# contorno.
+def _contour(mask_data: np.ndarray) -> np.ndarray:
+    """Retorna a máscara dos pixels pintados como contorno em ``crop_payload``."""
+    image = ImagePayload(np.full((6, 8, 3), 90, dtype=np.uint8), 8, 6)
+    mask = Mask(mask_data, 8, 6)
+    region = ObservedRegion("region-a", mask, mask.bounding_box(), 0.9, ("p-1",))
+    view = crop_payload(image, region, BoundingBox(0, 0, 8, 6), emphasis=SubjectEmphasis.CONTOUR)
+    changed: np.ndarray = (view.pixels != image.pixels).any(axis=2)
+    return changed
+
+
+# Regressão da #246: com np.roll circular, uma máscara que tocava duas bordas
+# opostas do recorte tinha a primeira linha tratada como vizinha da última, e
+# o contorno sumia justamente em paredes, colunas e corrimãos.
+def test_contour_is_drawn_on_crop_edges_for_a_mask_spanning_the_crop() -> None:
+    """Uma máscara que atravessa o recorte tem contorno nas duas bordas tocadas."""
+    vertical = np.zeros((6, 8), dtype=np.bool_)
+    vertical[:, 2:6] = True
+    contour = _contour(vertical)
+    assert contour[0, 2:6].all() and contour[-1, 2:6].all()
+    assert not contour[1:-1, 3:5].any()
+
+    horizontal = np.zeros((6, 8), dtype=np.bool_)
+    horizontal[2:5, :] = True
+    contour = _contour(horizontal)
+    assert contour[2:5, 0].all() and contour[2:5, -1].all()
+
+
+# O caso que já funcionava continua igual: sem tocar as bordas, contorno
+# fechado de um pixel; tocando uma borda só, contorno também nela.
+def test_contour_is_unchanged_away_from_edges_and_closed_on_a_single_edge() -> None:
+    """Máscara interna produz o anel de sempre; máscara numa borda fecha o contorno ali."""
+    inner = np.zeros((6, 8), dtype=np.bool_)
+    inner[1:5, 2:6] = True
+    expected = inner.copy()
+    expected[2:4, 3:5] = False
+    assert np.array_equal(_contour(inner), expected)
+
+    top = np.zeros((6, 8), dtype=np.bool_)
+    top[0:3, 2:6] = True
+    contour = _contour(top)
+    assert contour[0, 2:6].all()
+    assert not contour[1, 3:5].any()

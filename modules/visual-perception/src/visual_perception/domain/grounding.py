@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from math import isfinite
+from types import MappingProxyType
 from typing import Any
 
 from visual_perception.domain.geometry import BoundingBox, Mask
+from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.semantics import RegionKind
 
@@ -88,11 +91,14 @@ class SemanticGrounding:
     status: GroundingStatus
     semantic_mask: Mask | None = None
     support_pixel: tuple[int, int] | None = None
-    diagnostics: dict[str, Any] = field(default_factory=dict)
+    #: Somente leitura no primeiro nível: o grounding é congelado, e um dict
+    #: mutável deixava qualquer consumidor reescrever o diagnóstico publicado.
+    diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     # Uma falha não pode transportar uma máscara aparentemente utilizável.
     def __post_init__(self) -> None:
-        """Exige que máscara semântica e status concordem."""
+        """Exige que máscara semântica e status concordem, e congela o diagnóstico."""
+        object.__setattr__(self, "diagnostics", MappingProxyType(dict(self.diagnostics)))
         if (self.status is GroundingStatus.REFINED) != (self.semantic_mask is not None):
             raise ValueError("Only refined grounding may carry a semantic mask.")
         if self.semantic_mask is not None and self.semantic_mask.is_empty:
@@ -121,4 +127,16 @@ class SpatialRegionFootprint:
     concept: str
     mask: Mask | None
     strong: bool
-    diagnostics: dict[str, Any]
+    #: Somente leitura no primeiro nível, pela mesma razão de ``SemanticGrounding``.
+    diagnostics: Mapping[str, Any]
+
+    # Valida a identidade e a coerência entre força e máscara, e congela o
+    # diagnóstico publicado junto do footprint.
+    def __post_init__(self) -> None:
+        """Rejeita footprint sem identidade ou forte sem máscara, e congela o diagnóstico."""
+        validate_identifier(self.region_id, field="region_id")
+        if not self.concept.strip():
+            raise ValueError("SpatialRegionFootprint requires a non-empty concept.")
+        if self.strong and self.mask is None:
+            raise ValueError("A strong SpatialRegionFootprint must carry a mask.")
+        object.__setattr__(self, "diagnostics", MappingProxyType(dict(self.diagnostics)))

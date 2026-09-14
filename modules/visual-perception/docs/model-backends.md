@@ -488,22 +488,22 @@ Os picos observados na configuração de referência são aproximadamente:
 | CLIP ViT-L/14 | 1.6 GB |
 | Qwen2.5-VL-3B 4-bit | 2.5 GB |
 
-A soma aproximada excede 8GB. Por isso, os adapters reais compartilham um
-[`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py).
+A soma aproximada excede 8GB por uma margem pequena (~1GB), e o padrão de uso real do
+pipeline intercala principalmente CLIP e Qwen-VL (juntos, ~4,1GB — folga confortável),
+com SAM e GroundingDINO usados em pontos isolados do frame. Por isso, os adapters reais
+compartilham um
+[`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py) que mantém
+tudo residente que couber, e libera por LRU apenas quando um load novo esgota a VRAM de
+fato — não há uma tabela estática decidindo antecipadamente quem fica de fora.
 
 `create_perception_ports(config, lifecycle=None)` cria um manager quando ele não é
 fornecido e o compartilha entre os ports compostos. O pipeline recebe os ports já
 construídos e não seleciona modelos por conta própria.
 
-```text
-SAM   -> inferência -> unload
-DINO  -> inferência -> unload
-CLIP  -> inferência -> unload
-Qwen  -> inferência -> unload
-```
-
 `ModelLifecycleManager.metrics` registra métricas por estágio, incluindo identificação do
 backend/checkpoint, tempo de load e pico de memória medido pelo runtime disponível.
+`ModelLifecycleManager.resident_keys` expõe, em ordem de recência, quais modelos estão
+residentes no momento.
 
 ## Benchmark de seleção (#174)
 

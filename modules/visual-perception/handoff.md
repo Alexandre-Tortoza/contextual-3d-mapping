@@ -109,7 +109,7 @@ O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: *
    `facebook/sam3` no Hugging Face e configurar um token. O bloqueio não é técnico: o
    código da versão instalada de `transformers` já suporta os dois.
 
-3. **Calibrar os tetos dos estágios novos.** `refinement.max_regions_per_iteration` e
+3. **Calibrar os tetos dos estágios novos.** `refinement.max_refined_regions` e
    `semantic_relations.max_pairs` foram escolhidos como orçamento plausível, **não**
    medidos. O custo hoje é 1,74x da baseline em latência, com VRAM inalterada.
 

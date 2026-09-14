@@ -230,6 +230,13 @@ def _signals_for_region(
     concepts = _distinct_concepts(
         [claim for claim in region.claims if claim.kind in IDENTITY_CLAIM_KINDS]
     )
+    # A margem e o piso de indistinguibilidade são calibrados em cosseno. Sem
+    # vetores normalizados o produto escalar não é cosseno, e pontuar com ele
+    # decidiria vencedores com uma régua que não existe.
+    if not space.normalized:
+        reason = "language embeddings are not L2-normalized: the dot product is not a cosine"
+        return _with_signals(region, identity, {concept: _unavailable_row(slots, config.source, reason)
+                                                for concept in concepts}), 0
     if len(concepts) < 2:
         reason = "single hypothesis: alignment has no competing concept to arbitrate against"
         return _with_signals(region, identity, {concept: _unavailable_row(slots, config.source, reason)

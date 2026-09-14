@@ -15,7 +15,6 @@ import itertools
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-import numpy as np
 import torch
 from PIL import Image
 
@@ -81,7 +80,9 @@ def _fastsam_candidate(checkpoint: str, frames: list[Path]) -> Candidate:
     # encontrada); é o run_once exigido pelo contrato de benchmark_candidate.
     def run_once(model: object) -> float:
         image = next(frame_iter)
-        results = model(np.array(image), device=0, retina_masks=True, verbose=False)  # type: ignore[operator]
+        # A imagem vai como PIL, que o ultralytics trata como RGB — os candidatos SAM
+        # recebem a mesma imagem. Um ``np.ndarray`` é interpretado como BGR (#249).
+        results = model(image, device=0, retina_masks=True, verbose=False)  # type: ignore[operator]
         result = results[0]
         if result.boxes is None or result.boxes.conf is None or len(result.boxes.conf) == 0:
             return 0.0

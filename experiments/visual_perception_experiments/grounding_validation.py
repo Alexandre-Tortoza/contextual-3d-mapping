@@ -212,7 +212,7 @@ def _ground_frame(source: Path, destination: Path, config: ModuleConfig) -> dict
             ports.semantic_grounder, config.semantic_grounding,
             ImageAreaMasks(Mask(valid, raw.shape[1], raw.shape[0]), Mask(ego, raw.shape[1], raw.shape[0])))
     finally:
-        lifecycle.release_active()
+        lifecycle.release_all()
     latency_s = time.perf_counter() - started
     after = replace(observation, regions=grounded)
     after_audit = audit_observation(after)

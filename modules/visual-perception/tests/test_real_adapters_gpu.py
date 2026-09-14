@@ -55,7 +55,7 @@ def test_real_region_discovery_adapter_finds_regions_on_gpu() -> None:
     payload = _real_test_payload()
 
     proposals = ports.region_discoverer.discover(payload, config.region_discovery)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert len(proposals) > 0
     for proposal in proposals:
@@ -73,7 +73,7 @@ def test_real_feature_extraction_adapter_returns_finite_grid_on_gpu() -> None:
     payload = _real_test_payload()
 
     feature_map = ports.feature_extractor.extract(payload, config.feature_extraction)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert feature_map.dimension > 0
     assert feature_map.grid_height > 0 and feature_map.grid_width > 0
@@ -90,7 +90,7 @@ def test_real_language_embedding_adapter_returns_normalized_vector_on_gpu() -> N
 
     image_vector = ports.language_encoder.encode_image(payload, config.language_embedding)
     text_vector = ports.language_encoder.encode_text("a green square", config.language_embedding)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     for vector in (image_vector, text_vector):
         assert len(vector) == config.language_embedding.dimension
@@ -107,7 +107,7 @@ def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
     payload = _real_test_payload()
 
     response = ports.multimodal_reasoner.analyze_scene(payload, config.multimodal_reasoning)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert isinstance(response, dict)
     # O contract de cena é ambiental desde a #202: sem prosa livre e sem

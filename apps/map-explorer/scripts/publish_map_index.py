@@ -167,7 +167,7 @@ def publish(public_directory: Path) -> Path:
         frames = metadata["frame_count"]
         entries.append({
             "url": f"/runs/{quote(manifest_path.parent.name)}/context.json",
-            "label": f"{metadata['label']} · {frames} {'frame' if frames == 1 else 'frames'}",
+            "label": f"{metadata['run_id']} · {frames} {'frame' if frames == 1 else 'frames'}",
             "artifact_type": CONTEXT_TYPE, "run_id": metadata["run_id"],
             "created_at": metadata["created_at"], "map_id": metadata["map_id"],
             "frame_count": frames, "contextual_point_count": metadata.get("contextual_point_count"),

@@ -32,10 +32,10 @@ class RealLanguageAlignedEncoderAdapter:
     mesmo espaço de embedding, sem expor tensors para os consumidores do port.
     """
 
-    # Recebe (ou cria, se omitido) o lifecycle manager que carrega/libera o
-    # processor/modelo sob demanda. Compartilhar o mesmo manager entre os 4
-    # adapters reais (ver ``factory.py``) garante que no máximo um modelo
-    # pesado fica residente por vez.
+    # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
+    # residente o processor/modelo sob demanda. Compartilhar o mesmo manager
+    # entre os 4 adapters reais (ver ``factory.py``) permite reaproveitar
+    # modelos já residentes entre estágios intercalados no mesmo frame.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
         """Inicializa o adapter sem carregar pesos ou dependências opcionais."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
@@ -44,12 +44,16 @@ class RealLanguageAlignedEncoderAdapter:
     # pelo estágio de language embedding para cada região canônica.
     def encode_image(self, image: ImagePayload, config: LanguageEmbeddingConfig) -> tuple[float, ...]:
         """Retorna o embedding CLIP normalizado de um crop de imagem."""
-        torch, processor, model, device = self._get_runtime(config)
+        torch, processor, model, device, key = self._get_runtime(config)
         try:
             inputs = processor(images=payload_to_pil(image, config.backend), return_tensors="pt")
             inputs = {name: value.to(device) for name, value in inputs.items()}
-            with torch.inference_mode():
-                vector = _unwrap_features(model.get_image_features(**inputs))
+
+            def _run() -> Any:
+                with torch.inference_mode():
+                    return _unwrap_features(model.get_image_features(**inputs))
+
+            vector = self._lifecycle.call_with_eviction(key, _run)
             return _to_vector(vector, config, config.backend)
         except BackendExecutionError:
             raise
@@ -62,12 +66,16 @@ class RealLanguageAlignedEncoderAdapter:
         """Retorna o embedding CLIP normalizado de uma query textual."""
         if not text:
             raise ValueError("O texto para embedding não pode estar vazio.")
-        torch, processor, model, device = self._get_runtime(config)
+        torch, processor, model, device, key = self._get_runtime(config)
         try:
             inputs = processor(text=[text], return_tensors="pt", padding=True)
             inputs = {name: value.to(device) for name, value in inputs.items()}
-            with torch.inference_mode():
-                vector = _unwrap_features(model.get_text_features(**inputs))
+
+            def _run() -> Any:
+                with torch.inference_mode():
+                    return _unwrap_features(model.get_text_features(**inputs))
+
+            vector = self._lifecycle.call_with_eviction(key, _run)
             return _to_vector(vector, config, config.backend)
         except BackendExecutionError:
             raise
@@ -77,8 +85,8 @@ class RealLanguageAlignedEncoderAdapter:
     # Carrega um único modelo CLIP para imagem e texto, delegando residência
     # ao lifecycle manager compartilhado. Essa propriedade é necessária para
     # cumprir o contract de espaço de embedding compartilhado.
-    def _get_runtime(self, config: LanguageEmbeddingConfig) -> tuple[Any, Any, Any, str]:
-        """Retorna torch, processor, modelo e device para a configuração solicitada."""
+    def _get_runtime(self, config: LanguageEmbeddingConfig) -> tuple[Any, Any, Any, str, str]:
+        """Retorna torch, processor, modelo, device e a key residente para a configuração solicitada."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
         torch = require_module("torch", config.backend)
         device = resolve_device(torch, config.device, config.backend)
@@ -95,13 +103,17 @@ class RealLanguageAlignedEncoderAdapter:
                 return processor, model
             except BackendUnavailableError:
                 raise
+            except (MemoryError, torch.cuda.OutOfMemoryError):
+                # Ver comentário equivalente em feature_extraction_backend.py:
+                # preserva o tipo de OOM para que _load_with_eviction possa
+                # liberar residentes por LRU e tentar de novo.
+                raise
             except Exception as error:
                 raise_backend_execution_error(config.backend, "o carregamento do CLIP", error)
 
-        processor, model = self._lifecycle.get_or_load(
-            f"language_embedding:{checkpoint}:{device}", factory
-        )
-        return torch, processor, model, device
+        key = f"language_embedding:{checkpoint}:{device}"
+        processor, model = self._lifecycle.get_or_load(key, factory)
+        return torch, processor, model, device, key
 
 
 # Desembrulha o resultado de get_text_features/get_image_features entre

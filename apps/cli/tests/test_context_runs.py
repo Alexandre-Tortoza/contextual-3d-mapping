@@ -141,15 +141,33 @@ def test_compose_keeps_separate_runs_for_the_same_inputs(tmp_path: Path) -> None
                              tmp_path / "extrinsics.json", tmp_path / "ground-truth.csv",
                              tmp_path / "masks.json", "map-target", "context-target")
     workflows = Workflows(project, CompositionRunner())
-    first = workflows.compose(profile, segment_id="segment", window=window, visual_run=visual_run)
+    first = workflows.compose(
+        profile, segment_id="segment", window=window, visual_run=visual_run, run_name="segment-no-prior"
+    )
     original = first.read_bytes()
-    second = workflows.compose(profile, segment_id="segment", window=window, visual_run=visual_run, visibility_mode="dense_cells")
+    second = workflows.compose(
+        profile, segment_id="segment", window=window, visual_run=visual_run,
+        visibility_mode="dense_cells", run_name="segment-box-overlap"
+    )
     assert workflows.runner.visibility_modes == ["measured_surfaces", "dense_cells"]
     assert json.loads((second.parent / "manifest.json").read_text())["visibility_mode"] == "dense_cells"
     assert first.parent != second.parent
+    assert first.parent.name.endswith("-segment-no-prior")
+    assert second.parent.name.endswith("-segment-box-overlap")
     assert first.read_bytes() == original
     assert first.parent.parent == artifacts / "runs"
     assert (first.parent / "window.json").read_bytes() == window.read_bytes()
     assert (second.parent / "perception-manifest.json").read_bytes() == (visual_run / "manifest.json").read_bytes()
     assert len(project.available_context_runs()) == 2
     assert {entry["contextual_point_count"] for entry in project.available_context_runs()} == {1, 2}
+
+
+# Mantém a contagem absoluta após a limpeza dos artifacts de trabalho: o viewer
+# publicado ainda é a fonte das identidades que o usuário pode comparar.
+def test_next_context_run_id_considers_published_runs(tmp_path: Path) -> None:
+    """Continua a numeração a partir das runs já publicadas."""
+    project = publication_project(tmp_path)
+    published = project.root / "apps/map-explorer/web/public/runs/2026-09-12-run-007-original"
+    published.mkdir(parents=True)
+    workflows = Workflows(project)
+    assert workflows._next_context_run_id("candidate").endswith("-run-008-candidate")

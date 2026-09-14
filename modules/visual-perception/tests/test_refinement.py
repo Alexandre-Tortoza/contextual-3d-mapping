@@ -265,7 +265,7 @@ def test_the_budget_is_respected_and_selection_is_deterministic() -> None:
         image_observation(), payload_with_blobs(blobs=((2, 2, 8, 8, (200, 30, 30)),)),
         default_config(), default_ports()
     ).observation
-    config = RefinementConfig(max_regions_per_iteration=1, small_region_area_px=10_000)
+    config = RefinementConfig(max_refined_regions=1, small_region_area_px=10_000)
 
     first = select_refinement_targets(observation, config)
     second = select_refinement_targets(observation, config)
@@ -323,7 +323,6 @@ def test_refinement_appends_and_records_the_evidence_path() -> None:
         reasoning,
         RefinementConfig(
             escalation_views=("masked_subject", "tight_crop", "contextual_crop"),
-            max_iterations=2,
             small_region_area_px=0,
         ),
     )

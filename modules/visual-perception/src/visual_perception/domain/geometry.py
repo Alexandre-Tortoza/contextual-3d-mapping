@@ -24,6 +24,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from visual_perception.domain.arrays import read_only_view
+
 
 # Representa uma caixa retangular de pixels alinhada aos eixos, em intervalo
 # semi-aberto. Existe como a representação canônica de bounding box usada em
@@ -83,12 +85,23 @@ class BoundingBox:
     # Recorta a caixa aos limites de uma imagem de resolução dada. Usada
     # quando uma caixa remapeada de um tile/crop pode extrapolar a imagem
     # original.
-    def clipped_to(self, *, width: int, height: int) -> BoundingBox:
-        """Recorta a caixa para uma imagem da resolução dada."""
+    def clipped_to(self, *, width: int, height: int) -> BoundingBox | None:
+        """Recorta a caixa para uma imagem da resolução dada.
+
+        Argumentos:
+            width: largura da imagem em pixels.
+            height: altura da imagem em pixels.
+        Retorna:
+            a caixa recortada, ou ``None`` quando nada dela cai dentro da
+            imagem. Antes o recorte vazio virava ``ValueError`` na construção,
+            e o consumidor precisava contornar com ``try/except``.
+        """
         x_min = max(0.0, min(self.x_min, width))
         y_min = max(0.0, min(self.y_min, height))
         x_max = max(0.0, min(self.x_max, width))
         y_max = max(0.0, min(self.y_max, height))
+        if x_max <= x_min or y_max <= y_min:
+            return None
         return BoundingBox(x_min, y_min, x_max, y_max)
 
 
@@ -105,8 +118,10 @@ class Mask:
 
     # Valida que o dtype é bool e que o shape do array bate com
     # (image_height, image_width), para que toda Mask seja internamente
-    # consistente com a resolução que ela declara.
+    # consistente com a resolução que ela declara, e guarda os dados como
+    # visão somente-leitura.
     def __post_init__(self) -> None:
+        """Valida dtype e resolução, e impede escrita nos dados através da máscara."""
         if self.data.dtype != np.bool_:
             raise ValueError(f"Mask dtype must be bool, got {self.data.dtype}.")
         if self.data.shape != (self.image_height, self.image_width):
@@ -114,6 +129,7 @@ class Mask:
                 "Mask shape must be (image_height, image_width) = "
                 f"({self.image_height}, {self.image_width}), got {self.data.shape}."
             )
+        object.__setattr__(self, "data", read_only_view(self.data))
 
     # Compara duas máscaras por conteúdo (resolução + dados), já que
     # dataclass(eq=False) desativa a comparação automática por causa do
@@ -126,6 +142,13 @@ class Mask:
             and self.image_height == other.image_height
             and bool(np.array_equal(self.data, other.data))
         )
+
+    #: Máscaras não são hasheáveis: a igualdade é por conteúdo de um array de
+    #: resolução plena, e hashear esse conteúdo a cada uso custaria uma
+    #: varredura da imagem. Por consequência todo value object que carrega uma
+    #: máscara — como ``ObservedRegion`` — também não é; use o identificador
+    #: (``region_id``) como chave.
+    __hash__ = None  # type: ignore[assignment]
 
     # Indica se a máscara não ocupa nenhum pixel. Usada por operações que
     # não fazem sentido em uma máscara vazia (ex: bounding_box).

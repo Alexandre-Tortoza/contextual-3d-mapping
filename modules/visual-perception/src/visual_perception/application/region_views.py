@@ -182,17 +182,23 @@ def _scene_view(image: ImagePayload) -> RegionView:
 # geometria de uma view; usada por _append_crop_view e por
 # application/multi_context.py.
 def expanded_box(box: BoundingBox, expansion: float, width: int, height: int) -> BoundingBox:
-    """Retorna ``box`` expandida por ``expansion`` e recortada à imagem."""
-    if expansion <= 0.0:
-        return box.clipped_to(width=width, height=height)
-    margin_x = box.width * expansion / 2.0
-    margin_y = box.height * expansion / 2.0
-    return BoundingBox(
+    """Retorna ``box`` expandida por ``expansion`` e recortada à imagem.
+
+    Levanta:
+        ValueError: se a caixa da região não tiver nenhuma parte dentro da
+            imagem, o que só acontece com uma região de outra resolução.
+    """
+    margin_x = box.width * max(expansion, 0.0) / 2.0
+    margin_y = box.height * max(expansion, 0.0) / 2.0
+    clipped = BoundingBox(
         x_min=box.x_min - margin_x,
         y_min=box.y_min - margin_y,
         x_max=box.x_max + margin_x,
         y_max=box.y_max + margin_y,
     ).clipped_to(width=width, height=height)
+    if clipped is None:
+        raise ValueError(f"Box {box} lies entirely outside a {width}x{height} image.")
+    return clipped
 
 
 # Recorta os pixels da caixa pedida, aplicando o realce de sujeito pedido.
@@ -221,16 +227,20 @@ def crop_payload(
     return ImagePayload(pixels, width=crop.width, height=crop.height)
 
 
-# Calcula a borda de uma máscara: os pixels do sujeito que tocam o fundo.
-# Implementada com deslocamentos de numpy para não introduzir uma dependência
+# Calcula a borda de uma máscara: os pixels do sujeito que tocam o fundo ou a
+# borda do recorte. Implementada com numpy para não introduzir uma dependência
 # de morfologia só para desenhar uma linha de um pixel.
 def _boundary(window: np.ndarray) -> np.ndarray:
-    """Retorna os pixels da máscara que fazem fronteira com o fundo."""
-    interior = np.ones_like(window)
-    for axis, shift in ((0, 1), (0, -1), (1, 1), (1, -1)):
-        interior &= np.roll(window, shift, axis=axis)
-    # np.roll é circular: as bordas do recorte contam como fronteira, que é o
-    # comportamento desejado — um sujeito cortado pela caixa tem borda ali.
+    """Retorna os pixels da máscara vizinhos do fundo ou da borda do recorte."""
+    # O acolchoamento com fundo faz a borda do recorte contar como fronteira:
+    # um sujeito cortado pela caixa tem borda ali. A versão anterior usava
+    # np.roll, que é circular, e numa máscara que tocava topo e base a primeira
+    # linha virava vizinha da última — paredes e colunas que atravessam o
+    # recorte chegavam ao reasoner sem contorno em cima e embaixo (#246).
+    padded = np.pad(window, 1, constant_values=False)
+    interior = (
+        padded[:-2, 1:-1] & padded[2:, 1:-1] & padded[1:-1, :-2] & padded[1:-1, 2:]
+    )
     boundary: np.ndarray = window & ~interior
     return boundary
 

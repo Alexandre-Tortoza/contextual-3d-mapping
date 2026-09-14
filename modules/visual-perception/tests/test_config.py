@@ -2,14 +2,25 @@
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
+
 import pytest
 
+from visual_perception.application.execution_profile import research_quality_config
 from visual_perception.config import (
+    CalibrationConfig,
+    HypothesisSupportConfig,
+    ImageAreaConfig,
     ModuleConfig,
+    MultiContextConfig,
     MultimodalReasoningConfig,
     QualityProfile,
+    RefinementConfig,
     TilingConfig,
 )
+from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry
 
 
 # Confirma que a configuração default (sem nenhum campo explícito) é válida e usa o
@@ -134,3 +145,99 @@ def test_unknown_scene_context_mode_is_rejected() -> None:
     """Um modo de contexto de cena desconhecido é recusado na construção."""
     with pytest.raises(ValueError, match="scene_context_mode"):
         MultimodalReasoningConfig(scene_context_mode="somewhat_local")
+
+
+# Regressão da #241: ``asdict`` achata as geometrias de área em dicts, e
+# ``from_dict`` só reconstruía o nível de topo — a config relida carregava dicts
+# no lugar das geometrias e quebrava ao rasterizar. O caminho real passa por
+# JSON (manifest do run), então o teste também passa.
+def test_config_with_area_geometry_round_trips_through_json() -> None:
+    """Uma config com círculo, polígono e sub-configs não-default volta igual do JSON."""
+    config = ModuleConfig(
+        image_area=ImageAreaConfig(
+            valid_area=ImageAreaGeometry(circle=CircleArea(326.0, 244.0, 324.0)),
+            ego_vehicle=ImageAreaGeometry(polygons=(((0.0, 400.0), (639.0, 400.0), (639.0, 479.0)),)),
+        ),
+        tiling=TilingConfig(multi_scale_enabled=True, tile_grid="2x2"),
+        multi_context=MultiContextConfig(contextual_crop_enabled=True),
+        hypothesis_support=HypothesisSupportConfig(slots=("tight_crop", "contextual_crop")),
+        multimodal_reasoning=MultimodalReasoningConfig(region_views=("masked_subject", "contextual_crop")),
+    )
+
+    restored = ModuleConfig.from_dict(json.loads(json.dumps(config.to_dict())))
+
+    assert restored == config
+    masks = restored.image_area.rasterize(640, 480)
+    assert masks.valid_area is not None and masks.ego_vehicle is not None
+
+
+# ``ImageAreaConfig`` não aceita mais dicts no lugar das geometrias, que era o
+# que deixava a config corrompida passar.
+def test_image_area_config_rejects_non_geometry_values() -> None:
+    """Um dict no lugar de geometria falha na construção."""
+    with pytest.raises(TypeError, match="valid_area"):
+        ImageAreaConfig(valid_area={"circle": None})  # type: ignore[arg-type]
+
+
+# O artifact de calibração é conferido na construção, e o fingerprint não
+# depende mais do arquivo continuar existindo: antes ele relia o disco a cada
+# chamada e levantava FileNotFoundError longe da origem.
+def test_calibration_artifact_is_validated_once_at_construction(tmp_path: Path) -> None:
+    """Artifact ausente falha na construção; o fingerprint não faz I/O depois dela."""
+    with pytest.raises(ValueError, match="does not exist"):
+        CalibrationConfig(enabled=True, artifact_path=str(tmp_path / "missing.json"))
+
+    artifact = tmp_path / "calibration.json"
+    artifact.write_text("{}", encoding="utf-8")
+    config = ModuleConfig(calibration=CalibrationConfig(enabled=True, artifact_path=str(artifact)))
+    fingerprint = config.fingerprint()
+    artifact.unlink()
+
+    assert config.fingerprint() == fingerprint
+    assert config.calibration.artifact_digest is not None
+
+
+# O digest gravado na config permite detectar que o artifact mudou desde que
+# ela foi escrita; reler a config reproduziria outra calibração em silêncio.
+def test_rereading_a_config_whose_calibration_artifact_changed_fails(tmp_path: Path) -> None:
+    """Um artifact alterado desde a serialização faz ``from_dict`` falhar."""
+    artifact = tmp_path / "calibration.json"
+    artifact.write_text("{}", encoding="utf-8")
+    payload = ModuleConfig(
+        calibration=CalibrationConfig(enabled=True, artifact_path=str(artifact))
+    ).to_dict()
+    artifact.write_text('{"changed": true}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="changed since"):
+        ModuleConfig.from_dict(payload)
+
+
+# Regressão da #241: por default o crop contextual estava desligado e ainda
+# assim era pedido pelo suporte de hipótese e pelo refinamento — um terço dos
+# sinais saía sempre indisponível.
+@pytest.mark.parametrize(
+    ("field_name", "override"),
+    [
+        ("hypothesis_support.slots", {"hypothesis_support": HypothesisSupportConfig(slots=("contextual_crop",))}),
+        (
+            "refinement.escalation_views",
+            {"refinement": RefinementConfig(escalation_views=("masked_subject", "contextual_crop"))},
+        ),
+    ],
+)
+def test_requesting_a_disabled_evidence_slot_fails(field_name: str, override: dict[str, object]) -> None:
+    """Pedir um slot desligado em ``multi_context`` falha nomeando os dois campos."""
+    with pytest.raises(ValueError, match=rf"{re.escape(field_name)}.*multi_context"):
+        ModuleConfig(**override)  # type: ignore[arg-type]
+
+
+# Os dois conjuntos de defaults precisam satisfazer a invariante: o do módulo
+# (crop contextual desligado) e o do perfil real (ligado, e consumido).
+def test_module_defaults_and_real_profile_request_only_enabled_slots() -> None:
+    """Default e perfil real constroem sem pedir slot desligado."""
+    default = ModuleConfig()
+    real = research_quality_config(multi_scale_justified=False, real_backends=True)
+
+    assert "contextual_crop" not in default.hypothesis_support.slots
+    assert "contextual_crop" in real.hypothesis_support.slots
+    assert "contextual_crop" in real.refinement.escalation_views

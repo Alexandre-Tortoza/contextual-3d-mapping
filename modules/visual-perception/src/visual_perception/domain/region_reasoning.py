@@ -27,6 +27,7 @@ região.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import StrEnum
 from math import sqrt
@@ -141,6 +142,21 @@ class PriorHypothesis:
     #: Cosseno entre os embeddings densos, quando ambos existem. ``None``
     #: significa que o desempate não teve como ser feito, e não similaridade zero.
     similarity: float | None = None
+
+    # Valida o que atravessa a fronteira do prompt. Era o único value object de
+    # domínio sem validação: sobreposição e similaridade fora de faixa e
+    # conceito vazio chegavam ao reasoner.
+    def __post_init__(self) -> None:
+        """Rejeita conceito vazio, identidade inválida e medidas fora de faixa."""
+        if not self.concept.strip():
+            raise ValueError("PriorHypothesis requires a non-empty concept.")
+        validate_identifier(self.source_region_id, field="source_region_id")
+        if not math.isfinite(self.overlap) or not 0.0 <= self.overlap <= 1.0:
+            raise ValueError(f"PriorHypothesis.overlap must be in [0, 1], got {self.overlap}.")
+        if self.similarity is not None and (
+            not math.isfinite(self.similarity) or not -1.0 <= self.similarity <= 1.0
+        ):
+            raise ValueError(f"PriorHypothesis.similarity must be in [-1, 1], got {self.similarity}.")
 
 
 #: As claims de cena que podem acompanhar uma região no prompt: **apenas** as

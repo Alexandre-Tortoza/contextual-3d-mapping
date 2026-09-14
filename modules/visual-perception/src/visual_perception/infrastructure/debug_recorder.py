@@ -51,9 +51,7 @@ class DebugRecorder:
         Argumentos:
             root: raiz do diretório DEBUG. Se None, não grava nada.
         """
-        self.root = Path(root) if root else None
-        if self.root:
-            self.root.mkdir(parents=True, exist_ok=True)
+        self.root = Path(root) if root is not None else None
 
     def record_partition(
         self,
@@ -69,7 +67,7 @@ class DebugRecorder:
                 contextual_evidence_verdict().
             suppressed: lista de SuppressedRegion, com reason e concept.
         """
-        if not self.root:
+        if self.root is None:
             return
 
         # Conta os verdicts.
@@ -92,10 +90,12 @@ class DebugRecorder:
             "suppressed_sample": suppressed_sample,
         }
 
+        # O diretório só é criado na primeira gravação, para que um recorder
+        # sem nada a registrar não deixe um DEBUG/ vazio no run.
+        self.root.mkdir(parents=True, exist_ok=True)
         path = self.root / f"{frame_id}.json"
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
-        logger.debug(f"Debug recorded partition: {path}")
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        logger.debug("Debug recorded partition: %s", path)
 
     # Usa o mesmo recorder das decisões de publicação para guardar a trilha
     # geométrica de cada região, sem depender de um preview do viewer.
@@ -103,6 +103,7 @@ class DebugRecorder:
         """Grava áreas, componentes, proveniência e falhas de grounding por frame."""
         if self.root is None:
             return
+        self.root.mkdir(parents=True, exist_ok=True)
         path = self.root / f"{frame_id}-grounding.json"
         path.write_text(json.dumps({"frame_id": frame_id, "regions": regions}, indent=2), encoding="utf-8")
 

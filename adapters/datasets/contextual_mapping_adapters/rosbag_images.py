@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,120 @@ from PIL import Image
 
 IMAGE_MESSAGE_TYPES = {"sensor_msgs/msg/Image", "sensor_msgs/msg/CompressedImage"}
 _EXCLUDED_RGB_HINTS = ("depth", "infra", "ir")
+
+#: Relógio dos timestamps registrados na extração: o instante de gravação da
+#: mensagem no bag, o mesmo usado por ``bag_timestamp_ns`` nas janelas.
+ROSBAG_CLOCK_ID = "rosbag"
+
+#: Identidade do formato do registro de proveniência escrito ao lado de cada
+#: frame. Só esta versão é lida.
+_FRAME_PROVENANCE_SCHEMA = "rosbag-frame-provenance/1"
+
+
+# Registra de onde um frame extraído veio. Existe porque o PNG sozinho não
+# carrega timestamp nem posição no stream, e sem isso um consumidor acabava
+# inventando valores: a validação de referência gravava o mesmo timestamp em
+# todos os frames. É escrito pela extração e lido por read_frame_provenance.
+@dataclass(frozen=True)
+class ExtractedFrameProvenance:
+    """Fatos da mensagem de origem de um frame extraído de uma rosbag.
+
+    Argumentos:
+        recording_id: identidade da gravação, derivada do nome do bag.
+        topic: tópico ROS de onde a imagem foi lida.
+        frame_id: ``header.frame_id`` da mensagem, ou ``None`` quando vazio.
+        timestamp_ns: instante de gravação da mensagem no relógio ``rosbag``.
+        sequence_index: posição da mensagem no stream do tópico.
+    """
+
+    recording_id: str
+    topic: str
+    frame_id: str | None
+    timestamp_ns: int
+    sequence_index: int
+
+    # Valida os tipos e limites no momento em que o registro é criado ou lido,
+    # para que um arquivo corrompido falhe na leitura e não mais adiante.
+    def __post_init__(self) -> None:
+        """Rejeita registros sem identidade ou com valores fora do domínio."""
+        for field_name in ("recording_id", "topic"):
+            value = getattr(self, field_name)
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"{field_name} must be a non-empty string, got {value!r}.")
+        if self.frame_id is not None and (not isinstance(self.frame_id, str) or not self.frame_id):
+            raise ValueError(f"frame_id must be None or a non-empty string, got {self.frame_id!r}.")
+        for field_name in ("timestamp_ns", "sequence_index"):
+            value = getattr(self, field_name)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"{field_name} must be a non-negative integer, got {value!r}.")
+
+
+# Localiza o registro de proveniência de um frame. Existe para que escrita e
+# leitura concordem sobre o nome sem que consumidores repitam a convenção.
+def frame_provenance_path(image_path: Path) -> Path:
+    """Retorna o caminho do registro de proveniência de um frame.
+
+    Argumentos:
+        image_path: PNG extraído.
+    Retorna:
+        o arquivo JSON com o mesmo nome do frame.
+    """
+    return image_path.with_suffix(".json")
+
+
+# Grava o registro de proveniência ao lado do frame. Chamada pelas duas
+# funções de extração a cada PNG escrito.
+def write_frame_provenance(image_path: Path, provenance: ExtractedFrameProvenance) -> Path:
+    """Escreve o registro de proveniência de um frame extraído.
+
+    Argumentos:
+        image_path: PNG ao qual o registro pertence.
+        provenance: fatos da mensagem de origem.
+    Retorna:
+        caminho do registro escrito.
+    """
+    destination = frame_provenance_path(image_path)
+    record = {"schema": _FRAME_PROVENANCE_SCHEMA, **asdict(provenance)}
+    destination.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return destination
+
+
+# Lê o registro de proveniência de um frame. É a fronteira pública pela qual
+# consumidores (como a validação de referência de visual-perception) obtêm
+# timestamp e posição reais do frame em vez de reconstruí-los.
+def read_frame_provenance(image_path: Path) -> ExtractedFrameProvenance:
+    """Lê e valida o registro de proveniência de um frame extraído.
+
+    Argumentos:
+        image_path: PNG extraído.
+    Retorna:
+        a proveniência registrada na extração.
+    Levanta:
+        FileNotFoundError: se o frame não tiver registro — frames extraídos
+            antes deste registro existir precisam ser extraídos de novo.
+        ValueError: se o registro tiver outro formato ou valores inválidos.
+    """
+    path = frame_provenance_path(image_path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"frame provenance record missing: {path}. Re-extract the frames from the rosbag."
+        )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(record, dict) or record.get("schema") != _FRAME_PROVENANCE_SCHEMA:
+        raise ValueError(f"{path} is not a {_FRAME_PROVENANCE_SCHEMA!r} record.")
+    fields = ("recording_id", "topic", "frame_id", "timestamp_ns", "sequence_index")
+    missing = [name for name in fields if name not in record]
+    if missing:
+        raise ValueError(f"{path} is missing fields: {missing}.")
+    return ExtractedFrameProvenance(**{name: record[name] for name in fields})
+
+
+# Lê o frame de coordenadas declarado no header de uma mensagem ROS. Local
+# porque a forma da mensagem pertence ao runtime rosbags.
+def _header_frame_id(message: object) -> str | None:
+    """Retorna ``header.frame_id`` da mensagem, ou ``None`` quando ausente ou vazio."""
+    frame_id = getattr(getattr(message, "header", None), "frame_id", None)
+    return frame_id if isinstance(frame_id, str) and frame_id else None
 
 
 # Descreve um tópico de imagem sem expor objetos do runtime rosbags. Existe
@@ -176,6 +291,16 @@ def extract_rosbag_frames(
             pixels = decode_image_message(message, connection.msgtype)
             destination = output_dir / f"{frame_id_prefix}-{sequence_index:05d}.png"
             Image.fromarray(pixels).save(destination)
+            write_frame_provenance(
+                destination,
+                ExtractedFrameProvenance(
+                    recording_id=bag_path.stem,
+                    topic=topic,
+                    frame_id=_header_frame_id(message),
+                    timestamp_ns=timestamp,
+                    sequence_index=sequence_index,
+                ),
+            )
             written.append(destination)
             if not pending:
                 break
@@ -218,12 +343,22 @@ def extract_uniform_rosbag_frames(
     written: list[Path] = []
     with AnyReader([bag_path]) as reader:
         connections = [item for item in reader.connections if item.topic == selected.name]
-        for index, (connection, _, rawdata) in enumerate(reader.messages(connections=connections)):
+        for index, (connection, timestamp, rawdata) in enumerate(reader.messages(connections=connections)):
             if index % stride != 0 or len(written) >= count:
                 continue
             message = reader.deserialize(rawdata, connection.msgtype)
             pixels = decode_image_message(message, connection.msgtype)
             destination = output_dir / f"{frame_id_prefix or bag_path.stem}-{len(written):03d}.png"
             Image.fromarray(pixels).save(destination)
+            write_frame_provenance(
+                destination,
+                ExtractedFrameProvenance(
+                    recording_id=bag_path.stem,
+                    topic=selected.name,
+                    frame_id=_header_frame_id(message),
+                    timestamp_ns=timestamp,
+                    sequence_index=index,
+                ),
+            )
             written.append(destination)
     return written

@@ -335,7 +335,7 @@ def grounding_to_dict(grounding: SemanticGrounding | None) -> dict[str, Any] | N
         "status": grounding.status.value,
         "semantic_mask": None if grounding.semantic_mask is None else mask_to_dict(grounding.semantic_mask),
         "support_pixel": None if grounding.support_pixel is None else list(grounding.support_pixel),
-        "diagnostics": grounding.diagnostics,
+        "diagnostics": dict(grounding.diagnostics),
         "prediction": {
             "region_id": prediction.region_id, "concept": prediction.concept,
             "model_mask": None if prediction.model_mask is None else mask_to_dict(prediction.model_mask),

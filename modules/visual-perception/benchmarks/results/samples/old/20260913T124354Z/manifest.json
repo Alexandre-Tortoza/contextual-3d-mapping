@@ -1,0 +1,1018 @@
+{
+  "run_id": "20260913T124354Z",
+  "region_views_override": null,
+  "git_revision": "d947b60",
+  "gpu_memory_budget_gb": 8.0,
+  "config": {
+    "quality_profile": "research_quality",
+    "gpu_memory_budget_gb": 8.0,
+    "region_discovery": {
+      "backend": "sam",
+      "checkpoint": "facebook/sam-vit-huge",
+      "score_threshold": 0.5,
+      "device": "auto",
+      "model_config": "configs/sam2.1/sam2.1_hiera_s.yaml",
+      "max_regions": 100,
+      "min_mask_area": 500,
+      "pred_iou_threshold": 0.88,
+      "stability_score_threshold": 0.95
+    },
+    "tiling": {
+      "multi_scale_enabled": false,
+      "tile_grid": "2x2",
+      "overlap_ratio": 0.2
+    },
+    "merge": {
+      "iou_merge_threshold": 0.85,
+      "containment_merge_threshold": 0.9
+    },
+    "feature_extraction": {
+      "backend": "dinov2",
+      "checkpoint": "facebook/dinov2-base",
+      "feature_resolution": 16,
+      "device": "auto",
+      "upsampling": "nearest",
+      "input_resolution": 448,
+      "max_feature_map_mb": 384,
+      "upsampler_repository": "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d",
+      "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+      "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+      "fallback_backend": null,
+      "fallback_checkpoint": null
+    },
+    "language_embedding": {
+      "backend": "clip",
+      "checkpoint": "openai/clip-vit-large-patch14",
+      "dimension": 768,
+      "device": "auto",
+      "model_name": "ViT-B-32",
+      "normalize": true
+    },
+    "multimodal_reasoning": {
+      "backend": "qwen_vl",
+      "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_version": "v8",
+      "device": "auto",
+      "max_new_tokens": 256,
+      "temperature": 0.0,
+      "load_in_4bit": true,
+      "region_views": [
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "scene_context_mode": "context_assisted",
+      "temporal_prior_mode": "disabled",
+      "temporal_prior_min_overlap": 0.3
+    },
+    "multi_context": {
+      "foreground_enabled": true,
+      "masked_subject_enabled": true,
+      "tight_crop_enabled": true,
+      "contextual_crop_enabled": true,
+      "scene_conditioned_enabled": true,
+      "context_expansion": 0.25,
+      "masked_tight_crop": false
+    },
+    "hypothesis_support": {
+      "enabled": true,
+      "source": "clip_alignment",
+      "slots": [
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "indistinguishable_margin": 0.01,
+      "prompt_template": "a photo of {concept}",
+      "template_version": "align/v1"
+    },
+    "refinement": {
+      "enabled": true,
+      "max_refined_regions": 24,
+      "escalation_views": [
+        "foreground_dense",
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "small_region_area_px": 1024,
+      "min_mask_fill_ratio": 0.15
+    },
+    "reconciliation": {
+      "enabled": true,
+      "adjacency_margin_px": 5.0,
+      "min_group_coherence": 0.6,
+      "canonicalize_labels": true
+    },
+    "semantic_relations": {
+      "enabled": true,
+      "max_pairs": 16,
+      "max_pairs_per_region": 2,
+      "min_containment": 0.6,
+      "include_adjacent": true,
+      "require_distinct_concepts": true
+    },
+    "contextual_publication": {
+      "enabled": true,
+      "extra_structural_head_nouns": []
+    },
+    "calibration": {
+      "enabled": false,
+      "method": "reliability_table",
+      "version": "calibration/1",
+      "artifact_path": null,
+      "min_visual_support": 0.2,
+      "min_region_quality": 0.0,
+      "domain": "unspecified",
+      "artifact_digest": null
+    },
+    "image_area": {
+      "valid_area": {
+        "circle": {
+          "center_x": 326.0,
+          "center_y": 244.0,
+          "radius": 324.0
+        },
+        "polygons": []
+      },
+      "ego_vehicle": {
+        "circle": null,
+        "polygons": [
+          [
+            [
+              58.0,
+              480.0
+            ],
+            [
+              58.0,
+              455.0
+            ],
+            [
+              92.0,
+              428.0
+            ],
+            [
+              148.0,
+              414.0
+            ],
+            [
+              210.0,
+              409.0
+            ],
+            [
+              218.0,
+              391.0
+            ],
+            [
+              252.0,
+              387.0
+            ],
+            [
+              286.0,
+              364.0
+            ],
+            [
+              452.0,
+              364.0
+            ],
+            [
+              458.0,
+              396.0
+            ],
+            [
+              474.0,
+              414.0
+            ],
+            [
+              496.0,
+              424.0
+            ],
+            [
+              536.0,
+              416.0
+            ],
+            [
+              578.0,
+              420.0
+            ],
+            [
+              606.0,
+              446.0
+            ],
+            [
+              606.0,
+              480.0
+            ]
+          ]
+        ]
+      }
+    },
+    "proposal_filter": {
+      "min_relative_area": 0.002,
+      "max_relative_area": 0.6,
+      "min_valid_overlap": 0.5,
+      "max_ego_overlap": 0.3
+    },
+    "semantic_grounding": {
+      "backend": "grounded_sam",
+      "detector_checkpoint": "IDEA-Research/grounding-dino-base",
+      "segmenter_checkpoint": "facebook/sam-vit-huge",
+      "device": "auto",
+      "detection_threshold": 0.4,
+      "text_threshold": 0.3,
+      "duplicate_box_iou": 0.85,
+      "min_mask_area": 1
+    }
+  },
+  "config_fingerprint": "6dfd8f540f40983ea71abc55060c71341ec56f6ee71e68080c43fe58c9217a1b",
+  "frame_count": 31,
+  "ordered_frame_ids": [
+    "corridor-02-02148",
+    "corridor-02-02156",
+    "corridor-02-02163",
+    "corridor-02-02171",
+    "corridor-02-02179",
+    "corridor-02-02188",
+    "corridor-02-02196",
+    "corridor-02-02203",
+    "corridor-02-02211",
+    "corridor-02-02219",
+    "corridor-02-02228",
+    "corridor-02-02236",
+    "corridor-02-02244",
+    "corridor-02-02251",
+    "corridor-02-02259",
+    "corridor-02-02267",
+    "corridor-02-02276",
+    "corridor-02-02284",
+    "corridor-02-02291",
+    "corridor-02-02299",
+    "corridor-02-02307",
+    "corridor-02-02316",
+    "corridor-02-02324",
+    "corridor-02-02332",
+    "corridor-02-02339",
+    "corridor-02-02347",
+    "corridor-02-02355",
+    "corridor-02-02364",
+    "corridor-02-02371",
+    "corridor-02-02379",
+    "corridor-02-02387"
+  ],
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames",
+  "selection": {
+    "frame_ids": [],
+    "limit": null
+  },
+  "canonical_output": "frames",
+  "frame_artifact_layout": "frames/3",
+  "context_profile": "full",
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "sequence_masks": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/sequence-masks/corridor-02.json",
+  "lifecycle_metrics": [
+    {
+      "stage_name": "region_discovery:facebook/sam-vit-huge:cuda",
+      "load_time_s": 4.112468590996286,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7261356544,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7261356544,
+      "peak_cpu_rss_bytes": 9772199936
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 1.0483493560022907,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7261356544,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7261356544,
+      "peak_cpu_rss_bytes": 9772199936
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 3.64075337399845,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7261356544,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7261356544,
+      "peak_cpu_rss_bytes": 9772199936
+    }
+  ],
+  "frames": [
+    {
+      "frame_id": "corridor-02-02148",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02148.png",
+        "sha256": "30dd5dd3b910cea8899a44ed56dd3507c70eaf5cb1afa21a6404da9bb1428a5d",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02148",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2148,
+          "timestamp_ns": 1724621178450286723,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02148.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'qwen_vl' falhou durante o carregamento do VLM: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.76 GiB is allocated by PyTorch, and 136.49 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 30.74543239599734
+    },
+    {
+      "frame_id": "corridor-02-02156",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02156.png",
+        "sha256": "1bc27e0175e5032bd1231a22976e100ae7af330a98d4a4400380b35e217cb8f5",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02156",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2156,
+          "timestamp_ns": 1724621178783896111,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02156.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5522416149979108
+    },
+    {
+      "frame_id": "corridor-02-02163",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02163.png",
+        "sha256": "207535e0982886c238f29b759f769313af4f6b894d8127986e64ffce8fa5ea73",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02163",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2163,
+          "timestamp_ns": 1724621179075122163,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02163.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5466051570037962
+    },
+    {
+      "frame_id": "corridor-02-02171",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02171.png",
+        "sha256": "41b9d9e5767a2334e31ea67731cfd3b4c2f024965b40d56524e9c91f6a99cba4",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02171",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2171,
+          "timestamp_ns": 1724621179422310924,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02171.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5519774720014539
+    },
+    {
+      "frame_id": "corridor-02-02179",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02179.png",
+        "sha256": "4c333f92d388325ea3c0ccd0649d2cc666abcabd651f2571d7584de857a99db3",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02179",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2179,
+          "timestamp_ns": 1724621179748535222,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02179.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5409959030002938
+    },
+    {
+      "frame_id": "corridor-02-02188",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02188.png",
+        "sha256": "41876ee623ac92ba0de3b61d7e7803501e09cc8d63a24f8de695690e9453c13c",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02188",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2188,
+          "timestamp_ns": 1724621180118116667,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02188.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5535584809986176
+    },
+    {
+      "frame_id": "corridor-02-02196",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02196.png",
+        "sha256": "847648efb93f23780fb184e1f608d91854104b148e0e3d1949c52bd6ae257ada",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02196",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2196,
+          "timestamp_ns": 1724621180458913673,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02196.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5465960709989304
+    },
+    {
+      "frame_id": "corridor-02-02203",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02203.png",
+        "sha256": "4bfd17e400db607893ae45afd5cfaccee7b95053635c123e7d727a7738ef7e28",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02203",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2203,
+          "timestamp_ns": 1724621180743723021,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02203.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5452130589983426
+    },
+    {
+      "frame_id": "corridor-02-02211",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02211.png",
+        "sha256": "c64bbc65a8a1c8242c8200029522e307726488637b8353512249c819420f5b3d",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02211",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2211,
+          "timestamp_ns": 1724621181076865585,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02211.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5486118080007145
+    },
+    {
+      "frame_id": "corridor-02-02219",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02219.png",
+        "sha256": "7a0f3b5707a33b3ac7fa21f6509aed094dae4e6b6f38394f7159795ff4d61e96",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02219",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2219,
+          "timestamp_ns": 1724621181410686386,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02219.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5524099660033244
+    },
+    {
+      "frame_id": "corridor-02-02228",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02228.png",
+        "sha256": "db3608166bf19428bf273a35c5e8b92a7e6817cf2382302dad641f5bc739bef6",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02228",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2228,
+          "timestamp_ns": 1724621181784814916,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02228.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5543681130002369
+    },
+    {
+      "frame_id": "corridor-02-02236",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02236.png",
+        "sha256": "ac0e285c7a36b66aa55d359e6968e7ccbab7821bf0a0f737399bcfa82b713ad0",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02236",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2236,
+          "timestamp_ns": 1724621182117966453,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02236.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5454619439988164
+    },
+    {
+      "frame_id": "corridor-02-02244",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02244.png",
+        "sha256": "c236aa352506d8e297b9e22b298dbb26631a35b6ceffe72e1bae0c211fba747f",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02244",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2244,
+          "timestamp_ns": 1724621182450550616,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02244.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5511279080019449
+    },
+    {
+      "frame_id": "corridor-02-02251",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02251.png",
+        "sha256": "b677451e57d0b3e008e79b7613ce1af30efdd15675e15527868b4d85830f4f23",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02251",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2251,
+          "timestamp_ns": 1724621182743879132,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02251.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5471980379952583
+    },
+    {
+      "frame_id": "corridor-02-02259",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02259.png",
+        "sha256": "54319f224d9a42fbcf9cb19bc5c877eec6e1d8a869a44a629f971dc074f8856f",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02259",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2259,
+          "timestamp_ns": 1724621183084513046,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02259.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5501478520018281
+    },
+    {
+      "frame_id": "corridor-02-02267",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02267.png",
+        "sha256": "cf853dcc555284974cc1f9cb094e81d79145ef202234ad2e5cb39d1dacc7a26e",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02267",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2267,
+          "timestamp_ns": 1724621183410056224,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02267.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5415698970027734
+    },
+    {
+      "frame_id": "corridor-02-02276",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02276.png",
+        "sha256": "c7e980331bc865b70d03c6487011ca8a4595dbb94416cfd190afc3eed5bee85c",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02276",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2276,
+          "timestamp_ns": 1724621183786220656,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02276.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5406627710035536
+    },
+    {
+      "frame_id": "corridor-02-02284",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02284.png",
+        "sha256": "9aa0a617ec0b1f8439ee30c4ea5ad631c17d187ba34ec8568cfd0030edcd1999",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02284",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2284,
+          "timestamp_ns": 1724621184116679386,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02284.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5444797349991859
+    },
+    {
+      "frame_id": "corridor-02-02291",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02291.png",
+        "sha256": "7526d4fcd67604bb8e699a93f90f73bfb5bc1d160c8d4d188c799b235a0919b7",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02291",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2291,
+          "timestamp_ns": 1724621184423704396,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02291.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5475379359995713
+    },
+    {
+      "frame_id": "corridor-02-02299",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02299.png",
+        "sha256": "0f70c4fbb669bfcc1d0598770ac477e2d9d5bedb413737ccfaa5f34bd9aed713",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02299",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2299,
+          "timestamp_ns": 1724621184744739810,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02299.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5435227049965761
+    },
+    {
+      "frame_id": "corridor-02-02307",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02307.png",
+        "sha256": "f35aa3a6a9e0b6f27a9083422e9057ea2f8770642f4d3d7319ef5d1c89e48b04",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02307",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2307,
+          "timestamp_ns": 1724621185076564661,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02307.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5488452739955392
+    },
+    {
+      "frame_id": "corridor-02-02316",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02316.png",
+        "sha256": "8a87ef39983e3c6946f87d4278439a41bdf3b09527ec67c26b5fdcb7896deee3",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02316",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2316,
+          "timestamp_ns": 1724621185454736437,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02316.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5435489650044474
+    },
+    {
+      "frame_id": "corridor-02-02324",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02324.png",
+        "sha256": "bb3db7bf9b9db0633257ded168f6cdad4f6741674ec888862d6aea9157b5dd7b",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02324",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2324,
+          "timestamp_ns": 1724621185785478914,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02324.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5413509520003572
+    },
+    {
+      "frame_id": "corridor-02-02332",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02332.png",
+        "sha256": "10cd57933b19b22323ebe166e081205b0f95e80b080417700590dec030bf7a48",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02332",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2332,
+          "timestamp_ns": 1724621186119056031,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02332.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5465288459963631
+    },
+    {
+      "frame_id": "corridor-02-02339",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02339.png",
+        "sha256": "3ed10c6970b9435f79a8d957a0923b80475c2222b90a975b1789fbac99b761c7",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02339",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2339,
+          "timestamp_ns": 1724621186421356280,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02339.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5458803820001776
+    },
+    {
+      "frame_id": "corridor-02-02347",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02347.png",
+        "sha256": "07555878d104027639ad4ed679058f4177863ea262102ae7e1656b4ed8d519e9",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02347",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2347,
+          "timestamp_ns": 1724621186745156994,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02347.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5506167860003188
+    },
+    {
+      "frame_id": "corridor-02-02355",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02355.png",
+        "sha256": "0b197b8127b0c6708e5ddc4dbebd81b8217142b034e59991ae30c56f3a62d586",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02355",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2355,
+          "timestamp_ns": 1724621187078945113,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02355.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5465198189995135
+    },
+    {
+      "frame_id": "corridor-02-02364",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02364.png",
+        "sha256": "3a593b4b3b6dd76726654ec31be5558e8de36c645bfd78f1d216f2097fa5eaba",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02364",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2364,
+          "timestamp_ns": 1724621187452384148,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02364.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5478963290006504
+    },
+    {
+      "frame_id": "corridor-02-02371",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02371.png",
+        "sha256": "7d0aebac38e530b023c36ad55ffdbf7a450130e49a471be0d8a622898c4d02a8",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02371",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2371,
+          "timestamp_ns": 1724621187751067540,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02371.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5416770029987674
+    },
+    {
+      "frame_id": "corridor-02-02379",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02379.png",
+        "sha256": "eaa91f96088a5672fb1d199a39367ab57faadc532748d43be755797b889eae1c",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02379",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2379,
+          "timestamp_ns": 1724621188076922368,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02379.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5531559590017423
+    },
+    {
+      "frame_id": "corridor-02-02387",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02387.png",
+        "sha256": "a7145bea09487ba4abb9a1211278ee62536cb6f9da1c05d6b479a3a0fc4c63ae",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-02387",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2387,
+          "timestamp_ns": 1724621188413107441,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/artifacts/corridor-02-dist-02-frames/corridor-02-02387.png"
+        }
+      },
+      "failed": true,
+      "reason": "BackendExecutionError(\"O backend 'sam' falhou durante a gera\u00e7\u00e3o autom\u00e1tica de m\u00e1scaras: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 111.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.02 GiB memory in use. Of the allocated memory 6.32 GiB is allocated by PyTorch, and 583.92 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\")",
+      "latency_s": 0.5471454910002649
+    }
+  ]
+}

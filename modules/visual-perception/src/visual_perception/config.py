@@ -20,7 +20,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
-from visual_perception.domain.image_area import ImageAreaGeometry, ImageAreaMasks
+from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry, ImageAreaMasks
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
 from visual_perception.domain.region_reasoning import SceneContextMode, TemporalPriorMode
 
@@ -86,7 +86,6 @@ class RegionDiscoveryConfig:
     checkpoint: str = "none"
     score_threshold: float = 0.5
     device: str = "auto"
-    model_config: str = "configs/sam2.1/sam2.1_hiera_s.yaml"
     max_regions: int = 100
     min_mask_area: int = 64
     #: Qualidade mínima que o SAM exige da máscara predita, e estabilidade
@@ -107,8 +106,6 @@ class RegionDiscoveryConfig:
             raise ValueError("region_discovery.score_threshold must be in [0, 1].")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("region_discovery.device must be 'auto', 'cpu', or 'cuda'.")
-        if not self.model_config:
-            raise ValueError("region_discovery.model_config must not be empty.")
         for name in ("pred_iou_threshold", "stability_score_threshold"):
             value = getattr(self, name)
             if not 0.0 <= value <= 1.0:
@@ -180,6 +177,18 @@ class ImageAreaConfig:
 
     valid_area: ImageAreaGeometry | None = None
     ego_vehicle: ImageAreaGeometry | None = None
+
+    # Recusa qualquer coisa que não seja geometria já construída. Existe porque
+    # uma config relida de disco chegava aqui com dicts no lugar das geometrias,
+    # passava calada e só quebrava quando o pipeline tentava rasterizar.
+    def __post_init__(self) -> None:
+        """Rejeita áreas que não sejam ``ImageAreaGeometry`` ou ``None``."""
+        for name in ("valid_area", "ego_vehicle"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, ImageAreaGeometry):
+                raise TypeError(
+                    f"image_area.{name} must be an ImageAreaGeometry or None, got {type(value).__name__}."
+                )
 
     # Rasteriza as geometrias declaradas na resolução do frame. Chamada uma vez
     # por frame pelo pipeline, para que a filtragem compare máscaras já prontas
@@ -335,6 +344,20 @@ class MultiContextConfig:
                 "multi_context.contextual_crop_enabled requires a positive context_expansion."
             )
 
+    # Lista os slots que o estágio de evidência efetivamente produz. Existe para
+    # que estágios que consomem slots sejam validados contra o que existe, em
+    # vez de pedirem um slot desligado e receberem sempre "indisponível".
+    def enabled_slots(self) -> frozenset[EvidenceSlot]:
+        """Retorna os slots de evidência habilitados nesta configuração."""
+        flags = {
+            EvidenceSlot.FOREGROUND_DENSE: self.foreground_enabled,
+            EvidenceSlot.MASKED_SUBJECT: self.masked_subject_enabled,
+            EvidenceSlot.TIGHT_CROP: self.tight_crop_enabled,
+            EvidenceSlot.CONTEXTUAL_CROP: self.contextual_crop_enabled,
+            EvidenceSlot.SCENE_CONDITIONED: self.scene_conditioned_enabled,
+        }
+        return frozenset(slot for slot, enabled in flags.items() if enabled)
+
 
 # Configuração do estágio de suporte de hipótese por alinhamento (#214).
 # Existe porque este estágio tem um input de modelo que é texto — o template
@@ -352,10 +375,11 @@ class HypothesisSupportConfig:
             calibração volta a não ter suporte visual independente.
         source: identidade do produtor do sinal, gravada em cada
             :class:`HypothesisSupportSignal` e nos reports.
-        slots: quais slots de evidência são comparados, na ordem canônica. Os
-            três defaults são exatamente os que possuem embedding de linguagem
-            já calculado pelo estágio de evidência: o sinal custa apenas o
-            encoding do texto.
+        slots: quais slots de evidência são comparados, na ordem canônica. Todo
+            slot listado precisa estar habilitado em ``multi_context`` — um slot
+            que não é produzido geraria sempre um sinal indisponível. Os
+            defaults são os slots de linguagem habilitados por default; o perfil
+            real acrescenta o crop contextual, que ele habilita.
         indistinguishable_margin: piso abaixo do qual a diferença entre duas
             hipóteses não é reportada como vitória de nenhuma. Medido nos
             frames de referência, a margem mediana entre primária e melhor
@@ -370,7 +394,6 @@ class HypothesisSupportConfig:
     slots: tuple[str, ...] = (
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
-        EvidenceSlot.CONTEXTUAL_CROP.value,
     )
     indistinguishable_margin: float = 0.01
     prompt_template: str = "a photo of {concept}"
@@ -409,12 +432,13 @@ class RefinementConfig:
     """Quando uma região é reinterpretada, e com qual evidência nova.
 
     Argumentos:
-        enabled: se o estágio roda.
-        max_iterations: teto de passes. O loop também para sozinho assim que
-            nenhuma região tem razão **e** caminho de evidência novo.
-        max_regions_per_iteration: teto de regiões reprocessadas por passe.
-            Existe como orçamento de latência explícito, e a seleção dentro do
-            teto é determinística por prioridade de razão.
+        enabled: se o estágio roda. O refinamento é um passe único: o
+            escalonamento é um conjunto fixo de views, então um segundo passe
+            repetiria a mesma evidência. Até a #247 existia um
+            ``max_iterations`` que, acima de 1, não mudava nada.
+        max_refined_regions: teto de regiões reprocessadas no passe. Existe
+            como orçamento de latência explícito, e a seleção dentro do teto é
+            determinística por prioridade de razão.
         escalation_views: as views usadas no passe de refinamento. Precisa ser
             diferente do conjunto do passe anterior: repetir a mesma chamada
             com a mesma evidência e temperatura zero é pedir de novo esperando
@@ -439,13 +463,11 @@ class RefinementConfig:
     """
 
     enabled: bool = True
-    max_iterations: int = 1
-    max_regions_per_iteration: int = 24
+    max_refined_regions: int = 24
     escalation_views: tuple[str, ...] = (
         EvidenceSlot.FOREGROUND_DENSE.value,
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
-        EvidenceSlot.CONTEXTUAL_CROP.value,
     )
     small_region_area_px: int = 1024
     min_mask_fill_ratio: float = 0.15
@@ -453,10 +475,8 @@ class RefinementConfig:
     # Valida tetos, fração e o vocabulário de views de escalonamento.
     def __post_init__(self) -> None:
         """Rejeita tetos negativos, frações inválidas e views desconhecidas."""
-        if self.max_iterations < 0:
-            raise ValueError("refinement.max_iterations must not be negative.")
-        if self.max_regions_per_iteration <= 0:
-            raise ValueError("refinement.max_regions_per_iteration must be positive.")
+        if self.max_refined_regions <= 0:
+            raise ValueError("refinement.max_refined_regions must be positive.")
         if self.small_region_area_px < 0:
             raise ValueError("refinement.small_region_area_px must not be negative.")
         if not 0.0 <= self.min_mask_fill_ratio <= 1.0:
@@ -601,6 +621,9 @@ class CalibrationConfig:
     min_visual_support: float = 0.2
     min_region_quality: float = 0.0
     domain: str = "unspecified"
+    #: SHA-256 do artifact de calibração, calculado uma vez na construção. Faz
+    #: parte do fingerprint: uma tabela diferente produz claims diferentes.
+    artifact_digest: str | None = field(default=None, init=False)
 
     # Valida o método, a versão e os limiares de abstenção, e exige um
     # artifact quando o método é orientado a dados: calibrar sem artifact
@@ -622,6 +645,14 @@ class CalibrationConfig:
                 "calibration.enabled requires an artifact_path: a calibration rule without "
                 "measured data would fabricate the confidence it claims to calibrate."
             )
+        # O artifact é lido aqui, uma única vez: antes o fingerprint relia o
+        # arquivo a cada chamada, e uma config válida na construção levantava
+        # FileNotFoundError só quando a chave de cache era calculada.
+        if self.artifact_path is not None:
+            artifact = Path(self.artifact_path)
+            if not artifact.is_file():
+                raise ValueError(f"calibration.artifact_path does not exist: {artifact}.")
+            object.__setattr__(self, "artifact_digest", hashlib.sha256(artifact.read_bytes()).hexdigest())
 
 
 # Configuração do backend de embedding alinhado com linguagem (LanguageAlignedEncoder).
@@ -789,8 +820,20 @@ class ModuleConfig:
     # sozinhos), como a incompatibilidade entre o profile REDUCED_COST e
     # tiling multi-scale (#181).
     def __post_init__(self) -> None:
+        """Valida invariantes entre sub-configs."""
         if self.gpu_memory_budget_gb <= 0:
             raise ValueError("gpu_memory_budget_gb must be positive.")
+        enabled_slots = self.multi_context.enabled_slots()
+        for field_name, requested, active in (
+            ("hypothesis_support.slots", self.hypothesis_support.slots, self.hypothesis_support.enabled),
+            ("refinement.escalation_views", self.refinement.escalation_views, self.refinement.enabled),
+        ):
+            disabled = [name for name in requested if EvidenceSlot(name) not in enabled_slots]
+            if active and disabled:
+                raise ValueError(
+                    f"{field_name} requests evidence slots disabled in multi_context: {disabled}. "
+                    "Enable them in multi_context or remove them from the request."
+                )
         if (
             self.quality_profile is QualityProfile.REDUCED_COST
             and self.tiling.multi_scale_enabled
@@ -804,6 +847,7 @@ class ModuleConfig:
     # um dict simples, usado tanto para persistência quanto para o cálculo
     # de ``fingerprint``.
     def to_dict(self) -> dict[str, Any]:
+        """Serializa a configuração inteira em tipos JSON simples."""
         payload = asdict(self)
         payload["quality_profile"] = self.quality_profile.value
         return payload
@@ -813,6 +857,15 @@ class ModuleConfig:
     # um arquivo de config da aplicação.
     @staticmethod
     def from_dict(payload: dict[str, Any]) -> ModuleConfig:
+        """Reconstrói a configuração, inclusive geometrias aninhadas e tuplas.
+
+        Argumentos:
+            payload: dict produzido por ``to_dict``, direto ou relido de JSON.
+        Retorna:
+            a configuração igual à que foi serializada.
+        Levanta:
+            ValueError: se o artifact de calibração mudou desde a serialização.
+        """
         payload = dict(payload)
         payload["quality_profile"] = QualityProfile(
             payload.get("quality_profile", QualityProfile.RESEARCH_QUALITY.value)
@@ -836,7 +889,12 @@ class ModuleConfig:
             ("semantic_grounding", SemanticGroundingConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
-                payload[key] = config_type(**payload[key])
+                if key == "image_area":
+                    payload[key] = _image_area_from_dict(payload[key])
+                elif key == "calibration":
+                    payload[key] = _calibration_from_dict(payload[key])
+                else:
+                    payload[key] = config_type(**_as_tuples(payload[key]))
         return ModuleConfig(**payload)
 
     # Calcula uma identidade estável da configuração inteira, usada como
@@ -845,9 +903,54 @@ class ModuleConfig:
     def fingerprint(self) -> str:
         """Um hash estável da configuração completa, usado para caching (#170)."""
         payload = self.to_dict()
-        if self.calibration.artifact_path is not None:
-            payload["calibration_artifact_digest"] = hashlib.sha256(
-                Path(self.calibration.artifact_path).read_bytes()
-            ).hexdigest()
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+# Converte listas em tuplas, recursivamente. Existe porque toda sequência das
+# configs é tupla, e uma config relida de JSON chegava com listas: os campos
+# eram aceitos, mas a config deixava de ser igual à que foi escrita.
+def _as_tuples(value: Any) -> Any:
+    """Retorna ``value`` com toda lista, em qualquer profundidade, trocada por tupla."""
+    if isinstance(value, dict):
+        return {key: _as_tuples(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return tuple(_as_tuples(item) for item in value)
+    return value
+
+
+# Reconstrói uma geometria de área serializada por ``asdict``. Isolada porque
+# as duas áreas usam o mesmo formato.
+def _geometry_from_dict(payload: dict[str, Any] | None) -> ImageAreaGeometry | None:
+    """Converte o dict de uma geometria de área, ou ``None``."""
+    if payload is None:
+        return None
+    circle = payload.get("circle")
+    return ImageAreaGeometry(
+        circle=None if circle is None else CircleArea(**circle),
+        polygons=_as_tuples(payload.get("polygons", ())),
+    )
+
+
+# Reconstrói a configuração de áreas com geometrias de verdade, e não dicts.
+def _image_area_from_dict(payload: dict[str, Any]) -> ImageAreaConfig:
+    """Converte o dict de ``ImageAreaConfig`` produzido por ``to_dict``."""
+    return ImageAreaConfig(
+        valid_area=_geometry_from_dict(payload.get("valid_area")),
+        ego_vehicle=_geometry_from_dict(payload.get("ego_vehicle")),
+    )
+
+
+# Reconstrói a configuração de calibração conferindo o digest gravado. Existe
+# porque o digest é derivado do arquivo: se o artifact mudou desde que a
+# config foi escrita, reler a config reproduziria outra calibração em silêncio.
+def _calibration_from_dict(payload: dict[str, Any]) -> CalibrationConfig:
+    """Converte o dict de ``CalibrationConfig`` e valida o digest do artifact."""
+    fields = dict(payload)
+    recorded_digest = fields.pop("artifact_digest", None)
+    config = CalibrationConfig(**fields)
+    if recorded_digest is not None and recorded_digest != config.artifact_digest:
+        raise ValueError(
+            f"calibration artifact {config.artifact_path} changed since this configuration was written."
+        )
+    return config

@@ -18,3 +18,11 @@ rosbags. Sua API pública inspeciona duração e tópicos, seleciona o stream RG
 principal e extrai imagens identificadas por timestamp e índice original. A
 CLI usa essa fronteira para não duplicar parsing ROS ou regras de encoding; o
 harness histórico de `visual-perception` delega à mesma implementação.
+
+Cada PNG extraído ganha, ao lado, um registro `<frame>.json`
+(`rosbag-frame-provenance/1`) com os fatos da mensagem de origem: gravação,
+tópico, `header.frame_id`, timestamp de gravação no relógio `rosbag` e posição
+no stream. O PNG sozinho não carrega nada disso, e um consumidor que precisasse
+desses valores acabava inventando-os. `read_frame_provenance` é a leitura
+pública; um frame sem registro falha pedindo nova extração, e só a versão atual
+do formato é lida.

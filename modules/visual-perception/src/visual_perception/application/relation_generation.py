@@ -19,11 +19,8 @@ mesma certeza máxima. Uma relation inferida por modelo sem score fica com
 
 from __future__ import annotations
 
-from typing import Any
-
 from visual_perception.application.support import fingerprint_of
 from visual_perception.config import RegionMergeConfig
-from visual_perception.domain.identifiers import validate_identifier
 from visual_perception.domain.references import ModelProvenance
 from visual_perception.domain.regions import ObservedRegion
 from visual_perception.domain.relations import (
@@ -37,15 +34,15 @@ _CONTAINMENT_THRESHOLD = 0.9
 _ADJACENCY_MARGIN_PX = 5.0
 
 
-# Ponto de entrada público: gera todas as relations candidatas de uma
-# observation, combinando relations geométricas (calculadas par a par entre
-# regions) com relations inferidas por modelo (já resolvidas para region ids
-# canônicos), e valida que todas as referências apontam para regions
-# conhecidas. Chamada pelo pipeline principal após o merge de regions.
+# Ponto de entrada público: gera as relations geométricas candidatas de uma
+# observation, calculadas par a par entre regions, e valida que todas as
+# referências apontam para regions conhecidas. Chamada pelo pipeline principal
+# após o merge de regions. Relações inferidas por modelo são produzidas por
+# application/semantic_relations.py; o caminho antigo que aceitava dicts soltos
+# aqui nunca era usado pelo pipeline e aceitava predicados fora do vocabulário.
 def generate_relations(
     regions: tuple[ObservedRegion, ...],
     config: RegionMergeConfig,
-    inferred_relations: tuple[dict[str, Any], ...] = (),
 ) -> tuple[CandidateRelation, ...]:
     """Gera relations candidatas, referenciando apenas as regions canônicas fornecidas."""
     geometric_provenance = ModelProvenance(
@@ -57,9 +54,6 @@ def generate_relations(
             relations.extend(
                 _geometric_relations(subject, target, geometric_provenance)
             )
-
-    for index, raw in enumerate(inferred_relations):
-        relations.append(_model_inferred_relation(raw, index))
 
     known_ids = frozenset(region.region_id for region in regions)
     result = tuple(relations)
@@ -158,42 +152,3 @@ def _box_proximity(subject: ObservedRegion, target: ObservedRegion) -> float | N
     if gap > _ADJACENCY_MARGIN_PX:
         return None
     return 1.0 - gap / _ADJACENCY_MARGIN_PX
-
-
-# Converte uma relation bruta inferida por modelo (dict solto vindo do
-# reasoner) em uma CandidateRelation validada, verificando os campos
-# obrigatórios e os identifiers antes de aceitar o dado externo. Chamada
-# por generate_relations para cada relation em inferred_relations.
-def _model_inferred_relation(raw: dict[str, Any], index: int) -> CandidateRelation:
-    try:
-        subject_id = str(raw["subject_region_id"])
-        predicate = str(raw["predicate"])
-        object_id = str(raw["object_region_id"])
-    except KeyError as error:
-        raise ValueError(f"Malformed inferred relation at index {index}: missing {error}.") from error
-    validate_identifier(subject_id, field="subject_region_id")
-    validate_identifier(object_id, field="object_region_id")
-    provenance = ModelProvenance(
-        stage="relation_generation",
-        producer=str(raw.get("producer", "multimodal_reasoner")),
-        config_fingerprint=str(raw.get("config_fingerprint", "unknown")),
-    )
-    raw_confidence = raw.get("confidence")
-    if raw_confidence is not None and (
-        isinstance(raw_confidence, bool) or not isinstance(raw_confidence, int | float)
-    ):
-        raise ValueError(
-            f"Malformed inferred relation at index {index}: 'confidence' must be a number or absent."
-        )
-    return CandidateRelation(
-        relation_id=f"rel-inferred-{index}-{subject_id}-{object_id}",
-        subject_region_id=subject_id,
-        predicate=predicate,
-        object_region_id=object_id,
-        confidence=(
-            None if raw_confidence is None else ConfidenceScore(float(raw_confidence), provenance.producer)
-        ),
-        source=RelationSource.MODEL_INFERRED,
-        evidence=(Evidence(description="model-inferred relation from contextual analysis"),),
-        provenance=provenance,
-    )

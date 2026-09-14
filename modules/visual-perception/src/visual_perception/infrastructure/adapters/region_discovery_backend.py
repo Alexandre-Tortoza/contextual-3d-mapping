@@ -36,11 +36,10 @@ class RealRegionDiscoveryAdapter:
     stages canônicos de semântica e de merge.
     """
 
-    # Recebe (ou cria, se omitido) o lifecycle manager que carrega/libera o
-    # pipeline sob demanda. Compartilhar o mesmo manager entre os 4 adapters
-    # reais (ver ``factory.py``) garante que no máximo um modelo pesado
-    # fica residente por vez, mesmo com ``PerceptionPorts`` construído com
-    # os 4 adapters já instanciados.
+    # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
+    # residente o pipeline sob demanda. Compartilhar o mesmo manager entre
+    # os 4 adapters reais (ver ``factory.py``) permite reaproveitar modelos
+    # já residentes entre estágios intercalados no mesmo frame.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
         """Inicializa o adapter sem carregar pesos ou bibliotecas opcionais."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
@@ -51,14 +50,21 @@ class RealRegionDiscoveryAdapter:
         self, image: ImagePayload, config: RegionDiscoveryConfig
     ) -> tuple[LocalRegionProposal, ...]:
         """Retorna propostas locais do SAM preservando máscaras e confiança geométrica."""
+        checkpoint = require_checkpoint(config.checkpoint, config.backend)
+        torch = require_module("torch", config.backend)
+        device = resolve_device(torch, config.device, config.backend)
+        key = f"region_discovery:{checkpoint}:{device}"
         generator = self._get_generator(config)
         try:
-            output = generator(
-            payload_to_pil(image, config.backend),
-            points_per_batch=64,
-            pred_iou_thresh=config.pred_iou_threshold,
-            stability_score_thresh=config.stability_score_threshold,
-        )
+            output = self._lifecycle.call_with_eviction(
+                key,
+                lambda: generator(
+                    payload_to_pil(image, config.backend),
+                    points_per_batch=16,
+                    pred_iou_thresh=config.pred_iou_threshold,
+                    stability_score_thresh=config.stability_score_threshold,
+                ),
+            )
         except BackendExecutionError:
             raise
         except Exception as error:
@@ -93,6 +99,11 @@ class RealRegionDiscoveryAdapter:
                     "mask-generation", model=checkpoint, device=device_index, dtype=torch.float32
                 )
             except BackendUnavailableError:
+                raise
+            except (MemoryError, torch.cuda.OutOfMemoryError):
+                # Ver comentário equivalente em feature_extraction_backend.py:
+                # preserva o tipo de OOM para que _load_with_eviction possa
+                # liberar residentes por LRU e tentar de novo.
                 raise
             except Exception as error:
                 raise_backend_execution_error(config.backend, "o carregamento do SAM", error)

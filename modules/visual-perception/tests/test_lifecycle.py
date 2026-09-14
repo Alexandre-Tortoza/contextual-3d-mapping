@@ -1,4 +1,4 @@
-"""Testes sequenciais de ciclo de vida de modelo e diagnóstico de memória (#171). Só adapters fake."""
+"""Testes de ciclo de vida de modelo residente e diagnóstico de memória (#171). Só adapters fake."""
 
 from __future__ import annotations
 
@@ -81,33 +81,34 @@ def test_get_or_load_reuses_model_for_same_key() -> None:
     assert len(manager.metrics) == 1
 
 
-# Confirma a razão de existir de get_or_load para os adapters reais: pedir uma
-# key diferente libera o modelo ativo antes de carregar o novo, garantindo que
-# no máximo um modelo pesado fica residente por vez mesmo quando os 4 adapters
-# compartilham este manager.
-def test_get_or_load_releases_previous_model_on_key_change() -> None:
+# Confirma a razão de existir de get_or_load para os adapters reais: pedir
+# uma key diferente NÃO libera o modelo já residente — ambos ficam
+# disponíveis para chamadas futuras, já que a VRAM não estourou.
+def test_get_or_load_keeps_multiple_models_resident() -> None:
     manager = ModelLifecycleManager()
 
     manager.get_or_load("region_discovery", _FakeModel)
     manager.get_or_load("feature_extraction", _FakeModel)
 
     assert [m.stage_name for m in manager.metrics] == ["region_discovery", "feature_extraction"]
-    assert manager._active_key == "feature_extraction"  # noqa: SLF001 - test-only introspection
+    assert manager.resident_keys == ("region_discovery", "feature_extraction")
 
 
-# Garante que release_active limpa o estado ativo, para que um pipeline possa
-# não deixar nada residente ao terminar.
-def test_release_active_clears_state() -> None:
+# Garante que release_all limpa todo o estado residente, para que um
+# pipeline possa não deixar nada residente ao terminar.
+def test_release_all_clears_state() -> None:
     manager = ModelLifecycleManager()
     manager.get_or_load("region_discovery", _FakeModel)
+    manager.get_or_load("feature_extraction", _FakeModel)
 
-    manager.release_active()
+    manager.release_all()
 
-    assert manager._active_key is None  # noqa: SLF001 - test-only introspection
+    assert manager.resident_keys == ()
 
 
 # Garante que um MemoryError durante o load em get_or_load também é convertido
-# em BackendExecutionError, com a mesma garantia de `stage`.
+# em BackendExecutionError, com a mesma garantia de `stage`, quando não há
+# mais nada residente para liberar.
 def test_get_or_load_oom_surfaces_as_backend_execution_error() -> None:
     def failing_factory() -> _FakeModel:
         raise MemoryError
@@ -115,3 +116,40 @@ def test_get_or_load_oom_surfaces_as_backend_execution_error() -> None:
     manager = ModelLifecycleManager()
     with pytest.raises(BackendExecutionError):
         manager.get_or_load("region_discovery", failing_factory)
+
+
+# Confirma a eviction reativa: um load novo que estoura a VRAM libera o
+# modelo residente menos recentemente usado e tenta de novo, sem propagar
+# o OOM se a segunda tentativa couber.
+def test_get_or_load_evicts_lru_on_oom_and_retries() -> None:
+    manager = ModelLifecycleManager()
+    manager.get_or_load("region_discovery", _FakeModel)
+    manager.get_or_load("feature_extraction", _FakeModel)
+
+    attempts = []
+
+    def factory() -> _FakeModel:
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise MemoryError
+        return _FakeModel()
+
+    manager.get_or_load("multimodal_reasoning", factory)
+
+    assert len(attempts) == 2
+    assert manager.resident_keys == ("feature_extraction", "multimodal_reasoning")
+
+
+# Confirma que, sem nada residente para liberar, um OOM persistente ainda
+# vira BackendExecutionError em vez de tentar para sempre.
+def test_get_or_load_raises_when_no_more_to_evict() -> None:
+    manager = ModelLifecycleManager()
+    manager.get_or_load("region_discovery", _FakeModel)
+
+    def always_failing_factory() -> _FakeModel:
+        raise MemoryError
+
+    with pytest.raises(BackendExecutionError):
+        manager.get_or_load("feature_extraction", always_failing_factory)
+
+    assert manager.resident_keys == ()

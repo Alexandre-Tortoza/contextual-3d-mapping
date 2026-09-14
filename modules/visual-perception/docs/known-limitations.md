@@ -538,7 +538,7 @@ A distribuição do custo novo, por frame: refinamento 24/8/24 chamadas, relaç�
 semânticas 16/11/16, e suporte de hipótese 30/27/24 — estas últimas são encodings de
 texto curtos, não de imagem, porque o estágio reusa os vetores de imagem que já existiam.
 
-Os dois tetos são configuráveis (`refinement.max_regions_per_iteration`,
+Os dois tetos são configuráveis (`refinement.max_refined_regions`,
 `semantic_relations.max_pairs`) e nenhum deles foi ajustado por evidência ainda: os
 defaults foram escolhidos como orçamento plausível, não medidos como ótimos.
 

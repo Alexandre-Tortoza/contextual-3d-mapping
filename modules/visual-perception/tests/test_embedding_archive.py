@@ -25,7 +25,9 @@ def _visual_embedding(embedding_id: str, region_id: str, vector: tuple[float, ..
         pooling_method="mean",
         feature_resolution="native",
         model_id="fake-visual-encoder",
-        normalized=True,
+        # Os vetores destes testes são arbitrários: declará-los normalizados
+        # seria falso, e o contract recusa essa declaração (#243).
+        normalized=False,
     )
 
 
@@ -38,7 +40,7 @@ def _language_embedding(embedding_id: str, region_id: str, vector: tuple[float, 
         dimension=len(vector),
         model_id="fake-language-encoder",
         checkpoint="fake-checkpoint",
-        normalized=True,
+        normalized=False,
     )
 
 

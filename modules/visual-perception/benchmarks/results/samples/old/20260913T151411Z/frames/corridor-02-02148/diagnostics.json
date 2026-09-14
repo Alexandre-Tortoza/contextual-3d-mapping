@@ -1,0 +1,520 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-02148",
+  "input_sha256": "30dd5dd3b910cea8899a44ed56dd3507c70eaf5cb1afa21a6404da9bb1428a5d",
+  "latency_s": 320.81451961800485,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 43,
+  "proposal_count": 79,
+  "merged_proposal_count": 54,
+  "regions_with_multiple_proposals": 9,
+  "label_counts": [
+    [
+      "wall",
+      15
+    ],
+    [
+      "plain wall",
+      11
+    ],
+    [
+      "ceiling",
+      6
+    ],
+    [
+      "floor",
+      4
+    ],
+    [
+      "ceiling tiles",
+      2
+    ],
+    [
+      "black panel",
+      1
+    ],
+    [
+      "car dashboard",
+      1
+    ],
+    [
+      "carpeted floor",
+      1
+    ],
+    [
+      "curved edge",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "wall",
+      14
+    ],
+    [
+      "building interior",
+      12
+    ],
+    [
+      "flooring",
+      5
+    ],
+    [
+      "indoor ceiling",
+      5
+    ],
+    [
+      "ceilings",
+      3
+    ],
+    [
+      "architectural element",
+      1
+    ],
+    [
+      "automobile interior",
+      1
+    ],
+    [
+      "door",
+      1
+    ],
+    [
+      "floor",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      38
+    ],
+    [
+      "stuff",
+      5
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 43,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 43,
+    "missing": 0,
+    "minimum": 0.9331036806106567,
+    "maximum": 1.0,
+    "mean": 0.9779957823975142,
+    "median": 0.9810922741889954,
+    "distinct_values": 36,
+    "stddev": 0.019437094968571243,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 15,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.3488372093023256,
+    "distinct_labels": 10,
+    "dominant_category": "wall",
+    "dominant_category_fraction": 0.32558139534883723,
+    "distinct_categories": 9
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 15,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      15
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "below_min_relative_area",
+      4
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        94
+      ],
+      [
+        "indistinguishable",
+        23
+      ],
+      [
+        "contradicts",
+        12
+      ]
+    ],
+    "regions_with_unsupported_primary": 3,
+    "regions_with_ambiguous_identity": 1,
+    "region_kind_contradictions": 35,
+    "reconciled_regions": 35,
+    "distinct_raw_labels": 10,
+    "distinct_canonical_concepts": 9,
+    "entity_groups": 7,
+    "regions_in_entity_groups": 37,
+    "supported_entity_groups": 5,
+    "semantic_relations": [
+      [
+        "part_of",
+        6
+      ],
+      [
+        "covers",
+        1
+      ]
+    ],
+    "geometric_relations": 203,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 24
+  },
+  "published_region_count": 4,
+  "structural_context_count": 39,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      39
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-64c6b29ae4c559fe",
+      "label": "carpeted floor",
+      "region_kind": "stuff",
+      "discovery_area": 42938,
+      "box_before": {
+        "x_min": 4.0,
+        "y_min": 247.0,
+        "x_max": 381.0,
+        "y_max": 479.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 1001.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 6.15 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 166.23 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-8da26a04a48bd877",
+      "label": "car dashboard",
+      "region_kind": "thing",
+      "discovery_area": 8291,
+      "box_before": {
+        "x_min": 234.0,
+        "y_min": 271.0,
+        "x_max": 582.0,
+        "y_max": 420.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9436546564102173,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 1001.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 6.15 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 166.23 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-90f9d1ff28c31d0c",
+      "label": "curved edge",
+      "region_kind": "thing",
+      "discovery_area": 10494,
+      "box_before": {
+        "x_min": 444.0,
+        "y_min": 4.0,
+        "x_max": 508.0,
+        "y_max": 330.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9510512351989746,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 1001.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 6.15 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 166.23 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-b22542588224b8c9",
+      "label": "black panel",
+      "region_kind": "thing",
+      "discovery_area": 6938,
+      "box_before": {
+        "x_min": 235.0,
+        "y_min": 240.0,
+        "x_max": 469.0,
+        "y_max": 291.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9962987303733826,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 1001.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 6.15 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 166.23 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-02f897ababd60ffb",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-03b7c90bb8105a75",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-0a6539a1e8876a20",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-1848d0e52b9b5a2a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-1ff42ffc0b3218bc",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-2830c35f999a2828",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-2c2e63212b4d37a9",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-2f2f1f318085fe87",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-32ce5097236dcde9",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-3d5a728a4275a64b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-57b3c8f68562998d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling tiles"
+    },
+    {
+      "region_id": "region-644fad5435ed0e4c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-6ca9554d4136f0db",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-865f46f1fd5079c1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-97d8c6f526488786",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-9a2d935f16ce8b2c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-9a5c2bab7380263e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-9c7eba663c3a487e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-9d10d4db2b386975",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-9d132c82acb46706",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-9d8868c06fd43d62",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-9df1466306b441d3",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-9fd2d77a71d715da",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-9fdbd5e533fc4e3c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-b1a261fb6d3415b2",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-b1a94770dcb81104",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-b2a0c507d793af69",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-b744e1cb4eb3ffd1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-d032185b712de2d6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling tiles"
+    },
+    {
+      "region_id": "region-d35119190deb8a6f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-d5a9968b63b132eb",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-d770f0ba86ebc24f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-dca5959cda77b5f0",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-e3f691e9ad12bbce",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-e4fcd4264c7d71c6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-e69d1f4eb399c1e6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ed50bc6d5c9b04e8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-fd140bbf14d12f7e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-fe4cce7b646c8e89",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    }
+  ]
+}

@@ -36,10 +36,10 @@ footprint de discovery, não uma cópia do antigo arquivo final. A correção da
 leitura de suporte da claim e a exclusão do rig são comuns a todos os braços.
 Grounding não muda o ranking de fusão ou os filtros do viewer.
 
-Artifacts completos: [manifest](../../../artifacts/semantic-grounding-6s-20260911/manifest.json),
-[métricas](../../../artifacts/semantic-grounding-6s-20260911/metrics.json),
-[mapa anterior](../../../artifacts/semantic-grounding-6s-20260911/before.json),
-[mapa com os três fatores](../../../artifacts/semantic-grounding-6s-20260911/pose.json).
+Artifacts completos: [manifest](../../../artifacts/old/semantic-grounding-6s-20260911/manifest.json),
+[métricas](../../../artifacts/old/semantic-grounding-6s-20260911/metrics.json),
+[mapa anterior](../../../artifacts/old/semantic-grounding-6s-20260911/before.json),
+[mapa com os três fatores](../../../artifacts/old/semantic-grounding-6s-20260911/pose.json).
 São arquivos locais; os dados volumosos ficam em `artifacts/`, ignorado pelo Git.
 
 ## Pontos após fusão
@@ -85,9 +85,9 @@ interseção utilizável entre o segmento da porta e aquela discovery; o resulta
 é `semantic_mask_inconsistent`, claim preservada e footprint ausente. Aquele
 frame deixa de fornecer **553 associações `door`** sobre a parede/entorno.
 
-![Discovery de parede chamada door e segmentação localizada da porta](../../../artifacts/semantic-grounding-6s-20260911/frames/corridor-02-04246/masks/region-af034aba16490177/comparison.png)
+![Discovery de parede chamada door e segmentação localizada da porta](../../../artifacts/old/semantic-grounding-6s-20260911/frames/corridor-02-04246/masks/region-af034aba16490177/comparison.png)
 
-![Projeção antes/depois da região incorreta de porta](../../../artifacts/semantic-grounding-6s-20260911/projections/corridor-02-04246/projection-01.png)
+![Projeção antes/depois da região incorreta de porta](../../../artifacts/old/semantic-grounding-6s-20260911/projections/corridor-02-04246/projection-01.png)
 
 O frame `04258` contém discovery sobre a própria porta: **7.807 → 7.786 pixels**,
 um componente, 535 pixels de boundary e 7.251 de interior (93,1%). A porta
@@ -95,7 +95,7 @@ permanece associada: 380 contribuições anteriores, 379 com grounding, 347 com
 boundary e 371 com interpolação. O refinamento não apaga uma região boa para
 obter redução artificial de área.
 
-![Porta preservada com projeção grounded](../../../artifacts/semantic-grounding-6s-20260911/projections/corridor-02-04258/projection-02.png)
+![Porta preservada com projeção grounded](../../../artifacts/old/semantic-grounding-6s-20260911/projections/corridor-02-04258/projection-02.png)
 
 Nos exemplos inspecionados, a grande superfície de parede deixa de receber
 `door`. Permanecem pontos 3D distantes isolados, visíveis nas figuras; a
@@ -118,9 +118,9 @@ footprint forte. O pallet tem 818 pixels de boundary e 24.773 de interior
 (96,8%). As contribuições desse frame passam de **1.462 para 394** apenas com
 grounding, 382 com boundary e 379 com interpolação.
 
-![Pallet preservado na comparação das máscaras](../../../artifacts/semantic-grounding-6s-20260911/frames/corridor-02-04288/masks/region-b062138834f2b1d6/comparison.png)
+![Pallet preservado na comparação das máscaras](../../../artifacts/old/semantic-grounding-6s-20260911/frames/corridor-02-04288/masks/region-b062138834f2b1d6/comparison.png)
 
-![Projeção do pallet e parede antes/depois](../../../artifacts/semantic-grounding-6s-20260911/projections/corridor-02-04288/projection-03.png)
+![Projeção do pallet e parede antes/depois](../../../artifacts/old/semantic-grounding-6s-20260911/projections/corridor-02-04288/projection-03.png)
 
 A grande faixa de parede lateral deixa de receber `wooden pallet`. A máscara
 ainda preenche vãos entre ripas, pelos quais pode haver parede visível. Não foi

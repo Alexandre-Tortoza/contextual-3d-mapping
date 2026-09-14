@@ -21,8 +21,8 @@ from visual_perception.infrastructure.adapters.language_embedding_backend import
 from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
     _describe_scene_claims,
     _describe_views,
-    _parse_json_object,
     _region_prompt,
+    parse_json_object,
 )
 from visual_perception.infrastructure.adapters.region_discovery_backend import _proposal_from_mask
 
@@ -78,14 +78,14 @@ def test_sam_mask_with_wrong_resolution_is_rejected() -> None:
 )
 def test_vlm_json_parser_extracts_one_object(text: str, expected: dict[str, object]) -> None:
     """Extrai um objeto JSON de respostas textuais típicas de VLM."""
-    assert _parse_json_object(text) == expected
+    assert parse_json_object(text) == expected
 
 
 # Confirma que texto sem objeto JSON não é uma falha de transporte: a camada
 # application receberá um dict vazio e emitirá seu diagnóstico de schema.
 def test_vlm_json_parser_returns_empty_object_for_invalid_output() -> None:
     """Retorna objeto vazio para saída VLM malformada."""
-    assert _parse_json_object("não é JSON") == {}
+    assert parse_json_object("não é JSON") == {}
 
 
 # Exercita a validação de dimensão e a normalização do adapter CLIP sem

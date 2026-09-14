@@ -135,6 +135,21 @@ class ImageAreaMasks:
     valid_area: Mask | None = None
     ego_vehicle: Mask | None = None
 
+    # Exige que as duas máscaras declarem a mesma resolução. Existe porque o
+    # broadcasting do numpy aceitava, por exemplo, uma área válida 10x10 e uma
+    # faixa de ego 1x10: ``scene_box`` devolvia ``None`` e o frame inteiro
+    # perdia a cena analisável sem nada no artifact explicar a causa.
+    def __post_init__(self) -> None:
+        """Rejeita máscaras de área e de ego-veículo com resoluções diferentes."""
+        if self.valid_area is not None and self.ego_vehicle is not None:
+            valid = (self.valid_area.image_width, self.valid_area.image_height)
+            ego = (self.ego_vehicle.image_width, self.ego_vehicle.image_height)
+            if valid != ego:
+                raise ValueError(
+                    f"valid_area resolution {valid[0]}x{valid[1]} differs from ego_vehicle "
+                    f"resolution {ego[0]}x{ego[1]}."
+                )
+
     # Indica se alguma exclusão foi de fato declarada, para que o chamador não
     # precise testar os dois campos separadamente.
     @property

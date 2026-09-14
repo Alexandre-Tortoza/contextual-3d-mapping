@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -37,6 +38,24 @@ class Workflows:
         self.project = project
         self.runner = runner or ProcessRunner()
         self.project.activate_source_packages()
+
+    # Cria uma identidade legível e monotônica para a composição contextual.
+    # O número vem do catálogo local para que a pasta revele imediatamente a
+    # ordem das execuções, enquanto o segment-id preserva o nome do experimento.
+    def _next_context_run_id(self, name: str) -> str:
+        """Retorna o próximo identificador no formato ``AAAA-MM-DD-run-NNN-name``.
+
+        Argumentos:
+            name: nome validado do segmento ou experimento.
+        Retorna:
+            identificador único baseado nas runs contextuais já existentes.
+        """
+        numbers = []
+        for run_id in self.project.context_run_ids():
+            match = re.match(r"(?:\d{4}-\d{2}-\d{2}-)?run-(\d+)-", run_id)
+            if match:
+                numbers.append(int(match.group(1)))
+        return f"{datetime.now(UTC):%Y-%m-%d}-run-{max(numbers, default=0) + 1:03d}-{name}"
 
     # Inspeciona a rosbag por meio do adapter dono da integração.
     def inspect_bag(self, bag: Path) -> RosbagRecording:
@@ -254,6 +273,7 @@ class Workflows:
         window: Path,
         visual_run: Path,
         visibility_mode: str = "measured_surfaces",
+        run_name: str | None = None,
     ) -> Path:
         """Compõe o artifact contextual de um segmento conhecido.
 
@@ -263,18 +283,21 @@ class Workflows:
             window: janela resolvida.
             visual_run: run correspondente de percepção.
             visibility_mode: superfícies medidas ou uma ablação de células explícita.
+            run_name: sufixo legível da run publicada; quando ausente, usa o
+                ``segment_id`` geométrico.
         Retorna:
             artifact contextual publicado.
         """
         if visibility_mode not in {"measured_surfaces", "dense_cells", "legacy_cells"}:
             raise ValueError("visibility-mode deve ser measured_surfaces, dense_cells ou legacy_cells.")
         segment_id = self.project.validate_segment_id(segment_id)
+        run_name = self.project.validate_segment_id(run_name or segment_id)
         geometry = self.project.root / "artifacts" / f"{segment_id}.json"
         for required in (window, visual_run / "manifest.json", geometry):
             if not required.exists():
                 raise FileNotFoundError(f"entrada de composição ausente: {required}")
         python = self.project.root / "modules" / "visual-perception" / ".venv" / "bin" / "python"
-        run_id = f"{datetime.now(UTC):%Y%m%dT%H%M%S%fZ}-{segment_id}"
+        run_id = self._next_context_run_id(run_name)
         destination = self.project.root / "artifacts" / "runs" / run_id / "context.json"
         command = [
             "make",

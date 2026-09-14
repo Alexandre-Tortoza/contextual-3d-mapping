@@ -176,6 +176,11 @@ class ObservedRegion:
     #: autoriza interpretar pixels como suporte espacial do conceito.
     grounding: SemanticGrounding | None = None
 
+    #: Uma região carrega uma ``Mask``, que não é hasheável; declarar isso aqui
+    #: troca o ``TypeError`` sobre ``Mask`` por um que nomeia o tipo usado.
+    #: Indexe regiões por ``region_id``.
+    __hash__ = None  # type: ignore[assignment]
+
     # Valida o region_id, a confiança geométrica em [0, 1], que ao menos
     # uma proposta contribuinte foi preservada (para rastreabilidade até a
     # proveniência do merge), e que todo slot de evidência pertence a esta
