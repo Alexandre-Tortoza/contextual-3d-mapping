@@ -56,3 +56,8 @@ Quanto melhor a granularidade e estabilidade das features, mais precisa pode ser
 ## Referências científicas
 
 DINOv2 é a base atual das dense visual features. A documentação histórica sobre comparação de alta resolução e literatura relacionada foi preservada em `.old-docs/`.
+
+## Próxima leitura
+
+- [05. Mask-aware Pooling](./05-mask-aware-pooling.md)
+- [Backends de `visual-perception`](../modules/visual-perception/docs/model-backends.md)
