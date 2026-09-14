@@ -15,9 +15,87 @@ flowchart LR
 
 Encontrar áreas visuais coerentes que merecem análise separada. A etapa é geométrica e class-agnostic: ela não decide que uma região é `door`, `wall` ou `pallet`.
 
+Na configuração `research_quality` atual, o backend selecionado é **SAM ViT-H**, checkpoint `facebook/sam-vit-huge`. O adapter é genérico o suficiente para aceitar checkpoints SAM/SAM2 compatíveis com `mask-generation`, mas a reference run documentada aqui não usa SAM2.
+
+## O que o SAM produz
+
+O SAM recebe pixels RGB e devolve propostas de máscara. Cada máscara é uma matriz booleana com a mesma resolução da imagem:
+
+```text
+imagem 640 x 480
+        |
+        v
+SAM
+        |
+        v
+mask 640 x 480
+```
+
+Exemplo reduzido:
+
+```text
+0 0 0 0 0 0
+0 0 1 1 0 0
+0 1 1 1 1 0
+0 1 1 1 1 0
+0 0 0 0 0 0
+```
+
+Os pixels `1` pertencem à proposal. A partir dela o módulo calcula também a bounding box e preserva a confiança geométrica.
+
+```text
+RegionProposal
+├── mask
+├── box
+├── geometric_confidence
+└── source
+```
+
+O SAM **não retorna uma label semântica**. A saída não é:
+
+```text
+mask -> "door"
+```
+
+É apenas:
+
+```text
+mask -> "esta região parece visualmente coerente"
+```
+
+## Como a máscara será usada depois
+
+A máscara é uma das peças centrais da pipeline porque ela define onde está o sujeito visual.
+
+Depois do merge, a mesma geometria é usada para:
+
+```text
+SAM mask
+├── construir masked_subject para Qwen/CLIP
+├── construir tight_crop
+├── construir contextual_crop com contorno do sujeito
+├── selecionar patches/features do DINO
+└── posteriormente testar membership do pixel projetado do LiDAR
+```
+
+A máscara não é enviada ao Qwen como uma matriz booleana. Ela é usada para construir as imagens que o Qwen e o CLIP recebem.
+
 ## Como funciona
 
-O backend real de referência usa SAM ViT-H. A imagem pode ser processada em tiles/escalas; cada candidato retorna máscara, bounding box e confiança geométrica. Coordenadas locais são remapeadas para a imagem original e filtros removem proposals inválidas antes da consolidação.
+O backend real de referência usa geração automática de máscaras. A imagem pode ser processada em tiles; cada candidato retorna máscara e score. Coordenadas locais são remapeadas para a imagem original.
+
+Depois existem filtros geométricos para remover propostas que não devem entrar na análise:
+
+```text
+proposal SAM
+   |
+   +--> pequena demais? ---------> rejeita
+   +--> fora da área fisheye? ---> rejeita
+   +--> sobre ego-veículo? ------> rejeita
+   +--> válida ------------------> Region Merge
+```
+
+Isso é feito sobre a geometria das máscaras. O pipeline evita alterar os pixels originais apenas para esconder o rig, porque isso já foi observado degradando o comportamento dos modelos downstream.
 
 ## Reference run
 
@@ -45,6 +123,18 @@ Artifacts:
 
 `75 proposals` não significam `75 objetos`. Parte é rejeitada e parte representa regiões sobrepostas do mesmo conteúdo visual.
 
+## Exemplo de propagação de erro
+
+Imagine que o SAM produza uma máscara assim:
+
+```text
+[porta vermelha + pedaço grande da parede]
+```
+
+Mesmo que o Qwen acerte a hipótese `door`, a evidência visual usada depois pode continuar contaminada pela parede. O CLIP pode pontuar o crop de modo ambíguo e, quando essa região for associada ao mapa 3D, o footprint semântico pode alcançar pontos que não pertencem à porta.
+
+Por isso qualidade de máscara é uma preocupação independente da qualidade do VLM.
+
 ## Saída
 
 ```text
@@ -53,15 +143,13 @@ RegionProposal[]
     -> Region Merge / Consolidation
 ```
 
-## Influência no contexto do mapa
+## Referência científica e implementação
 
-Erros aqui se propagam. Uma proposal que inclui objeto e fundo pode fazer uma hipótese semanticamente correta ganhar um footprint espacial errado. Mais frames não corrigem automaticamente uma máscara individual ruim.
+A implementação atual usa Segment Anything como mecanismo de proposta/segmentação class-agnostic. A semântica é adicionada somente em estágios posteriores.
 
-## Referência científica
-
-A implementação usa Segment Anything como mecanismo de proposta/segmentação class-agnostic. A semântica é adicionada somente em estágios posteriores.
+Para ver a relação completa entre SAM, DINO, Qwen e CLIP, consulte [Pipeline detalhada de Visual Perception](../modules/visual-perception/docs/pipeline.md).
 
 ## Próxima leitura
 
 - [03. Region Merge / Consolidation](./03-region-merge.md)
-- [Backends de `visual-perception`](../modules/visual-perception/docs/model-backends.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
