@@ -25,6 +25,52 @@ ImageObservation + ImagePayload
 
 A saída ainda é 2D. Projeção para LiDAR e geometria persistente pertence a `sensor-association`.
 
+## Como os modelos se relacionam
+
+A configuração de referência atual usa quatro papéis diferentes:
+
+```text
+SAM
+    encontra regiões e masks
+
+DINOv2
+    transforma a imagem em uma grade de patches com embeddings visuais
+
+Qwen2.5-VL
+    interpreta cena e regiões e produz hipóteses textuais
+
+CLIP
+    coloca imagens e textos no mesmo espaço para medir suporte às hipóteses
+```
+
+O fluxo mais importante é:
+
+```text
+SAM mask
+   |
+   +--> views em pixels --> Qwen --> primary + alternatives
+   |
+   +--> views em pixels --> CLIP image embeddings
+                                  ^
+                                  |
+Qwen labels --> CLIP text embeddings
+                                  |
+                                  v
+                         hypothesis support
+```
+
+Em paralelo:
+
+```text
+RGB --> DINOv2 --> FeatureMap [Hf, Wf, C]
+SAM mask ---------> mask-aware pooling
+                         |
+                         v
+                 dense visual evidence
+```
+
+A explicação completa, com shapes reais, exemplos de vetores e uma região da reference run, está em [Pipeline detalhada de Visual Perception](./pipeline.md).
+
 ## Organização do código
 
 ```text
@@ -65,6 +111,7 @@ src/visual_perception/
 
 ## Documentos especializados
 
+- [Pipeline detalhada](./pipeline.md)
 - [Backends de modelos](./model-backends.md)
 - [Política de semântica contextual](./contextual-semantics.md)
 - [Pipeline end-to-end do repositório](../../../docs/README.md)
@@ -99,3 +146,9 @@ A reference run indicada pela documentação raiz é `20260910T115810Z`. Ela ser
 ## Regra de manutenção
 
 Documentação local deve acompanhar comportamento implementado e contracts públicos. Resultados medidos devem apontar para artifacts versionados. Arquitetura pretendida, implementação atual e comportamento observado devem permanecer explicitamente separados.
+
+## Próxima leitura
+
+- [Pipeline detalhada de Visual Perception](./pipeline.md)
+- [02. Region Discovery](../../../docs/02-region-discovery.md)
+- [Backends de modelos](./model-backends.md)
