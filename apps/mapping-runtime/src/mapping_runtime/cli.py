@@ -47,6 +47,13 @@ def _parser() -> argparse.ArgumentParser:
         help="contextualiza o slice FAST-LIO do corridor-02 com os keyframes de um trecho",
     )
     context.add_argument("--geometric-slice", type=Path, required=True)
+    context.add_argument(
+        "--crop-radius-m", type=float, default=15.0,
+        help="raio da geometria do trecho em torno das posições da câmera nos keyframes",
+    )
+    context.add_argument(
+        "--max-points", type=int, default=150_000, help="teto de pontos da geometria do trecho",
+    )
     context.add_argument("--bag", type=Path, required=True)
     context.add_argument("--intrinsics", type=Path, required=True)
     context.add_argument("--extrinsics", type=Path, required=True)
@@ -182,6 +189,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 visibility_mode=options.visibility_mode,
                 visibility_geometry=options.visibility_geometry,
                 stuff_discovery_fallback=options.stuff_discovery_fallback,
+                crop_radius_m=options.crop_radius_m,
+                max_points=options.max_points,
             )
         )
         print(destination)

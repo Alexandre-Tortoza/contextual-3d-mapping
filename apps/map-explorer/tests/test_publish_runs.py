@@ -20,7 +20,8 @@ def context_artifact(directory: Path) -> Path:
     artifact = directory / "source.json"
     artifact.write_text(json.dumps({
         "schema_version": 2, "artifact_type": "contextual_rgb_lidar_slice",
-        "map_id": "shared-map", "map_frame": "map", "points": [], "regions": [{"region_id": "region-1"}],
+        "map_id": "shared-map", "map_frame": "map", "source": {"sha256": "a" * 64, "point_count": 10},
+        "points": [], "regions": [{"region_id": "region-1"}],
         "observations": [{"raw_image_uri": "source-assets/raw.png", "overlay_image_uri": "source-assets/overlay.png"}],
         "context_summary": {"visual_observation_count": 1, "contextual_point_count": 1},
     }))
@@ -156,3 +157,37 @@ def test_index_ignores_staging_directories(tmp_path: Path) -> None:
     entries = json.loads(publish(public).read_text())
     assert [entry["run_id"] for entry in entries if entry["artifact_type"] == "contextual_rgb_lidar_slice"] == ["ready"]
     assert len([entry for entry in entries if entry["artifact_type"] == "consolidated_contextual_map"]) == 1
+
+
+# Cada trecho carrega só a própria vizinhança; o fundo global declarado pela run é
+# publicado uma vez, verificado pelo digest, e vira a geometria do mapa consolidado.
+def test_declared_backdrop_is_published_once_and_used_by_the_consolidated_map(tmp_path: Path) -> None:
+    """Publica o slice global da run e o usa como geometria do consolidado."""
+    import hashlib
+
+    backdrop = tmp_path / "global.json"
+    backdrop.write_text(json.dumps({
+        "artifact_type": "geometric_pcd_slice", "map_id": "shared-map", "map_frame": "map",
+        "source": {"sha256": "a" * 64, "point_count": 10},
+        "points": [{"geometry_id": "shared-map:pcd:0", "coordinates_m": [0.0, 0.0, 0.0]}],
+    }))
+    digest = hashlib.sha256(backdrop.read_bytes()).hexdigest()
+    artifact = context_artifact(tmp_path / "input")
+    payload = json.loads(artifact.read_text())
+    payload["geometry_backdrop"] = {"artifact_uri": str(backdrop), "sha256": digest}
+    artifact.write_text(json.dumps(payload))
+    public = tmp_path / "public"
+
+    saved = save_run(public, artifact, run_id="segment")
+    entries = json.loads(publish(public).read_text())
+
+    assert (public / "maps" / "geometry" / f"{digest}.json").read_bytes() == backdrop.read_bytes()
+    assert json.loads((saved / "manifest.json").read_text())["geometry_backdrop_sha256"] == digest
+    consolidated_url = next(entry["url"] for entry in entries if entry["artifact_type"] == "consolidated_contextual_map")
+    consolidated = json.loads((public / consolidated_url.lstrip("/")).read_text())
+    assert [point["geometry_id"] for point in consolidated["points"]] == ["shared-map:pcd:0"]
+    backdrop.write_text("{}")
+    payload["geometry_backdrop"]["sha256"] = "b" * 64
+    artifact.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="digest"):
+        save_run(tmp_path / "other-public", artifact, run_id="tampered")

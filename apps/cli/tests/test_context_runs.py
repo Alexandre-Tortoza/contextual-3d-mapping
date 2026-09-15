@@ -41,7 +41,8 @@ def write_context(artifact: Path, count: int = 1) -> None:
     (assets / "overlay.png").write_bytes(b"overlay")
     artifact.write_text(json.dumps({
         "schema_version": 2, "artifact_type": "contextual_rgb_lidar_slice",
-        "map_id": "shared-geometry", "map_frame": "map", "points": [], "regions": [{"region_id": "region-1"}],
+        "map_id": "shared-geometry", "map_frame": "map", "source": {"sha256": "a" * 64, "point_count": 10},
+        "points": [], "regions": [{"region_id": "region-1"}],
         "observations": [{"raw_image_uri": "context-assets/raw.png", "overlay_image_uri": "context-assets/overlay.png"}],
         "context_summary": {"contextual_point_count": count},
     }), encoding="utf-8")

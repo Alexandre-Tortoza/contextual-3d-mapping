@@ -93,8 +93,10 @@ apps/cli/.venv/bin/contextual-3d-mapping-cli campaign \
 
 Antes dele, `artifacts/corridor-02-global.json` e
 `artifacts/corridor-02-global-odometry.csv` devem existir e representar o
-mesmo frame global. O viewer consolida automaticamente as dez runs porque elas
-referenciam a mesma geometria. Cada observação publicada inclui todas as
+mesmo frame global. Cada run carrega só a geometria a até 15 m das posições da
+câmera no trecho, tirada da nuvem completa (teto de 150 mil pontos); o slice
+global vira o fundo do mapa consolidado, que o viewer reconstrói automaticamente
+porque todas as runs vêm da mesma nuvem de origem. Cada observação publicada inclui todas as
 camadas de debug disponíveis do pipeline e os diagnósticos JSON.
 
 Gere ambos com:

@@ -109,9 +109,16 @@ automaticamente. A comparação ocorre pela alternância no mesmo viewport.
 ## Mapas consolidados
 
 Depois de cada publicação, o catálogo reconstrói automaticamente um mapa
-consolidado para cada grupo de runs com geometria idêntica. Esse artifact é
-derivado das pastas imutáveis em `runs/`: não altera nenhuma run de origem e
-preserva a identidade, o hash, as observações e as regiões que contribuíram.
+consolidado para cada grupo de runs sobre a mesma nuvem de origem (mesmo PCD,
+mapa e frame). Esse artifact é derivado das pastas imutáveis em `runs/`: não
+altera nenhuma run de origem e preserva a identidade, o hash, as observações e
+as regiões que contribuíram.
+
+Uma run de trecho carrega só a vizinhança das suas poses. Quando ela declara
+`geometry_backdrop`, o publisher copia esse slice global uma vez para
+`maps/geometry/<sha256>.json`, depois de conferir o digest e a origem. O
+consolidado usa esse fundo como geometria do mapa geral e acrescenta apenas os
+pontos com contexto de cada run.
 
 O seletor separa **Runs** de **Mapas consolidados**. Cada ponto consolidado
 recebe no máximo um voto por run; variantes como `pallet` e `wooden pallet`

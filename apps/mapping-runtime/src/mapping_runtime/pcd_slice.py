@@ -38,6 +38,31 @@ def _height_color(height: float, minimum: float, maximum: float) -> tuple[int, i
 _COORDINATE_DECIMALS = 4
 
 
+def geometry_point_records(
+    map_id: str, sampled: list[tuple[int, tuple[float, ...], float | None]]
+) -> list[dict]:
+    """Converte pontos ``(índice de origem, xyz, intensidade)`` no schema do viewer.
+
+    Argumentos:
+        map_id: identidade do mapa, prefixo estável de ``geometry_id``.
+        sampled: pontos já selecionados, na ordem de exportação.
+    Retorna:
+        registros com identidade, coordenadas arredondadas, intensidade e cor por altura.
+    """
+    heights = [coordinates[2] for _, coordinates, _ in sampled]
+    minimum_height, maximum_height = min(heights), max(heights)
+    return [
+        {
+            "geometry_id": f"{map_id}:pcd:{index}",
+            "coordinates_m": [round(value, _COORDINATE_DECIMALS) for value in coordinates],
+            "intensity": intensity,
+            "display_color_rgb": _height_color(coordinates[2], minimum_height, maximum_height),
+        }
+        for index, coordinates, intensity in sampled
+    ]
+
+
+# Amostra um PCD inteiro com passo fixo pelo índice de origem e grava o slice.
 def export_pcd_slice(
     source: Path,
     destination: Path,
@@ -74,17 +99,7 @@ def export_pcd_slice(
     ]
     if not sampled:
         raise ValueError("PCD does not contain finite sampled points.")
-    heights = [coordinates[2] for _, coordinates, _ in sampled]
-    minimum_height, maximum_height = min(heights), max(heights)
-    points = [
-        {
-            "geometry_id": f"{map_id}:pcd:{index}",
-            "coordinates_m": [round(value, _COORDINATE_DECIMALS) for value in coordinates],
-            "intensity": intensity,
-            "display_color_rgb": _height_color(coordinates[2], minimum_height, maximum_height),
-        }
-        for index, coordinates, intensity in sampled
-    ]
+    points = geometry_point_records(map_id, sampled)
     payload_record = {
         "schema_version": 1,
         "artifact_type": "geometric_pcd_slice",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import shutil
@@ -11,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from geometric_map import GeometryReference, read_pcd_geometry
+from geometric_map import GeometryReference, read_pcd_geometry, select_neighbourhood
 from semantic_fusion import (
     LabelledPoint,
     SemanticContribution,
@@ -42,6 +43,8 @@ from contextual_mapping_contracts import (
     SourceArtifactReference,
     Timestamp,
 )
+
+from .pcd_slice import geometry_point_records
 
 # Ordem de informatividade das rejeições. Um ponto que a câmera enquadrou e
 # perdeu por oclusão diz algo sobre a cena; um ponto que ficou atrás da câmera
@@ -143,6 +146,8 @@ class Corridor02ContextRequest:
         ground_truth: trajetória do dataset, usada quando não há odometria.
         pose_anchor_ns: instante em que o mapa foi iniciado, usado para alinhar
             o ground-truth à origem do mapa FAST-LIO.
+        crop_radius_m: raio da vizinhança do trecho em torno das posições da câmera.
+        max_points: teto de pontos da geometria do trecho.
     """
 
     geometric_slice: Path
@@ -163,6 +168,11 @@ class Corridor02ContextRequest:
     visibility_geometry: Path | None = None
     surface_config: SurfaceVisibilityConfig = field(default_factory=SurfaceVisibilityConfig)
     audit_geometry_ids: frozenset[str] = frozenset()
+    #: Um trecho carrega só a vizinhança das suas poses, da nuvem em resolução
+    #: completa, e não o mapa global amostrado: o mapa inteiro pertence ao
+    #: consolidado. 15 m cobre o corredor visível e um pouco de contexto.
+    crop_radius_m: float = 15.0
+    max_points: int = 150_000
 
     # Exige uma fonte de pose e ao menos um keyframe antes de qualquer leitura,
     # porque ambos são pré-condições da composição, e não erros de dados.
@@ -176,6 +186,10 @@ class Corridor02ContextRequest:
             raise ValueError("pose_sampling must be interpolated or nearest.")
         if type(self.max_pose_gap_ns) is not int or self.max_pose_gap_ns <= 0:
             raise ValueError("max_pose_gap_ns must be a positive integer.")
+        if not math.isfinite(self.crop_radius_m) or self.crop_radius_m <= 0:
+            raise ValueError("crop_radius_m must be positive.")
+        if type(self.max_points) is not int or self.max_points <= 0:
+            raise ValueError("max_points must be a positive integer.")
         if (self.footprint_mode == "legacy_discovery") != self.boundary_policy.allow_legacy_discovery:
             raise ValueError("Legacy footprint ablation must explicitly enable legacy association.")
         for path in (self.geometric_slice, self.bag, self.intrinsics, self.extrinsics):
@@ -632,25 +646,14 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     laser_to_camera = _pose_matrix(
         calibration.lidar_to_camera.translation_m, calibration.lidar_to_camera.rotation_xyzw
     )
-    map_points = tuple(
-        MapAnchoredPoint(
-            GeometryReference(map_id, str(point["geometry_id"])),
-            tuple(float(value) for value in point["coordinates_m"]),
-        )
-        for point in base["points"]
-    )
-    full_geometry = None
-    surfaces = None
-    if request.visibility_mode != "legacy_cells":
-        source = base.get("source") or {}
-        geometry_path = request.visibility_geometry or Path(source.get("uri", ""))
-        if not geometry_path.is_file():
-            raise ValueError("PCD completo ausente; informe visibility_geometry para a geometria do slice.")
-        if not source.get("sha256"):
-            raise ValueError("O slice deve registrar source.sha256 para validar a geometria completa.")
-        full_geometry = read_pcd_geometry(geometry_path, map_id=map_id, frame_id=map_frame, expected_sha256=source["sha256"])
-        if request.visibility_mode == "measured_surfaces":
-            surfaces = MeasuredSurfaceModel(full_geometry, request.surface_config)
+    source = base.get("source") or {}
+    geometry_path = request.visibility_geometry or Path(source.get("uri", ""))
+    if not geometry_path.is_file():
+        raise ValueError("PCD completo ausente; informe visibility_geometry para a geometria do slice.")
+    if not source.get("sha256"):
+        raise ValueError("O slice deve registrar source.sha256 para validar a geometria completa.")
+    full_geometry = read_pcd_geometry(geometry_path, map_id=map_id, frame_id=map_frame, expected_sha256=source["sha256"])
+    surfaces = MeasuredSurfaceModel(full_geometry, request.surface_config) if request.visibility_mode == "measured_surfaces" else None
     if request.odometry is not None:
         poses = _load_odometry(request.odometry)
         pose_source = "fastlio_odometry"
@@ -658,6 +661,51 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         assert request.ground_truth is not None and request.pose_anchor_ns is not None
         poses = _load_ground_truth(request.ground_truth, request.pose_anchor_ns)
         pose_source = "dataset_ground_truth"
+
+    # A geometria do trecho é a vizinhança das posições da câmera nos keyframes,
+    # tirada da nuvem completa. O slice global passa a ser só o fundo que o
+    # consolidado usa, registrado abaixo como ``geometry_backdrop``.
+    camera_to_body = laser_to_imu @ np.linalg.inv(laser_to_camera)
+    camera_centers = np.array([
+        (_sample_pose(poses, keyframe.header_timestamp_ns, request.pose_sampling, request.max_pose_gap_ns)[1]
+         @ camera_to_body)[:3, 3]
+        for keyframe in request.keyframes
+    ])
+    segment_geometry, crop_stride = select_neighbourhood(
+        full_geometry, camera_centers, radius_m=request.crop_radius_m, max_points=request.max_points
+    )
+    base["points"] = geometry_point_records(
+        str(map_id),
+        [
+            (int(index), tuple(float(value) for value in coordinates),
+             None if segment_geometry.intensities is None else float(segment_geometry.intensities[position]))
+            for position, (index, coordinates) in enumerate(
+                zip(segment_geometry.source_indices, segment_geometry.coordinates_m, strict=True)
+            )
+        ],
+    )
+    base["source"] = {
+        **source,
+        "sampling_stride": crop_stride,
+        "crop": {
+            "mode": "camera_pose_radius",
+            "radius_m": request.crop_radius_m,
+            "max_points": request.max_points,
+            "camera_center_count": len(camera_centers),
+            "selected_point_count": len(segment_geometry.coordinates_m),
+        },
+    }
+    base["geometry_backdrop"] = {
+        "artifact_uri": str(request.geometric_slice.resolve()),
+        "sha256": hashlib.sha256(request.geometric_slice.read_bytes()).hexdigest(),
+    }
+    map_points = tuple(
+        MapAnchoredPoint(
+            GeometryReference(map_id, str(point["geometry_id"])),
+            tuple(float(value) for value in point["coordinates_m"]),
+        )
+        for point in base["points"]
+    )
 
     assets = request.destination.parent / f"{request.destination.stem}-assets"
     assets.mkdir(parents=True, exist_ok=True)
@@ -766,7 +814,8 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 results = associate_map_points(
                     map_points, rgb, calibration, map_to_camera, evidence,
                     lidar_observation=lidar_reference, max_time_delta_ns=100_000_000,
-                    boundary_policy=request.boundary_policy, visibility_geometry=full_geometry,
+                    boundary_policy=request.boundary_policy,
+                    visibility_geometry=None if request.visibility_mode == "legacy_cells" else full_geometry,
                 )
             for association in results:
                 geometry_id = association.geometry.geometry_id
@@ -966,7 +1015,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     base["regions"] = list(regions.values())
     base["visibility"] = {
         "mode": request.visibility_mode,
-        "geometry": None if full_geometry is None else {
+        "geometry": None if request.visibility_mode == "legacy_cells" else {
             "uri": full_geometry.source.uri, "sha256": full_geometry.source.digest,
             "point_count": full_geometry.point_count, "finite_point_count": len(full_geometry.coordinates_m),
             "map_id": str(map_id), "frame_id": str(map_frame), "units": "m",

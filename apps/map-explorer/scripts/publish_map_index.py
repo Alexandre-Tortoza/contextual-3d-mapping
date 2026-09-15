@@ -30,6 +30,7 @@ from semantic_map import (
 
 INDEX_NAME = "index.json"
 CONTEXT_TYPE = "contextual_rgb_lidar_slice"
+GEOMETRY_DIRECTORY = "geometry"
 
 
 # Valida o tipo antes de copiar arquivos para que mapas de geometria pura não
@@ -101,6 +102,47 @@ def preview_files(artifact: Path, payload: dict) -> dict[Path, Path]:
     return previews
 
 
+# Publica o fundo global declarado pela run em ``maps/geometry/<sha256>.json``. Existe
+# porque cada trecho carrega só a própria vizinhança e o mapa geral precisa da
+# geometria do corredor inteiro; o arquivo é compartilhado pelas runs da mesma origem
+# e só é aceito com o digest declarado, a mesma origem e o tipo de slice geométrico.
+def publish_backdrop(public_directory: Path, payload: dict) -> str | None:
+    """Copia o fundo global da run para o catálogo e retorna seu digest.
+
+    Argumentos:
+        public_directory: raiz estática do viewer.
+        payload: artifact contextual já validado.
+    Retorna:
+        sha256 do fundo publicado, ou ``None`` quando a run não declara fundo.
+    Levanta:
+        ValueError: se o fundo divergir do digest, do tipo ou da origem da run.
+        FileNotFoundError: se o arquivo declarado não existir.
+    """
+    declared = payload.get("geometry_backdrop")
+    if declared is None:
+        return None
+    if not isinstance(declared, dict) or not isinstance(declared.get("sha256"), str) or not isinstance(declared.get("artifact_uri"), str):
+        raise ValueError("geometry_backdrop deve declarar artifact_uri e sha256.")
+    digest = declared["sha256"]
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("geometry_backdrop.sha256 inválido.")
+    destination = public_directory / "maps" / GEOMETRY_DIRECTORY / f"{digest}.json"
+    if destination.is_file():
+        return digest
+    source = Path(declared["artifact_uri"])
+    content = source.read_bytes()
+    if hashlib.sha256(content).hexdigest() != digest:
+        raise ValueError(f"{source}: fundo global diferente do digest declarado pela run.")
+    backdrop = json.loads(content)
+    if backdrop.get("artifact_type") != "geometric_pcd_slice" or geometry_fingerprint(backdrop) != geometry_fingerprint(payload):
+        raise ValueError(f"{source}: fundo global não é um slice da mesma origem da run.")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(".json.tmp")
+    temporary.write_bytes(content)
+    temporary.replace(destination)
+    return digest
+
+
 # Publica mapa e previews juntos, sem sobrescrever a identidade de uma run.
 # O fingerprint inclui as imagens: mudar um preview também cria outro resultado.
 def save_run(
@@ -120,6 +162,7 @@ def save_run(
     """
     payload = read_context(artifact)
     previews = preview_files(artifact, payload)
+    backdrop_sha256 = publish_backdrop(public_directory, payload)
     artifact_bytes = artifact.read_bytes()
     asset_hashes = {str(path): hashlib.sha256(source.read_bytes()).hexdigest()
                     for path, source in sorted(previews.items())}
@@ -160,6 +203,7 @@ def save_run(
             "source_artifact": str(artifact.resolve()), "artifact": "context.json",
             "artifact_sha256": hashlib.sha256(artifact_bytes).hexdigest(),
             "assets_sha256": asset_hashes, "fingerprint": fingerprint,
+            "geometry_backdrop_sha256": backdrop_sha256,
         }
         (staging / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
         staging.rename(destination)
@@ -212,6 +256,19 @@ def _write_json_atomic(destination: Path, payload: dict) -> None:
     temporary.replace(destination)
 
 
+# Escolhe o fundo global de um grupo: o que todas as runs do grupo declaram. Runs
+# sem fundo, ou com fundos diferentes, consolidam pela união dos próprios pontos.
+def _group_backdrop(public_directory: Path, runs: list[PublishedContextRun]) -> dict | None:
+    """Retorna o slice global compartilhado pelo grupo, ou ``None``."""
+    digests = {
+        (run.payload.get("geometry_backdrop") or {}).get("sha256") for run in runs
+    }
+    if len(digests) != 1 or None in digests:
+        return None
+    path = public_directory / "maps" / GEOMETRY_DIRECTORY / f"{digests.pop()}.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+
+
 # Reconstrói um mapa derivado por fingerprint geométrico. A separação por
 # fingerprint impede que duas runs de mesmo nome lógico, mas nuvens diferentes,
 # sejam fundidas por acidente.
@@ -227,7 +284,7 @@ def publish_consolidated_maps(public_directory: Path) -> list[dict]:
         grouped.setdefault(fingerprint, []).append(run)
     entries = []
     for fingerprint, runs in sorted(grouped.items()):
-        consolidated = consolidate_context_runs(runs)
+        consolidated = consolidate_context_runs(runs, backdrop=_group_backdrop(public_directory, runs))
         destination = public_directory / "maps" / "consolidated" / fingerprint / "context.json"
         _write_json_atomic(destination, consolidated.to_payload())
         source_metadata = [

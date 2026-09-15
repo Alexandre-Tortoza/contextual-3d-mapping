@@ -148,6 +148,59 @@ class PointCloudGeometry:
             object.__setattr__(self, "intensities", intensities)
 
 
+# Seleciona a geometria medida em torno de um trecho: pontos a até ``radius_m`` de
+# algum centro, amostrados de forma determinística até ``max_points``. Existe para
+# que o artifact de um trecho carregue a vizinhança densa em vez do mapa global
+# inteiro amostrado. Os índices de origem são preservados, então a identidade de
+# cada ponto continua comparável entre trechos e com o mapa global.
+def select_neighbourhood(
+    cloud: PointCloudGeometry, centers_m: np.ndarray, *, radius_m: float, max_points: int
+) -> tuple[PointCloudGeometry, int]:
+    """Retorna os pontos próximos aos centros e o passo de amostragem aplicado.
+
+    Argumentos:
+        cloud: nuvem medida completa, no frame do mapa.
+        centers_m: centros ``(N, 3)`` no mesmo frame, em metros.
+        radius_m: raio máximo até o centro mais próximo.
+        max_points: teto de pontos da seleção.
+    Retorna:
+        ``(nuvem selecionada, passo)``; o passo é 1 quando a seleção cabe no teto.
+    Levanta:
+        ValueError: se centros, raio ou teto forem inválidos ou nenhum ponto couber no raio.
+    """
+    centers = np.asarray(centers_m, dtype=np.float64)
+    if centers.ndim != 2 or centers.shape[1:] != (3,) or not len(centers) or not np.isfinite(centers).all():
+        raise ValueError("Os centros devem ser coordenadas XYZ finitas.")
+    if not np.isfinite(radius_m) or radius_m <= 0:
+        raise ValueError("O raio deve ser positivo.")
+    if type(max_points) is not int or max_points <= 0:
+        raise ValueError("O teto de pontos deve ser um inteiro positivo.")
+    xyz = cloud.coordinates_m
+    lower, upper = centers.min(axis=0) - radius_m, centers.max(axis=0) + radius_m
+    candidates = np.flatnonzero(((xyz >= lower) & (xyz <= upper)).all(axis=1))
+    near = np.zeros(len(candidates), dtype=bool)
+    for center in centers:
+        near |= ((xyz[candidates] - center) ** 2).sum(axis=1) <= radius_m * radius_m
+    selected = candidates[near]
+    if not len(selected):
+        raise ValueError("Nenhum ponto medido dentro do raio pedido.")
+    stride = max(1, -(-len(selected) // max_points))
+    positions = selected[::stride]
+    return (
+        PointCloudGeometry(
+            xyz[positions],
+            cloud.source_indices[positions],
+            cloud.map_id,
+            cloud.frame_id,
+            cloud.source,
+            cloud.point_count,
+            cloud.data_offset,
+            None if cloud.intensities is None else cloud.intensities[positions],
+        ),
+        stride,
+    )
+
+
 # Contém o formato externo no módulo dono da geometria. A mesma leitura serve
 # ao exportador amostrado e à associação sobre todos os pontos medidos.
 def read_pcd_geometry(

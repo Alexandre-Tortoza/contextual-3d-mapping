@@ -58,33 +58,46 @@ def _label_families(labels: Iterable[str]) -> dict[str, str]:
     return families
 
 
-# Materializa uma identidade de geometria independente da ordem do JSON. Ela
-# protege a fusão ponto a ponto contra runs que compartilham nome de mapa mas
-# não representam exatamente a mesma nuvem persistente.
+# Identifica a nuvem de origem de um artifact contextual. Runs de trechos diferentes
+# carregam recortes diferentes da mesma nuvem; o que as torna fundíveis é a origem
+# comum (PCD, mapa e frame), e não o conjunto exato de pontos exportados.
 def geometry_fingerprint(payload: Mapping[str, Any]) -> str:
-    """Calcula o SHA-256 canônico da geometria de um artifact contextual.
+    """Calcula o SHA-256 canônico da geometria de origem de um artifact.
 
     Argumentos:
-        payload: artifact contextual com ``map_id``, ``map_frame`` e pontos.
+        payload: artifact com ``map_id``, ``map_frame`` e ``source.sha256``.
     Retorna:
-        digest hexadecimal que identifica a geometria completa.
+        digest hexadecimal que identifica a nuvem de origem.
     Levanta:
-        ValueError: se a geometria não possuir identidades, coordenadas ou
-            valores finitos válidos.
+        ValueError: se faltar identidade de mapa, frame ou digest da origem.
     """
-    points = payload.get("points")
+    source = payload.get("source")
     if not isinstance(payload.get("map_id"), str) or not isinstance(payload.get("map_frame"), str):
         raise ValueError("context run must declare map_id and map_frame.")
+    if not isinstance(source, Mapping) or not isinstance(source.get("sha256"), str) or not source["sha256"]:
+        raise ValueError("context run must declare source.sha256 of its point cloud.")
+    canonical = json.dumps(
+        {"map_id": payload["map_id"], "map_frame": payload["map_frame"], "source_sha256": source["sha256"],
+         "source_point_count": source.get("point_count")},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+# Valida e indexa os pontos de um artifact por identidade. Identidades duplicadas,
+# coordenadas não finitas ou fora de 3D tornam a fusão ponto a ponto ambígua.
+def _points_by_geometry_id(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Retorna os pontos do artifact indexados por ``geometry_id``."""
+    points = payload.get("points")
     if not isinstance(points, list):
         raise ValueError("context run must declare points.")
-    records = []
-    seen: set[str] = set()
+    indexed: dict[str, Mapping[str, Any]] = {}
     for point in points:
         if not isinstance(point, Mapping) or not isinstance(point.get("geometry_id"), str):
             raise ValueError("every point must declare geometry_id.")
-        geometry_id = point["geometry_id"]
         coordinates = point.get("coordinates_m")
-        if geometry_id in seen or not isinstance(coordinates, (list, tuple)) or len(coordinates) != 3:
+        if point["geometry_id"] in indexed or not isinstance(coordinates, (list, tuple)) or len(coordinates) != 3:
             raise ValueError("geometry ids must be unique and coordinates_m must be three-dimensional.")
         try:
             numbers = tuple(float(value) for value in coordinates)
@@ -92,14 +105,14 @@ def geometry_fingerprint(payload: Mapping[str, Any]) -> str:
             raise ValueError("coordinates_m must be numeric.") from error
         if not all(number == number and abs(number) != float("inf") for number in numbers):
             raise ValueError("coordinates_m must be finite.")
-        seen.add(geometry_id)
-        records.append((geometry_id, numbers))
-    canonical = json.dumps(
-        {"map_id": payload["map_id"], "map_frame": payload["map_frame"], "points": sorted(records)},
-        ensure_ascii=False,
-        separators=(",", ":"),
-    )
-    return sha256(canonical.encode("utf-8")).hexdigest()
+        indexed[point["geometry_id"]] = point
+    return indexed
+
+
+# Copia só a geometria de um ponto; o contexto consolidado é recalculado.
+def _geometry_record(point: Mapping[str, Any]) -> dict[str, Any]:
+    """Retorna o ponto sem o contexto de nenhuma run específica."""
+    return {key: deepcopy(value) for key, value in point.items() if key in {"geometry_id", "coordinates_m", "intensity", "display_color_rgb"}}
 
 
 # Representa uma run já copiada e validada pelo publisher. A aplicação entrega
@@ -136,7 +149,7 @@ class PublishedContextRun:
 # payload permanece serializável para a persistência estática do map-explorer.
 @dataclass(frozen=True)
 class ConsolidatedContextMap:
-    """Artifact global derivado de um grupo de runs geometricamente idênticas.
+    """Artifact global derivado de runs sobre a mesma nuvem de origem.
 
     Argumentos:
         geometry_fingerprint: identidade da geometria compartilhada.
@@ -221,24 +234,57 @@ def _ranked_vote(vote: Mapping[str, Any]) -> SemanticContribution:
     )
 
 
-# Consolida runs que compartilham exatamente a geometria. A função é a fronteira
+# Monta a geometria do mapa geral. Com um fundo global, ela é o fundo mais os pontos
+# com contexto das runs (os recortes densos inteiros multiplicariam o tamanho sem
+# acrescentar contexto); sem fundo, é a união dos pontos das runs. Uma identidade
+# repetida precisa ter as mesmas coordenadas em todas as fontes.
+def _output_geometry(
+    material: list[PublishedContextRun],
+    points_by_run: Mapping[str, Mapping[str, Mapping[str, Any]]],
+    backdrop: Mapping[str, Any] | None,
+    fingerprint: str,
+) -> list[dict[str, Any]]:
+    """Retorna os pontos geométricos do mapa consolidado, sem contexto."""
+    records: dict[str, dict[str, Any]] = {}
+    if backdrop is not None:
+        if backdrop.get("artifact_type") != "geometric_pcd_slice" or geometry_fingerprint(backdrop) != fingerprint:
+            raise ValueError("backdrop must be a geometric slice of the same geometry source.")
+        records = {geometry_id: _geometry_record(point) for geometry_id, point in _points_by_geometry_id(backdrop).items()}
+    for run in material:
+        for geometry_id, point in points_by_run[run.run_id].items():
+            contextual = isinstance(point.get("context"), Mapping) and point["context"].get("label")
+            existing = records.get(geometry_id)
+            if existing is not None:
+                if [float(v) for v in existing["coordinates_m"]] != [float(v) for v in point["coordinates_m"]]:
+                    raise ValueError(f"point {geometry_id} has different coordinates across sources.")
+            elif backdrop is None or contextual:
+                records[geometry_id] = _geometry_record(point)
+    return list(records.values())
+
+
+# Consolida runs que compartilham a mesma nuvem de origem. A função é a fronteira
 # pública do módulo usada pelo publisher depois que cada run se tornou imutável.
-def consolidate_context_runs(runs: Iterable[PublishedContextRun]) -> ConsolidatedContextMap:
-    """Funde contexto semântico de runs publicadas sobre a mesma geometria.
+def consolidate_context_runs(
+    runs: Iterable[PublishedContextRun], backdrop: Mapping[str, Any] | None = None
+) -> ConsolidatedContextMap:
+    """Funde contexto semântico de runs publicadas sobre a mesma nuvem de origem.
 
     Argumentos:
         runs: runs publicadas com artifacts contextuais completos.
+        backdrop: slice geométrico global da mesma origem; quando presente, é a
+            geometria do mapa geral, e das runs entram só os pontos com contexto.
     Retorna:
         artifact global com evidências namespaceadas e decisão por ponto.
     Levanta:
-        ValueError: se não houver runs ou se a geometria não for idêntica.
+        ValueError: se não houver runs, se a origem divergir ou se uma mesma
+            identidade de ponto tiver coordenadas diferentes.
     """
     material = sorted(runs, key=lambda run: run.run_id)
     if not material:
         raise ValueError("consolidation requires at least one published context run.")
     fingerprints = {geometry_fingerprint(run.payload) for run in material}
     if len(fingerprints) != 1:
-        raise ValueError("context runs must share exactly the same geometry.")
+        raise ValueError("context runs must share the same geometry source.")
     fingerprint = fingerprints.pop()
     first = material[0].payload
     map_id, map_frame = first["map_id"], first["map_frame"]
@@ -261,7 +307,7 @@ def consolidate_context_runs(runs: Iterable[PublishedContextRun]) -> Consolidate
         regions = {str(item.get("region_id")): item for item in run.payload.get("regions", []) if isinstance(item, Mapping) and item.get("region_id")}
         observations_by_run[run.run_id] = observations
         regions_by_run[run.run_id] = regions
-        points_by_run[run.run_id] = {str(item.get("geometry_id")): item for item in run.payload.get("points", []) if isinstance(item, Mapping)}
+        points_by_run[run.run_id] = _points_by_geometry_id(run.payload)
         for local_id, observation in observations.items():
             record = deepcopy(dict(observation))
             record.update({"observation_id": _namespaced(run.run_id, local_id), "source_run_id": run.run_id, "source_observation_id": local_id})
@@ -273,7 +319,7 @@ def consolidate_context_runs(runs: Iterable[PublishedContextRun]) -> Consolidate
             record.update({"region_id": _namespaced(run.run_id, local_id), "source_run_id": run.run_id, "source_region_id": local_id})
             regions_out.append(record)
 
-    output_points = deepcopy(list(first["points"]))
+    output_points = _output_geometry(material, points_by_run, backdrop, fingerprint)
     labelled: list[LabelledPoint] = []
     for point in output_points:
         geometry_id = str(point["geometry_id"])
@@ -331,7 +377,7 @@ def consolidate_context_runs(runs: Iterable[PublishedContextRun]) -> Consolidate
         "artifact_type": CONSOLIDATED_ARTIFACT_TYPE,
         "map_id": map_id,
         "map_frame": map_frame,
-        "source": deepcopy(first.get("source")),
+        "source": deepcopy((backdrop or first).get("source")),
         "points": output_points,
         "observations": observations_out,
         "regions": regions_out,
@@ -339,6 +385,7 @@ def consolidate_context_runs(runs: Iterable[PublishedContextRun]) -> Consolidate
         "consolidation": {
             "geometry_fingerprint": fingerprint,
             "source_run_count": len(material),
+            "backdrop_point_count": None if backdrop is None else len(backdrop["points"]),
             "algorithm": "one_vote_per_run:textual_family:strict_majority_or_quality_tiebreak",
         },
         "context_summary": {
