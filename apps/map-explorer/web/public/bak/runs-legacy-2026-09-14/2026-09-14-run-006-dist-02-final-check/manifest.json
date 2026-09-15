@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "artifact_type": "contextual_rgb_lidar_slice",
+  "run_id": "2026-09-14-run-006-dist-02-final-check",
+  "label": "2026-09-14-run-006-dist-02-final-check",
+  "created_at": "2026-09-14T14:44:32.366984+00:00",
+  "map_id": "corridor-02-dist-02",
+  "map_frame": "map",
+  "frame_count": 3,
+  "contextual_point_count": 11090,
+  "source_artifact": "/home/alexmrtr/Projects/contextual-3d-mapping/artifacts/runs/2026-09-14-run-006-dist-02-final-check/context.json",
+  "artifact": "context.json",
+  "artifact_sha256": "310a97b35cf01b84e378b51b9aa4572ff2fae4a06658f160e6e5da5b1f842ddd",
+  "assets_sha256": {
+    "context-assets/corridor-02-02148-raw.png": "30dd5dd3b910cea8899a44ed56dd3507c70eaf5cb1afa21a6404da9bb1428a5d",
+    "context-assets/corridor-02-02148-regions.png": "15256b3a6ff1701bb3f1e482de3f5cd932dbc202d55f88723ae3f7384199d7ff",
+    "context-assets/corridor-02-02156-raw.png": "1bc27e0175e5032bd1231a22976e100ae7af330a98d4a4400380b35e217cb8f5",
+    "context-assets/corridor-02-02156-regions.png": "a88fafa2c12b9ebb112c486ea8188817579ddbb4cc2e6b2a20ab146ff6617e93",
+    "context-assets/corridor-02-02163-raw.png": "207535e0982886c238f29b759f769313af4f6b894d8127986e64ffce8fa5ea73",
+    "context-assets/corridor-02-02163-regions.png": "efd8d3170612948de81103beb9c86dca8c87a04d662b20f1c18bc2d852bd4154"
+  },
+  "fingerprint": "de1138a275cc3cf598f84a51be493397c8dbca0953f121474b929900df939aa4"
+}

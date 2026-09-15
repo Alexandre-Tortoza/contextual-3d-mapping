@@ -48,7 +48,7 @@ class Ablation:
 def baseline_config(*, real_backends: bool, gpu_memory_budget_gb: float = 8.0) -> ModuleConfig:
     """Retorna a configuração baseline: grade de patches, sem contexto, sem calibração."""
     config = research_quality_config(
-        multi_scale_justified=False,
+        multi_scale_enabled=False,
         gpu_memory_budget_gb=gpu_memory_budget_gb,
         real_backends=real_backends,
     )

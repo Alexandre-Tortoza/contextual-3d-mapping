@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-12933",
+  "regions": [
+    {
+      "region_id": "region-0bda1bdf32800587",
+      "label": "sky",
+      "region_kind": "thing",
+      "discovery_area": 127276,
+      "box_before": {
+        "x_min": 1.0,
+        "y_min": 4.0,
+        "x_max": 636.0,
+        "y_max": 261.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9789081811904907,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.272099713009084,
+      "model_mask_area": 127794,
+      "clipped_pixel_count": 1036,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 126758,
+          "box": {
+            "x_min": 3.0,
+            "y_min": 4.0,
+            "x_max": 632.0,
+            "y_max": 261.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 126758,
+          "refined_overlap": 126758,
+          "detector_box_overlap": 126758,
+          "distance_to_box_center_px": 0.6627199530127991
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 126758,
+      "area_ratio": 0.9959301046544518,
+      "area_reduction_ratio": 0.004069895345548247,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 3.0,
+        "y_min": 4.0,
+        "x_max": 632.0,
+        "y_max": 261.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-15d8499ee0ceb20f",
+      "label": "tree branches",
+      "region_kind": "thing",
+      "discovery_area": 700,
+      "box_before": {
+        "x_min": 324.0,
+        "y_min": 244.0,
+        "x_max": 355.0,
+        "y_max": 274.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9219849109649658,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.49373386401566677,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

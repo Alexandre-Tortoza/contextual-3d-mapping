@@ -52,6 +52,29 @@ def test_sam_mask_becomes_local_region_proposal() -> None:
     assert proposal.geometric_confidence == 0.8
 
 
+# Garante que o resultado SAM3 mantém o contract geométrico do port sem
+# vazar tensores do runtime e registra o prompt que definiu a cobertura.
+def test_sam3_mask_becomes_local_region_proposal_with_prompt_provenance() -> None:
+    """Converte máscara SAM3 e preserva a proveniência do prompt amplo."""
+    image = payload_with_blobs(width=8, height=8)
+    segmentation = np.zeros((8, 8), dtype=np.bool_)
+    segmentation[1:5, 2:7] = True
+
+    proposal = _proposal_from_mask(
+        segmentation,
+        0.9,
+        0,
+        image,
+        RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3", min_mask_area=1),
+        backend_name="sam3",
+    )
+
+    assert proposal is not None
+    assert proposal.local_id == "sam3-0"
+    assert proposal.box == proposal.mask.bounding_box()
+    assert proposal.source == "sam3:facebook/sam3:prompt=all visible objects"
+
+
 # Protege a fronteira contra máscaras devolvidas em resolução diferente da
 # entrada, que não podem ser remapeadas corretamente pelo tiling.
 def test_sam_mask_with_wrong_resolution_is_rejected() -> None:
@@ -144,6 +167,20 @@ def test_port_factory_keeps_fake_defaults_gpu_free() -> None:
     assert isinstance(ports.feature_extractor, FakeDenseFeatureExtractor)
     assert isinstance(ports.language_encoder, FakeLanguageAlignedEncoder)
     assert isinstance(ports.multimodal_reasoner, FakeMultimodalReasoner)
+
+
+# Confirma que SAM3 é selecionável sem importar o runtime opcional durante a
+# composição; os pesos continuam sendo carregados apenas no primeiro discovery.
+def test_port_factory_selects_sam3_region_discoverer_lazily() -> None:
+    """Seleciona o adapter SAM3 sem exigir torch, Transformers ou checkpoint."""
+    from visual_perception.config import ModuleConfig
+    from visual_perception.infrastructure.adapters.region_discovery_backend import Sam3RegionDiscoveryAdapter
+
+    ports = create_perception_ports(
+        ModuleConfig(region_discovery=RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3"))
+    )
+
+    assert isinstance(ports.region_discoverer, Sam3RegionDiscoveryAdapter)
 
 
 # Constrói um RegionReasoningRequest mínimo para os testes de tradução de

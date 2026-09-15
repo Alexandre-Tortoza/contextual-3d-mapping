@@ -1,0 +1,101 @@
+{
+  "frame_id": "corridor-02-15276",
+  "regions": [
+    {
+      "region_id": "region-40563a009f68b6a1",
+      "label": "graffiti",
+      "region_kind": "thing",
+      "discovery_area": 19806,
+      "box_before": {
+        "x_min": 438.0,
+        "y_min": 26.0,
+        "x_max": 629.0,
+        "y_max": 292.0
+      },
+      "component_count_before": 7,
+      "geometric_confidence": 0.9792153835296631,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 4.440247509017354,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-476fcb76e09ed70e",
+      "label": "closed door",
+      "region_kind": "thing",
+      "discovery_area": 15946,
+      "box_before": {
+        "x_min": 429.0,
+        "y_min": 25.0,
+        "x_max": 509.0,
+        "y_max": 279.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9738705158233643,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 3.253303487057565,
+      "model_mask_area": 15946,
+      "clipped_pixel_count": 60,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 15886,
+          "box": {
+            "x_min": 429.0,
+            "y_min": 25.0,
+            "x_max": 509.0,
+            "y_max": 279.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 15886,
+          "refined_overlap": 15886,
+          "detector_box_overlap": 15886,
+          "distance_to_box_center_px": 0.357990117443696
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 15886,
+      "area_ratio": 0.9962373008905054,
+      "area_reduction_ratio": 0.0037626991094945605,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 429.0,
+        "y_min": 25.0,
+        "x_max": 509.0,
+        "y_max": 279.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-bb53e4da989c2828",
+      "label": "blue door",
+      "region_kind": "thing",
+      "discovery_area": 13137,
+      "box_before": {
+        "x_min": 219.0,
+        "y_min": 37.0,
+        "x_max": 294.0,
+        "y_max": 277.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9692663550376892,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.4995451750000939,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

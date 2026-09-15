@@ -1,0 +1,80 @@
+{
+  "frame_id": "corridor-02-10764",
+  "regions": [
+    {
+      "region_id": "region-4d72445177de09c8",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1164,
+      "box_before": {
+        "x_min": 456.0,
+        "y_min": 192.0,
+        "x_max": 497.0,
+        "y_max": 237.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9308899641036987,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 7.3369400589726865,
+      "model_mask_area": 1172,
+      "clipped_pixel_count": 19,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1153,
+          "box": {
+            "x_min": 456.0,
+            "y_min": 192.0,
+            "x_max": 497.0,
+            "y_max": 237.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1153,
+          "refined_overlap": 1153,
+          "detector_box_overlap": 1153,
+          "distance_to_box_center_px": 0.17554862023787107
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1153,
+      "area_ratio": 0.9905498281786942,
+      "area_reduction_ratio": 0.009450171821305808,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 456.0,
+        "y_min": 192.0,
+        "x_max": 497.0,
+        "y_max": 237.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-9e36b1c12c2e9c6d",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 107738,
+      "box_before": {
+        "x_min": 12.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 235.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9819861650466919,
+      "visual_support": null,
+      "model_calls": 2,
+      "latency_s": 0.5775279530207627,
+      "model_mask_area": 10872,
+      "clipped_pixel_count": 10872,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

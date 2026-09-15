@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-08684",
+  "regions": [
+    {
+      "region_id": "region-561c04d349003879",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1367,
+      "box_before": {
+        "x_min": 408.0,
+        "y_min": 183.0,
+        "x_max": 452.0,
+        "y_max": 224.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9433059692382812,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 3.9975949109939393,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    },
+    {
+      "region_id": "region-e3e1511012fabbac",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1403,
+      "box_before": {
+        "x_min": 320.0,
+        "y_min": 179.0,
+        "x_max": 366.0,
+        "y_max": 229.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9341968894004822,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 2.5181453579862136,
+      "model_mask_area": 1395,
+      "clipped_pixel_count": 6,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1389,
+          "box": {
+            "x_min": 320.0,
+            "y_min": 179.0,
+            "x_max": 366.0,
+            "y_max": 229.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1389,
+          "refined_overlap": 1389,
+          "detector_box_overlap": 1389,
+          "distance_to_box_center_px": 0.5769798748012015
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1389,
+      "area_ratio": 0.9900213827512473,
+      "area_reduction_ratio": 0.009978617248752708,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 320.0,
+        "y_min": 179.0,
+        "x_max": 366.0,
+        "y_max": 229.0
+      },
+      "reason": null
+    }
+  ]
+}

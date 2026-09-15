@@ -11,12 +11,13 @@ regras de runtime ficam isolados em `infrastructure/adapters/`.
 O módulo roda por padrão com `backend="fake"`. Os fakes são determinísticos, não exigem
 GPU e exercitam contracts, pipeline, cache e integração.
 
-A configuração real de referência foi escolhida por benchmark reproduzível na RTX 3060
-8GB (#174):
+A configuração real de referência usa SAM3 por decisão de produto; o benchmark
+reproduzível na RTX 3060 8GB continua sendo a fonte de verdade para medir qualidade,
+latência e VRAM:
 
 | Capability | Port | Backend real | Checkpoint | Identificador |
 | --- | --- | --- | --- | --- |
-| Region discovery | `RegionDiscoverer` | SAM ViT-H | `facebook/sam-vit-huge` | `sam` |
+| Region discovery | `RegionDiscoverer` | SAM3, prompt amplo | `facebook/sam3` | `sam3` |
 | Dense feature extraction | `DenseFeatureExtractor` | DINOv2-base | `facebook/dinov2-base` | `dinov2` |
 | Language-aligned embedding | `LanguageAlignedEncoder` | CLIP ViT-L/14 | `openai/clip-vit-large-patch14` | `clip` |
 | Multimodal reasoning | `MultimodalReasoner` | Qwen2.5-VL-3B-Instruct 4-bit | `Qwen/Qwen2.5-VL-3B-Instruct` | `qwen_vl` |
@@ -92,18 +93,21 @@ prefira manter o mesmo port e trocar somente o adapter/factory/configuração.
 Produzir propostas geométricas 2D class-agnostic. O backend não atribui identidade
 semântica final à região.
 
-### Implementação atual
+### Implementação de referência
 
 - port: `RegionDiscoverer`;
 - adapter: `infrastructure/adapters/region_discovery_backend.py`;
-- backend: `sam`;
-- checkpoint: `facebook/sam-vit-huge`.
+- backend: `sam3`;
+- checkpoint: `facebook/sam3`;
+- prompt versionado: `all visible objects`;
+- limiar de instância e de binarização: `0.5`.
 
 ### Por que foi escolhido
 
-No benchmark #174, SAM ViT-H apresentou IoU previsto médio de `0.956`, contra `0.937`
-para SAM2.1-hiera-large e `0.585` para FastSAM-x. Todos cabiam individualmente no budget
-de 8GB, então a seleção priorizou qualidade.
+SAM3 recebe o prompt amplo em cada imagem ou tile e retorna todas as instâncias que o
+modelo associa a ele. Isso não introduz uma lista de classes, mas também não equivale à
+geração automática class-agnostic do SAM2. O benchmark precisa registrar a cobertura,
+latência e VRAM dessa política na RTX 3060 8GB antes de qualquer alegação de qualidade.
 
 ### Output esperado
 
@@ -112,9 +116,10 @@ consolidação e semântica são etapas posteriores.
 
 ### Limites atuais
 
-SAM pode over-segmentar superfícies repetitivas, como tetos em ladrilhos. O merge atual
-atua por IoU/sobreposição e não une automaticamente regiões vizinhas não sobrepostas com
-semântica semelhante.
+O prompt amplo pode omitir superfícies que o modelo não interprete como objeto, agrupar
+categorias distintas ou over-segmentar superfícies repetitivas. O merge atua por
+IoU/sobreposição e não une automaticamente regiões vizinhas não sobrepostas com semântica
+semelhante. `sam`/SAM2 permanece disponível como alternativa class-agnostic explícita.
 
 ## Dense feature extraction
 
@@ -571,14 +576,15 @@ mais fortes devem ser definidas em protocolos de avaliação específicos.
 
 ## Candidatos avaliados nesta rodada
 
-A revisão de contexto visual investigou quatro candidatos modernos. Nenhum deles trocou a
-configuração de referência, e os motivos são diferentes entre si:
+A revisão de contexto visual investigou quatro candidatos modernos. SAM3 passou a ser a
+configuração de referência após a aprovação de acesso; os demais permanecem pendentes ou
+não adotados pelos motivos abaixo:
 
 | candidato | capability | disponibilidade verificada | estado |
 | --- | --- | --- | --- |
 | Qwen3-VL 2B / 4B / 8B | multimodal reasoning | `transformers` 5.16.1 tem `Qwen3VLForConditionalGeneration`; os três checkpoints já estão no cache local (4,0 / 8,3 / 17 GB), sem gate | **benchmark pendente**, issue #218. Nenhum download necessário |
 | DINOv3 ViT-B/16 | dense features | `transformers` 5.16.1 tem `DINOv3ViTModel`; `facebook/dinov3-vitb16-pretrain-lvd1689m` é 85,7 M params — mesma classe do DINOv2-base — mas está **`gated=manual`** no Hub | **bloqueado**: exige aceite de licença na conta HF do usuário. Issue #219 |
-| SAM 3 | verificação condicionada a conceito | `transformers` 5.16.1 tem `Sam3Model`/`Sam3Processor`; `facebook/sam3` é 860 M params e está **`gated=manual`** | **bloqueado** pelo mesmo motivo. Issue #220 |
+| SAM 3 | discovery por prompt amplo | `transformers>=5.16.1` tem `Sam3Model`/`Sam3Processor`; `facebook/sam3` é 860 M params e o acesso da conta foi aprovado | provider `sam3` adotado; benchmark de cobertura/VRAM pendente |
 | LoftUp | feature upsampling | não integrado | **não avaliado** nesta rodada; prioridade menor que os anteriores. Issue #221 |
 
 Duas observações de método:

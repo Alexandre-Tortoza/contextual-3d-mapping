@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-12868",
+  "regions": [
+    {
+      "region_id": "region-717046faec1eafae",
+      "label": "trees",
+      "region_kind": "thing",
+      "discovery_area": 119455,
+      "box_before": {
+        "x_min": 9.0,
+        "y_min": 4.0,
+        "x_max": 634.0,
+        "y_max": 241.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9745520949363708,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 4.876490123977419,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    },
+    {
+      "region_id": "region-90bb94a4fd85d2ff",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 709,
+      "box_before": {
+        "x_min": 376.0,
+        "y_min": 217.0,
+        "x_max": 410.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8905613422393799,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 3.878552227979526,
+      "model_mask_area": 713,
+      "clipped_pixel_count": 10,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 703,
+          "box": {
+            "x_min": 376.0,
+            "y_min": 217.0,
+            "x_max": 410.0,
+            "y_max": 247.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 703,
+          "refined_overlap": 703,
+          "detector_box_overlap": 703,
+          "distance_to_box_center_px": 0.5287983366432908
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 703,
+      "area_ratio": 0.9915373765867419,
+      "area_reduction_ratio": 0.008462623413258097,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 376.0,
+        "y_min": 217.0,
+        "x_max": 410.0,
+        "y_max": 247.0
+      },
+      "reason": null
+    }
+  ]
+}

@@ -87,7 +87,9 @@ class QualityProfile(StrEnum):
 class RegionDiscoveryConfig:
     backend: str = "fake"
     checkpoint: str = "none"
+    prompt: str = "all visible objects"
     score_threshold: float = 0.5
+    mask_threshold: float = 0.5
     device: str = "auto"
     max_regions: int = 100
     min_mask_area: int = 64
@@ -105,8 +107,14 @@ class RegionDiscoveryConfig:
     # falhando cedo com um erro acionável em vez de deixar um threshold
     # inválido se propagar para o pipeline.
     def __post_init__(self) -> None:
+        if self.backend not in {"fake", "sam", "sam3"}:
+            raise ValueError("region_discovery.backend must be fake, sam, or sam3.")
+        if not self.prompt.strip():
+            raise ValueError("region_discovery.prompt must not be empty.")
         if not 0.0 <= self.score_threshold <= 1.0:
             raise ValueError("region_discovery.score_threshold must be in [0, 1].")
+        if not 0.0 <= self.mask_threshold <= 1.0:
+            raise ValueError("region_discovery.mask_threshold must be in [0, 1].")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("region_discovery.device must be 'auto', 'cpu', or 'cuda'.")
         for name in ("pred_iou_threshold", "stability_score_threshold"):

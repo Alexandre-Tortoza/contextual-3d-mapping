@@ -52,7 +52,7 @@ def _real_test_payload(width: int = 64, height: int = 64) -> ImagePayload:
 @requires_gpu
 def test_real_region_discovery_adapter_finds_regions_on_gpu() -> None:
     """O adapter real de region discovery roda SAM de verdade e retorna geometria válida."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -70,7 +70,7 @@ def test_real_region_discovery_adapter_finds_regions_on_gpu() -> None:
 @requires_gpu
 def test_real_feature_extraction_adapter_returns_finite_grid_on_gpu() -> None:
     """O adapter real de feature extraction roda DINOv2 de verdade e retorna um grid finito."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -86,7 +86,7 @@ def test_real_feature_extraction_adapter_returns_finite_grid_on_gpu() -> None:
 @requires_gpu
 def test_real_language_embedding_adapter_returns_normalized_vector_on_gpu() -> None:
     """O adapter real de language embedding roda CLIP de verdade e normaliza a saída."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -104,7 +104,7 @@ def test_real_language_embedding_adapter_returns_normalized_vector_on_gpu() -> N
 @requires_gpu
 def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
     """O adapter real de multimodal reasoning roda o VLM de verdade e retorna JSON parseável."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -137,7 +137,7 @@ def test_real_semantic_grounding_adapter_grounds_regions_on_gpu() -> None:
     mesmo quando nada nunca refina, que foi exatamente como esta regressão escapou na
     primeira versão deste teste.
     """
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -173,7 +173,7 @@ def test_real_semantic_grounding_adapter_grounds_regions_on_gpu() -> None:
 @requires_gpu
 def test_semantic_grounding_releases_prior_residency_before_loading_its_own() -> None:
     """`ground()` libera os modelos residentes de outros estágios antes de carregar os seus."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
@@ -208,7 +208,7 @@ def test_real_backends_pipeline_runs_end_to_end_within_vram_budget() -> None:
     os 4 modelos nunca fiquem residentes ao mesmo tempo; sem isso, a soma dos
     picos individuais (SAM+DINOv2+CLIP+Qwen) estoura os 8GB de referência.
     """
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()

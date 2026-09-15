@@ -1,0 +1,184 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-06660",
+  "input_sha256": "18dcd6636d1e41e23b56d860b3bad1ad67f426a2ba3cd603de94020681a6ccc9",
+  "latency_s": 49.27174203298637,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 2,
+  "proposal_count": 2,
+  "merged_proposal_count": 2,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "building silhouette",
+      1
+    ],
+    [
+      "car",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "automobile",
+      1
+    ],
+    [
+      "structure",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 2,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 2,
+    "missing": 0,
+    "minimum": 0.9807029962539673,
+    "maximum": 0.9829567670822144,
+    "mean": 0.9818298816680908,
+    "median": 0.9818298816680908,
+    "distinct_values": 2,
+    "stddev": 0.0011268854141235352,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "building silhouette",
+    "dominant_fraction": 0.5,
+    "distinct_labels": 2,
+    "dominant_category": "automobile",
+    "dominant_category_fraction": 0.5,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        5
+      ],
+      [
+        "indistinguishable",
+        1
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 0,
+    "reconciled_regions": 0,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 2,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 0,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 0
+  },
+  "published_region_count": 2,
+  "structural_context_count": 0,
+  "suppressed_regions": [],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-9915fd3f39354245",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 117459,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 3.0,
+        "x_max": 640.0,
+        "y_max": 232.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9807029962539673,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 6.433470710006077,
+      "model_mask_area": 8025,
+      "clipped_pixel_count": 8025,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-c50779772b27de0b",
+      "label": "car",
+      "region_kind": "thing",
+      "discovery_area": 85622,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 252.0,
+        "x_max": 627.0,
+        "y_max": 469.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9829567670822144,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.4477360379823949,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": []
+}

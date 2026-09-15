@@ -1,0 +1,250 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-13004",
+  "input_sha256": "8b298a76edf11dae19ba9e1d54e53e642cadca6d9698cfd67cdb6d9f2ad5605f",
+  "latency_s": 76.58610169799067,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 5,
+  "proposal_count": 7,
+  "merged_proposal_count": 7,
+  "regions_with_multiple_proposals": 1,
+  "label_counts": [
+    [
+      "plain surface",
+      2
+    ],
+    [
+      "building",
+      1
+    ],
+    [
+      "curved wall",
+      1
+    ],
+    [
+      "plain wall",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "industrial",
+      4
+    ],
+    [
+      "building exterior",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      3
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 5,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 5,
+    "missing": 0,
+    "minimum": 0.9320879578590393,
+    "maximum": 0.985650360584259,
+    "mean": 0.9589286327362061,
+    "median": 0.9477791786193848,
+    "distinct_values": 5,
+    "stddev": 0.02141061844715123,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "plain surface",
+    "dominant_fraction": 0.4,
+    "distinct_labels": 4,
+    "dominant_category": "industrial",
+    "dominant_category_fraction": 0.8,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        8
+      ],
+      [
+        "indistinguishable",
+        6
+      ],
+      [
+        "contradicts",
+        1
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 2,
+    "reconciled_regions": 4,
+    "distinct_raw_labels": 4,
+    "distinct_canonical_concepts": 4,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "part_of",
+        3
+      ]
+    ],
+    "geometric_relations": 7,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 2
+  },
+  "published_region_count": 2,
+  "structural_context_count": 3,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      3
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-900c0e9f269f2e5f",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 78645,
+      "box_before": {
+        "x_min": 4.0,
+        "y_min": 4.0,
+        "x_max": 636.0,
+        "y_max": 228.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9828631281852722,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.681199522019597,
+      "model_mask_area": 40492,
+      "clipped_pixel_count": 40492,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-ac4fc2118a6cc32b",
+      "label": "curved wall",
+      "region_kind": "thing",
+      "discovery_area": 40823,
+      "box_before": {
+        "x_min": 183.0,
+        "y_min": 36.0,
+        "x_max": 640.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.985650360584259,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.5141374109953176,
+      "model_mask_area": 40490,
+      "clipped_pixel_count": 126,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 40364,
+          "box": {
+            "x_min": 336.0,
+            "y_min": 110.0,
+            "x_max": 640.0,
+            "y_max": 254.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 40364,
+          "refined_overlap": 40364,
+          "detector_box_overlap": 40364,
+          "distance_to_box_center_px": 0.2396230472007003
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 40364,
+      "area_ratio": 0.9887563383386816,
+      "area_reduction_ratio": 0.011243661661318405,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 336.0,
+        "y_min": 110.0,
+        "x_max": 640.0,
+        "y_max": 254.0
+      },
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-6ea3d2309373ff49",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-90108150701d9cb7",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-f614a101234c085a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    }
+  ]
+}

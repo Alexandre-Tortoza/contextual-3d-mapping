@@ -1,0 +1,374 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-15085",
+  "input_sha256": "708efdf0eef22fa9b4f936894908f257309254115a0627b4ff3498b4d6fa3595",
+  "latency_s": 269.69304464999004,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 39,
+  "proposal_count": 51,
+  "merged_proposal_count": 51,
+  "regions_with_multiple_proposals": 8,
+  "label_counts": [
+    [
+      "wall",
+      27
+    ],
+    [
+      "ceiling",
+      9
+    ],
+    [
+      "floor",
+      2
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "building interior",
+      23
+    ],
+    [
+      "ceilings",
+      7
+    ],
+    [
+      "wall",
+      4
+    ],
+    [
+      "flooring",
+      2
+    ],
+    [
+      "indoor ceiling",
+      2
+    ],
+    [
+      "floor",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      34
+    ],
+    [
+      "stuff",
+      5
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 39,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 39,
+    "missing": 0,
+    "minimum": 0.8829436302185059,
+    "maximum": 0.9843512773513794,
+    "mean": 0.9437136268004392,
+    "median": 0.9448290467262268,
+    "distinct_values": 39,
+    "stddev": 0.02205622002725143,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 24,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.6923076923076923,
+    "distinct_labels": 4,
+    "dominant_category": "building interior",
+    "dominant_category_fraction": 0.5897435897435898,
+    "distinct_categories": 6
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        77
+      ],
+      [
+        "contradicts",
+        27
+      ],
+      [
+        "indistinguishable",
+        13
+      ]
+    ],
+    "regions_with_unsupported_primary": 6,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 34,
+    "reconciled_regions": 34,
+    "distinct_raw_labels": 4,
+    "distinct_canonical_concepts": 4,
+    "entity_groups": 3,
+    "regions_in_entity_groups": 35,
+    "supported_entity_groups": 1,
+    "semantic_relations": [
+      [
+        "covers",
+        2
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 116,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 24
+  },
+  "published_region_count": 0,
+  "structural_context_count": 39,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      39
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-0c6c665fe948e8d8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-0ed49ffc9aae4f75",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-246b1237f914f2c4",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-2706968075270fe1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-291d75cea2a70636",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-2b9ab19e2d743170",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-39b09b61a2306b75",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-3d5f82d32440d277",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-422742ba644ae55a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-42e528c391ee6edd",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-4e756b1fa25b319c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-509ee9de4c29eeb1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-56bb03083d7512f1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-58ab1f2df3dc8717",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-620bad6bab6ed3e5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-6388084f83680d9f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-668471b0d06e7a5e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-68344a8d676f3c75",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-73ce35d1a3604603",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-8d1eb56fc25761c9",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-8f0993d4af863620",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-92017c1c59be005f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-95319c51d82ad303",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-995b48ccefbeca85",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-9a377841cca90fda",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-9b2d764ec47c265e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-a10a2f3e6f1a50a6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-adb26719033b3ddb",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-b3a0fedb5d2c4e37",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-b8fe25aeef474c21",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c00de828253f81a5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c3b6ce198f34bbd7",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c49f9646cd19ad0c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c6545009bf3ae090",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-d48d457063c4c027",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-dba2ab9ac921093c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-e9fa1077355178a5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-f7464205e0815a4e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-f9b13f8a4af14e8b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    }
+  ]
+}

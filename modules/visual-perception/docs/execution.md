@@ -32,6 +32,14 @@ from visual_perception.application.execution_profile import research_quality_con
 config = research_quality_config(real_backends=True)
 ```
 
+Por default, esse perfil executa `region discovery` uma vez na imagem completa
+e uma vez em cada tile de uma grade `2x2` com 20% de sobreposição. A passada
+global preserva o contexto da cena; os tiles elevam a cobertura de detalhes
+finos. As proposals são remapeadas para a imagem original e o merge geométrico
+deduplica apenas máscaras quase idênticas. Use
+`research_quality_config(multi_scale_enabled=False, ...)` somente para uma
+ablação ou benchmark que exija o braço full-only.
+
 A composição dos ports ocorre antes da chamada do pipeline:
 
 ```python

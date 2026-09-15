@@ -1,0 +1,104 @@
+{
+  "frame_id": "corridor-02-12981",
+  "regions": [
+    {
+      "region_id": "region-0a0d6a823ffe6c0f",
+      "label": "building roof",
+      "region_kind": "thing",
+      "discovery_area": 101611,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 3.0,
+        "x_max": 631.0,
+        "y_max": 257.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9813448190689087,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 6.573482300009346,
+      "model_mask_area": 30644,
+      "clipped_pixel_count": 30644,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-15a80fda6373f60f",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 30680,
+      "box_before": {
+        "x_min": 407.0,
+        "y_min": 126.0,
+        "x_max": 640.0,
+        "y_max": 274.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9862498044967651,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.507931186031783,
+      "model_mask_area": 30643,
+      "clipped_pixel_count": 194,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 30449,
+          "box": {
+            "x_min": 408.0,
+            "y_min": 126.0,
+            "x_max": 640.0,
+            "y_max": 274.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 30449,
+          "refined_overlap": 30449,
+          "detector_box_overlap": 30449,
+          "distance_to_box_center_px": 0.5146648197087732
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 30449,
+      "area_ratio": 0.9924706649282921,
+      "area_reduction_ratio": 0.007529335071707943,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 408.0,
+        "y_min": 126.0,
+        "x_max": 640.0,
+        "y_max": 274.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-5e21f758d6c9563b",
+      "label": "pink flower",
+      "region_kind": "thing",
+      "discovery_area": 822,
+      "box_before": {
+        "x_min": 72.0,
+        "y_min": 237.0,
+        "x_max": 107.0,
+        "y_max": 270.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9288967251777649,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.4970167969877366,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

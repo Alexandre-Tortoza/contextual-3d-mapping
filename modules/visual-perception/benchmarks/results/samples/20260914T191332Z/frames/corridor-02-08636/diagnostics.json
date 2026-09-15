@@ -1,0 +1,233 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-08636",
+  "input_sha256": "256f960ab7234c770fc2a9148419facaee9b51e3dbc7183f0f12092d86d255fd",
+  "latency_s": 49.12716134398943,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 3,
+  "proposal_count": 4,
+  "merged_proposal_count": 3,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "building silhouette",
+      1
+    ],
+    [
+      "tree",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "building interior",
+      1
+    ],
+    [
+      "urban architecture",
+      1
+    ],
+    [
+      "vegetation",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      3
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 3,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 3,
+    "missing": 0,
+    "minimum": 0.934191882610321,
+    "maximum": 0.9824436902999878,
+    "mean": 0.9550074537595113,
+    "median": 0.9483867883682251,
+    "distinct_values": 3,
+    "stddev": 0.0202473725702485,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "building silhouette",
+    "dominant_fraction": 0.3333333333333333,
+    "distinct_labels": 3,
+    "dominant_category": "building interior",
+    "dominant_category_fraction": 0.3333333333333333,
+    "distinct_categories": 3
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 1,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "outside_valid_area",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        7
+      ],
+      [
+        "contradicts",
+        1
+      ],
+      [
+        "indistinguishable",
+        1
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 1,
+    "reconciled_regions": 1,
+    "distinct_raw_labels": 3,
+    "distinct_canonical_concepts": 3,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 2,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 1
+  },
+  "published_region_count": 2,
+  "structural_context_count": 1,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      1
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-2a82be8519689532",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 100015,
+      "box_before": {
+        "x_min": 5.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 222.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9824436902999878,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 4.309306449984433,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b8ecb82a4b1f9411",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1317,
+      "box_before": {
+        "x_min": 365.0,
+        "y_min": 181.0,
+        "x_max": 410.0,
+        "y_max": 229.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.934191882610321,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 3.973601484991377,
+      "model_mask_area": 1304,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1301,
+          "box": {
+            "x_min": 366.0,
+            "y_min": 181.0,
+            "x_max": 410.0,
+            "y_max": 229.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1301,
+          "refined_overlap": 1301,
+          "detector_box_overlap": 1301,
+          "distance_to_box_center_px": 0.4919663580069134
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1301,
+      "area_ratio": 0.9878511769172361,
+      "area_reduction_ratio": 0.012148823082763882,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 366.0,
+        "y_min": 181.0,
+        "x_max": 410.0,
+        "y_max": 229.0
+      },
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-38fb838b7e97c89e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    }
+  ]
+}

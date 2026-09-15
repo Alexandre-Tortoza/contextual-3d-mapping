@@ -1,0 +1,53 @@
+{
+  "frame_id": "corridor-02-02364",
+  "regions": [
+    {
+      "region_id": "region-363c14bd2d5f6c2e",
+      "label": "dark-colored panel",
+      "region_kind": "thing",
+      "discovery_area": 16883,
+      "box_before": {
+        "x_min": 95.0,
+        "y_min": 252.0,
+        "x_max": 327.0,
+        "y_max": 368.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.924003541469574,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.705530655977782,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-bbe559f49d969808",
+      "label": "black leather armrest",
+      "region_kind": "thing",
+      "discovery_area": 9963,
+      "box_before": {
+        "x_min": 96.0,
+        "y_min": 252.0,
+        "x_max": 323.0,
+        "y_max": 329.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9136096239089966,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.4536705430073198,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

@@ -59,6 +59,44 @@ def _sam_family_candidate(name: str, checkpoint: str, frames: list[Path]) -> Can
     return (name, factory, run_once)
 
 
+# Constrói o candidato SAM3 com o prompt amplo versionado do profile real.
+# SAM3 não possui geração automática class-agnostic: o prompt faz parte do
+# nome para que comparações não confundam políticas de cobertura diferentes.
+def _sam3_candidate(frames: list[Path]) -> Candidate:
+    """Retorna o candidato SAM3 de segmentação por prompt amplo."""
+    frame_iter = _frame_cycle(frames)
+    prompt = "all visible objects"
+
+    # Carrega modelo e processor juntos porque o pós-processamento das masks
+    # depende do processor que pertence ao mesmo checkpoint.
+    def factory() -> tuple[object, object]:
+        """Carrega as classes públicas do Transformers para SAM3 na GPU."""
+        from transformers import Sam3Model, Sam3Processor
+
+        return (
+            Sam3Model.from_pretrained("facebook/sam3").to("cuda").eval(),
+            Sam3Processor.from_pretrained("facebook/sam3"),
+        )
+
+    # Executa uma inferência por frame e mede a confiança média das instâncias
+    # devolvidas pelo próprio SAM3, mantendo a métrica comparável aos candidatos SAM.
+    def run_once(candidate: object) -> float:
+        """Segmenta o próximo frame com o prompt amplo e retorna o score médio."""
+        import torch
+
+        model, processor = candidate  # type: ignore[misc]
+        inputs = processor(images=next(frame_iter), text=prompt, return_tensors="pt").to("cuda")
+        with torch.inference_mode():
+            outputs = model(**inputs)
+        result = processor.post_process_instance_segmentation(
+            outputs, threshold=0.5, mask_threshold=0.5, target_sizes=inputs.get("original_sizes").tolist()
+        )[0]
+        scores = result["scores"]
+        return 0.0 if len(scores) == 0 else float(sum(float(score) for score in scores) / len(scores))
+
+    return (f"sam3:facebook/sam3:prompt={prompt}", factory, run_once)
+
+
 # Constrói um candidato de benchmark (nome fixo "fastsam:<checkpoint>",
 # factory, run_once) para um checkpoint FastSAM via ultralytics: factory
 # carrega o modelo, e run_once roda a detecção sobre um frame e retorna a
@@ -97,6 +135,7 @@ def _fastsam_candidate(checkpoint: str, frames: list[Path]) -> Candidate:
 # run_backend_benchmark.py ao selecionar o stage "region_discovery".
 def candidates(frames: list[Path]) -> list[Candidate]:
     return [
+        _sam3_candidate(frames),
         _sam_family_candidate("sam:facebook/sam-vit-huge", "facebook/sam-vit-huge", frames),
         _sam_family_candidate(
             "sam2:facebook/sam2.1-hiera-large", "facebook/sam2.1-hiera-large", frames

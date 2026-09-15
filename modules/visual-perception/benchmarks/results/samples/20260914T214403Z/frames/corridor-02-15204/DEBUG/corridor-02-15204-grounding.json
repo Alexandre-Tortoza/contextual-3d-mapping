@@ -1,0 +1,29 @@
+{
+  "frame_id": "corridor-02-15204",
+  "regions": [
+    {
+      "region_id": "region-d473f2c334330fe9",
+      "label": "wall",
+      "region_kind": "thing",
+      "discovery_area": 4110,
+      "box_before": {
+        "x_min": 325.0,
+        "y_min": 131.0,
+        "x_max": 363.0,
+        "y_max": 251.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9614991545677185,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 5.283288023987552,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

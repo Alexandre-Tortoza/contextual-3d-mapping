@@ -23,7 +23,10 @@ from visual_perception.infrastructure.adapters.language_embedding_backend import
 from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
     RealMultimodalReasoningAdapter,
 )
-from visual_perception.infrastructure.adapters.region_discovery_backend import RealRegionDiscoveryAdapter
+from visual_perception.infrastructure.adapters.region_discovery_backend import (
+    RealRegionDiscoveryAdapter,
+    Sam3RegionDiscoveryAdapter,
+)
 from visual_perception.infrastructure.adapters.semantic_grounding_backend import RealSemanticGroundingAdapter
 from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
 from visual_perception.infrastructure.fakes.fake_language_encoder import FakeLanguageAlignedEncoder
@@ -55,12 +58,14 @@ def create_perception_ports(
 # Seleciona o backend de geometria sem atribuir semântica a propostas.
 def _region_discoverer_for(
     config: ModuleConfig, lifecycle: ModelLifecycleManager
-) -> FakeRegionDiscoverer | RealRegionDiscoveryAdapter:
+) -> FakeRegionDiscoverer | RealRegionDiscoveryAdapter | Sam3RegionDiscoveryAdapter:
     """Seleciona o port de descoberta de regiões declarado pela configuração."""
     if config.region_discovery.backend == "fake":
         return FakeRegionDiscoverer()
     if config.region_discovery.backend == "sam":
         return RealRegionDiscoveryAdapter(lifecycle)
+    if config.region_discovery.backend == "sam3":
+        return Sam3RegionDiscoveryAdapter(lifecycle)
     raise ValueError(f"Backend de region discovery não suportado: {config.region_discovery.backend!r}.")
 
 

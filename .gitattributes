@@ -1,1 +1,2 @@
 apps/map-explorer/web/public/old/runs/**/context.json filter=lfs diff=lfs merge=lfs -text
+apps/map-explorer/web/public/bak/runs-legacy-2026-09-14/**/context.json filter=lfs diff=lfs merge=lfs -text

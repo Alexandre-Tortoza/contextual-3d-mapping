@@ -1,0 +1,32 @@
+{
+  "frame_id": "corridor-02-06436",
+  "regions": [
+    {
+      "region_id": "region-a530e169c0b1e3a0",
+      "label": "pole",
+      "region_kind": "thing",
+      "discovery_area": 113095,
+      "box_before": {
+        "x_min": 10.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 239.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9699819087982178,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 7.069733102020109,
+      "model_mask_area": 191,
+      "clipped_pixel_count": 191,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

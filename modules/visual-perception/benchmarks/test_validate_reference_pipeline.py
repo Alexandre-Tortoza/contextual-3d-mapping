@@ -21,6 +21,8 @@ from validate_reference_pipeline import (  # noqa: E402
     resolve_config,
     select_frame_paths,
 )
+from fixtures import payload_with_blobs  # noqa: E402
+from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.domain.geometry import BoundingBox, Mask  # noqa: E402
 from visual_perception.domain.region_evidence import (  # noqa: E402
     EvidenceSlot,
@@ -178,6 +180,17 @@ def test_without_the_override_the_reference_checkpoint_is_untouched() -> None:
     config = resolve_config(ValidationOptions(sequence_masks=None))
 
     assert config.multimodal_reasoning.checkpoint == "Qwen/Qwen2.5-VL-3B-Instruct"
+
+
+# O validador compõe o perfil real sem alterar sua política de discovery: a
+# execução de referência deve incluir a imagem completa e os quatro tiles.
+def test_reference_validator_uses_hybrid_global_and_tiled_discovery() -> None:
+    """Mantém cinco chamadas de discovery por frame no perfil de referência."""
+    config = resolve_config(ValidationOptions(sequence_masks=None))
+    tiles = build_tiles(payload_with_blobs(), config.tiling)
+
+    assert config.tiling.multi_scale_enabled
+    assert len(tiles) == 5
 
 
 # O braço com prior temporal precisa diferir do braço sem ele em exatamente

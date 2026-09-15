@@ -105,9 +105,10 @@ O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: *
    comparação de backends. Mudar os dois juntos torna ambos ininterpretáveis — é a regra
    que esta rodada já pagou para aprender duas vezes.
 
-2. **#219 e #220** dependem de você aceitar as licenças de `facebook/dinov3-*` e
-   `facebook/sam3` no Hugging Face e configurar um token. O bloqueio não é técnico: o
-   código da versão instalada de `transformers` já suporta os dois.
+2. **#219** depende de você aceitar a licença de `facebook/dinov3-*` no Hugging Face e
+   configurar um token. O acesso a `facebook/sam3` foi aprovado e o provider `sam3` usa
+   o prompt amplo versionado `all visible objects`; o próximo passo é medir sua cobertura
+   e VRAM no benchmark de region discovery.
 
 3. **Calibrar os tetos dos estágios novos.** `refinement.max_refined_regions` e
    `semantic_relations.max_pairs` foram escolhidos como orçamento plausível, **não**

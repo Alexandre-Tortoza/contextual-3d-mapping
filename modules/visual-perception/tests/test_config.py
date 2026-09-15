@@ -18,6 +18,7 @@ from visual_perception.config import (
     MultimodalReasoningConfig,
     QualityProfile,
     RefinementConfig,
+    RegionDiscoveryConfig,
     TilingConfig,
 )
 from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry
@@ -28,6 +29,39 @@ from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry
 def test_minimal_config_validates() -> None:
     config = ModuleConfig()
     assert config.quality_profile is QualityProfile.RESEARCH_QUALITY
+
+
+# Protege o contract do provider SAM3: o prompt amplo é dado de configuração
+# reproduzível e o threshold de máscara precisa permanecer uma probabilidade.
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"backend": "unknown"}, "region_discovery.backend"),
+        ({"backend": "sam3", "prompt": "   "}, "region_discovery.prompt"),
+        ({"backend": "sam3", "mask_threshold": 1.1}, "region_discovery.mask_threshold"),
+    ],
+)
+def test_region_discovery_rejects_invalid_sam3_configuration(
+    override: dict[str, object], message: str
+) -> None:
+    """Recusa backend, prompt ou threshold SAM3 inválido na fronteira da config."""
+    with pytest.raises(ValueError, match=message):
+        RegionDiscoveryConfig(**override)  # type: ignore[arg-type]
+
+
+# Garante que mudar o prompt altera a identidade reproduzível do run, sem
+# precisar de um checkpoint ou de uma GPU para exercitar essa propriedade.
+def test_sam3_prompt_round_trips_and_changes_fingerprint() -> None:
+    """Preserva o prompt SAM3 e o inclui no fingerprint da configuração."""
+    first = ModuleConfig(region_discovery=RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3"))
+    second = ModuleConfig(
+        region_discovery=RegionDiscoveryConfig(
+            backend="sam3", checkpoint="facebook/sam3", prompt="all visible entities"
+        )
+    )
+
+    assert ModuleConfig.from_dict(first.to_dict()) == first
+    assert first.fingerprint() != second.fingerprint()
 
 
 # Confirma que uma configuração com campos explícitos (orçamento de GPU, tiling
@@ -236,7 +270,7 @@ def test_requesting_a_disabled_evidence_slot_fails(field_name: str, override: di
 def test_module_defaults_and_real_profile_request_only_enabled_slots() -> None:
     """Default e perfil real constroem sem pedir slot desligado."""
     default = ModuleConfig()
-    real = research_quality_config(multi_scale_justified=False, real_backends=True)
+    real = research_quality_config(real_backends=True)
 
     assert "contextual_crop" not in default.hypothesis_support.slots
     assert "contextual_crop" in real.hypothesis_support.slots

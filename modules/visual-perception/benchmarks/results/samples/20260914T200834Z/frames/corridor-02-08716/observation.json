@@ -1,0 +1,3645 @@
+{
+  "schema_version": 5,
+  "coordinate_convention": "top-left-origin,half-open-xyxy",
+  "source": {
+    "observation_id": "corridor-02-08716",
+    "dataset_id": "corridor-02",
+    "sequence_id": "corridor-02",
+    "sensor_id": "/camera_1/image_raw",
+    "sequence_index": 8716,
+    "timestamp": {
+      "nanoseconds": 1724621452130202438,
+      "clock_id": "rosbag"
+    },
+    "frame_id": "d",
+    "calibration_id": null
+  },
+  "image_width": 640,
+  "image_height": 480,
+  "scene_context": {
+    "claims": [
+      {
+        "kind": "scene_type",
+        "value": "park",
+        "confidence": {
+          "value": 0.85,
+          "source": "qwen_vl"
+        },
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "raw",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "environment",
+        "value": "outdoor",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "layout",
+        "value": "open field with buildings in the background",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "lighting",
+        "value": "daytime with bright sunlight",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "visibility",
+        "value": "clear view of distant objects",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "navigability",
+        "value": "good for walking but not for vehicles",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.85, \"environment\": \"outdoor\", \"layout\": \"open field with buildings in the background\", \"lighting\": \"daytime with bright sunlight\", \"navigability\": \"good for walking but not for vehicles\", \"scene_type\": \"park\", \"visibility\": \"clear view of distant objects\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      }
+    ]
+  },
+  "regions": [
+    {
+      "region_id": "region-3366beb9408b64b4",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          99088,
+          3,
+          610,
+          1,
+          23,
+          10,
+          602,
+          9,
+          16,
+          16,
+          597,
+          14,
+          11,
+          19,
+          594,
+          18,
+          7,
+          22,
+          591,
+          22,
+          4,
+          23,
+          589,
+          26,
+          1,
+          25,
+          587,
+          54,
+          585,
+          56,
+          583,
+          58,
+          581,
+          60,
+          11,
+          13,
+          555,
+          63,
+          6,
+          18,
+          552,
+          89,
+          551,
+          89,
+          551,
+          89,
+          550,
+          90,
+          550,
+          90,
+          550,
+          90,
+          550,
+          90,
+          551,
+          89,
+          550,
+          89,
+          551,
+          88,
+          553,
+          83,
+          558,
+          78,
+          562,
+          71,
+          569,
+          67,
+          573,
+          61,
+          578,
+          57,
+          583,
+          54,
+          587,
+          46,
+          594,
+          41,
+          599,
+          34,
+          607,
+          28,
+          613,
+          19,
+          625,
+          11,
+          630,
+          1,
+          185748
+        ]
+      },
+      "box": {
+        "x_min": 482.0,
+        "y_min": 154.0,
+        "x_max": 572.0,
+        "y_max": 190.0
+      },
+      "geometric_confidence": 0.9095756411552429,
+      "contributing_proposal_ids": [
+        "full-whole-sam-2"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "tree branches",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:tree branches",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:tree branches",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:tree branches",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "vegetation",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree branches",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.21310511671257315,
+              "margin": 0.03240200592794382,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree branches",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.23359336177192058,
+              "margin": 0.041285900791617924,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree branches",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.20982304787808745,
+              "margin": 0.030439401866501598,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "branch",
+          "confidence": {
+            "value": 0.4,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.75,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:branch",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:branch",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:branch",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.18070311078462933,
+              "margin": -0.03240200592794382,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.19230746098030266,
+              "margin": -0.041285900791617924,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.17938364601158585,
+              "margin": -0.030439401866501598,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "The subject is a cluster of tree branches.",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "purple",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "out of focus",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "wood",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3366beb9408b64b4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"branch\"}], \"attributes\": [\"purple\"], \"category\": \"vegetation\", \"condition\": \"out of focus\", \"confidence\": 0.9, \"description\": \"The subject is a cluster of tree branches.\", \"kind\": \"thing\", \"label\": \"tree branches\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9095756411552429,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3366beb9408b64b4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3366beb9408b64b4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "tree branche",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "reconciled from raw label 'tree branches'; canonical concept 'tree branche'",
+              "artifact": null,
+              "raw_response_json": null
+            }
+          ],
+          "provenance": {
+            "stage": "intra_frame_reconciliation",
+            "producer": "intra_frame_reconciliation",
+            "config_fingerprint": "249192ca21cc2388",
+            "model_id": null,
+            "checkpoint": null,
+            "prompt_version": null
+          },
+          "support": null,
+          "role": "reconciled",
+          "category": "vegetation",
+          "region_kind": "thing",
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-3366beb9408b64b4",
+      "language_embedding_ref": "language-region-3366beb9408b64b4",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-3366beb9408b64b4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 482.0,
+            "y_min": 154.0,
+            "x_max": 572.0,
+            "y_max": 190.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-3366beb9408b64b4",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3366beb9408b64b4",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.6401234567901235,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-3366beb9408b64b4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 482.0,
+            "y_min": 154.0,
+            "x_max": 572.0,
+            "y_max": 190.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 482.0,
+            "offset_y": 154.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-3366beb9408b64b4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3366beb9408b64b4",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.6401234567901235,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-3366beb9408b64b4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 482.0,
+            "y_min": 154.0,
+            "x_max": 572.0,
+            "y_max": 190.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 482.0,
+            "offset_y": 154.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-3366beb9408b64b4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.6401234567901235,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-3366beb9408b64b4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 470.75,
+            "y_min": 149.5,
+            "x_max": 583.25,
+            "y_max": 194.5
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 470.75,
+            "offset_y": 149.5
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-3366beb9408b64b4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3366beb9408b64b4",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.407866273352999,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-3366beb9408b64b4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": {
+        "status": "grounding_failed",
+        "semantic_mask": null,
+        "support_pixel": null,
+        "diagnostics": {
+          "region_id": "region-3366beb9408b64b4",
+          "label": "tree branches",
+          "region_kind": "thing",
+          "discovery_area": 2074,
+          "box_before": {
+            "x_min": 482.0,
+            "y_min": 154.0,
+            "x_max": 572.0,
+            "y_max": 190.0
+          },
+          "component_count_before": 1,
+          "geometric_confidence": 0.9095756411552429,
+          "visual_support": 1.0,
+          "model_calls": 1,
+          "latency_s": 3.96725553800934,
+          "semantic_grounding_status": "grounding_failed",
+          "semantic_area": 0,
+          "area_ratio": 0.0,
+          "area_reduction_ratio": 1.0,
+          "component_count_after": 0,
+          "box_after": null,
+          "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+        },
+        "prediction": {
+          "region_id": "region-3366beb9408b64b4",
+          "concept": "tree branches",
+          "model_mask": null,
+          "prompt_box": null,
+          "detection_confidence": null,
+          "geometric_confidence": null,
+          "provenance": [
+            {
+              "stage": "semantic_localization",
+              "producer": "grounding_dino",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "IDEA-Research/grounding-dino-base",
+              "prompt_version": null
+            },
+            {
+              "stage": "prompted_segmentation",
+              "producer": "sam",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "facebook/sam2.1-hiera-large",
+              "prompt_version": null
+            }
+          ],
+          "reason": "Nenhuma box localizada sobrep\u00f5e discovery.",
+          "status": "grounding_failed",
+          "model_calls": 1,
+          "latency_s": 3.96725553800934,
+          "prompt_boxes": []
+        }
+      }
+    },
+    {
+      "region_id": "region-3f10961a4967c206",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          111682,
+          5,
+          629,
+          16,
+          621,
+          20,
+          608,
+          32,
+          607,
+          33,
+          607,
+          33,
+          606,
+          34,
+          606,
+          34,
+          606,
+          33,
+          606,
+          34,
+          606,
+          33,
+          607,
+          33,
+          607,
+          33,
+          607,
+          32,
+          608,
+          32,
+          608,
+          31,
+          609,
+          31,
+          609,
+          30,
+          610,
+          30,
+          610,
+          31,
+          609,
+          32,
+          608,
+          33,
+          607,
+          34,
+          607,
+          35,
+          605,
+          37,
+          603,
+          39,
+          3,
+          3,
+          596,
+          45,
+          595,
+          45,
+          595,
+          45,
+          595,
+          45,
+          596,
+          44,
+          596,
+          44,
+          596,
+          44,
+          597,
+          42,
+          599,
+          41,
+          599,
+          40,
+          602,
+          37,
+          604,
+          34,
+          609,
+          30,
+          614,
+          24,
+          618,
+          21,
+          620,
+          19,
+          621,
+          17,
+          624,
+          16,
+          625,
+          14,
+          627,
+          12,
+          628,
+          11,
+          629,
+          9,
+          631,
+          6,
+          634,
+          5,
+          637,
+          1,
+          163518
+        ]
+      },
+      "box": {
+        "x_min": 298.0,
+        "y_min": 174.0,
+        "x_max": 345.0,
+        "y_max": 225.0
+      },
+      "geometric_confidence": 0.9441123604774475,
+      "contributing_proposal_ids": [
+        "full-whole-sam-0"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "tree trunk",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.3333333333333333,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:tree trunk",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "claim:label:tree",
+                "source": "qwen_vl",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": null
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "tree",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree trunk",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.199053066302661,
+              "margin": 0.005195719143632732,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree trunk",
+              "slot": "tight_crop",
+              "status": "indistinguishable",
+              "score": 0.23169170043226384,
+              "margin": -7.481862496788727e-05,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree trunk",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.21489213334496138,
+              "margin": -0.01339039959464422,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "branch",
+          "confidence": {
+            "value": 0.05,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.3333333333333333,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:branch",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.19385734715902828,
+              "margin": -0.005195719143632732,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "tight_crop",
+              "status": "indistinguishable",
+              "score": 0.23176651905723172,
+              "margin": 7.481862496788727e-05,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "branch",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.2282825329396056,
+              "margin": 0.01339039959464422,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "a tree trunk with a blurred texture",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "blurred",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "alive",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "wood",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"branch\"}], \"attributes\": [\"blurred\"], \"category\": \"tree\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree trunk with a blurred texture\", \"kind\": \"thing\", \"label\": \"tree trunk\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "tree",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.16666666666666666,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "claim:label:tree trunk",
+                "source": "qwen_vl",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": null
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "plant",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.21615547190790885,
+              "margin": 0.01403208571142145,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.2694704584807026,
+              "margin": 0.03770393942347089,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.2786073602480015,
+              "margin": 0.04097122643594503,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "leaves",
+          "confidence": {
+            "value": 0.6,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.5,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:leaves",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:leaves",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:leaves",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "leaves",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.2021233861964874,
+              "margin": -0.01403208571142145,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "leaves",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.21949276511497037,
+              "margin": -0.04997769336573224,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "leaves",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.23763613381205645,
+              "margin": -0.04097122643594503,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "a tree with purple leaves",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "purple",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "alive",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "leaves",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-3f10961a4967c206 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.6, \"label\": \"leaves\"}], \"attributes\": [\"purple\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9441123604774475,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-3f10961a4967c206",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-3f10961a4967c206",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "tree",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "reconciled from raw label 'tree trunk'; 2 asserted hypotheses competed; independent support selected 'tree'; canonical concept 'tree'",
+              "artifact": null,
+              "raw_response_json": null
+            }
+          ],
+          "provenance": {
+            "stage": "intra_frame_reconciliation",
+            "producer": "intra_frame_reconciliation",
+            "config_fingerprint": "249192ca21cc2388",
+            "model_id": null,
+            "checkpoint": null,
+            "prompt_version": null
+          },
+          "support": null,
+          "role": "reconciled",
+          "category": "plant",
+          "region_kind": "thing",
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-3f10961a4967c206",
+      "language_embedding_ref": "language-region-3f10961a4967c206",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-3f10961a4967c206",
+          "state": "available",
+          "crop_box": {
+            "x_min": 298.0,
+            "y_min": 174.0,
+            "x_max": 345.0,
+            "y_max": 225.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-3f10961a4967c206",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3f10961a4967c206",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.623279098873592,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-3f10961a4967c206",
+          "state": "available",
+          "crop_box": {
+            "x_min": 298.0,
+            "y_min": 174.0,
+            "x_max": 345.0,
+            "y_max": 225.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 298.0,
+            "offset_y": 174.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-3f10961a4967c206",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3f10961a4967c206",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.623279098873592,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-3f10961a4967c206",
+          "state": "available",
+          "crop_box": {
+            "x_min": 298.0,
+            "y_min": 174.0,
+            "x_max": 345.0,
+            "y_max": 225.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 298.0,
+            "offset_y": 174.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-3f10961a4967c206",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.623279098873592,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-3f10961a4967c206",
+          "state": "available",
+          "crop_box": {
+            "x_min": 292.125,
+            "y_min": 167.625,
+            "x_max": 350.875,
+            "y_max": 231.375
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 292.125,
+            "offset_y": 167.625
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-3f10961a4967c206",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-3f10961a4967c206",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.40247844827586204,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-3f10961a4967c206",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": {
+        "status": "grounding_failed",
+        "semantic_mask": null,
+        "support_pixel": null,
+        "diagnostics": {
+          "region_id": "region-3f10961a4967c206",
+          "label": "tree trunk",
+          "region_kind": "thing",
+          "discovery_area": 1494,
+          "box_before": {
+            "x_min": 298.0,
+            "y_min": 174.0,
+            "x_max": 345.0,
+            "y_max": 225.0
+          },
+          "component_count_before": 1,
+          "geometric_confidence": 0.9441123604774475,
+          "visual_support": 0.0,
+          "model_calls": 1,
+          "latency_s": 0.4496871510054916,
+          "semantic_grounding_status": "grounding_failed",
+          "semantic_area": 0,
+          "area_ratio": 0.0,
+          "area_reduction_ratio": 1.0,
+          "component_count_after": 0,
+          "box_after": null,
+          "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+        },
+        "prediction": {
+          "region_id": "region-3f10961a4967c206",
+          "concept": "tree trunk",
+          "model_mask": null,
+          "prompt_box": null,
+          "detection_confidence": null,
+          "geometric_confidence": null,
+          "provenance": [
+            {
+              "stage": "semantic_localization",
+              "producer": "grounding_dino",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "IDEA-Research/grounding-dino-base",
+              "prompt_version": null
+            },
+            {
+              "stage": "prompted_segmentation",
+              "producer": "sam",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "facebook/sam2.1-hiera-large",
+              "prompt_version": null
+            }
+          ],
+          "reason": "Nenhuma box localizada sobrep\u00f5e discovery.",
+          "status": "grounding_failed",
+          "model_calls": 1,
+          "latency_s": 0.4496871510054916,
+          "prompt_boxes": []
+        }
+      }
+    },
+    {
+      "region_id": "region-ad62bc9ae4977c0a",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          112416,
+          2,
+          635,
+          15,
+          623,
+          19,
+          619,
+          21,
+          618,
+          23,
+          615,
+          26,
+          611,
+          30,
+          608,
+          32,
+          606,
+          35,
+          603,
+          38,
+          601,
+          39,
+          599,
+          41,
+          598,
+          42,
+          598,
+          42,
+          597,
+          43,
+          597,
+          44,
+          595,
+          45,
+          595,
+          45,
+          595,
+          45,
+          594,
+          46,
+          594,
+          46,
+          594,
+          46,
+          594,
+          45,
+          595,
+          45,
+          595,
+          45,
+          595,
+          45,
+          595,
+          44,
+          595,
+          45,
+          595,
+          45,
+          595,
+          44,
+          596,
+          44,
+          596,
+          44,
+          596,
+          43,
+          598,
+          42,
+          602,
+          38,
+          604,
+          35,
+          605,
+          35,
+          606,
+          34,
+          607,
+          33,
+          608,
+          27,
+          2,
+          1,
+          611,
+          23,
+          618,
+          21,
+          622,
+          18,
+          634,
+          3,
+          167261
+        ]
+      },
+      "box": {
+        "x_min": 389.0,
+        "y_min": 175.0,
+        "x_max": 436.0,
+        "y_max": 219.0
+      },
+      "geometric_confidence": 0.9354888200759888,
+      "contributing_proposal_ids": [
+        "full-whole-sam-1"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "tree",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "plant",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.20482329656322246,
+              "margin": 0.06658570594480995,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.23385150711961544,
+              "margin": 0.041163336546066465,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.24791087585917093,
+              "margin": 0.06957333601118199,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "building",
+          "confidence": {
+            "value": 0.05,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.75,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:building",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:building",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:building",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "building",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.1382375906184125,
+              "margin": -0.06658570594480995,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "building",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.19268817057354898,
+              "margin": -0.041163336546066465,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "building",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.17833753984798895,
+              "margin": -0.06957333601118199,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "a tree with purple leaves",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "purple leaves",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "alive",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "leaves",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-ad62bc9ae4977c0a from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"building\"}], \"attributes\": [\"purple leaves\"], \"category\": \"plant\", \"condition\": \"alive\", \"confidence\": 0.9, \"description\": \"a tree with purple leaves\", \"kind\": \"thing\", \"label\": \"tree\", \"material\": \"leaves\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9354888200759888,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-ad62bc9ae4977c0a",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-ad62bc9ae4977c0a",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-ad62bc9ae4977c0a",
+      "language_embedding_ref": "language-region-ad62bc9ae4977c0a",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-ad62bc9ae4977c0a",
+          "state": "available",
+          "crop_box": {
+            "x_min": 389.0,
+            "y_min": 175.0,
+            "x_max": 436.0,
+            "y_max": 219.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-ad62bc9ae4977c0a",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-ad62bc9ae4977c0a",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.7562862669245648,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-ad62bc9ae4977c0a",
+          "state": "available",
+          "crop_box": {
+            "x_min": 389.0,
+            "y_min": 175.0,
+            "x_max": 436.0,
+            "y_max": 219.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 389.0,
+            "offset_y": 175.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-ad62bc9ae4977c0a",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-ad62bc9ae4977c0a",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.7562862669245648,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-ad62bc9ae4977c0a",
+          "state": "available",
+          "crop_box": {
+            "x_min": 389.0,
+            "y_min": 175.0,
+            "x_max": 436.0,
+            "y_max": 219.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 389.0,
+            "offset_y": 175.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-ad62bc9ae4977c0a",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.7562862669245648,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-ad62bc9ae4977c0a",
+          "state": "available",
+          "crop_box": {
+            "x_min": 383.125,
+            "y_min": 169.5,
+            "x_max": 441.875,
+            "y_max": 224.5
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 383.125,
+            "offset_y": 169.5
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-ad62bc9ae4977c0a",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-ad62bc9ae4977c0a",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.490282131661442,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-ad62bc9ae4977c0a",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": {
+        "status": "grounding_failed",
+        "semantic_mask": null,
+        "support_pixel": null,
+        "diagnostics": {
+          "region_id": "region-ad62bc9ae4977c0a",
+          "label": "tree",
+          "region_kind": "thing",
+          "discovery_area": 1564,
+          "box_before": {
+            "x_min": 389.0,
+            "y_min": 175.0,
+            "x_max": 436.0,
+            "y_max": 219.0
+          },
+          "component_count_before": 1,
+          "geometric_confidence": 0.9354888200759888,
+          "visual_support": 1.0,
+          "model_calls": 1,
+          "latency_s": 0.4499376080057118,
+          "semantic_grounding_status": "grounding_failed",
+          "semantic_area": 0,
+          "area_ratio": 0.0,
+          "area_reduction_ratio": 1.0,
+          "component_count_after": 0,
+          "box_after": null,
+          "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+        },
+        "prediction": {
+          "region_id": "region-ad62bc9ae4977c0a",
+          "concept": "tree",
+          "model_mask": null,
+          "prompt_box": null,
+          "detection_confidence": null,
+          "geometric_confidence": null,
+          "provenance": [
+            {
+              "stage": "semantic_localization",
+              "producer": "grounding_dino",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "IDEA-Research/grounding-dino-base",
+              "prompt_version": null
+            },
+            {
+              "stage": "prompted_segmentation",
+              "producer": "sam",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "facebook/sam2.1-hiera-large",
+              "prompt_version": null
+            }
+          ],
+          "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua.",
+          "status": "grounding_failed",
+          "model_calls": 1,
+          "latency_s": 0.4499376080057118,
+          "prompt_boxes": []
+        }
+      }
+    }
+  ],
+  "relations": [],
+  "entity_hypotheses": [],
+  "structural_context": []
+}

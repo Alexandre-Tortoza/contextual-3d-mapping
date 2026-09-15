@@ -1,0 +1,120 @@
+{
+  "frame_id": "corridor-02-10756",
+  "regions": [
+    {
+      "region_id": "region-774af631fd209f13",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 107874,
+      "box_before": {
+        "x_min": 9.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 236.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.985646665096283,
+      "visual_support": null,
+      "model_calls": 3,
+      "latency_s": 6.2827052250213455,
+      "model_mask_area": 10732,
+      "clipped_pixel_count": 10728,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4,
+          "box": {
+            "x_min": 382.0,
+            "y_min": 233.0,
+            "x_max": 385.0,
+            "y_max": 235.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 4,
+          "refined_overlap": 4,
+          "detector_box_overlap": 4,
+          "distance_to_box_center_px": 56.47199802920328
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-87d3f09888675e50",
+      "label": "tree branches",
+      "region_kind": "thing",
+      "discovery_area": 1189,
+      "box_before": {
+        "x_min": 599.0,
+        "y_min": 169.0,
+        "x_max": 640.0,
+        "y_max": 207.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9273815155029297,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.45161529700271785,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-dd6bd931943ba934",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1191,
+      "box_before": {
+        "x_min": 449.0,
+        "y_min": 190.0,
+        "x_max": 490.0,
+        "y_max": 235.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9131103754043579,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.4620553719869349,
+      "model_mask_area": 1141,
+      "clipped_pixel_count": 1,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1140,
+          "box": {
+            "x_min": 449.0,
+            "y_min": 190.0,
+            "x_max": 490.0,
+            "y_max": 235.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1140,
+          "refined_overlap": 1140,
+          "detector_box_overlap": 1140,
+          "distance_to_box_center_px": 0.513860945118157
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1140,
+      "area_ratio": 0.9571788413098237,
+      "area_reduction_ratio": 0.04282115869017633,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 449.0,
+        "y_min": 190.0,
+        "x_max": 490.0,
+        "y_max": 235.0
+      },
+      "reason": null
+    }
+  ]
+}

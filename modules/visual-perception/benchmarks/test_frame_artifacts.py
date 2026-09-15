@@ -71,6 +71,28 @@ _EXPECTED_ARTIFACTS = (
 _AREA_ARTIFACTS = ("ego-mask.png", "valid-area-mask.png")
 
 
+# Garante que o full debug preserva as cinco passadas reais de discovery e as
+# três views enviadas ao reasoner. Sem este teste, uma mudança no writer poderia
+# voltar a deixar tiles e recortes disponíveis apenas em memória.
+def test_full_debug_writes_discovery_passes_and_reasoner_views(tmp_path: Path) -> None:
+    """Grava imagem/propostas globais e tiled, mais as três views por região."""
+    frame_dir = _run(tmp_path)
+    discovery = frame_dir / "DEBUG" / "discovery"
+    expected_discovery = {
+        f"{scale}-{tile}-{kind}.png"
+        for scale, tile in (("full", "whole"), ("tile", "r0c0"), ("tile", "r0c1"),
+                            ("tile", "r1c0"), ("tile", "r1c1"))
+        for kind in ("input", "proposals")
+    }
+    assert expected_discovery <= {path.name for path in discovery.iterdir()}
+
+    region_directories = [path for path in (frame_dir / "DEBUG" / "regions").iterdir() if path.is_dir()]
+    assert region_directories
+    assert {
+        "masked-subject.png", "tight-crop.png", "contextual-crop.png",
+    } <= {path.name for path in region_directories[0].iterdir()}
+
+
 # Gera um frame sintético com blobs separados, para o fake discoverer encontrar
 # várias regiões sem depender de nenhuma imagem real do dataset. A resolução
 # acompanha a dos frames reais do corridor-02 porque a máscara do ego-veículo é

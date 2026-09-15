@@ -1,0 +1,80 @@
+{
+  "frame_id": "corridor-02-02188",
+  "regions": [
+    {
+      "region_id": "region-2fc1c1ea13d501c6",
+      "label": "car bumper",
+      "region_kind": "thing",
+      "discovery_area": 60026,
+      "box_before": {
+        "x_min": 5.0,
+        "y_min": 263.0,
+        "x_max": 629.0,
+        "y_max": 471.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9672653675079346,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 7.250275841041002,
+      "model_mask_area": 23290,
+      "clipped_pixel_count": 23290,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-35d227a0c31b143a",
+      "label": "black panel",
+      "region_kind": "thing",
+      "discovery_area": 8182,
+      "box_before": {
+        "x_min": 204.0,
+        "y_min": 257.0,
+        "x_max": 402.0,
+        "y_max": 326.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8994635939598083,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.4523865439987276,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-89b19a8c1af98250",
+      "label": "ceiling fixture",
+      "region_kind": "thing",
+      "discovery_area": 2312,
+      "box_before": {
+        "x_min": 227.0,
+        "y_min": 34.0,
+        "x_max": 306.0,
+        "y_max": 99.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9402080774307251,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4531532429973595,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

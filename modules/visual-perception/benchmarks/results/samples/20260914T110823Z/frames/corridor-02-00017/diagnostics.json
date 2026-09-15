@@ -1,0 +1,375 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-00017",
+  "input_sha256": "4f7570208a0ede3a20c2853c98d1c122459c8b963198e07cc2c1a2592f8d6da4",
+  "latency_s": 201.25732229099958,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 25,
+  "proposal_count": 40,
+  "merged_proposal_count": 35,
+  "regions_with_multiple_proposals": 7,
+  "label_counts": [
+    [
+      "ceiling",
+      11
+    ],
+    [
+      "wall",
+      10
+    ],
+    [
+      "ceiling light fixture",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "red door",
+      1
+    ],
+    [
+      "wooden door",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "indoor ceiling",
+      7
+    ],
+    [
+      "building interior",
+      6
+    ],
+    [
+      "ceilings",
+      4
+    ],
+    [
+      "wall",
+      4
+    ],
+    [
+      "door",
+      2
+    ],
+    [
+      "flooring",
+      1
+    ],
+    [
+      "lighting fixture",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      19
+    ],
+    [
+      "stuff",
+      6
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 25,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 25,
+    "missing": 0,
+    "minimum": 0.9066314101219177,
+    "maximum": 0.981414258480072,
+    "mean": 0.9442867374420166,
+    "median": 0.9481620788574219,
+    "distinct_values": 25,
+    "stddev": 0.019009046932883182,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 17,
+  "mode_collapse": {
+    "dominant_label": "ceiling",
+    "dominant_fraction": 0.44,
+    "distinct_labels": 6,
+    "dominant_category": "indoor ceiling",
+    "dominant_category_fraction": 0.28,
+    "distinct_categories": 7
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      5
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        37
+      ],
+      [
+        "contradicts",
+        21
+      ],
+      [
+        "indistinguishable",
+        17
+      ]
+    ],
+    "regions_with_unsupported_primary": 3,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 16,
+    "reconciled_regions": 16,
+    "distinct_raw_labels": 6,
+    "distinct_canonical_concepts": 6,
+    "entity_groups": 2,
+    "regions_in_entity_groups": 17,
+    "supported_entity_groups": 2,
+    "semantic_relations": [
+      [
+        "part_of",
+        3
+      ]
+    ],
+    "geometric_relations": 59,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 21
+  },
+  "published_region_count": 3,
+  "structural_context_count": 22,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      22
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-7b14a755e9b0a5d6",
+      "label": "red door",
+      "region_kind": "thing",
+      "discovery_area": 6092,
+      "box_before": {
+        "x_min": 196.0,
+        "y_min": 96.0,
+        "x_max": 272.0,
+        "y_max": 285.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9800108671188354,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.21534636500291526,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Falha de localiza\u00e7\u00e3o: CUDA out of memory. Tried to allocate 280.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 160.06 MiB is free. Process 1485 has 4.09 MiB memory in use. Process 261633 has 28.53 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 6.58 GiB is allocated by PyTorch, and 306.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-c575a8b238afc58d",
+      "label": "ceiling light fixture",
+      "region_kind": "thing",
+      "discovery_area": 7080,
+      "box_before": {
+        "x_min": 246.0,
+        "y_min": 3.0,
+        "x_max": 492.0,
+        "y_max": 84.0
+      },
+      "component_count_before": 7,
+      "geometric_confidence": 0.981414258480072,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.21834016998764127,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Falha de localiza\u00e7\u00e3o: CUDA out of memory. Tried to allocate 280.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 160.06 MiB is free. Process 1485 has 4.09 MiB memory in use. Process 261633 has 28.53 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 6.58 GiB is allocated by PyTorch, and 307.53 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-cc312ccc487614af",
+      "label": "wooden door",
+      "region_kind": "thing",
+      "discovery_area": 5700,
+      "box_before": {
+        "x_min": 534.0,
+        "y_min": 263.0,
+        "x_max": 640.0,
+        "y_max": 334.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.951223611831665,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.2169049239892047,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Falha de localiza\u00e7\u00e3o: CUDA out of memory. Tried to allocate 280.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 160.06 MiB is free. Process 1485 has 4.09 MiB memory in use. Process 261633 has 28.53 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 6.58 GiB is allocated by PyTorch, and 307.29 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-1715e0f4b7918291",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-1e4254c8b053a5a1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-313aed1881a99311",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-5515a61ca03c9529",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-57be5a4ffde73443",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-5bd0e1feb681c023",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-613b36ca72c67729",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-6362b07364a25965",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-6869ae0cd1ca7b6b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-698038c39620d75d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-7192155b04279a1c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-86cdf1eaa60c0764",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-9ac2547287b76a50",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-9c1c28340066b80d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-9dea8ac5243bb024",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-b6b9926402db83bc",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-b7ccecd4c561b3a0",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ba58f7ff671e3846",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-bdf69eb91b2a010e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c5beafdfac97244a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-d1c3a8b279f5611f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-e7f38b8fbdfca725",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    }
+  ]
+}

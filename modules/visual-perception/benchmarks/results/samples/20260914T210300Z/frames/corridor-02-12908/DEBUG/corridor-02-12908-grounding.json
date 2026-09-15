@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-12908",
+  "regions": [
+    {
+      "region_id": "region-3afbe928c08eb19a",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 704,
+      "box_before": {
+        "x_min": 376.0,
+        "y_min": 217.0,
+        "x_max": 410.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8824135661125183,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 6.440588350960752,
+      "model_mask_area": 714,
+      "clipped_pixel_count": 15,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 699,
+          "box": {
+            "x_min": 376.0,
+            "y_min": 217.0,
+            "x_max": 410.0,
+            "y_max": 247.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 699,
+          "refined_overlap": 699,
+          "detector_box_overlap": 699,
+          "distance_to_box_center_px": 0.42342287628949477
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 699,
+      "area_ratio": 0.9928977272727273,
+      "area_reduction_ratio": 0.007102272727272707,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 376.0,
+        "y_min": 217.0,
+        "x_max": 410.0,
+        "y_max": 247.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-e1967e68072caf86",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 119558,
+      "box_before": {
+        "x_min": 7.0,
+        "y_min": 4.0,
+        "x_max": 639.0,
+        "y_max": 245.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9746618866920471,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4944163349864539,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

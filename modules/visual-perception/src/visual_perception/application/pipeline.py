@@ -147,6 +147,11 @@ class PipelineResult:
     #: WARNING: carrega as masks em resolução plena de todas as proposals.
     #: Não retenha um ``PipelineResult`` entre frames.
     proposals: tuple[RegionProposal, ...] = ()
+    #: Propostas brutas de todas as passadas de discovery, antes da política de
+    #: área e do merge. Preserva a separação entre imagem inteira e tiles para
+    #: que os artifacts de DEBUG expliquem qual passada produziu cada máscara
+    #: sem repetir uma inferência não determinística.
+    discovered_proposals: tuple[RegionProposal, ...] = ()
     #: As proposals descartadas pela filtragem, com motivo e medida. Existem
     #: aqui para que o descarte seja auditável: ``proposals`` e estas somam
     #: exatamente o que discovery produziu, e o diagnóstico as usa para afirmar
@@ -351,6 +356,7 @@ def run_canonical_pipeline(
         evidence_metrics=evidence.metrics,
         feature_fallback_reason=feature_fallback_reason,
         proposals=proposals,
+        discovered_proposals=discovered,
         rejected_proposals=rejected_proposals,
         area_masks=area_masks,
         visual_embeddings=evidence.visual_embeddings,

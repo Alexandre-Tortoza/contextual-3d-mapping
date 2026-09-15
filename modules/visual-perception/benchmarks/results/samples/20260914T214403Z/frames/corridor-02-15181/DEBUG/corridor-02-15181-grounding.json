@@ -1,0 +1,29 @@
+{
+  "frame_id": "corridor-02-15181",
+  "regions": [
+    {
+      "region_id": "region-53d9e1a139ffb8ea",
+      "label": "dark brown leather skirt",
+      "region_kind": "thing",
+      "discovery_area": 1314,
+      "box_before": {
+        "x_min": 420.0,
+        "y_min": 219.0,
+        "x_max": 447.0,
+        "y_max": 284.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.918861448764801,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 4.334312115999637,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

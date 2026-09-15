@@ -45,6 +45,9 @@ from render_layers import DrawableShape, binary_mask_image, blend_masks, draw_bo
 from render_overlay import proposal_shapes, region_shapes, structural_context_shapes
 from visual_perception.application.observation_diagnostics import ObservationDiagnostics
 from visual_perception.application.pipeline import PipelineResult
+from visual_perception.application.region_views import build_region_views
+from visual_perception.application.tiling import build_tiles
+from visual_perception.config import ModuleConfig
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.infrastructure.debug_recorder import DebugRecorder
 from visual_perception.infrastructure.embedding_archive import write_embedding_archive
@@ -98,6 +101,64 @@ def _to_image(payload: ImagePayload) -> Image.Image:
     return Image.fromarray(payload.pixels.astype(np.uint8), mode="RGB")
 
 
+# Persiste as entradas e propostas de cada passada do discovery. Existe porque
+# ``proposals.png`` agrega a imagem inteira e escondia se uma máscara veio da
+# passagem global ou de um tile; usa as proposals já retornadas pelo pipeline,
+# portanto não reexecuta SAM nem altera a inferência auditada.
+def _write_discovery_debug(
+    root: Path, image: ImagePayload, config: ModuleConfig, result: PipelineResult,
+) -> None:
+    """Grava a entrada e o overlay de propostas de cada passada do discovery.
+
+    Argumentos:
+        root: diretório DEBUG do frame.
+        image: pixels exatos recebidos pelo pipeline.
+        config: configuração que define a malha de tiles.
+        result: saída com as propostas brutas anteriores à filtragem.
+    """
+    discovery_root = root / "discovery"
+    discovery_root.mkdir(parents=True, exist_ok=True)
+    shapes = proposal_shapes(result.discovered_proposals)
+    global_overlay = draw_boxes(blend_masks(_to_image(image), shapes), shapes)
+    for tile in build_tiles(image, config.tiling):
+        offset_x = int(tile.transform.offset_x)
+        offset_y = int(tile.transform.offset_y)
+        bounds = (offset_x, offset_y, offset_x + tile.payload.width, offset_y + tile.payload.height)
+        stem = f"{tile.scale_id}-{tile.tile_id}"
+        _to_image(tile.payload).save(discovery_root / f"{stem}-input.png")
+        global_overlay.crop(bounds).save(discovery_root / f"{stem}-proposals.png")
+
+
+# Materializa as três views entregues ao reasoner. Existe para permitir revisão
+# visual de uma run sem reconstruir recortes nem depender do script auxiliar;
+# é chamada depois da observação final, cuja geometria é congelada após merge.
+def _write_region_view_debug(
+    root: Path, image: ImagePayload, config: ModuleConfig, result: PipelineResult,
+) -> None:
+    """Grava masked subject, tight crop e contextual crop por região final.
+
+    Argumentos:
+        root: diretório DEBUG do frame.
+        image: pixels exatos recebidos pelo pipeline.
+        config: configuração que define quais views existem.
+        result: observação final usada pelo reasoner e pela publicação.
+    """
+    filenames = {
+        "masked_subject": "masked-subject.png",
+        "tight_crop": "tight-crop.png",
+        "contextual_crop": "contextual-crop.png",
+    }
+    views_by_region = build_region_views(result.observation.all_regions, image, config)
+    for region_id, views in views_by_region.items():
+        region_root = root / "regions" / region_id
+        for view in views:
+            filename = filenames.get(view.slot.value)
+            if filename is None:
+                continue
+            region_root.mkdir(parents=True, exist_ok=True)
+            _to_image(view.payload).save(region_root / filename)
+
+
 # Escreve os artifacts de um frame e devolve o mapa de nome lógico para caminho
 # relativo. O mapa vai para o manifest, de modo que um leitor encontre cada
 # camada pelo nome em vez de reconstruir convenções de caminho.
@@ -108,6 +169,7 @@ def write_frame_artifacts(
     result: PipelineResult,
     diagnostics: ObservationDiagnostics,
     extra_diagnostics: Mapping[str, object] | None = None,
+    config: ModuleConfig | None = None,
 ) -> dict[str, str]:
     """Persiste as camadas de inspeção de um frame e retorna seus caminhos relativos.
 
@@ -118,6 +180,8 @@ def write_frame_artifacts(
         diagnostics: o resumo estatístico já calculado para a observação.
         extra_diagnostics: campos adicionais do harness (identidade do frame,
             hash da entrada, latência) mesclados no ``diagnostics.json``.
+        config: configuração efetiva da run; quando presente, grava os
+            artifacts detalhados de discovery e de views no diretório DEBUG.
     Retorna:
         mapa de nome lógico do artifact para o caminho relativo a ``frame_dir``.
     """
@@ -131,6 +195,10 @@ def write_frame_artifacts(
     # lista vazia por frame não informa nada e poluía o run versionado.
     if grounding_diagnostics:
         DebugRecorder(frame_dir / "DEBUG").record_grounding(frame_dir.name, grounding_diagnostics)
+    if config is not None:
+        debug_root = frame_dir / "DEBUG"
+        _write_discovery_debug(debug_root, inputs.pipeline_input, config, result)
+        _write_region_view_debug(debug_root, inputs.pipeline_input, config, result)
     written: dict[str, str] = {}
 
     # Um write_text por artifact, com o nome lógico registrado no mesmo passo,

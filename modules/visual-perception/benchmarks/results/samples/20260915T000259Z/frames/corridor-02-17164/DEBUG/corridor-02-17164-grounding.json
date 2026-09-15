@@ -1,0 +1,56 @@
+{
+  "frame_id": "corridor-02-17164",
+  "regions": [
+    {
+      "region_id": "region-216d6dd309c8433e",
+      "label": "black tire",
+      "region_kind": "thing",
+      "discovery_area": 76268,
+      "box_before": {
+        "x_min": 21.0,
+        "y_min": 236.0,
+        "x_max": 640.0,
+        "y_max": 471.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9700607657432556,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 5.35788798800786,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    },
+    {
+      "region_id": "region-5d5e32e31946247c",
+      "label": "wooden door",
+      "region_kind": "thing",
+      "discovery_area": 1370,
+      "box_before": {
+        "x_min": 404.0,
+        "y_min": 141.0,
+        "x_max": 420.0,
+        "y_max": 243.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9442445039749146,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 3.740043751982739,
+      "model_mask_area": 3220,
+      "clipped_pixel_count": 3220,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

@@ -1,0 +1,213 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-10764",
+  "input_sha256": "136e62e195739e46742770eccc627c38c02f2af7ab9279e599b023e2730b6830",
+  "latency_s": 45.460843303997535,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 2,
+  "proposal_count": 3,
+  "merged_proposal_count": 2,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "building silhouette",
+      1
+    ],
+    [
+      "tree",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "plant",
+      1
+    ],
+    [
+      "urban architecture",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 2,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 2,
+    "missing": 0,
+    "minimum": 0.9308899641036987,
+    "maximum": 0.9819861650466919,
+    "mean": 0.9564380645751953,
+    "median": 0.9564380645751953,
+    "distinct_values": 2,
+    "stddev": 0.025548100471496582,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": "building silhouette",
+    "dominant_fraction": 0.5,
+    "distinct_labels": 2,
+    "dominant_category": "plant",
+    "dominant_category_fraction": 0.5,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 1,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "outside_valid_area",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        3
+      ],
+      [
+        "unavailable",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 0,
+    "reconciled_regions": 0,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 2,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 1,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 0
+  },
+  "published_region_count": 2,
+  "structural_context_count": 0,
+  "suppressed_regions": [],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-4d72445177de09c8",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1164,
+      "box_before": {
+        "x_min": 456.0,
+        "y_min": 192.0,
+        "x_max": 497.0,
+        "y_max": 237.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9308899641036987,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 7.3369400589726865,
+      "model_mask_area": 1172,
+      "clipped_pixel_count": 19,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1153,
+          "box": {
+            "x_min": 456.0,
+            "y_min": 192.0,
+            "x_max": 497.0,
+            "y_max": 237.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1153,
+          "refined_overlap": 1153,
+          "detector_box_overlap": 1153,
+          "distance_to_box_center_px": 0.17554862023787107
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1153,
+      "area_ratio": 0.9905498281786942,
+      "area_reduction_ratio": 0.009450171821305808,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 456.0,
+        "y_min": 192.0,
+        "x_max": 497.0,
+        "y_max": 237.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-9e36b1c12c2e9c6d",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 107738,
+      "box_before": {
+        "x_min": 12.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 235.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9819861650466919,
+      "visual_support": null,
+      "model_calls": 2,
+      "latency_s": 0.5775279530207627,
+      "model_mask_area": 10872,
+      "clipped_pixel_count": 10872,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": []
+}

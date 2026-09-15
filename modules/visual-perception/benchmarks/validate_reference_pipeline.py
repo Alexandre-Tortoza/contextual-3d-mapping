@@ -460,7 +460,7 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
     Retorna:
         a configuração de referência com os overrides declarados aplicados.
     """
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(real_backends=True)
     # A geometria de área da sequência entra na configuração do módulo, e não
     # num passo do harness: assim ela participa do fingerprint e do manifest, e
     # a exclusão acontece dentro do pipeline em vez de sobre os pixels.
@@ -672,6 +672,7 @@ def run_validation(
                 "prompt_version": config.multimodal_reasoning.prompt_version,
                 "region_views": list(config.multimodal_reasoning.region_views),
             },
+            config=config,
         )
         overlay_path = frame_dir / artifacts["regions_overlay"]
 

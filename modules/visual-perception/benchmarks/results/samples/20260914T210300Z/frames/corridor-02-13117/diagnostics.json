@@ -1,0 +1,148 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-13117",
+  "input_sha256": "55279e7febdf283bbcac9d6574752dfa59bfc46654edef55cb0f7da37083dc84",
+  "latency_s": 49.09384990402032,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 1,
+  "proposal_count": 1,
+  "merged_proposal_count": 1,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "road marking",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "road surface",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      1
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 1,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": null,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 1,
+    "missing": 0,
+    "minimum": 0.9764038920402527,
+    "maximum": 0.9764038920402527,
+    "mean": 0.9764038920402527,
+    "median": 0.9764038920402527,
+    "distinct_values": 1,
+    "stddev": null,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "road marking",
+    "dominant_fraction": 1.0,
+    "distinct_labels": 1,
+    "dominant_category": "road surface",
+    "dominant_category_fraction": 1.0,
+    "distinct_categories": 1
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "contradicts",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 1,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 1,
+    "reconciled_regions": 1,
+    "distinct_raw_labels": 1,
+    "distinct_canonical_concepts": 1,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 0,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 1
+  },
+  "published_region_count": 1,
+  "structural_context_count": 0,
+  "suppressed_regions": [],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-1eb1556e1e2de919",
+      "label": "road marking",
+      "region_kind": "thing",
+      "discovery_area": 110728,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 240.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9764038920402527,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.644719416013686,
+      "model_mask_area": 99422,
+      "clipped_pixel_count": 99422,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": []
+}

@@ -11,6 +11,7 @@ from visual_perception.config import (
     ContextualPublicationConfig,
     FeatureExtractionConfig,
     MultiContextConfig,
+    TilingConfig,
 )
 from visual_perception.domain.feature_map import FeatureMap
 from visual_perception.domain.image_payload import ImagePayload
@@ -133,6 +134,25 @@ def test_every_proposal_is_accounted_for_by_exactly_one_region() -> None:
         for proposal_id in region.contributing_proposal_ids
     ]
     assert sorted(contributing) == sorted(p.proposal_id for p in result.proposals)
+
+
+# Exercita o fluxo híbrido completo: a região central é vista pela imagem
+# inteira e pelos quatro tiles sobrepostos, mas o merge devolve uma única
+# região canônica com toda a proveniência de discovery preservada.
+def test_multi_scale_pipeline_merges_global_and_tile_proposals() -> None:
+    """Mescla duplicatas da imagem completa e dos tiles sem perder proveniência."""
+    payload = payload_with_blobs(blobs=((14, 14, 18, 18, (200, 30, 30)),))
+    config = dataclasses.replace(
+        default_config(),
+        tiling=TilingConfig(multi_scale_enabled=True, tile_grid="2x2", overlap_ratio=0.2),
+    )
+
+    result = run_canonical_pipeline(image_observation(), payload, config, default_ports())
+
+    assert len(result.proposals) == 5
+    assert {proposal.tile.scale_id for proposal in result.proposals} == {"full", "tile"}
+    assert len(result.observation.regions) == 1
+    assert len(result.observation.regions[0].contributing_proposal_ids) == 5
 
 
 # Um consumidor que não pede diagnóstico não deve ser obrigado a preencher o

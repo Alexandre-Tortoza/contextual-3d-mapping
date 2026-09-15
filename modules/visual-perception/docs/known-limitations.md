@@ -620,11 +620,12 @@ Os dois tetos são configuráveis (`refinement.max_refined_regions`,
 `semantic_relations.max_pairs`) e nenhum deles foi ajustado por evidência ainda: os
 defaults foram escolhidos como orçamento plausível, não medidos como ótimos.
 
-### DINOv3 e SAM 3 estão bloqueados por licença
+### DINOv3 continua bloqueado por licença; SAM3 está disponível
 
 Os dois candidatos modernos avaliados nesta rodada existem na versão de `transformers`
-instalada (5.16.1 tem `DINOv3ViTModel` e `Sam3Model`), mas os checkpoints
-`facebook/dinov3-vitb16-pretrain-lvd1689m` e `facebook/sam3` estão `gated=manual` no Hub.
+necessária (`>=5.16.1` tem `DINOv3ViTModel` e `Sam3Model`). O checkpoint
+`facebook/dinov3-vitb16-pretrain-lvd1689m` continua `gated=manual`; o acesso da conta a
+`facebook/sam3` foi aprovado e ele agora é o provider de discovery por prompt amplo.
 
 Verificado em 2026-09-10: existe um token válido da conta `alexmrtr` em
 `~/.cache/huggingface/token`, e mesmo assim os dois repositórios devolvem **HTTP 403** ao
@@ -637,8 +638,9 @@ https://huggingface.co/facebook/sam3
 ```
 
 Depois do aceite, `curl -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)"` sobre
-aquele `config.json` passa a devolver 200, e as issues `#219` e `#220` deixam de estar
-bloqueadas. O bloqueio não é técnico em nenhum momento.
+o `config.json` do DINOv3 passa a devolver 200 e a issue `#219` deixa de estar bloqueada.
+SAM3 não está mais bloqueado por acesso; seu risco restante é a cobertura produzida pelo
+prompt `all visible objects` e o consumo medido de VRAM.
 
 Qwen3-VL, ao contrário, **não** está bloqueado: os checkpoints 2B, 4B e 8B já estão no
 cache local e a família é suportada pela mesma versão de `transformers`. A `#218` não

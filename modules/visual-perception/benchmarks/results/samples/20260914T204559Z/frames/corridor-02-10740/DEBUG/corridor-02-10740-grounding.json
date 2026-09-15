@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-10740",
+  "regions": [
+    {
+      "region_id": "region-82ce4d99a552fba3",
+      "label": "grass field",
+      "region_kind": "thing",
+      "discovery_area": 104209,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 227.0,
+        "x_max": 640.0,
+        "y_max": 471.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9797341227531433,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.393690911034355,
+      "model_mask_area": 103458,
+      "clipped_pixel_count": 5012,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 98446,
+          "box": {
+            "x_min": 3.0,
+            "y_min": 228.0,
+            "x_max": 638.0,
+            "y_max": 424.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 98446,
+          "refined_overlap": 98446,
+          "detector_box_overlap": 98446,
+          "distance_to_box_center_px": 0.3997575213422634
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 98446,
+      "area_ratio": 0.9446976748649349,
+      "area_reduction_ratio": 0.055302325135065056,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 3.0,
+        "y_min": 228.0,
+        "x_max": 638.0,
+        "y_max": 424.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-b7a9c2d4c4a1a3a0",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 93641,
+      "box_before": {
+        "x_min": 13.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 211.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.983333170413971,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4525836230022833,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    }
+  ]
+}

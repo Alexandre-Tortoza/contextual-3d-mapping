@@ -1,0 +1,77 @@
+{
+  "frame_id": "corridor-02-08588",
+  "regions": [
+    {
+      "region_id": "region-ac958a9e5955dec9",
+      "label": "tree branches",
+      "region_kind": "thing",
+      "discovery_area": 1778,
+      "box_before": {
+        "x_min": 473.0,
+        "y_min": 173.0,
+        "x_max": 555.0,
+        "y_max": 207.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9121531248092651,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 3.9256259439571295,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e1b55fe59d04d106",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1154,
+      "box_before": {
+        "x_min": 313.0,
+        "y_min": 191.0,
+        "x_max": 356.0,
+        "y_max": 235.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9248070120811462,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 3.2120135800214484,
+      "model_mask_area": 1175,
+      "clipped_pixel_count": 24,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1151,
+          "box": {
+            "x_min": 313.0,
+            "y_min": 191.0,
+            "x_max": 356.0,
+            "y_max": 235.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1151,
+          "refined_overlap": 1151,
+          "detector_box_overlap": 1151,
+          "distance_to_box_center_px": 0.35767112840571985
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1151,
+      "area_ratio": 0.9974003466204506,
+      "area_reduction_ratio": 0.0025996533795493715,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 313.0,
+        "y_min": 191.0,
+        "x_max": 356.0,
+        "y_max": 235.0
+      },
+      "reason": null
+    }
+  ]
+}

@@ -202,7 +202,7 @@ def _format_metric(value: float | None) -> str:
 # Executa todos os candidatos sobre geometria fixa e grava JSON/Markdown.
 def run_benchmark(frame_paths: tuple[Path, ...], results_dir: Path = RESULTS_DIR) -> tuple[Path, Path]:
     """Compara os cinco caminhos da #208 nos mesmos frames e regiões."""
-    base_config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    base_config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     baseline_config = dataclasses.replace(
         base_config,
         feature_extraction=dataclasses.replace(

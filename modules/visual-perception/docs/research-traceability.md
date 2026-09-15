@@ -87,7 +87,7 @@ compor a evidência que vários modelos produzem**.
 | Referência | Pesquisa | Estado |
 | --- | --- | --- |
 | Siméoni et al., **DINOv3** | [arXiv:2508.10104](https://arxiv.org/abs/2508.10104), [código](https://github.com/facebookresearch/dinov3) | candidato a dense features; *Gram anchoring* mantém o mapa denso limpo em alta resolução. **Bloqueado** por licença gated no Hub (#219) |
-| Carion et al., **SAM 3: Segment Anything with Concepts** | [arXiv:2511.16719](https://arxiv.org/abs/2511.16719), [código](https://github.com/facebookresearch/sam3) | candidato a verificação condicionada a conceito de regiões não resolvidas. **Bloqueado** por licença gated no Hub (#220) |
+| Carion et al., **SAM 3: Segment Anything with Concepts** | [arXiv:2511.16719](https://arxiv.org/abs/2511.16719), [código](https://github.com/facebookresearch/sam3) | provider `sam3` de discovery por prompt amplo (`all visible objects`); acesso ao Hub aprovado, benchmark pendente (#220) |
 | Huang et al., **LoftUp: Learning a Coordinate-Based Feature Upsampler for Vision Foundation Models** | [arXiv:2504.14032](https://arxiv.org/abs/2504.14032), [código](https://github.com/andrehuang/loftup) | candidato a upsampling aprendido, alternativo ao FeatUp já integrado. **Não avaliado** nesta rodada (#221) |
 
 ### Open-vocabulary 3D mapping e associação 2D→3D
