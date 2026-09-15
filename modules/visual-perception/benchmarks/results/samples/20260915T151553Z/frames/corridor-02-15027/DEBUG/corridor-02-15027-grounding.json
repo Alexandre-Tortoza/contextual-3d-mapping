@@ -1,0 +1,189 @@
+{
+  "frame_id": "corridor-02-15027",
+  "regions": [
+    {
+      "region_id": "region-a1dae11ee8864157",
+      "label": "wooden plank",
+      "region_kind": "thing",
+      "discovery_area": 1429,
+      "box_before": {
+        "x_min": 461.0,
+        "y_min": 281.0,
+        "x_max": 570.0,
+        "y_max": 312.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9362532496452332,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 3.76054347500758,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ba1c578f443d4c65",
+      "label": "blue door",
+      "region_kind": "thing",
+      "discovery_area": 6461,
+      "box_before": {
+        "x_min": 149.0,
+        "y_min": 15.0,
+        "x_max": 284.0,
+        "y_max": 287.0
+      },
+      "component_count_before": 12,
+      "geometric_confidence": 0.9542194604873657,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 2.918651364998368,
+      "model_mask_area": 27864,
+      "clipped_pixel_count": 27855,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1,
+          "box": {
+            "x_min": 232.0,
+            "y_min": 15.0,
+            "x_max": 233.0,
+            "y_max": 16.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 169.42538295836292
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 237.0,
+            "y_min": 74.0,
+            "x_max": 238.0,
+            "y_max": 75.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 117.81251497757766
+        },
+        {
+          "component_id": 3,
+          "area": 2,
+          "box": {
+            "x_min": 236.0,
+            "y_min": 77.0,
+            "x_max": 237.0,
+            "y_max": 79.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 113.87368350109085
+        },
+        {
+          "component_id": 4,
+          "area": 1,
+          "box": {
+            "x_min": 235.0,
+            "y_min": 85.0,
+            "x_max": 236.0,
+            "y_max": 86.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 107.42113273234823
+        },
+        {
+          "component_id": 5,
+          "area": 1,
+          "box": {
+            "x_min": 198.0,
+            "y_min": 124.0,
+            "x_max": 199.0,
+            "y_max": 125.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 55.421750215238895
+        },
+        {
+          "component_id": 6,
+          "area": 1,
+          "box": {
+            "x_min": 216.0,
+            "y_min": 147.0,
+            "x_max": 217.0,
+            "y_max": 148.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 48.4975893121643
+        },
+        {
+          "component_id": 7,
+          "area": 2,
+          "box": {
+            "x_min": 149.0,
+            "y_min": 208.0,
+            "x_max": 150.0,
+            "y_max": 210.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 42.875511505825244
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-f10105932b1340f5",
+      "label": "car bumper",
+      "region_kind": "thing",
+      "discovery_area": 41736,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 255.0,
+        "x_max": 640.0,
+        "y_max": 479.0
+      },
+      "component_count_before": 17,
+      "geometric_confidence": 0.9900742173194885,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.4651759439948364,
+      "model_mask_area": 23908,
+      "clipped_pixel_count": 23908,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

@@ -1,0 +1,486 @@
+{
+  "frame_id": "corridor-02-02907",
+  "regions": [
+    {
+      "region_id": "region-3867ea1346dbd75f",
+      "label": "black cushion",
+      "region_kind": "thing",
+      "discovery_area": 9905,
+      "box_before": {
+        "x_min": 96.0,
+        "y_min": 250.0,
+        "x_max": 322.0,
+        "y_max": 329.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9660897850990295,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.832516101996589,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5d9d32184e117889",
+      "label": "car tire",
+      "region_kind": "thing",
+      "discovery_area": 7865,
+      "box_before": {
+        "x_min": 71.0,
+        "y_min": 270.0,
+        "x_max": 231.0,
+        "y_max": 453.0
+      },
+      "component_count_before": 14,
+      "geometric_confidence": 0.9154996275901794,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 3.0098278730001766,
+      "model_mask_area": 5760,
+      "clipped_pixel_count": 5760,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-84a291911e096ee4",
+      "label": "black rectangular object",
+      "region_kind": "thing",
+      "discovery_area": 2762,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 276.0,
+        "x_max": 380.0,
+        "y_max": 369.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9473228454589844,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.45766509500390384,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-9791bad02ce5cec1",
+      "label": "carpet",
+      "region_kind": "thing",
+      "discovery_area": 18751,
+      "box_before": {
+        "x_min": 382.0,
+        "y_min": 304.0,
+        "x_max": 640.0,
+        "y_max": 428.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.8686850070953369,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.4543060409996542,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a02a8b1cc9a4959a",
+      "label": "dark brown leather wallet",
+      "region_kind": "thing",
+      "discovery_area": 14939,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 192.0,
+        "x_max": 384.0,
+        "y_max": 367.0
+      },
+      "component_count_before": 8,
+      "geometric_confidence": 0.9580413103103638,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.46766539300006116,
+      "model_mask_area": 23384,
+      "clipped_pixel_count": 23384,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-a0bfb032e4e11994",
+      "label": "white vertical panel",
+      "region_kind": "thing",
+      "discovery_area": 19257,
+      "box_before": {
+        "x_min": 322.0,
+        "y_min": 3.0,
+        "x_max": 384.0,
+        "y_max": 368.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9092165231704712,
+      "visual_support": null,
+      "model_calls": 2,
+      "latency_s": 0.46803785399970366,
+      "model_mask_area": 71519,
+      "clipped_pixel_count": 52446,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 19071,
+          "box": {
+            "x_min": 322.0,
+            "y_min": 4.0,
+            "x_max": 384.0,
+            "y_max": 364.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 19071,
+          "refined_overlap": 19071,
+          "detector_box_overlap": 19071,
+          "distance_to_box_center_px": 85.43104481838398
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 340.0,
+            "y_min": 44.0,
+            "x_max": 341.0,
+            "y_max": 45.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 174.7679054620744
+        },
+        {
+          "component_id": 3,
+          "area": 1,
+          "box": {
+            "x_min": 371.0,
+            "y_min": 70.0,
+            "x_max": 372.0,
+            "y_max": 71.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 175.9814618051917
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-b278a621556ea11d",
+      "label": "black plastic strip",
+      "region_kind": "thing",
+      "discovery_area": 16126,
+      "box_before": {
+        "x_min": 95.0,
+        "y_min": 251.0,
+        "x_max": 348.0,
+        "y_max": 367.0
+      },
+      "component_count_before": 13,
+      "geometric_confidence": 0.8709230422973633,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.46859445500012953,
+      "model_mask_area": 10047,
+      "clipped_pixel_count": 634,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 9387,
+          "box": {
+            "x_min": 95.0,
+            "y_min": 251.0,
+            "x_max": 322.0,
+            "y_max": 320.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 9387,
+          "refined_overlap": 9387,
+          "detector_box_overlap": 9387,
+          "distance_to_box_center_px": 0.2779655003964153
+        },
+        {
+          "component_id": 2,
+          "area": 3,
+          "box": {
+            "x_min": 241.0,
+            "y_min": 311.0,
+            "x_max": 244.0,
+            "y_max": 312.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 38.593878421156234
+        },
+        {
+          "component_id": 3,
+          "area": 1,
+          "box": {
+            "x_min": 314.0,
+            "y_min": 314.0,
+            "x_max": 315.0,
+            "y_max": 315.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 107.66097705594039
+        },
+        {
+          "component_id": 4,
+          "area": 1,
+          "box": {
+            "x_min": 272.0,
+            "y_min": 315.0,
+            "x_max": 273.0,
+            "y_max": 316.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 67.89065743526322
+        },
+        {
+          "component_id": 5,
+          "area": 1,
+          "box": {
+            "x_min": 318.0,
+            "y_min": 317.0,
+            "x_max": 319.0,
+            "y_max": 318.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 112.26554539532701
+        },
+        {
+          "component_id": 6,
+          "area": 1,
+          "box": {
+            "x_min": 269.0,
+            "y_min": 318.0,
+            "x_max": 270.0,
+            "y_max": 319.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 66.38290704469904
+        },
+        {
+          "component_id": 7,
+          "area": 2,
+          "box": {
+            "x_min": 303.0,
+            "y_min": 318.0,
+            "x_max": 304.0,
+            "y_max": 320.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 98.10113947706873
+        },
+        {
+          "component_id": 8,
+          "area": 1,
+          "box": {
+            "x_min": 273.0,
+            "y_min": 319.0,
+            "x_max": 274.0,
+            "y_max": 320.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 70.42324629395593
+        },
+        {
+          "component_id": 9,
+          "area": 6,
+          "box": {
+            "x_min": 280.0,
+            "y_min": 320.0,
+            "x_max": 284.0,
+            "y_max": 322.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 6,
+          "refined_overlap": 6,
+          "detector_box_overlap": 6,
+          "distance_to_box_center_px": 77.21083509349602
+        },
+        {
+          "component_id": 10,
+          "area": 1,
+          "box": {
+            "x_min": 305.0,
+            "y_min": 320.0,
+            "x_max": 306.0,
+            "y_max": 321.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 100.61137001196072
+        },
+        {
+          "component_id": 11,
+          "area": 1,
+          "box": {
+            "x_min": 314.0,
+            "y_min": 321.0,
+            "x_max": 315.0,
+            "y_max": 322.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 109.49711407396735
+        },
+        {
+          "component_id": 12,
+          "area": 1,
+          "box": {
+            "x_min": 290.0,
+            "y_min": 322.0,
+            "x_max": 291.0,
+            "y_max": 323.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 87.20028884797901
+        },
+        {
+          "component_id": 13,
+          "area": 1,
+          "box": {
+            "x_min": 307.0,
+            "y_min": 322.0,
+            "x_max": 308.0,
+            "y_max": 323.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 103.13807243044657
+        },
+        {
+          "component_id": 14,
+          "area": 2,
+          "box": {
+            "x_min": 309.0,
+            "y_min": 327.0,
+            "x_max": 311.0,
+            "y_max": 328.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 106.71064305282367
+        },
+        {
+          "component_id": 15,
+          "area": 4,
+          "box": {
+            "x_min": 314.0,
+            "y_min": 327.0,
+            "x_max": 318.0,
+            "y_max": 328.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 4,
+          "refined_overlap": 4,
+          "detector_box_overlap": 4,
+          "distance_to_box_center_px": 111.39743392339373
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 9387,
+      "area_ratio": 0.5821034354458638,
+      "area_reduction_ratio": 0.41789656455413615,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 95.0,
+        "y_min": 251.0,
+        "x_max": 322.0,
+        "y_max": 320.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-e1680a6b3cb9ebe1",
+      "label": "dark brown leather wallet",
+      "region_kind": "thing",
+      "discovery_area": 4193,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 258.0,
+        "x_max": 323.0,
+        "y_max": 362.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9733225703239441,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}
