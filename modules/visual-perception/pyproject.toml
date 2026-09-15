@@ -35,6 +35,12 @@ ml = [
     "sentencepiece>=0.2",
     "protobuf>=4",
 ]
+# Backend remoto opcional de raciocínio multimodal (#276). Frames e crops saem da
+# máquina; nunca é default nem fallback do Qwen local.
+remote-vlm = [
+    "google-genai>=1.0",
+    "pillow>=10",
+]
 # Local benchmark/validation data prep only (e.g. prepare_corridor02_frames.py).
 # Unrelated to inference; kept separate from `ml` on purpose.
 bench = [

@@ -1,7 +1,10 @@
 """Adapters reais de backend de descoberta de regiões.
 
-SAM/SAM2 produzem propostas automaticamente. SAM3 usa um prompt amplo
-versionado para produzir propostas geométricas sem publicar semântica.
+SAM, SAM2 e SAM3 produzem propostas por geração automática de máscaras
+(*segment everything*): uma grade de pontos percorre a imagem e o modelo
+devolve máscaras class-agnostic. No SAM3 a geração usa o tracker, a interface
+de prompts por ponto do modelo; o prompt textual (PCS) não é usado porque
+frases genéricas não produzem máscaras.
 """
 
 from __future__ import annotations
@@ -25,15 +28,15 @@ from visual_perception.infrastructure.adapters._runtime import (
 )
 
 
-# Implementa o port RegionDiscoverer com SAM (automatic mask generation via
-# Transformers), mantendo detalhes do runtime e do checkpoint locais ao adapter.
+# Implementa o port RegionDiscoverer com geração automática de máscaras via
+# Transformers, mantendo detalhes do runtime e do checkpoint locais ao adapter.
 class RealRegionDiscoveryAdapter:
     """Satisfaz :class:`~visual_perception.ports.region_discovery.RegionDiscoverer`.
 
-    Usa o pipeline ``mask-generation`` do Transformers (SAM/SAM2, conforme o
-    checkpoint configurado) para retornar somente geometria. A classe não
-    atribui rótulos nem executa merge: essas responsabilidades continuam nos
-    stages canônicos de semântica e de merge.
+    Usa o pipeline ``mask-generation`` do Transformers com SAM/SAM2 (backend
+    ``sam``) ou com o tracker do SAM3 (backend ``sam3``) para retornar somente
+    geometria. A classe não atribui rótulos nem executa merge: essas
+    responsabilidades continuam nos stages canônicos de semântica e de merge.
     """
 
     # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
@@ -49,11 +52,11 @@ class RealRegionDiscoveryAdapter:
     def discover(
         self, image: ImagePayload, config: RegionDiscoveryConfig
     ) -> tuple[LocalRegionProposal, ...]:
-        """Retorna propostas locais do SAM preservando máscaras e confiança geométrica."""
+        """Retorna propostas locais preservando máscaras e confiança geométrica."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
         torch = require_module("torch", config.backend)
         device = resolve_device(torch, config.device, config.backend)
-        key = f"region_discovery:{checkpoint}:{device}"
+        key = f"region_discovery:{config.backend}:{checkpoint}:{device}"
         generator = self._get_generator(config)
         try:
             output = self._lifecycle.call_with_eviction(
@@ -70,21 +73,10 @@ class RealRegionDiscoveryAdapter:
         except Exception as error:
             raise_backend_execution_error(config.backend, "a geração automática de máscaras", error)
 
-        masks = output["masks"]
-        scores = output["scores"]
-        order = sorted(range(len(masks)), key=lambda i: -float(scores[i]))
+        return _proposals_from_mask_outputs(output["masks"], output["scores"], image, config)
 
-        proposals: list[LocalRegionProposal] = []
-        for rank, index in enumerate(order):
-            if len(proposals) >= config.max_regions:
-                break
-            proposal = _proposal_from_mask(masks[index], float(scores[index]), rank, image, config)
-            if proposal is not None:
-                proposals.append(proposal)
-        return tuple(proposals)
-
-    # Carrega o pipeline SAM apenas quando a configuração real for usada,
-    # mantendo a instalação fake-only independente de torch, CUDA e checkpoints.
+    # Carrega o pipeline apenas quando a configuração real for usada, mantendo
+    # a instalação fake-only independente de torch, CUDA e checkpoints.
     def _get_generator(self, config: RegionDiscoveryConfig) -> Any:
         """Retorna o pipeline de mask-generation correspondente à configuração solicitada."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
@@ -95,6 +87,18 @@ class RealRegionDiscoveryAdapter:
             try:
                 transformers = require_module("transformers", config.backend)
                 device_index = 0 if device == "cuda" else -1
+                if config.backend == "sam3":
+                    # O checkpoint do SAM3 não é resolvido pelo AutoModel de
+                    # mask-generation; o tracker e seu image processor são
+                    # entregues explicitamente ao pipeline.
+                    tracker = transformers.Sam3TrackerModel.from_pretrained(checkpoint).to(device).eval()
+                    processor = transformers.Sam3TrackerProcessor.from_pretrained(checkpoint)
+                    return transformers.pipeline(
+                        "mask-generation",
+                        model=tracker,
+                        image_processor=processor.image_processor,
+                        device=device_index,
+                    )
                 return transformers.pipeline(
                     "mask-generation", model=checkpoint, device=device_index, dtype=torch.float32
                 )
@@ -106,93 +110,39 @@ class RealRegionDiscoveryAdapter:
                 # liberar residentes por LRU e tentar de novo.
                 raise
             except Exception as error:
-                raise_backend_execution_error(config.backend, "o carregamento do SAM", error)
+                raise_backend_execution_error(config.backend, "o carregamento do gerador de máscaras", error)
 
-        return self._lifecycle.get_or_load(f"region_discovery:{checkpoint}:{device}", factory)
+        return self._lifecycle.get_or_load(f"region_discovery:{config.backend}:{checkpoint}:{device}", factory)
 
 
-# Implementa RegionDiscoverer com SAM3, cujo runtime exige um prompt textual.
-# O prompt amplo pertence à config para que a cobertura produzida seja
-# reprodutível e participe do fingerprint do stage.
-class Sam3RegionDiscoveryAdapter:
-    """Satisfaz ``RegionDiscoverer`` usando segmentação condicionada por texto do SAM3."""
+# Ordena e limita a saída de masks do runtime antes de traduzi-la ao contract
+# local. Separada de ``discover`` para que a política de score, área e máximo
+# de propostas seja testável sem GPU nem checkpoint.
+def _proposals_from_mask_outputs(
+    masks: Any,
+    scores: Any,
+    image: ImagePayload,
+    config: RegionDiscoveryConfig,
+) -> tuple[LocalRegionProposal, ...]:
+    """Converte a saída de masks do runtime em propostas locais ordenadas.
 
-    # Recebe o lifecycle compartilhado para manter o modelo SAM3 residente entre
-    # tiles e delegar a eviction sob pressão de VRAM ao dono central.
-    def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
-        """Inicializa o adapter sem carregar pesos ou módulos opcionais."""
-        self._lifecycle = lifecycle or ModelLifecycleManager()
-
-    # Segmenta todas as instâncias que correspondem ao prompt amplo da config.
-    # É chamado por tile pelo stage de discovery antes de qualquer semântica.
-    def discover(
-        self, image: ImagePayload, config: RegionDiscoveryConfig
-    ) -> tuple[LocalRegionProposal, ...]:
-        """Retorna propostas locais do SAM3 preservando máscaras e confiança geométrica."""
-        checkpoint = require_checkpoint(config.checkpoint, config.backend)
-        torch = require_module("torch", config.backend)
-        device = resolve_device(torch, config.device, config.backend)
-        key = f"region_discovery:sam3:{checkpoint}:{device}"
-        model, processor = self._get_model(config, torch, device)
-        pil = payload_to_pil(image, config.backend)
-        try:
-            # Mantém forward e pós-processamento na mesma chamada gerenciada,
-            # pois ambos retêm intermediários CUDA que podem exigir eviction.
-            def infer() -> Any:
-                """Executa o forward e restaura as máscaras nas dimensões da imagem."""
-                inputs = processor(images=pil, text=config.prompt, return_tensors="pt").to(device)
-                with torch.inference_mode():
-                    outputs = model(**inputs)
-                return processor.post_process_instance_segmentation(
-                    outputs,
-                    threshold=config.score_threshold,
-                    mask_threshold=config.mask_threshold,
-                    target_sizes=inputs.get("original_sizes").tolist(),
-                )[0]
-
-            output = self._lifecycle.call_with_eviction(key, infer)
-        except BackendExecutionError:
-            raise
-        except Exception as error:
-            raise_backend_execution_error(config.backend, "a segmentação pelo prompt amplo", error)
-
-        masks = output["masks"]
-        scores = output["scores"]
-        order = sorted(range(len(masks)), key=lambda index: -float(scores[index]))
-        proposals: list[LocalRegionProposal] = []
-        for rank, index in enumerate(order):
-            if len(proposals) >= config.max_regions:
-                break
-            proposal = _proposal_from_mask(
-                masks[index], float(scores[index]), rank, image, config, backend_name="sam3"
-            )
-            if proposal is not None:
-                proposals.append(proposal)
-        return tuple(proposals)
-
-    # Carrega modelo e processor juntos porque ambos são necessários para o
-    # contract do checkpoint e precisam compartilhar a mesma residência.
-    def _get_model(self, config: RegionDiscoveryConfig, torch: Any, device: str) -> tuple[Any, Any]:
-        """Retorna o modelo e processor SAM3 residentes para a configuração solicitada."""
-        checkpoint = require_checkpoint(config.checkpoint, config.backend)
-
-        def factory() -> tuple[Any, Any]:
-            """Carrega SAM3 por meio das classes públicas do Transformers."""
-            try:
-                transformers = require_module("transformers", config.backend)
-                return (
-                    transformers.Sam3Model.from_pretrained(checkpoint).to(device).eval(),
-                    transformers.Sam3Processor.from_pretrained(checkpoint),
-                )
-            except BackendUnavailableError:
-                raise
-            except (MemoryError, torch.cuda.OutOfMemoryError):
-                raise
-            except Exception as error:
-                raise_backend_execution_error(config.backend, "o carregamento do SAM3", error)
-
-        key = f"region_discovery:sam3:{checkpoint}:{device}"
-        return self._lifecycle.get_or_load(key, factory)
+    Argumentos:
+        masks: masks binárias ou tensores devolvidos pelo runtime.
+        scores: confidences geométricas correspondentes às masks.
+        image: imagem local do tile que definiu as dimensões das masks.
+        config: backend, limites e thresholds de region discovery.
+    Retorna:
+        propostas válidas, em ordem decrescente de score.
+    """
+    order = sorted(range(len(masks)), key=lambda index: -float(scores[index]))
+    proposals: list[LocalRegionProposal] = []
+    for rank, index in enumerate(order):
+        if len(proposals) >= config.max_regions:
+            break
+        proposal = _proposal_from_mask(masks[index], float(scores[index]), rank, image, config)
+        if proposal is not None:
+            proposals.append(proposal)
+    return tuple(proposals)
 
 
 # Converte uma máscara+score do pipeline de mask-generation no contract local
@@ -204,7 +154,6 @@ def _proposal_from_mask(
     index: int,
     image: ImagePayload,
     config: RegionDiscoveryConfig,
-    backend_name: str = "sam",
 ) -> LocalRegionProposal | None:
     """Converte uma máscara+score do SAM em proposta local ou descarta saída inválida."""
     segmentation = _mask_to_numpy(mask_array)
@@ -219,15 +168,11 @@ def _proposal_from_mask(
     if confidence < config.score_threshold:
         return None
     return LocalRegionProposal(
-        local_id=f"{backend_name}-{index}",
+        local_id=f"{config.backend}-{index}",
         mask=mask,
         box=mask.bounding_box(),
         geometric_confidence=confidence,
-        source=(
-            f"sam3:{config.checkpoint}:prompt={config.prompt}"
-            if backend_name == "sam3"
-            else f"sam:{config.checkpoint}"
-        ),
+        source=f"{config.backend}:{config.checkpoint}",
     )
 
 

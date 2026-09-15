@@ -12,7 +12,7 @@ pytest.importorskip("torch")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from candidates.multimodal_reasoning import score_scene_response  # noqa: E402
-from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import scene_prompt  # noqa: E402
+from visual_perception.infrastructure.adapters.reasoning_prompts import scene_prompt  # noqa: E402
 
 _PRODUCTION_RESPONSE = {
     "scene_type": "corridor",

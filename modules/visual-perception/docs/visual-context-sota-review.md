@@ -375,7 +375,7 @@ sinal deste módulo tem três desfechos com massa real.
 | **VLMaps** (arXiv:2210.05714), **ConceptFusion** (arXiv:2302.07241) | a evidência 2D por região precisa **chegar ao downstream como vetor**, não como rótulo | produzimos os vetores e os descartamos antes de `PipelineResult` (§2.1) |
 | **Open-vocabulary detection confidence** (arXiv:2607.10993) | o cosseno CLIP região-texto é uma **mistura enviesada** de escala e especificidade semântica: regiões grandes pontuam mais alto e termos genéricos pontuam mais baixo, independentemente do conteúdo | é exatamente o erro que estaríamos cometendo se transformássemos o cosseno em `confidence`. Sustenta a decisão de emitir *support signal* com margem, e não score |
 | **DINOv3** (arXiv:2508.10104) | *Gram anchoring* mantém o mapa denso limpo em resolução alta, onde o DINOv2 degrada | nosso mapa denso é DINOv2-base a 448 (grade 32x24) |
-| **SAM 3** (arXiv:2511.16719) | *promptable concept segmentation*: dado um sintagma nominal ou exemplar, devolve **todas** as instâncias correspondentes | provider `sam3` usa o prompt amplo `all visible objects`; a cobertura ainda precisa de benchmark |
+| **SAM 3** (arXiv:2511.16719) | *promptable concept segmentation*: dado um sintagma nominal ou exemplar, devolve **todas** as instâncias correspondentes | provider `sam3` usa o tracker como segment everything; PCS com prompt genérico devolveu zero masks e foi descartado |
 | **LoftUp** (arXiv:2504.14032) | upsampler baseado em coordenadas com cross-attention, treinado contra pseudo-GT de alta resolução | temos FeatUp/JBU como candidato e `nearest`/`bilinear` como baselines |
 | **Qwen3-VL** (arXiv:2511.21631) | família densa 2B/4B/8B/32B, contexto intercalado longo | usamos Qwen2.5-VL-3B em 4-bit |
 
@@ -410,8 +410,8 @@ Registrado explicitamente para que nenhuma issue desta rodada escorregue para do
 | SAM 2 / SAM 3 (tracking) | identidade de objeto **entre frames** | fora deste módulo por definição |
 
 Em particular: o SAM 3 é usado aqui apenas para segmentação dentro de um frame, pelo
-prompt amplo versionado `all visible objects`. Seu tracker de vídeo é identidade temporal,
-que é explicitamente proibida neste módulo.
+tracker de imagem (`Sam3TrackerModel`) com grade de pontos. O tracker de vídeo
+(`Sam3TrackerVideoModel`) é identidade temporal, que é explicitamente proibida neste módulo.
 
 ---
 
@@ -429,7 +429,7 @@ que é explicitamente proibida neste módulo.
 | O8 | Expor os embeddings em `PipelineResult` e persistí-los | **P1** | consequência direta de O1; sem isso o downstream recomputa ou fica sem |
 | O9 | Benchmark Qwen2.5-VL-3B vs Qwen3-VL-2B/4B sobre a **mesma** arquitetura | **P2** | os três checkpoints já estão no cache local; custo zero de download |
 | O10 | Benchmark DINOv2 vs DINOv3 | **P2** | bloqueado: checkpoints `gated=manual` no HF, exigem aceite de licença pelo usuário |
-| O11 | SAM 3 como discovery por prompt amplo | **P2** | provider `sam3` adotado com `all visible objects`; benchmark de cobertura e VRAM pendente |
+| O11 | SAM 3 como discovery segment everything | **P2** | provider `sam3` adotado via tracker (0.80/0.90); comparação com SAM2 nos mesmos thresholds pendente |
 | O12 | LoftUp como candidato de upsampling | **P3** | o gargalo medido na #208 era a resolução de entrada do backbone, não a regra de leitura; ganho esperado menor que O1–O7 |
 | O13 | Podar `near` O(n²) | **P3** | é custo de serialização, não erro; e a poda correta depende de O6 |
 
@@ -466,7 +466,7 @@ decidido (§6) e onde a decisão vive no código.
 | diagnóstico de frame | nada contava o efeito dos estágios contextuais | `ContextualDiagnostics` no artifact e no manifest | **P1** | `application/observation_diagnostics.py`, `benchmarks/validate_reference_pipeline.py` |
 | backend de raciocínio multimodal | selecionado antes de a arquitetura contextual existir | benchmark sobre a arquitetura fixa | **P2** | `benchmarks/`, issue #218 |
 | backbone denso | gargalo é a resolução efetiva | benchmark de candidato moderno | **P2** | issue #219 (bloqueado por licença) |
-| discovery por prompt amplo | SAM2 class-agnostic | SAM3 com `all visible objects` em cada tile | **P2** | provider `sam3`; benchmark pendente |
+| discovery class-agnostic | SAM2 automático | SAM3 tracker com grade de pontos em cada tile | **P2** | provider `sam3`; benchmark pendente |
 | upsampling aprendido | FeatUp integrado, não medido na tarefa | comparar candidato mais recente | **P3** | issue #221 |
 | relações `near` O(n²) | 432 de 726 relações | poda depende da inferência semântica estar medida | **P3** | issue própria quando houver medida |
 
@@ -513,7 +513,7 @@ registrada em `research-traceability.md` com a ideia usada e a diferença para o
 | Koch et al., **Open3DSG**, arXiv:2402.12259 | relações de conjunto aberto condicionadas aos conceitos dos nós, sem taxonomia fechada |
 | Soon & Hsieh, **Confidence Scores in Open-Vocabulary Detection Are a Biased Mixture of Scale and Semantics**, arXiv:2607.10993 | evidência publicada de que o cosseno CLIP região-texto é enviesado por escala e por especificidade do termo; sustenta emitir *support signal* com margem em vez de confiança |
 | Siméoni et al., **DINOv3**, arXiv:2508.10104 | candidato avaliado para features densas (Gram anchoring em alta resolução) |
-| Carion et al., **SAM 3**, arXiv:2511.16719 | provider de discovery por prompt amplo; benchmark pendente |
+| Carion et al., **SAM 3**, arXiv:2511.16719 | provider de discovery por segment everything (tracker); benchmark pendente |
 | Bai et al., **Qwen3-VL**, arXiv:2511.21631 | candidato avaliado para raciocínio multimodal |
 | Huang et al., **LoftUp**, arXiv:2504.14032 | candidato avaliado para upsampling de features |
 
@@ -590,7 +590,7 @@ verificações da suíte passavam em todos os três casos.
 - se o rendimento baixo das relações semânticas é do modelo ou da tarefa (`#218`);
 - se um backbone denso mais recente melhora a corroboração de grupos (`#219`, bloqueado
   por licença);
-- se o discovery por prompt amplo do SAM3 melhora cobertura sem estourar o budget (`#220`,
-  acesso aprovado; benchmark pendente);
+- se o segment everything do SAM3 supera o SAM2 com os mesmos thresholds sem estourar o
+  budget (`#220`, benchmark pendente);
 - **qualquer coisa sobre acurácia.** `#210`/`#211` continuam abertas, e sem elas nenhum
   número desta rodada é uma afirmação de correção semântica.

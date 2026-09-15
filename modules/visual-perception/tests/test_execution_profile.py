@@ -65,4 +65,5 @@ def test_real_research_profile_enables_every_multi_context_slot_explicitly() -> 
     assert config.feature_extraction.input_resolution == 448
     assert config.region_discovery.backend == "sam3"
     assert config.region_discovery.checkpoint == "facebook/sam3"
-    assert config.region_discovery.prompt == "all visible objects"
+    assert config.region_discovery.pred_iou_threshold == 0.80
+    assert config.region_discovery.stability_score_threshold == 0.90

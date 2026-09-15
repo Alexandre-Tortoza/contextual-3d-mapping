@@ -53,11 +53,15 @@ class LocalRegionProposal:
     box: BoundingBox
     geometric_confidence: float
     source: str
+    #: Conceito textual que condicionou a máscara no grounding por conceito (#277);
+    #: ``None`` para discovery genérico.
+    concept: str | None = None
 
     # Valida o id local, a confiança geométrica em [0, 1], a presença de
     # source, e que a máscara não está vazia.
     def __post_init__(self) -> None:
         validate_identifier(self.local_id, field="local_id")
+        _validate_concept(self.concept)
         if not 0.0 <= self.geometric_confidence <= 1.0:
             raise ValueError(
                 f"geometric_confidence must be in [0, 1], got {self.geometric_confidence}."
@@ -85,11 +89,15 @@ class RegionProposal:
     geometric_confidence: float
     source: str
     tile: TileProvenance
+    #: Conceito que originou a proposta no grounding por conceito (#277), preservado
+    #: até o merge para que cada região seja rastreável ao seu conceito de origem.
+    concept: str | None = None
 
     # Valida o id da proposta, a confiança geométrica em [0, 1], a presença
     # de source, e que a máscara não está vazia.
     def __post_init__(self) -> None:
         validate_identifier(self.proposal_id, field="proposal_id")
+        _validate_concept(self.concept)
         if not 0.0 <= self.geometric_confidence <= 1.0:
             raise ValueError(
                 f"geometric_confidence must be in [0, 1], got {self.geometric_confidence}."
@@ -98,6 +106,13 @@ class RegionProposal:
             raise ValueError("source must not be empty.")
         if self.mask.is_empty:
             raise ValueError(f"RegionProposal({self.proposal_id!r}) has an empty mask.")
+
+
+# Recusa um conceito vazio ou com espaços nas pontas: ``None`` é a ausência.
+def _validate_concept(concept: str | None) -> None:
+    """Valida o conceito de origem de uma proposta."""
+    if concept is not None and (not concept or concept != concept.strip()):
+        raise ValueError("proposal concept must be None or a non-empty stripped string.")
 
 
 # Enumera por que uma proposta foi descartada antes de virar região. Existe

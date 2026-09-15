@@ -17,10 +17,11 @@ latência e VRAM:
 
 | Capability | Port | Backend real | Checkpoint | Identificador |
 | --- | --- | --- | --- | --- |
-| Region discovery | `RegionDiscoverer` | SAM3, prompt amplo | `facebook/sam3` | `sam3` |
+| Region discovery | `RegionDiscoverer` | SAM3 tracker, segment everything | `facebook/sam3` | `sam3` |
 | Dense feature extraction | `DenseFeatureExtractor` | DINOv2-base | `facebook/dinov2-base` | `dinov2` |
 | Language-aligned embedding | `LanguageAlignedEncoder` | CLIP ViT-L/14 | `openai/clip-vit-large-patch14` | `clip` |
 | Multimodal reasoning | `MultimodalReasoner` | Qwen2.5-VL-3B-Instruct 4-bit | `Qwen/Qwen2.5-VL-3B-Instruct` | `qwen_vl` |
+| Multimodal reasoning (remoto, opt-in) | `MultimodalReasoner` | Gemini Robotics ER 2 | `gemini-robotics-er-2-preview` | `gemini_robotics_er` |
 
 `research_quality_config(real_backends=True)` em
 [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py)
@@ -35,7 +36,9 @@ retorna a configuração de referência com os quatro backends reais.
 | implementação de region discovery | [`region_discovery_backend.py`](../src/visual_perception/infrastructure/adapters/region_discovery_backend.py) | `ports/region_discovery.py` e testes GPU |
 | implementação de dense features | [`feature_extraction_backend.py`](../src/visual_perception/infrastructure/adapters/feature_extraction_backend.py) | `ports/feature_extraction.py`, pooling e benchmark |
 | implementação de language embedding | [`language_embedding_backend.py`](../src/visual_perception/infrastructure/adapters/language_embedding_backend.py) | `ports/language_embedding.py` e benchmark |
-| modelo ou prompt do VLM | [`multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py) | parser de cena/região, fingerprint e testes |
+| prompt do VLM (compartilhado pelos backends) | [`reasoning_prompts.py`](../src/visual_perception/infrastructure/adapters/reasoning_prompts.py) | `prompt_version`, parser de cena/região, fingerprint e testes |
+| modelo local do VLM | [`multimodal_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/multimodal_reasoning_backend.py) | lifecycle, 4-bit e testes GPU |
+| VLM remoto (Gemini) | [`gemini_reasoning_backend.py`](../src/visual_perception/infrastructure/adapters/gemini_reasoning_backend.py) | `GEMINI_API_KEY`, telemetria e governança de dados |
 | parsing de resposta de região | [`application/region_semantics.py`](../src/visual_perception/application/region_semantics.py) | `domain/semantics.py` e testes do parser |
 | lifecycle e VRAM | [`application/lifecycle.py`](../src/visual_perception/application/lifecycle.py) | `factory.py`, `_runtime.py` e validação real |
 | candidatos de benchmark | [`benchmarks/candidates/`](../benchmarks/candidates/) | `run_backend_benchmark.py` e resultados |
@@ -90,24 +93,42 @@ prefira manter o mesmo port e trocar somente o adapter/factory/configuração.
 
 ### Responsabilidade
 
-Produzir propostas geométricas 2D class-agnostic. O backend não atribui identidade
-semântica final à região.
+Produzir propostas geométricas 2D. O backend não atribui identidade semântica
+final à região; o Qwen continua responsável por contexto ambiental e relações
+semânticas, e não por escolher prompts de discovery.
 
 ### Implementação de referência
 
 - port: `RegionDiscoverer`;
 - adapter: `infrastructure/adapters/region_discovery_backend.py`;
 - backend: `sam3`;
-- checkpoint: `facebook/sam3`;
-- prompt versionado: `all visible objects`;
-- limiar de instância e de binarização: `0.5`.
+- checkpoint: `facebook/sam3`, carregado como `Sam3TrackerModel` no pipeline `mask-generation`;
+- `pred_iou_threshold=0.80`, `stability_score_threshold=0.90`, `min_mask_area=500`.
 
 ### Por que foi escolhido
 
-SAM3 recebe o prompt amplo em cada imagem ou tile e retorna todas as instâncias que o
-modelo associa a ele. Isso não introduz uma lista de classes, mas também não equivale à
-geração automática class-agnostic do SAM2. O benchmark precisa registrar a cobertura,
-latência e VRAM dessa política na RTX 3060 8GB antes de qualquer alegação de qualidade.
+O cenário alvo é exploração de áreas de desastre, em que a discovery precisa achar
+paredes danificadas, placas, escombros e objetos sem depender de uma lista de classes.
+Por isso o SAM3 roda como *segment everything*: o tracker recebe uma grade de pontos e
+devolve masks class-agnostic, como a geração automática do SAM2.
+
+O caminho por *Promptable Concept Segmentation* (PCS) foi descartado. Em 2026-09-15, com
+frames de todos os trechos do corridor-02 (indoor e outdoor), prompts genéricos
+(`find every contextually relevant object...`, `all visible objects`, `objects`,
+`things`, `segment everything` e outros) devolveram zero masks ou uma única mask fixa.
+Conceitos concretos (`wall`, `door`, `tree`) funcionam, mas exigiriam uma lista fechada.
+
+Na mesma comparação (5 frames, frame inteiro, sem tiles):
+
+| Discovery | Masks/frame | Cobertura | Latência | VRAM |
+| --- | --- | --- | --- | --- |
+| SAM2.1-large, 0.88/0.95 | 1–43 | 30–66% | ~4,3 s | 2,5 GB |
+| SAM3 tracker, 0.88/0.95 | 2–36 | 11–54% | ~6,7 s | 3,9 GB |
+| SAM3 tracker, 0.80/0.90 | 10–59 | 64–74% | ~6,8 s | 3,9 GB |
+
+Com os defaults 0.88/0.95, piso e quase todo o outdoor eram descartados; 0.80/0.90
+segmentou piso, forro, portas, janelas e árvores individuais. O SAM2 não foi medido com
+0.80/0.90, então a vantagem ainda não separa o efeito do modelo do efeito do threshold.
 
 ### Output esperado
 
@@ -116,10 +137,63 @@ consolidação e semântica são etapas posteriores.
 
 ### Limites atuais
 
-O prompt amplo pode omitir superfícies que o modelo não interprete como objeto, agrupar
-categorias distintas ou over-segmentar superfícies repetitivas. O merge atua por
-IoU/sobreposição e não une automaticamente regiões vizinhas não sobrepostas com semântica
-semelhante. `sam`/SAM2 permanece disponível como alternativa class-agnostic explícita.
+Os thresholds mais permissivos aumentam a cobertura, mas também admitem masks menos
+estáveis, e superfícies repetitivas (placas de forro) ainda são over-segmentadas. O merge atua por
+IoU/containment e não reconstrói metades quase disjuntas de um objeto em tiles
+adjacentes; a passada global preserva a proposal de cobertura completa quando o modelo a
+produz. `sam`/SAM2 permanece disponível como alternativa class-agnostic explícita.
+
+### Tiling e truncamento nas bordas dos tiles
+
+Com `tiling.multi_scale_enabled`, o discovery roda na imagem completa e em um grid de
+tiles sobrepostos. Uma superfície maior que o tile (céu, asfalto, piso) sai do tile
+cortada numa reta, e o merge por IoU ou containment **mútua** não junta esse fragmento à
+máscara global: o fragmento cabe inteiro na global, mas a global não cabe nele. No
+corridor-02 outdoor (2026-09-15) isso virou faixas retangulares de céu rotuladas `pole`,
+`building` e `field`.
+
+`tiling.discard_tile_border_truncations=True` descarta propostas de tile que tocam uma
+borda interna do tile (`application/tiling.py:is_truncated_by_tile`). Um objeto menor que
+a sobreposição aparece inteiro no tile vizinho; um maior fica com a passada global. A
+opção é desligada por default até o benchmark de tiling decidir o grid
+(`benchmarks/tiling_benchmark.py`, variantes `1x1`, `2x2`, `2x2-discard`, `3x3` e
+`3x3-discard`).
+
+### Descoberta de conceitos e grounding por conceito (#277)
+
+Duas etapas opcionais somam propostas guiadas por semântica ao discovery genérico, que
+continua obrigatório:
+
+```text
+imagem ── discovery genérico (SAM3 tracker, tiles) ───────────────┐
+   │                                                               ├─ filtro de área → merge → regiões
+   └─ SceneConceptDiscoverer (VLM) → conceitos → SAM3 PCS ─────────┘
+```
+
+- **Descoberta de conceitos** (`scene_concept_discovery.enabled`): o mesmo VLM do
+  `multimodal_reasoner` (Qwen ou Gemini) recebe a view de cena, sem o rig e dentro do
+  sensor, e o prompt `concepts/v1`. Ele devolve `entities` e `contextual_features` como
+  frases nominais curtas. O prompt é separado do prompt de cena, que proíbe inventário de
+  objetos porque o texto dele entra em cada região (#202); estes conceitos só viram
+  consultas de grounding. A application (`application/scene_concept_discovery.py`)
+  normaliza, deduplica, descarta `wall`/`floor`/`ceiling` sozinhos (mas mantém `wall
+  crack`), prioriza os sinais contextuais e aplica `max_concepts`. Cada descarte fica
+  registrado com motivo.
+- **Grounding por conceito** (`concept_grounding.backend="sam3"`): cada conceito vira um
+  prompt textual do SAM3 PCS na imagem completa
+  (`infrastructure/adapters/concept_grounding_backend.py`). O encoder de imagem roda uma
+  vez por frame e as features são reaproveitadas entre conceitos. Na CPU, isso deu 16,8 s
+  de encoder e ~1,9 s por conceito, contra 19,7 s por conceito com o forward completo, com
+  máscaras e scores idênticos. Cada proposta leva `concept` na proveniência, que o merge
+  preserva via `contributing_proposal_ids`.
+
+A config recusa grounding ligado com a descoberta desligada. O manifest do harness
+registra por frame `concept_discovery`: conceitos, descartes, propostas por conceito,
+regiões que contêm conceito e `concepts_without_region`, que são os conceitos vistos pelo
+VLM e não localizados pelo SAM3. As duas consultas entram em `model_calls`.
+
+Prompts genéricos no PCS não servem como conceito. `all visible objects`, `objects`,
+`things` e `segment everything` devolveram zero máscaras em todos os frames testados.
 
 ## Dense feature extraction
 
@@ -271,6 +345,50 @@ região, não a confiança do claim.
 
 Falhas locais de interpretação viram `RegionInterpretationFailure` e não precisam
 invalidar toda a observação.
+
+### Backend remoto opcional: Gemini Robotics ER 2 (#276)
+
+- adapter: `infrastructure/adapters/gemini_reasoning_backend.py`;
+- backend: `gemini_robotics_er`;
+- checkpoint: `gemini-robotics-er-2-preview` (id do modelo na Gemini API);
+- instalação: `pip install -e ".[ml,remote-vlm]"`;
+- credencial: somente a variável de ambiente `GEMINI_API_KEY`. O harness também lê o
+  `.env` da raiz do repositório, que está no `.gitignore`. A chave nunca entra na config,
+  no fingerprint, no manifest nem na telemetria.
+
+O adapter implementa o mesmo port e usa os mesmos prompts do Qwen, extraídos para
+`infrastructure/adapters/reasoning_prompts.py`, com as mesmas views na mesma ordem. Assim a
+comparação entre os dois mede o modelo, e não o pipeline. A resposta passa pelo mesmo
+`parse_json_object` e pela mesma validação de application.
+
+Transporte:
+
+- saída pedida como `application/json`, com `temperature` e `max_new_tokens` da config;
+- `thinking_budget=0` por default. No prompt de cena, com o default do modelo, a resposta
+  levou 22,6 s e gastou 341 tokens de raciocínio; com `0`, levou 2,4 s e manteve o contract;
+- `timeout_s` por requisição e até `max_retries` tentativas extras, com backoff exponencial
+  (1, 2, 4… s, teto de 30 s), apenas para timeout, 408, 429 e 5xx. Qualquer outro erro
+  vira `BackendExecutionError` na hora. Nunca há fallback para o Qwen nem do Qwen para cá;
+- telemetria por consulta (`RemoteReasoningCall`: operação, latência, tentativas, tokens,
+  falhas transitórias), resumida em `remote_reasoning` no `manifest.json` do run.
+
+Comparação reproduzível contra o Qwen, com o resto da configuração idêntico:
+
+```bash
+python benchmarks/validate_reference_pipeline.py --reasoning-backend gemini_robotics_er \
+  --frames-dir <frames> --frame-id <id> ...
+python benchmarks/compare_runs.py --baseline <run-qwen> --candidate <run-gemini>
+```
+
+Enquanto o conjunto de referência (#197) não tiver anotação revisada, a comparação é de
+estrutura, custo e concordância, não de acurácia.
+
+**Dados saem da máquina.** Frames e crops são enviados à API do Google. No free tier, o
+Google declara que pode usar o conteúdo para melhorar seus produtos; no pago, não. Em
+2026-09-15 ficou decidido que o corridor-02 pode ser enviado porque é um dataset público.
+Qualquer dataset privado exige uma nova decisão explícita antes de usar este backend. Os
+limites de requisição do projeto ficam em Google AI Studio → *Usage & Billing* / *Rate
+limits*; um 429 aparece em `remote_reasoning.transient_failures`.
 
 ## Contract de resposta de relação
 
@@ -584,7 +702,7 @@ não adotados pelos motivos abaixo:
 | --- | --- | --- | --- |
 | Qwen3-VL 2B / 4B / 8B | multimodal reasoning | `transformers` 5.16.1 tem `Qwen3VLForConditionalGeneration`; os três checkpoints já estão no cache local (4,0 / 8,3 / 17 GB), sem gate | **benchmark pendente**, issue #218. Nenhum download necessário |
 | DINOv3 ViT-B/16 | dense features | `transformers` 5.16.1 tem `DINOv3ViTModel`; `facebook/dinov3-vitb16-pretrain-lvd1689m` é 85,7 M params — mesma classe do DINOv2-base — mas está **`gated=manual`** no Hub | **bloqueado**: exige aceite de licença na conta HF do usuário. Issue #219 |
-| SAM 3 | discovery por prompt amplo | `transformers>=5.16.1` tem `Sam3Model`/`Sam3Processor`; `facebook/sam3` é 860 M params e o acesso da conta foi aprovado | provider `sam3` adotado; benchmark de cobertura/VRAM pendente |
+| SAM 3 | discovery por segment everything | `transformers>=5.16.1` tem `Sam3TrackerModel`/`Sam3TrackerProcessor`; `facebook/sam3` é 860 M params e o acesso da conta foi aprovado | provider `sam3` adotado via tracker; comparação com SAM2 nos mesmos thresholds pendente |
 | LoftUp | feature upsampling | não integrado | **não avaliado** nesta rodada; prioridade menor que os anteriores. Issue #221 |
 
 Duas observações de método:

@@ -19,6 +19,25 @@ responde não é "que superfícies existem nesta imagem?", e sim "que informaç�
 visualmente observável merece ser preservada como evidência contextual em um mapa 3D?".
 Ver [contexto estrutural vs. observação contextual](#contexto-estrutural-vs-observação-contextual).
 
+## SAM 3, DINO e Qwen
+
+O SAM 3 usado pelo profile real faz *segment everything*: o tracker (a interface de
+prompts por ponto do SAM 3) percorre uma grade de pontos e devolve masks class-agnostic,
+e o adapter publica somente `RegionProposal` geométricas. O prompt textual (PCS) não é
+usado porque frases genéricas não produzem masks. SAM/SAM2 continuam selecionáveis pelo
+mesmo adapter para comparação.
+
+```text
+SAM3 tracker   -> masks e boxes candidatos
+DINO           -> representações visuais densas
+Qwen           -> contexto ambiental, hipóteses e relações semânticas
+fusão 3D       -> consistência entre observações e associação espacial
+```
+
+Qwen não seleciona prompts de discovery e SAM 3 não publica interpretação semântica.
+O checkpoint, os thresholds, o score e o tile de cada proposal permanecem auditáveis; detalhes de
+limites, tiling e benchmark estão em [docs/model-backends.md](docs/model-backends.md).
+
 > Documentação detalhada: [`docs/`](docs/README.md).
 
 O módulo é testável de forma independente e cada estágio canônico é substituível por

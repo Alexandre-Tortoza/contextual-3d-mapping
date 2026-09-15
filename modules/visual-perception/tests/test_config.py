@@ -31,32 +31,32 @@ def test_minimal_config_validates() -> None:
     assert config.quality_profile is QualityProfile.RESEARCH_QUALITY
 
 
-# Protege o contract do provider SAM3: o prompt amplo é dado de configuração
-# reproduzível e o threshold de máscara precisa permanecer uma probabilidade.
+# Protege o contract de region discovery: backend desconhecido e thresholds da
+# geração automática fora de [0, 1] falham na fronteira da config.
 @pytest.mark.parametrize(
     ("override", "message"),
     [
         ({"backend": "unknown"}, "region_discovery.backend"),
-        ({"backend": "sam3", "prompt": "   "}, "region_discovery.prompt"),
-        ({"backend": "sam3", "mask_threshold": 1.1}, "region_discovery.mask_threshold"),
+        ({"backend": "sam3", "pred_iou_threshold": 1.1}, "region_discovery.pred_iou_threshold"),
+        ({"backend": "sam3", "stability_score_threshold": -0.1}, "region_discovery.stability_score_threshold"),
     ],
 )
-def test_region_discovery_rejects_invalid_sam3_configuration(
+def test_region_discovery_rejects_invalid_configuration(
     override: dict[str, object], message: str
 ) -> None:
-    """Recusa backend, prompt ou threshold SAM3 inválido na fronteira da config."""
+    """Recusa backend ou threshold de geração automática inválido."""
     with pytest.raises(ValueError, match=message):
         RegionDiscoveryConfig(**override)  # type: ignore[arg-type]
 
 
-# Garante que mudar o prompt altera a identidade reproduzível do run, sem
-# precisar de um checkpoint ou de uma GPU para exercitar essa propriedade.
-def test_sam3_prompt_round_trips_and_changes_fingerprint() -> None:
-    """Preserva o prompt SAM3 e o inclui no fingerprint da configuração."""
+# Garante que mudar os thresholds do segment everything altera a identidade
+# reproduzível do run, sem precisar de checkpoint ou GPU.
+def test_sam3_thresholds_round_trip_and_change_fingerprint() -> None:
+    """Preserva os thresholds do SAM3 e os inclui no fingerprint da configuração."""
     first = ModuleConfig(region_discovery=RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3"))
     second = ModuleConfig(
         region_discovery=RegionDiscoveryConfig(
-            backend="sam3", checkpoint="facebook/sam3", prompt="all visible entities"
+            backend="sam3", checkpoint="facebook/sam3", pred_iou_threshold=0.80, stability_score_threshold=0.90
         )
     )
 

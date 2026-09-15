@@ -78,11 +78,18 @@ def select_research_quality_backend(
 # que dão pouco sinal visual ao VLM e inflam o over-segmentation sem
 # agregar conteúdo distinto (visto na prática em #190: ~82% de falha de
 # interpretação antes de ajustar o prompt, muitas delas em crops <30x30px).
-# SAM3 exige um prompt textual; ``all visible objects`` é a política ampla
-# versionada do profile, não uma lista de classes. SAM2 continua selecionável
-# para comparações, mas SAM3 é a referência solicitada para este profile.
+# SAM3 roda como segment everything pelo tracker (grade de pontos,
+# class-agnostic). Prompts textuais genéricos do PCS ("all visible objects",
+# "objects", "segment everything") devolveram zero máscaras nos frames do
+# corridor-02. Os thresholds 0.80/0.90 ficam abaixo dos defaults do SAM
+# (0.88/0.95), que descartavam piso e quase todo o outdoor: na comparação de
+# 2026-09-15, a cobertura foi de 11–54% para ~65–74% por frame.
 _REAL_REGION_DISCOVERY = RegionDiscoveryConfig(
-    backend="sam3", checkpoint="facebook/sam3", prompt="all visible objects", min_mask_area=500
+    backend="sam3",
+    checkpoint="facebook/sam3",
+    min_mask_area=500,
+    pred_iou_threshold=0.80,
+    stability_score_threshold=0.90,
 )
 _REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(
     backend="dinov2",

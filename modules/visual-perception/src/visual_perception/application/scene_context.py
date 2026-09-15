@@ -83,7 +83,7 @@ def analyze_scene(
     Retorna:
         o contexto de cena validado.
     """
-    response = reasoner.analyze_scene(_scene_view(image, area_masks), config)
+    response = reasoner.analyze_scene(scene_view(image, area_masks), config)
     validate_scene_response(response)
 
     provenance = ModelProvenance(
@@ -117,8 +117,8 @@ def analyze_scene(
 # Recorta a imagem à parte que é cena analisável: dentro do sensor e fora do
 # rig. Existe para que o rig deixe de ser inventariado como objeto do ambiente
 # sem que nenhum pixel seja alterado — recortar preserva a evidência restante,
-# pintar destruiria a que ficasse. Chamada por analyze_scene.
-def _scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> ImagePayload:
+# pintar destruiria a que ficasse. Chamada por analyze_scene e pela descoberta de conceitos.
+def scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> ImagePayload:
     """Retorna a view de cena, recortada às áreas declaradas quando existirem."""
     if area_masks is None:
         return image

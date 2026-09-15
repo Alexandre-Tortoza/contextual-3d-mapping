@@ -20,11 +20,8 @@ from PIL import Image
 
 from visual_perception.application.scene_context import validate_scene_response
 from visual_perception.config import MultimodalReasoningConfig
-from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
-    MAXIMUM_VISUAL_PIXELS,
-    parse_json_object,
-    scene_prompt,
-)
+from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import MAXIMUM_VISUAL_PIXELS
+from visual_perception.infrastructure.adapters.reasoning_prompts import parse_json_object, scene_prompt
 
 Candidate = tuple[str, Callable[[], object], Callable[[object], float]]
 

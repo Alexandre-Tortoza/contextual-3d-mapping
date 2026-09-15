@@ -133,7 +133,7 @@ A composição atual de referência é:
 
 | Capability | Backend | Checkpoint de referência |
 | --- | --- | --- |
-| Region discovery | `sam3` | `facebook/sam3` (`all visible objects`) |
+| Region discovery | `sam3` | `facebook/sam3` (tracker, segment everything, 0.80/0.90) |
 | Dense feature extraction | `dinov2` | `facebook/dinov2-base` |
 | Language-aligned embedding | `clip` | `openai/clip-vit-large-patch14` |
 | Multimodal reasoning | `qwen_vl` | `Qwen/Qwen2.5-VL-3B-Instruct` em 4-bit |

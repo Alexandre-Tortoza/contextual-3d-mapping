@@ -21,6 +21,7 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -31,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_ROOT = _MODULE_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 for relative in ("src", "../../contracts", "../../adapters/datasets", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / relative).resolve()))
@@ -65,9 +67,12 @@ from visual_perception.application.pipeline import (  # noqa: E402
 from visual_perception.application.temporal_prior import prior_from  # noqa: E402
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.config import (  # noqa: E402
+    ConceptGroundingConfig,
     ImageAreaConfig,
     ModuleConfig,
     MultiContextConfig,
+    SceneConceptDiscoveryConfig,
+    TilingConfig,
 )
 from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
 from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry  # noqa: E402
@@ -81,8 +86,22 @@ from visual_perception.domain.region_reasoning import (  # noqa: E402
 )
 from visual_perception.domain.visual_observation import VisualObservation  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
+from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (  # noqa: E402
+    DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
+    RemoteReasoningCall,
+)
 
 FRAMES_DIR = Path(__file__).resolve().parent / ".local" / "corridor-02-frames"
+
+#: Variantes de tiling comparadas na #277. Vivem aqui para que o harness completo e o
+#: benchmark só de discovery (``tiling_benchmark.py``) usem exatamente as mesmas.
+TILING_VARIANTS: dict[str, TilingConfig] = {
+    "1x1": TilingConfig(multi_scale_enabled=False),
+    "2x2": TilingConfig(multi_scale_enabled=True, tile_grid="2x2"),
+    "2x2-discard": TilingConfig(multi_scale_enabled=True, tile_grid="2x2", discard_tile_border_truncations=True),
+    "3x3": TilingConfig(multi_scale_enabled=True, tile_grid="3x3"),
+    "3x3-discard": TilingConfig(multi_scale_enabled=True, tile_grid="3x3", discard_tile_border_truncations=True),
+}
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 #: Como run_validation obtém seus backends. Existe para que um teste injete
@@ -142,6 +161,16 @@ class ValidationOptions:
     #: anterior — ela foi feita antes de os estágios contextuais existirem.
     #: ``None`` mantém o checkpoint da configuração de referência.
     reasoning_checkpoint: str | None = None
+    #: Troca o backend do reasoner mantendo prompts, views e estágios (#276).
+    #: ``gemini_robotics_er`` envia frames e crops para a API do Gemini; ``None``
+    #: mantém o Qwen local da configuração de referência.
+    reasoning_backend: str | None = None
+    #: Variante de tiling do benchmark da #277 (``1x1``, ``2x2``, ``2x2-discard``,
+    #: ``3x3``, ``3x3-discard``); ``None`` mantém a da configuração de referência.
+    tiling_variant: str | None = None
+    #: Liga descoberta de conceitos na cena e grounding por SAM3 PCS (#277) como
+    #: fonte adicional de propostas.
+    concept_discovery: bool = False
     #: Encadeia o que cada frame afirmou no frame seguinte (prior temporal).
     #: A ordem dos frames é uma decisão de composição, e por isso vive aqui e
     #: não no módulo: ``visual_perception`` recebe apenas "isto foi afirmado
@@ -444,8 +473,131 @@ def model_call_counts(
         "hypothesis_support_text": stage_calls.get("hypothesis_support_text", 0),
         "region_refinement": stage_calls.get("region_refinement", 0),
         "semantic_relations": stage_calls.get("semantic_relations", 0),
+        "scene_concept_discovery": stage_calls.get("scene_concept_discovery", 0),
+        "concept_grounding": stage_calls.get("concept_grounding", 0),
     }
     return {**counts, "total": sum(counts.values())}
+
+
+# Resume a geometria produzida por discovery antes e depois da filtragem e do
+# merge. Existe para comparar configurações de discovery sem tratar contagem bruta de masks
+# como qualidade: tamanho, sobreposição e fragmentação explicam se propostas
+# extras carregam cobertura nova ou apenas repetem a mesma evidência.
+def discovery_telemetry(
+    payload: ImagePayload, result: PipelineResult
+) -> dict[str, int | float | None]:
+    """Calcula telemetria geométrica de region discovery para um frame.
+
+    Argumentos:
+        payload: frame que define a área de normalização das masks.
+        result: saída do pipeline com proposals cruas, filtradas e regiões finais.
+    Retorna:
+        contagens, estatísticas de área, sobreposição média e fragmentação.
+    """
+    frame_area = payload.width * payload.height
+    raw = result.discovered_proposals
+    kept = result.proposals
+    areas = np.asarray([proposal.mask.area() / frame_area for proposal in kept], dtype=np.float64)
+    overlaps = [
+        left.mask.iou(right.mask)
+        for index, left in enumerate(kept)
+        for right in kept[index + 1 :]
+    ]
+    region_count = len(result.observation.all_regions)
+    return {
+        "raw_proposal_count": len(raw),
+        "kept_proposal_count": len(kept),
+        "merged_region_count": region_count,
+        "area_fraction_min": None if not len(areas) else float(areas.min()),
+        "area_fraction_median": None if not len(areas) else float(np.median(areas)),
+        "area_fraction_max": None if not len(areas) else float(areas.max()),
+        "mean_pairwise_iou": None if not overlaps else float(np.mean(overlaps)),
+        "fragmentation_ratio": None if not region_count else len(kept) / region_count,
+    }
+
+
+# Resume custo e falhas das consultas a um reasoner remoto. Existe porque latência,
+# tokens e rate limit da API não aparecem nas métricas de VRAM do lifecycle; ``None``
+# quando o reasoner é local e não registra consultas.
+def remote_reasoning_summary(calls: tuple[RemoteReasoningCall, ...] | None) -> dict[str, object] | None:
+    """Agrega a telemetria de consultas remotas do run.
+
+    Argumentos:
+        calls: consultas registradas pelo adapter remoto, ou ``None``.
+    Retorna:
+        contagens, latência, tokens e falhas transitórias por motivo.
+    """
+    if calls is None:
+        return None
+    transient: dict[str, int] = {}
+    for call in calls:
+        for reason in call.transient_failures:
+            transient[reason] = transient.get(reason, 0) + 1
+    latencies = [call.latency_s for call in calls]
+    return {
+        "model": calls[0].model if calls else None,
+        "calls": len(calls),
+        "failed_calls": sum(not call.succeeded for call in calls),
+        "calls_by_operation": {op: sum(call.operation == op for call in calls) for op in sorted({c.operation for c in calls})},
+        "total_latency_s": sum(latencies),
+        "mean_latency_s": (sum(latencies) / len(latencies)) if latencies else None,
+        "prompt_tokens": sum(call.prompt_tokens or 0 for call in calls),
+        "output_tokens": sum(call.output_tokens or 0 for call in calls),
+        "thought_tokens": sum(call.thought_tokens or 0 for call in calls),
+        "transient_failures": transient,
+    }
+
+
+# Resume o que a descoberta de conceitos (#277) produziu e quanto disso virou região.
+# ``concepts_without_region`` é o gatilho natural do refinamento adaptativo: um
+# conceito que o VLM viu mas o grounding não localizou.
+def concept_discovery_report(result: PipelineResult) -> dict[str, object] | None:
+    """Retorna conceitos, descartes e a contribuição deles para as regiões do frame.
+
+    Argumentos:
+        result: saída do pipeline para o frame.
+    Retorna:
+        o relatório, ou ``None`` quando a descoberta de conceitos estava desligada.
+    """
+    if result.scene_concepts is None:
+        return None
+    concept_by_proposal = {p.proposal_id: p.concept for p in result.discovered_proposals if p.concept}
+    kept_concepts = {p.concept for p in result.proposals if p.concept}
+    regions_with_concept = 0
+    regions_only_from_concepts = 0
+    grounded_concepts: set[str] = set()
+    for region in result.observation.all_regions:
+        contributing = [concept_by_proposal.get(pid) for pid in region.contributing_proposal_ids]
+        concepts = {concept for concept in contributing if concept}
+        grounded_concepts |= concepts
+        regions_with_concept += int(bool(concepts))
+        regions_only_from_concepts += int(bool(contributing) and all(contributing))
+    texts = [concept.text for concept in result.scene_concepts.concepts]
+    return {
+        "prompt_version": result.scene_concepts.provenance.prompt_version,
+        "concepts": [
+            {"text": c.text, "kind": c.kind.value, "confidence": c.confidence} for c in result.scene_concepts.concepts
+        ],
+        "discarded": [list(item) for item in result.scene_concepts.discarded],
+        "concept_proposals": len(concept_by_proposal),
+        "concept_proposals_after_area_filter": sum(1 for p in result.proposals if p.concept),
+        "regions_with_concept": regions_with_concept,
+        "regions_only_from_concepts": regions_only_from_concepts,
+        "concepts_without_region": [text for text in texts if text not in grounded_concepts],
+        "concepts_filtered_out": [text for text in texts if text not in kept_concepts],
+    }
+
+
+# Carrega variáveis de um ``.env`` sem sobrescrever o ambiente. Existe só no ponto
+# de entrada: a chave nunca passa pela config nem pelo manifest.
+def load_dotenv(path: Path) -> None:
+    """Exporta pares ``CHAVE=valor`` de ``path`` que ainda não estão no ambiente."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, separator, value = line.partition("=")
+        if separator and key.strip() and not key.strip().startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip())
 
 
 # Resolve a configuração de um run a partir das opções, sem executar nada.
@@ -499,6 +651,24 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
             multimodal_reasoning=dataclasses.replace(
                 config.multimodal_reasoning, region_views=options.region_views
             ),
+        )
+    if options.reasoning_backend == "gemini_robotics_er":
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning,
+                backend="gemini_robotics_er",
+                checkpoint=DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
+                load_in_4bit=False,
+            ),
+        )
+    if options.tiling_variant is not None:
+        config = dataclasses.replace(config, tiling=TILING_VARIANTS[options.tiling_variant])
+    if options.concept_discovery:
+        config = dataclasses.replace(
+            config,
+            scene_concept_discovery=SceneConceptDiscoveryConfig(enabled=True),
+            concept_grounding=ConceptGroundingConfig(backend="sam3"),
         )
     if options.reasoning_checkpoint is not None:
         config = dataclasses.replace(
@@ -740,6 +910,8 @@ def run_validation(
                     (metric.peak_cpu_rss_bytes for metric in frame_metrics), default=None
                 ),
                 "proposal_count": diagnostics.proposal_count,
+                "discovery_telemetry": discovery_telemetry(payload, result),
+                "concept_discovery": concept_discovery_report(result),
                 "dominant_label": diagnostics.mode_collapse.dominant_label,
                 "dominant_label_fraction": diagnostics.mode_collapse.dominant_fraction,
                 "distinct_labels": diagnostics.mode_collapse.distinct_labels,
@@ -819,6 +991,7 @@ def run_validation(
         "prompt_version": config.multimodal_reasoning.prompt_version,
         "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
         "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
+        "remote_reasoning": remote_reasoning_summary(getattr(ports.multimodal_reasoner, "calls", None)),
         "frames": frame_reports,
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -853,6 +1026,27 @@ def _argument_parser() -> argparse.ArgumentParser:
             "resto constante (#218). Trocar prompt e modelo na mesma comparação torna "
             "as duas mudanças ininterpretáveis."
         ),
+    )
+    parser.add_argument(
+        "--reasoning-backend",
+        choices=("qwen_vl", "gemini_robotics_er"),
+        default=None,
+        help=(
+            "gemini_robotics_er consulta a API do Gemini com os mesmos prompts e views do "
+            "Qwen (#276); frames e crops saem da máquina. Lê GEMINI_API_KEY do ambiente ou do .env"
+        ),
+    )
+    parser.add_argument(
+        "--tiling",
+        dest="tiling_variant",
+        choices=tuple(TILING_VARIANTS),
+        default=None,
+        help="variante de tiling do benchmark da #277; discard descarta propostas truncadas pela borda do tile",
+    )
+    parser.add_argument(
+        "--concept-discovery",
+        action="store_true",
+        help="liga descoberta de conceitos na cena e grounding por SAM3 PCS como fonte adicional de propostas (#277)",
     )
     parser.add_argument(
         "--context-profile",
@@ -908,6 +1102,7 @@ def _argument_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     """Executa o CLI de validação real."""
     arguments = _argument_parser().parse_args(argv)
+    load_dotenv(_REPOSITORY_ROOT / ".env")
     run_validation(
         ValidationOptions(
             frames_dir=arguments.frames_dir,
@@ -916,6 +1111,9 @@ def main(argv: list[str] | None = None) -> None:
             limit=arguments.limit,
             context_profile=arguments.context_profile,
             reasoning_checkpoint=arguments.reasoning_checkpoint,
+            reasoning_backend=arguments.reasoning_backend,
+            tiling_variant=arguments.tiling_variant,
+            concept_discovery=arguments.concept_discovery,
             region_views=tuple(arguments.region_views) or None,
             scene_context_mode=arguments.scene_context_mode,
             temporal_prior_mode=arguments.temporal_prior_mode,

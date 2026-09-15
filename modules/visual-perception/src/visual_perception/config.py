@@ -64,6 +64,64 @@ class SemanticGroundingConfig:
             raise ValueError("semantic_grounding.min_mask_area must be a positive integer.")
 
 
+# Configura a descoberta de conceitos concretos na cena (#277), que alimenta o
+# grounding por conceito como fonte adicional de propostas. Desligada por default:
+# o discovery genérico continua sendo a fonte obrigatória de regiões.
+@dataclass(frozen=True)
+class SceneConceptDiscoveryConfig:
+    """Teto, exclusões estruturais e versão do prompt da descoberta de conceitos."""
+
+    enabled: bool = False
+    #: Máximo de conceitos por frame. Cada conceito vira uma consulta de grounding
+    #: e pode gerar regiões que depois custam uma chamada de VLM cada.
+    max_concepts: int = 12
+    #: Conceitos estruturais genéricos descartados quando aparecem sozinhos. Frases
+    #: com evidência contextual ("wall crack", "flooded floor") são mantidas.
+    structural_exclusions: tuple[str, ...] = ("wall", "walls", "floor", "floors", "ceiling", "ceilings")
+    prompt_version: str = "concepts/v1"
+
+    # Recusa teto e versão inválidos na fronteira da config.
+    def __post_init__(self) -> None:
+        """Valida teto de conceitos, exclusões e versão do prompt."""
+        if self.max_concepts <= 0:
+            raise ValueError("scene_concept_discovery.max_concepts must be positive.")
+        if any(not item or item != item.strip().lower() for item in self.structural_exclusions):
+            raise ValueError("scene_concept_discovery.structural_exclusions must be stripped lowercase terms.")
+        if not self.prompt_version:
+            raise ValueError("scene_concept_discovery.prompt_version must not be empty.")
+
+
+# Configura o grounding por conceito (#277): cada conceito da descoberta de cena
+# vira um prompt textual do SAM3 PCS, e as máscaras entram como propostas
+# adicionais ao discovery genérico, nunca no lugar dele.
+@dataclass(frozen=True)
+class ConceptGroundingConfig:
+    """Backend, limiares e teto de regiões do grounding por conceito."""
+
+    backend: str = "unavailable"
+    checkpoint: str = "facebook/sam3"
+    device: str = "auto"
+    score_threshold: float = 0.5
+    mask_threshold: float = 0.5
+    min_mask_area: int = 500
+    #: Máximo de máscaras aceitas por conceito; um conceito genérico demais não pode
+    #: inundar o merge e as chamadas de VLM.
+    max_regions_per_concept: int = 8
+
+    # Recusa backend, device e limiares inválidos na fronteira da config.
+    def __post_init__(self) -> None:
+        """Valida backend, device, limiares e tetos."""
+        if self.backend not in {"unavailable", "sam3"}:
+            raise ValueError("concept_grounding.backend must be unavailable or sam3.")
+        if self.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("concept_grounding.device must be 'auto', 'cpu', or 'cuda'.")
+        for name in ("score_threshold", "mask_threshold"):
+            if not 0.0 <= getattr(self, name) <= 1.0:
+                raise ValueError(f"concept_grounding.{name} must be in [0, 1].")
+        if self.min_mask_area <= 0 or self.max_regions_per_concept <= 0:
+            raise ValueError("concept_grounding.min_mask_area and max_regions_per_concept must be positive.")
+
+
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
 # módulo precisa escolher entre priorizar qualidade científica ou custo
 # computacional/GPU, e essa escolha afeta várias configs abaixo ao mesmo
@@ -87,9 +145,7 @@ class QualityProfile(StrEnum):
 class RegionDiscoveryConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt: str = "all visible objects"
     score_threshold: float = 0.5
-    mask_threshold: float = 0.5
     device: str = "auto"
     max_regions: int = 100
     min_mask_area: int = 64
@@ -109,12 +165,8 @@ class RegionDiscoveryConfig:
     def __post_init__(self) -> None:
         if self.backend not in {"fake", "sam", "sam3"}:
             raise ValueError("region_discovery.backend must be fake, sam, or sam3.")
-        if not self.prompt.strip():
-            raise ValueError("region_discovery.prompt must not be empty.")
         if not 0.0 <= self.score_threshold <= 1.0:
             raise ValueError("region_discovery.score_threshold must be in [0, 1].")
-        if not 0.0 <= self.mask_threshold <= 1.0:
-            raise ValueError("region_discovery.mask_threshold must be in [0, 1].")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("region_discovery.device must be 'auto', 'cpu', or 'cuda'.")
         for name in ("pred_iou_threshold", "stability_score_threshold"):
@@ -135,6 +187,12 @@ class TilingConfig:
     multi_scale_enabled: bool = False
     tile_grid: str = "1x1"
     overlap_ratio: float = 0.2
+    #: Descarta propostas de tile cortadas por uma borda interna do tile. Sem isso,
+    #: superfícies grandes (céu, asfalto) viram faixas retas que o merge por
+    #: containment mútua não junta à passada global (visto em 2026-09-15 no
+    #: outdoor do corridor-02). Objetos menores que a sobreposição continuam
+    #: inteiros no tile vizinho; os maiores ficam com a passada global.
+    discard_tile_border_truncations: bool = False
 
     # Valida que ``tile_grid`` está no formato esperado ("<linhas>x<colunas>")
     # e que ``overlap_ratio`` é um invariante de fronteira válido, falhando
@@ -730,6 +788,14 @@ class MultimodalReasoningConfig:
     #: label", e por isso ele entra só como desempate entre candidatos que já se
     #: sobrepõem geometricamente.
     temporal_prior_min_overlap: float = 0.3
+    #: Limite de espera por requisição e tentativas extras em falhas transitórias
+    #: (timeout, 429, 5xx). Só os backends remotos usam; o Qwen local ignora.
+    timeout_s: float = 60.0
+    max_retries: int = 3
+    #: Orçamento de raciocínio interno do Gemini Robotics ER. ``0`` desliga: medido
+    #: em 2026-09-15 no prompt de cena, 2,4 s contra 22,6 s com o default do modelo,
+    #: e a resposta segue no mesmo contract. Muda a saída, então entra no fingerprint.
+    thinking_budget: int = 0
 
     # Garante que a versão do prompt está definida, já que ela identifica
     # qual template estruturado o backend deve usar. ``v8`` des-arredonda os dois
@@ -793,6 +859,12 @@ class MultimodalReasoningConfig:
             raise ValueError(
                 "multimodal_reasoning.temporal_prior_min_overlap must be within [0, 1]."
             )
+        if self.timeout_s <= 0.0:
+            raise ValueError("multimodal_reasoning.timeout_s must be positive.")
+        if self.max_retries < 0:
+            raise ValueError("multimodal_reasoning.max_retries must not be negative.")
+        if self.thinking_budget < 0:
+            raise ValueError("multimodal_reasoning.thinking_budget must not be negative.")
 
 
 # Configuração raiz do módulo: agrega todas as sub-configs acima em um único
@@ -825,6 +897,10 @@ class ModuleConfig:
     image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
     proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
     semantic_grounding: SemanticGroundingConfig = field(default_factory=SemanticGroundingConfig)
+    scene_concept_discovery: SceneConceptDiscoveryConfig = field(
+        default_factory=SceneConceptDiscoveryConfig
+    )
+    concept_grounding: ConceptGroundingConfig = field(default_factory=ConceptGroundingConfig)
 
     # Valida invariantes que dependem de mais de um campo ao mesmo tempo
     # (o que os ``__post_init__`` das sub-configs não conseguem verificar
@@ -852,6 +928,11 @@ class ModuleConfig:
             raise ValueError(
                 "Incompatible configuration: 'reduced_cost' quality profile does not support "
                 "multi-scale tiling (see issue #181)."
+            )
+        if self.concept_grounding.backend != "unavailable" and not self.scene_concept_discovery.enabled:
+            raise ValueError(
+                "concept_grounding requires scene_concept_discovery.enabled: without concepts there is "
+                "nothing to ground."
             )
 
     # Serializa a configuração inteira (incluindo sub-configs aninhadas) em
@@ -898,6 +979,8 @@ class ModuleConfig:
             ("image_area", ImageAreaConfig),
             ("proposal_filter", ProposalFilterConfig),
             ("semantic_grounding", SemanticGroundingConfig),
+            ("scene_concept_discovery", SceneConceptDiscoveryConfig),
+            ("concept_grounding", ConceptGroundingConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
                 if key == "image_area":

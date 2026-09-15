@@ -54,6 +54,19 @@ def test_high_overlap_merges_via_iou() -> None:
     assert len(regions) == 1
 
 
+# Protege a fronteira de tiling: duas metades quase disjuntas de uma mesma
+# estrutura não são duplicatas geométricas. Reconstruí-las exigiria uma regra
+# nova de stitching, que não pertence ao merge atual de IoU/containment.
+def test_adjacent_tile_fragments_are_not_merged_without_geometric_overlap() -> None:
+    """Mantém fragmentos adjacentes separados quando não há evidência de duplicidade."""
+    left = _proposal("tile-left", (0, 2, 7, 10))
+    right = _proposal("tile-right", (7, 2, 14, 10))
+
+    regions = merge_regions("obs-1", (left, right), RegionMergeConfig())
+
+    assert len(regions) == 2
+
+
 # Garante que os region_id gerados são estáveis: a mesma entrada, processada duas vezes,
 # produz o mesmo id de região (necessário para o cache de estágio e para reprodutibilidade).
 def test_region_ids_are_stable_for_identical_input() -> None:

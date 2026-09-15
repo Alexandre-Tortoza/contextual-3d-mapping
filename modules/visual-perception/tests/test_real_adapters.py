@@ -18,13 +18,16 @@ from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evide
 from visual_perception.infrastructure.adapters._runtime import require_checkpoint
 from visual_perception.infrastructure.adapters.factory import create_perception_ports
 from visual_perception.infrastructure.adapters.language_embedding_backend import _to_vector
-from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
-    _describe_scene_claims,
-    _describe_views,
-    _region_prompt,
+from visual_perception.infrastructure.adapters.reasoning_prompts import (
+    describe_scene_claims,
+    describe_views,
+    region_prompt,
     parse_json_object,
 )
-from visual_perception.infrastructure.adapters.region_discovery_backend import _proposal_from_mask
+from visual_perception.infrastructure.adapters.region_discovery_backend import (
+    _proposal_from_mask,
+    _proposals_from_mask_outputs,
+)
 
 
 # Garante que uma máscara+score válidos do SAM sejam convertidos para a
@@ -52,10 +55,10 @@ def test_sam_mask_becomes_local_region_proposal() -> None:
     assert proposal.geometric_confidence == 0.8
 
 
-# Garante que o resultado SAM3 mantém o contract geométrico do port sem
-# vazar tensores do runtime e registra o prompt que definiu a cobertura.
-def test_sam3_mask_becomes_local_region_proposal_with_prompt_provenance() -> None:
-    """Converte máscara SAM3 e preserva a proveniência do prompt amplo."""
+# Garante que a máscara do segment everything do SAM3 mantém o contract
+# geométrico do port e registra backend e checkpoint na proveniência.
+def test_sam3_mask_becomes_local_region_proposal_with_checkpoint_provenance() -> None:
+    """Converte máscara do SAM3 tracker e preserva a proveniência do checkpoint."""
     image = payload_with_blobs(width=8, height=8)
     segmentation = np.zeros((8, 8), dtype=np.bool_)
     segmentation[1:5, 2:7] = True
@@ -66,13 +69,34 @@ def test_sam3_mask_becomes_local_region_proposal_with_prompt_provenance() -> Non
         0,
         image,
         RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3", min_mask_area=1),
-        backend_name="sam3",
     )
 
     assert proposal is not None
     assert proposal.local_id == "sam3-0"
     assert proposal.box == proposal.mask.bounding_box()
-    assert proposal.source == "sam3:facebook/sam3:prompt=all visible objects"
+    assert proposal.source == "sam3:facebook/sam3"
+
+
+# Confirma que o adapter mantém todas as propostas geométricas válidas da
+# geração automática, ordenadas por score.
+def test_sam3_outputs_multiple_local_region_proposals() -> None:
+    """Converte múltiplas masks em propostas locais ordenadas por confiança."""
+    image = payload_with_blobs(width=8, height=8)
+    first = np.zeros((8, 8), dtype=np.bool_)
+    second = np.zeros((8, 8), dtype=np.bool_)
+    first[1:3, 1:3] = True
+    second[4:7, 4:7] = True
+
+    proposals = _proposals_from_mask_outputs(
+        (first, second),
+        (0.7, 0.9),
+        image,
+        RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3", min_mask_area=1),
+    )
+
+    assert len(proposals) == 2
+    assert [proposal.geometric_confidence for proposal in proposals] == [0.9, 0.7]
+    assert all(proposal.source == "sam3:facebook/sam3" for proposal in proposals)
 
 
 # Protege a fronteira contra máscaras devolvidas em resolução diferente da
@@ -97,6 +121,9 @@ def test_sam_mask_with_wrong_resolution_is_rejected() -> None:
     [
         ('{"scene_type": "room"}', {"scene_type": "room"}),
         ('```json\n{"label": "chair"}\n```', {"label": "chair"}),
+        # Regressão do Gemini Robotics ER: objeto correto seguido de uma chave sobrando.
+        ('{"scene_type": "hallway", "nested": {"a": 1}}\n}', {"scene_type": "hallway", "nested": {"a": 1}}),
+        ('resposta: {"label": "door"} fim', {"label": "door"}),
     ],
 )
 def test_vlm_json_parser_extracts_one_object(text: str, expected: dict[str, object]) -> None:
@@ -172,15 +199,15 @@ def test_port_factory_keeps_fake_defaults_gpu_free() -> None:
 # Confirma que SAM3 é selecionável sem importar o runtime opcional durante a
 # composição; os pesos continuam sendo carregados apenas no primeiro discovery.
 def test_port_factory_selects_sam3_region_discoverer_lazily() -> None:
-    """Seleciona o adapter SAM3 sem exigir torch, Transformers ou checkpoint."""
+    """Seleciona o adapter de geração automática sem exigir torch, Transformers ou checkpoint."""
     from visual_perception.config import ModuleConfig
-    from visual_perception.infrastructure.adapters.region_discovery_backend import Sam3RegionDiscoveryAdapter
+    from visual_perception.infrastructure.adapters.region_discovery_backend import RealRegionDiscoveryAdapter
 
     ports = create_perception_ports(
         ModuleConfig(region_discovery=RegionDiscoveryConfig(backend="sam3", checkpoint="facebook/sam3"))
     )
 
-    assert isinstance(ports.region_discoverer, Sam3RegionDiscoveryAdapter)
+    assert isinstance(ports.region_discoverer, RealRegionDiscoveryAdapter)
 
 
 # Constrói um RegionReasoningRequest mínimo para os testes de tradução de
@@ -222,7 +249,7 @@ def test_region_prompt_numbers_and_labels_each_view() -> None:
         (EvidenceSlot.FOREGROUND_DENSE, EvidenceSlot.TIGHT_CROP, EvidenceSlot.CONTEXTUAL_CROP)
     )
 
-    described = _describe_views(request)
+    described = describe_views(request)
 
     assert "3 image(s)" in described
     assert described.index("Image 1") < described.index("Image 2") < described.index("Image 3")
@@ -248,7 +275,7 @@ def test_scene_claims_reach_the_prompt_typed_and_marked_as_scene_level() -> None
     )
     request = _reasoning_request((EvidenceSlot.FOREGROUND_DENSE,), scene_claims=claims)
 
-    described = _describe_scene_claims(request)
+    described = describe_scene_claims(request)
 
     assert "scene_type: corridor (confidence 0.82)" in described
     assert "hazard: wet floor" in described
@@ -260,7 +287,7 @@ def test_scene_claims_reach_the_prompt_typed_and_marked_as_scene_level() -> None
 def test_absent_scene_context_adds_nothing_to_the_prompt() -> None:
     """Um request sem claims de cena não acrescenta bloco de contexto ao prompt."""
     request = _reasoning_request((EvidenceSlot.FOREGROUND_DENSE,))
-    assert _describe_scene_claims(request) == ""
+    assert describe_scene_claims(request) == ""
 
 
 # O exemplo de formato do prompt não pode ser uma resposta plausível. Com o
@@ -269,7 +296,7 @@ def test_absent_scene_context_adds_nothing_to_the_prompt() -> None:
 # pelo parser em vez de plausível.
 def test_the_region_prompt_example_uses_placeholders_not_answerable_values() -> None:
     """O exemplo de formato do prompt não oferece um label copiável."""
-    prompt = _region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)))
+    prompt = region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)))
 
     assert '"label": "<one noun naming the subject>"' in prompt
     assert '"label": "door"' not in prompt
@@ -287,9 +314,9 @@ def test_no_prompt_offers_a_round_confidence_for_the_model_to_copy() -> None:
     """Nenhum dos três prompts embute um ``confidence`` de exemplo redondo."""
     import re
 
-    from visual_perception.infrastructure.adapters import multimodal_reasoning_backend
+    from visual_perception.infrastructure.adapters import reasoning_prompts
 
-    source = Path(multimodal_reasoning_backend.__file__).read_text()
+    source = Path(reasoning_prompts.__file__).read_text()
     offered = re.findall(r'"confidence":\s*([0-9.]+)', source)
 
     assert offered, "os prompts precisam continuar mostrando o formato esperado"

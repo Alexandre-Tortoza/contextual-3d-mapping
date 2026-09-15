@@ -155,6 +155,29 @@ def test_multi_scale_pipeline_merges_global_and_tile_proposals() -> None:
     assert len(result.observation.regions[0].contributing_proposal_ids) == 5
 
 
+# Regressão do outdoor do corridor-02: uma superfície que cruza as bordas dos tiles
+# gerava fragmentos retangulares que o merge mantinha como regiões próprias. Com o
+# descarte de truncamentos, só a passada global a representa.
+def test_tile_border_truncations_are_discarded_when_enabled() -> None:
+    """Uma superfície grande fica com uma única proposta, a da imagem completa."""
+    payload = payload_with_blobs(blobs=((4, 4, 28, 28, (200, 30, 30)),))
+    tiling = TilingConfig(multi_scale_enabled=True, tile_grid="2x2", overlap_ratio=0.2)
+    fragmented = run_canonical_pipeline(
+        image_observation(), payload, dataclasses.replace(default_config(), tiling=tiling), default_ports()
+    )
+    discarding = run_canonical_pipeline(
+        image_observation(),
+        payload,
+        dataclasses.replace(default_config(), tiling=dataclasses.replace(tiling, discard_tile_border_truncations=True)),
+        default_ports(),
+    )
+
+    assert len(fragmented.proposals) == 5
+    assert len(fragmented.observation.all_regions) > 1
+    assert [proposal.tile.scale_id for proposal in discarding.proposals] == ["full"]
+    assert len(discarding.observation.all_regions) == 1
+
+
 # Um consumidor que não pede diagnóstico não deve ser obrigado a preencher o
 # campo: ele é aditivo e tem default vazio.
 def test_proposals_default_to_empty_when_not_provided() -> None:
@@ -200,6 +223,8 @@ def test_the_canonical_pipeline_runs_every_context_stage() -> None:
         "region_refinement",
         "semantic_relations",
         "semantic_grounding",
+        "scene_concept_discovery",
+        "concept_grounding",
     }
     # O audit final observa o estado pós-refinamento, pós-reconciliação e
     # pós-relações: ele é calculado depois de tudo que acrescenta claim ou

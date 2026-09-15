@@ -106,9 +106,9 @@ O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: *
    que esta rodada já pagou para aprender duas vezes.
 
 2. **#219** depende de você aceitar a licença de `facebook/dinov3-*` no Hugging Face e
-   configurar um token. O acesso a `facebook/sam3` foi aprovado e o provider `sam3` usa
-   o prompt amplo versionado `all visible objects`; o próximo passo é medir sua cobertura
-   e VRAM no benchmark de region discovery.
+   configurar um token. O acesso a `facebook/sam3` foi aprovado e o provider `sam3` roda
+   o tracker como segment everything (0.80/0.90); prompts PCS genéricos devolviam zero
+   masks. Falta medir o SAM2 com os mesmos thresholds para separar modelo de threshold.
 
 3. **Calibrar os tetos dos estágios novos.** `refinement.max_refined_regions` e
    `semantic_relations.max_pairs` foram escolhidos como orçamento plausível, **não**
