@@ -36,6 +36,8 @@ BINDING_FRAMES = ("corridor-02-000", "corridor-02-008", "corridor-02-017")
 _AXES: tuple[tuple[str, str, str], ...] = (
     ("proposals", "diag:proposal_count", "{}"),
     ("regiões canônicas", "diag:region_count", "{}"),
+    ("regiões publicadas", "diag:published_region_count", "{}"),
+    ("contexto estrutural", "diag:structural_context_count", "{}"),
     ("labels crus distintos", "diag:mode_collapse.distinct_labels", "{}"),
     ("conceitos canônicos", "diag:contextual.distinct_canonical_concepts", "{}"),
     ("label dominante", "diag:mode_collapse.dominant_label", "{}"),
@@ -161,6 +163,19 @@ def compare_frame(
     return lines
 
 
+# Pico de VRAM medido num run, ou ``n/a`` quando nenhum frame mediu GPU. Um
+# run sem CUDA registra ``None``; tratá-lo como zero apresentaria uma medida
+# que não aconteceu.
+def _peak_vram_gib(manifest: dict[str, Any]) -> str:
+    """Formata o maior pico de VRAM dos frames do manifest, ou ``n/a``."""
+    measured = [
+        frame["peak_vram_bytes"]
+        for frame in manifest.get("frames", ())
+        if frame.get("peak_vram_bytes") is not None
+    ]
+    return "n/a" if not measured else f"{max(measured) / 2**30:.2f}"
+
+
 # Ponto de entrada da comparação. Emite markdown para stdout, e opcionalmente
 # para um arquivo versionável ao lado dos runs comparados.
 def compare(baseline: Path, candidate: Path, frame_ids: tuple[str, ...]) -> str:
@@ -176,9 +191,7 @@ def compare(baseline: Path, candidate: Path, frame_ids: tuple[str, ...]) -> str:
         f"| prompt_version | `{base_manifest['config']['multimodal_reasoning']['prompt_version']}` "
         f"| `{cand_manifest['config']['multimodal_reasoning']['prompt_version']}` |",
         f"| perfil | `{base_manifest.get('context_profile')}` | `{cand_manifest.get('context_profile')}` |",
-        f"| pico de VRAM (GiB) | "
-        f"{max(f['peak_vram_bytes'] for f in base_manifest['frames']) / 2**30:.2f} | "
-        f"{max(f['peak_vram_bytes'] for f in cand_manifest['frames']) / 2**30:.2f} |",
+        f"| pico de VRAM (GiB) | {_peak_vram_gib(base_manifest)} | {_peak_vram_gib(cand_manifest)} |",
         "",
         "> Comparação **estrutural**. Sem anotação humana revisada (#210/#211) nenhuma",
         "> afirmação de acurácia semântica é possível, e nenhuma é feita aqui.",

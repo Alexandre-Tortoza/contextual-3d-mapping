@@ -15,15 +15,15 @@ Todas as contagens abaixo vêm dos runs versionados dos três frames vinculantes
 
 | run | revisão | o que era |
 | --- | --- | --- |
-| `samples/20260906T195310Z/` | `ebe211f` | baseline: crop pelo bounding box, cena achatada em string, `prompt_version v2` |
-| `samples/20260907T005820Z/` | `0fda5cf` | primeira versão multi-view, `prompt_version v3` |
-| `samples/20260907T014526Z/` | `50ed564` | `prompt_version v5`, sem exclusão de área |
-| `samples/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
-| `samples/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
-| `samples/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
-| `samples/20260909T135428Z/` | `1270e53` | primeira arquitetura contextual — **superado**, tinha a view de cena no escalonamento |
-| `samples/20260910T115810Z/` | `7001803` | **run de referência desta rodada**, escalonamento region-local |
-| `samples/20260909T205243Z/` | `478fe63` | 16 keyframes de um segmento, mesma configuração; corroboração em escala |
+| `samples/old/20260906T195310Z/` | `ebe211f` | baseline: crop pelo bounding box, cena achatada em string, `prompt_version v2` |
+| `samples/old/20260907T005820Z/` | `0fda5cf` | primeira versão multi-view, `prompt_version v3` |
+| `samples/old/20260907T014526Z/` | `50ed564` | `prompt_version v5`, sem exclusão de área |
+| `samples/old/20260907T115208Z/` | `abb755b` | último run antes da #202: 64 proposals → 60 regiões |
+| `samples/old/20260908T003114Z/` | #202 | `prompt_version v6`, áreas declaradas |
+| `samples/old/20260908T131207Z/` | `03ec593` | baseline desta rodada: 5 frames, 165 regiões, sem estágios contextuais |
+| `samples/old/20260909T135428Z/` | `1270e53` | primeira arquitetura contextual — **superado**, tinha a view de cena no escalonamento |
+| `samples/old/20260910T115810Z/` | `7001803` | **run de referência desta rodada**, escalonamento region-local |
+| `samples/old/20260909T205243Z/` | `478fe63` | 16 keyframes de um segmento, mesma configuração; corroboração em escala |
 
 O run de referência é o `20260910T115810Z`. A comparação estrutural contra a baseline está
 em
@@ -69,7 +69,7 @@ Três leituras que importam para não superinterpretar a tabela:
 
 ## O que a #202 fechou, medido em `corridor-02-002`
 
-Comparação direta entre `samples/20260907T115208Z/` e `samples/20260908T003114Z/`, mesmo
+Comparação direta entre `samples/old/20260907T115208Z/` e `samples/old/20260908T003114Z/`, mesmo
 frame, mesmo SHA-256 de entrada:
 
 | campo | antes | depois |
@@ -248,6 +248,32 @@ como certeza semântica. Os dois eixos agora aparecem nomeados — `sem=0.90 geo
 voltar. A limitação em si, o backend nunca omitir `confidence`, **continua aberta**: o que
 mudou foi a legibilidade do artifact, não o comportamento do modelo.
 
+### O `0,9` do prompt de cena, que ninguém tinha corrigido
+
+Ao investigar se `sem=0,90` era um default do nosso código, a resposta foi **não**: no run
+de referência o valor vem literalmente do JSON do produtor, preservado em
+`Evidence.raw_response_json`. Nenhum caminho do módulo inventa `0,9`.
+
+Mas a investigação encontrou o mesmo defeito em um lugar que tinha escapado das duas
+correções anteriores. O exemplo de formato do prompt de **região** foi des-arredondado para
+`0,71` na `#212`, depois de 26 de 27 regiões reproduzirem a assinatura inteira do exemplo;
+o do prompt de **relação** virou `0,42` depois de 15 de 16 respostas `none` voltarem com
+`0,95` exato. O prompt de **cena** continuava embutindo `"confidence": 0.9`.
+
+Ele é o mesmo tipo de âncora, no mesmo formato, no único dos três prompts que ninguém
+tinha revisitado — e a busca encontrou ainda um segundo: o exemplo de `alternatives` no
+prompt de região oferecia `0.2`. Os dois escaparam pelo mesmo motivo: nenhum deles aparece
+em uma distribuição que o `diagnostics.json` resuma. O de cena é consultado uma vez por
+frame, e o de alternativa não é agregado em lugar nenhum, então nem "confiança degenerada"
+nem `label_counts` jamais os denunciariam.
+
+Corrigidos no `prompt_version` **v8** (`0.9` → `0.63`, `0.2` → `0.18`), em commit e run
+separados da política de publicação: trocar as duas coisas no mesmo run tornaria as duas
+ininterpretáveis. Um teste de regressão agora recusa qualquer exemplo de `confidence`
+redondo em qualquer um dos três prompts.
+
+**O que o run mediu:** ver a comparação `v7 → v8` versionada em `benchmarks/results/`.
+
 ---
 
 ## 4. Superfície contínua vira muitas regiões
@@ -276,6 +302,43 @@ superfícies contínuas fragmentadas.
 **O que continua aberto:** decidir se as três paredes são a mesma parede *no mundo* exige
 geometria 3D e pertence a `sensor-association`/`semantic-fusion`. Este módulo entrega a
 hipótese e todos os membros.
+
+### O que a política de publicação contextual mudou aqui
+
+A fragmentação **não** foi resolvida: a geometria continua a mesma, e o SAM continua
+recortando uma parede contínua em dezenas de máscaras. O que mudou é onde ela aparece.
+
+Os fragmentos de parede deixaram de ser output público e passaram a viver em
+`observation.structural_context`. Um consumidor downstream deixa de receber 25 regiões que
+descrevem a mesma parede — mas elas continuam medidas, continuam agrupadas pela
+reconciliação, e `region_count`/`mode_collapse` continuam contando a observação inteira
+justamente para que esta limitação siga visível e comparável entre runs.
+
+Medido no run `20260910T175410Z` (revisão `3ac763a`, mesma configuração e mesmos três
+frames vinculantes da referência):
+
+| frame | regiões | publicadas | contexto estrutural |
+| --- | ---: | ---: | ---: |
+| `corridor-02-000` | 40 | 2 | 38 |
+| `corridor-02-008` | 16 | 13 | 3 |
+| `corridor-02-017` | 38 | 4 | 34 |
+| **total** | **94** | **19** | **75** |
+
+`corridor-02-008` publicar 13 de 16 é o comportamento correto e o melhor controle que os
+três frames oferecem: é o único que **não** é um corredor. Campo aberto com culturas,
+árvores e flores quase não contém superfície estrutural genérica, e a política quase não
+suprime nada. Os dois corredores caem para 2 e 4 regiões publicadas.
+
+A comparação estrutural contra a referência está em
+[`../benchmarks/results/comparison-contextual-publication-20260910T175410Z.md`](../benchmarks/results/comparison-contextual-publication-20260910T175410Z.md).
+Nos três frames, **todos** os eixos medidos são idênticos aos da referência — proposals,
+regiões canônicas, conceitos, colapso de modo, eco de cena, contradições conceito/natureza,
+grupos, relações, falhas e audit — exceto os dois campos novos e a latência (±7 s). A
+política não altera nenhum estágio anterior a ela; ela decide o que é publicado.
+
+A distinção importa para não confundir duas coisas: a política reduz o **ruído entregue**,
+e não a **fragmentação observada**. Quem quiser medir a segunda deve ler
+`region_count` e `structural_context_count`, nunca `published_region_count`.
 
 ### O texto original, preservado
 
@@ -320,6 +383,20 @@ Duas coisas mudaram, e nenhuma delas é o modelo acertar mais:
 - **a interpretação reconciliada existe ao lado da original.** A região continua dizendo
   `wall`/`thing`, e ganha uma claim `RECONCILED` que diz `wall`/`stuff`, com a evidência
   nomeando o veredito estrutural que a produziu.
+
+**A política de publicação contextual não mexe nisto, de propósito.** Ela não consulta
+`RegionKind` — apoiar-se num campo que o modelo erra em 73,3% das regiões herdaria o erro
+inteiro. Ela decide pelo **conceito** afirmado, e o audit continua varrendo a observação
+inteira (`all_regions`), de modo que as contradições nas superfícies suprimidas continuam
+contáveis. Auditar só a metade publicada tornaria invisível exatamente a maioria dos casos,
+já que eles ocorrem justamente nas superfícies estruturais.
+
+Note também que `INHERENTLY_STUFF_HEAD_NOUNS` (o invariante do audit) e
+`GENERIC_STRUCTURAL_HEAD_NOUNS` (a política de publicação) são conjuntos **separados**. O
+primeiro precisa continuar minúsculo, porque ampliá-lo mascararia o erro do reasoner no
+momento em que ele passou a ser mensurável. O segundo responde outra pergunta — "isto vale
+como evidência contextual?" — e um conceito a mais nele não apaga nenhuma medida: a região
+continua no contexto estrutural.
 
 **Consequência para comparações:** contagens de `region_kind_inconsistent_with_category`
 **não são comparáveis** através dessa mudança de cobertura.
@@ -417,6 +494,84 @@ mudou.
 `prompt_version`, seguido de nova comparação. Mudar prompt e modelo juntos tornaria as duas
 mudanças ininterpretáveis, então isso é trabalho de outra rodada.
 
+## 9. Prosa livre dentro de uma claim de cena permitida reabre o vazamento que a `#202` fechou
+
+**Status: aberto.** Sem issue própria ainda. Causa confirmada por ablation controlada
+(uma variável por vez, mesma metodologia da limitação 1); a hipótese inicial foi
+descartada pela própria medição.
+
+Medido em `corridor-02-dist-03`, frame `corridor-02-04292`: das 18 regiões cujo box cai na
+metade superior do frame (`y_max < 150px`, a faixa do teto — ver `regions-masks.png`, onde
+aparecem como azulejos individuais bem segmentados pelo SAM2), **16 saíram rotuladas
+`wooden pallet`** pelo Qwen2.5-VL, e só 1-2 saíram `ceiling`. A geometria está correta (cada
+azulejo é uma mask própria, limpa); a semântica está errada.
+
+### O que foi descartado
+
+- **Hipótese "vazamento via `contextual_crop`" — descartada.** Rodando o mesmo frame só com
+  `masked_subject` + `tight_crop` (`--region-view masked_subject --region-view tight_crop`,
+  sem `contextual_crop`), o padrão continua quase idêntico: `dominant_fraction` cai de 0,82
+  para apenas 0,77, e os mesmos 16/18 azulejos do teto continuam saindo `wooden pallet`. Se
+  fosse vazamento visual via contexto, removê-lo deveria ter reduzido bem mais o eco — a
+  medição não confirma.
+- **`scene_echo_label_count` não capta isso** — é 0 neste frame, porque essa métrica só
+  compara o label da região contra o valor **inteiro** de uma claim de cena por igualdade
+  exata. É o mesmo ponto cego que a limitação 7 já registrou de outro ângulo (a métrica lê
+  só a primeira hipótese afirmada e pode reportar 1 onde 8 regiões estão afetadas).
+
+### O que confirmou a causa
+
+Rodando o mesmo frame com `--scene-context-mode local_first` (as claims de cena deixam de
+ir ao prompt do reasoner, só o canal visual continua) o resultado inverte por completo:
+`dominant_label` vira `plain surface`, `dominant_fraction` cai para 0,59, e
+**`published_region_count` cai de 21 para 0** — as 22 regiões saem todas
+`generic_structural_surface`, corretamente.
+
+A claim de cena `layout` deste frame, gerada pelo próprio Qwen2.5-VL no estágio
+`scene_context`, é:
+
+```text
+"layout": "narrow hallway with wooden pallets on the right side"
+```
+
+`layout` está em `REGION_SCENE_CLAIM_KINDS` — a lista de tipos de claim que a `#202`
+decidiu que é seguro mandar para o reasoner de região (`scene_type`, `environment`,
+`layout`, `lighting`, `visibility`, `navigability`). A `#202` fechou o vazamento
+restringindo **quais tipos** de claim podem chegar à região; não restringiu o **conteúdo**
+de um tipo permitido. `layout` é prosa livre, e nada impede o modelo de nomear um objeto
+específico dentro dela — "wooden pallets" nesta claim é exatamente esse caso. O texto do
+prompt (`_describe_scene_claims`) já avisa que aquilo é "propriedade da CENA, nunca da
+região", mas — a mesma lição já registrada na limitação 1 — instrução textual sozinha não é
+garantia estrutural.
+
+Sinal concreto de que o próprio pipeline já desconfiava da claim, mesmo antes desta
+investigação: `visual_support = 0.0` em praticamente todas as 16 claims erradas (o canal
+independente de suporte já rejeita a hipótese), contra valores maiores que zero nas regiões
+corretas ou parcialmente corretas (`wooden plank`, `corner of a wall`). O sinal existe e
+está correto — mas não barra a publicação: as 16 regiões erradas aparecem normalmente em
+`published_region_count`, mesmo com `min_visual_support` configurado em `0.2` (`config.py`,
+`HypothesisSupportConfig`). `contextual_evidence_verdict` (`domain/contextual_evidence.py`),
+o gate que decide `CONTEXT_BEARING` vs. `GENERIC_STRUCTURAL_SURFACE`, é puramente lexical —
+olha só se o substantivo núcleo do label está numa lista fixa de palavras estruturais — e
+não consulta `visual_support` em nenhum momento.
+
+### Duas frentes de correção, independentes
+
+- **Na origem**: impedir que uma claim de cena de tipo permitido carregue identidade de
+  objeto em prosa livre — ex.: um passe de sanitização sobre `layout`/`visibility`/etc. antes
+  de `_describe_scene_claims` montar o prompt, ou restringir esses campos a vocabulário
+  fechado em vez de texto livre do VLM.
+- **No gate de publicação**: fazer `contextual_evidence_verdict` considerar `visual_support`
+  (ou o estado de calibração) além do substantivo do label — uma claim `thing` sem suporte
+  mínimo não devia virar `CONTEXT_BEARING` só por não estar na lista de palavras estruturais.
+  Esta frente é o sintoma final, medido, e resolve a classe inteira de "claim que o próprio
+  pipeline já desconfia mas publica assim mesmo" — não só este caso específico.
+
+Reproduzir: `benchmarks/results/samples/20260914T194013Z/` (baseline, `context_assisted`),
+`benchmarks/results/samples/20260914T194407Z/` (sem `contextual_crop`, mesmo padrão),
+`benchmarks/results/samples/20260914T194913Z/` (`local_first`, padrão desaparece) — todas do
+frame `corridor-02-04292`.
+
 ## 7. Alimentar a cena ao refinamento reintroduz o vazamento que a #202 fechou
 
 **Status: fechado por configuração, e registrado porque a lição é geral.**
@@ -461,15 +616,16 @@ A distribuição do custo novo, por frame: refinamento 24/8/24 chamadas, relaç�
 semânticas 16/11/16, e suporte de hipótese 30/27/24 — estas últimas são encodings de
 texto curtos, não de imagem, porque o estágio reusa os vetores de imagem que já existiam.
 
-Os dois tetos são configuráveis (`refinement.max_regions_per_iteration`,
+Os dois tetos são configuráveis (`refinement.max_refined_regions`,
 `semantic_relations.max_pairs`) e nenhum deles foi ajustado por evidência ainda: os
 defaults foram escolhidos como orçamento plausível, não medidos como ótimos.
 
-### DINOv3 e SAM 3 estão bloqueados por licença
+### DINOv3 continua bloqueado por licença; SAM3 está disponível
 
 Os dois candidatos modernos avaliados nesta rodada existem na versão de `transformers`
-instalada (5.16.1 tem `DINOv3ViTModel` e `Sam3Model`), mas os checkpoints
-`facebook/dinov3-vitb16-pretrain-lvd1689m` e `facebook/sam3` estão `gated=manual` no Hub.
+necessária (`>=5.16.1` tem `DINOv3ViTModel` e `Sam3Model`). O checkpoint
+`facebook/dinov3-vitb16-pretrain-lvd1689m` continua `gated=manual`; o acesso da conta a
+`facebook/sam3` foi aprovado e ele agora é o provider de discovery (tracker, segment everything).
 
 Verificado em 2026-09-10: existe um token válido da conta `alexmrtr` em
 `~/.cache/huggingface/token`, e mesmo assim os dois repositórios devolvem **HTTP 403** ao
@@ -482,8 +638,9 @@ https://huggingface.co/facebook/sam3
 ```
 
 Depois do aceite, `curl -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)"` sobre
-aquele `config.json` passa a devolver 200, e as issues `#219` e `#220` deixam de estar
-bloqueadas. O bloqueio não é técnico em nenhum momento.
+o `config.json` do DINOv3 passa a devolver 200 e a issue `#219` deixa de estar bloqueada.
+SAM3 não está mais bloqueado por acesso; seu risco restante é a estabilidade das masks com
+os thresholds permissivos 0.80/0.90 e o consumo medido de VRAM.
 
 Qwen3-VL, ao contrário, **não** está bloqueado: os checkpoints 2B, 4B e 8B já estão no
 cache local e a família é suportada pela mesma versão de `transformers`. A `#218` não

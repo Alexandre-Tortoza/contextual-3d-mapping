@@ -32,6 +32,14 @@ from visual_perception.application.execution_profile import research_quality_con
 config = research_quality_config(real_backends=True)
 ```
 
+Por default, esse perfil executa `region discovery` uma vez na imagem completa
+e uma vez em cada tile de uma grade `2x2` com 20% de sobreposição. A passada
+global preserva o contexto da cena; os tiles elevam a cobertura de detalhes
+finos. As proposals são remapeadas para a imagem original e o merge geométrico
+deduplica apenas máscaras quase idênticas. Use
+`research_quality_config(multi_scale_enabled=False, ...)` somente para uma
+ablação ou benchmark que exija o braço full-only.
+
 A composição dos ports ocorre antes da chamada do pipeline:
 
 ```python
@@ -69,8 +77,10 @@ Seu papel é:
 
 - carregar um backend pesado somente quando necessário;
 - registrar métricas do estágio;
-- liberar a referência ao final do uso;
-- evitar manter todos os modelos pesados residentes ao mesmo tempo.
+- manter residente tudo que já carregou, reaproveitando entre chamadas e
+  entre estágios intercalados no mesmo frame;
+- liberar apenas o modelo menos recentemente usado (LRU), e só quando um
+  load novo esgota a VRAM de fato (OOM real, não um orçamento estimado).
 
 A factory
 [`create_perception_ports`](../src/visual_perception/infrastructure/adapters/factory.py)
@@ -89,38 +99,30 @@ run_canonical_pipeline(...)
     -> não escolhe backends
 ```
 
-## Execução sequencial e VRAM
+## Residência e VRAM
 
-Na configuração real de referência, os quatro modelos cabem individualmente em 8GB, mas
-a soma dos picos excede esse orçamento. O comportamento esperado é conceitualmente:
+O pipeline canônico intercala estágios várias vezes por frame (ex: CLIP e Qwen-VL se
+alternam repetidamente entre reconhecimento, hipóteses e refinamento). Descarregar um
+modelo a cada troca de estágio recarregaria pesos repetidamente no mesmo frame — custo de
+I/O e tempo desperdiçado sem necessidade, sempre que os modelos envolvidos cabem juntos em
+VRAM.
+
+Por isso o `ModelLifecycleManager` mantém residente qualquer modelo já carregado, e só
+libera algo quando é preciso: um `get_or_load` que estoura a VRAM real (OOM) libera o
+modelo residente menos recentemente usado e tenta carregar de novo, repetindo até caber ou
+até não sobrar mais nada para liberar — nesse caso, o OOM vira `BackendExecutionError`.
+Não há tabela estática de orçamento por modelo: a decisão de liberar é reativa à memória
+real da máquina em que o pipeline roda, não a uma estimativa de referência.
 
 ```text
-SAM
-  -> load
-  -> inferência
-  -> métricas
-  -> unload
-
-DINOv2
-  -> load
-  -> inferência
-  -> métricas
-  -> unload
-
-CLIP
-  -> load
-  -> inferência
-  -> métricas
-  -> unload
-
-Qwen-VL
-  -> load
-  -> inferência
-  -> métricas
-  -> unload
+get_or_load(key)
+    -> key já residente? retorna sem recarregar
+    -> senão: tenta carregar
+        -> OOM e há residentes? libera o LRU e tenta de novo
+        -> OOM e nada residente? BackendExecutionError
 ```
 
-Os valores medidos e a motivação da seleção estão em
+Os valores medidos na configuração de referência estão em
 [model-backends.md](model-backends.md#orçamento-de-vram-e-lifecycle).
 
 ## Métricas de estágio
@@ -309,6 +311,16 @@ python benchmarks/validate_reference_pipeline.py \
 
 A execução gera samples em `benchmarks/results/samples/<run-id>/`. O layout completo por
 frame é descrito, em um lugar só, em [artifacts.md](artifacts.md#artifacts-de-benchmark-e-validação).
+
+A observação de cada frame é montada a partir do registro de proveniência que a extração
+grava ao lado do PNG (`<frame>.json`, ver `adapters/datasets/README.md`): identidade pelo
+nome do frame, gravação como dataset e sequência, tópico como sensor, `header.frame_id`
+como frame de coordenadas e o timestamp de gravação da mensagem. Todos os frames
+selecionados são conferidos antes de qualquer modelo carregar, e um frame sem registro
+interrompe o run — frames extraídos antes desse registro existir precisam ser extraídos de
+novo com `prepare_corridor02_frames.py`. Até a #239 o validador usava valores fixos de um
+fixture de teste, e todos os frames saíam com o mesmo timestamp; runs anteriores têm essa
+proveniência inválida.
 
 `manifest.json` preserva IDs na ordem solicitada, SHA-256 de cada entrada, revisão Git,
 configuração e fingerprint, latência, VRAM, falhas, audit e estados dos slots por frame.

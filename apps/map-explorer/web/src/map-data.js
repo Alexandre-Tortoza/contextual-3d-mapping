@@ -2,9 +2,38 @@ const UNOBSERVED_KEY = "__unobserved__";
 const UNOBSERVED_COLOR = [28, 31, 38];
 const OBSERVED_UNLABELED_KEY = "__observed_unlabeled__";
 const OBSERVED_UNLABELED_COLOR = [104, 111, 124];
+const STRUCTURAL_KEY = "__structural__";
+const STRUCTURAL_COLOR = [150, 150, 150];
 const OTHER_FAMILY_KEY = "__other__";
 const OTHER_FAMILY_COLOR = [185, 189, 199];
 const DIMMED_COLOR = [70, 74, 84];
+const CONTEXT_ARTIFACT_TYPE = "contextual_rgb_lidar_slice";
+const CONSOLIDATED_ARTIFACT_TYPE = "consolidated_contextual_map";
+
+// Substantivos estruturais genéricos espelhados de
+// modules/visual-perception/src/visual_perception/domain/structural_consistency.py
+// INHERENTLY_STUFF_HEAD_NOUNS + complementos em contextual_evidence.py:89-98.
+// Fonte de verdade: os dois arquivos Python. Manter sincronizado.
+const STRUCTURAL_HEAD_NOUNS = Object.freeze({
+  carpet: true,
+  ceiling: true,
+  floor: true,
+  flooring: true,
+  grass: true,
+  ground: true,
+  pavement: true,
+  road: true,
+  sky: true,
+  surface: true,
+  tile: true,
+  wall: true,
+  baseboard: true,
+  molding: true,
+  panel: true,
+  panelling: true,
+  partition: true,
+  plank: true,
+});
 
 // Quatro matizes, nesta ordem, e nenhum a mais.
 //
@@ -15,6 +44,9 @@ const DIMMED_COLOR = [70, 74, 84];
 // limiares de separação para visão normal e para daltonismo; nenhum conjunto de
 // cinco passa. Famílias além da quarta recebem um neutro claro em vez de um
 // matiz gerado que o leitor não conseguiria separar dos demais.
+//
+// Nota: estas cores são reservadas para achados interessantes apenas. A
+// categoria estrutural usa STRUCTURAL_COLOR, que não compete com estas.
 const FAMILY_COLORS = Object.freeze([
   [57, 135, 229],
   [201, 133, 0],
@@ -23,16 +55,17 @@ const FAMILY_COLORS = Object.freeze([
 ]);
 
 const NEUTRAL_LABELS = Object.freeze({
-  [UNOBSERVED_KEY]: "Sem contexto",
-  [OBSERVED_UNLABELED_KEY]: "Observado, sem label",
+  [UNOBSERVED_KEY]: "Não observado pelos keyframes",
+  [OBSERVED_UNLABELED_KEY]: "Observado, sem evidência publicada",
   [OTHER_FAMILY_KEY]: "Outros labels",
+  [STRUCTURAL_KEY]: "Estruturas",
 });
 
 // Valida a fronteira mínima consumida pelo viewer antes de qualquer estado de
 // câmera ou renderização ser criado.
 export function validateSlice(value) {
-  if (![1, 2].includes(value?.schema_version)) {
-    throw new Error("O artifact precisa usar schema_version 1 ou 2.");
+  if (!Number.isInteger(value?.schema_version)) {
+    throw new Error("O artifact precisa declarar schema_version inteiro.");
   }
   if (typeof value.map_id !== "string" || typeof value.map_frame !== "string") {
     throw new Error("O artifact precisa declarar map_id e map_frame.");
@@ -48,10 +81,11 @@ export function validateSlice(value) {
       throw new Error(`O ponto ${index} possui coordenadas não finitas.`);
     }
   });
-  if (
-    value.schema_version === 2
-    && (!Array.isArray(value.observations) || !Array.isArray(value.regions))
-  ) {
+  if (value.artifact_type == null) return value;
+  if (![CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(value.artifact_type)) {
+    throw new Error("O artifact precisa ser uma run contextual ou um mapa consolidado.");
+  }
+  if (!Array.isArray(value.observations) || !Array.isArray(value.regions)) {
     throw new Error("O artifact contextual precisa declarar observations e regions.");
   }
   return value;
@@ -118,9 +152,23 @@ function isVisuallyObserved(evidence) {
   return Boolean(evidence.color_rgb || evidence.pixel);
 }
 
-// Classifica cada ponto em uma de três categorias, porque "a câmera viu e não
-// classificou" e "a câmera nunca viu" são diagnósticos diferentes: o primeiro
-// aponta para a máscara ou para o reasoner, o segundo para cobertura de frames.
+// Verifica se um label é uma superfície estrutural genérica. O última palavra
+// (núcleo nominal) determina: wall, ceiling, panel, etc. são estruturais; suas
+// modificações (cracked wall, wooden panel) são interessantes por ter claims
+// adicionais.
+function isStructuralLabel(label) {
+  if (!label) return false;
+  const tokens = label.trim().toLowerCase().split(/\s+/);
+  if (tokens.length === 0) return false;
+  const headNoun = tokens[tokens.length - 1];
+  return headNoun in STRUCTURAL_HEAD_NOUNS;
+}
+
+// Classifica cada ponto pelo label publicado, ou por um dos dois estados de
+// cobertura: observado sem label, ou não observado pelos keyframes. O label
+// bruto é a chave de filtro em todos os casos — agrupar labels estruturais sob
+// uma chave sintética aqui quebraria o foco por label dentro da família, já que
+// a legenda alterna exatamente as chaves que esta função devolve.
 export function contextKey(point) {
   const evidence = visualEvidence(point);
   if (evidence?.label) return evidence.label.trim().toLowerCase();
@@ -173,18 +221,38 @@ export function buildLabelFamilies(labelCounts) {
 
 // Constrói a paleta e a legenda a partir de um artifact concreto.
 //
+// Separação: a categoria estrutural (__structural__) agrupa todos os labels
+// cujos núcleos são estruturais genéricos (wall, floor, ceiling, etc.) e
+// recebe uma cor neutra fixa. Achados interessantes são agrupados por
+// família (heurística textual) e colorem-se a partir de FAMILY_COLORS em
+// ordem de frequência — isto evita que paredes comuns roubem matiz de
+// objetos raros. Famílias interessantes além da quarta compartilham o bucket
+// "Outros labels".
+//
 // A cor segue a família, e a família é decidida uma vez para o mapa aberto:
-// filtrar ou isolar na legenda nunca repinta o que sobrou. Famílias além da
-// quarta compartilham um neutro claro, porque só quatro matizes se separam com
-// segurança sobre este fundo.
+// filtrar ou isolar na legenda nunca repinta o que sobrou.
 export function buildContextPalette(points) {
   const labelCounts = new Map();
   const neutralCounts = new Map();
+  const structuralCounts = new Map();
+
   points.forEach((point) => {
-    const key = contextKey(point);
-    const target = key in NEUTRAL_LABELS ? neutralCounts : labelCounts;
-    target.set(key, (target.get(key) ?? 0) + 1);
+    const evidence = visualEvidence(point);
+    if (evidence?.label) {
+      const label = evidence.label.trim().toLowerCase();
+      if (isStructuralLabel(label)) {
+        structuralCounts.set(label, (structuralCounts.get(label) ?? 0) + 1);
+      } else {
+        labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+      }
+    } else {
+      // Pontos sem label vão para neutralCounts (cobertura/não-observado).
+      const key = contextKey(point);
+      neutralCounts.set(key, (neutralCounts.get(key) ?? 0) + 1);
+    }
   });
+
+  // Agrupa achados interessantes por família (textual heuristic).
   const families = buildLabelFamilies(labelCounts);
   const grouped = new Map();
   labelCounts.forEach((count, label) => {
@@ -194,24 +262,51 @@ export function buildContextPalette(points) {
     entry.members.push({ key: label, label, count });
     grouped.set(family, entry);
   });
+
+  // Ranking de achados interessantes por frequência.
   const ranked = [...grouped.values()].sort(
     (left, right) => right.count - left.count || left.key.localeCompare(right.key),
   );
+
+  // Mapeamento de cores para achados interessantes.
   const colorByFamily = new Map();
   ranked.forEach((entry, rank) => {
     colorByFamily.set(entry.key, FAMILY_COLORS[rank] ?? OTHER_FAMILY_COLOR);
   });
+
   const byCoverage = (left, right) => right.count - left.count;
-  const legend = ranked.slice(0, FAMILY_COLORS.length).map((entry) => ({
-    key: entry.key,
-    label: entry.key,
-    count: entry.count,
-    color: colorByFamily.get(entry.key),
-    semantic: true,
-    members: [...entry.members].sort(byCoverage),
-  }));
-  // A cauda vira uma linha só. Espalhá-la em várias linhas do mesmo neutro
-  // sugeriria categorias distinguíveis no mapa, quando elas compartilham cor.
+  const legend = [];
+
+  // Adiciona a categoria estrutural no topo, se houver pontos estruturais.
+  const structuralCount = [...structuralCounts.values()].reduce((a, b) => a + b, 0);
+  if (structuralCount > 0) {
+    const structuralMembers = [...structuralCounts.entries()]
+      .map(([label, count]) => ({ key: label, label, count }))
+      .sort(byCoverage);
+    legend.push({
+      key: STRUCTURAL_KEY,
+      label: NEUTRAL_LABELS[STRUCTURAL_KEY],
+      count: structuralCount,
+      color: STRUCTURAL_COLOR,
+      semantic: true,
+      members: structuralMembers,
+      structural: true,
+    });
+  }
+
+  // Adiciona achados interessantes (primeiras 4 famílias com matiz).
+  ranked.slice(0, FAMILY_COLORS.length).forEach((entry) => {
+    legend.push({
+      key: entry.key,
+      label: entry.key,
+      count: entry.count,
+      color: colorByFamily.get(entry.key),
+      semantic: true,
+      members: [...entry.members].sort(byCoverage),
+    });
+  });
+
+  // A cauda de achados interessantes vira uma linha só.
   const tail = ranked.slice(FAMILY_COLORS.length);
   if (tail.length) {
     legend.push({
@@ -223,6 +318,8 @@ export function buildContextPalette(points) {
       members: tail.flatMap((entry) => entry.members).sort(byCoverage),
     });
   }
+
+  // Adiciona cobertura visual (observado-não-labeled, não-observado).
   [OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY].forEach((key) => {
     const count = neutralCounts.get(key);
     if (!count) return;
@@ -235,12 +332,15 @@ export function buildContextPalette(points) {
       members: [],
     });
   });
+
   const colorOf = (point) => {
     const key = contextKey(point);
     if (key === UNOBSERVED_KEY) return UNOBSERVED_COLOR;
     if (key === OBSERVED_UNLABELED_KEY) return OBSERVED_UNLABELED_COLOR;
+    if (isStructuralLabel(key)) return STRUCTURAL_COLOR;
     return colorByFamily.get(families.get(key) ?? key) ?? OTHER_FAMILY_COLOR;
   };
+
   return { legend, colorOf, familyOf: (label) => families.get(label) ?? label };
 }
 
@@ -313,8 +413,15 @@ export function srgbColorToLinear(color) {
 export function mapEntriesFromIndex(payload) {
   if (!Array.isArray(payload)) return [];
   return payload.filter(
-    (entry) => typeof entry?.url === "string" && typeof entry?.label === "string",
-  ).map((entry) => ({ url: entry.url, label: entry.label }));
+    (entry) => [CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(entry?.artifact_type)
+      && typeof entry.url === "string" && typeof entry.label === "string",
+  ).map((entry) => ({ url: entry.url, label: entry.label, artifactType: entry.artifact_type }));
+}
+
+// Identifica a geometria compartilhada por runs, para que alternar evidência
+// contextual preserve a câmera e comparar outro mapa refaça o enquadramento.
+export function geometryIdentity(slice) {
+  return JSON.stringify([slice.map_frame, slice.source?.sha256 ?? slice.map_id, slice.points.length]);
 }
 
 // Encapsula o artifact atual como uma fonte de geometria estática. A mesma
@@ -338,4 +445,5 @@ export class StaticArtifactGeometrySource {
   }
 }
 
-export { DIMMED_COLOR, OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY };
+export { DIMMED_COLOR, OBSERVED_UNLABELED_KEY, UNOBSERVED_KEY, STRUCTURAL_KEY };
+export { CONSOLIDATED_ARTIFACT_TYPE, CONTEXT_ARTIFACT_TYPE };

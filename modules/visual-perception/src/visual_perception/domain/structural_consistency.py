@@ -26,6 +26,15 @@ A diferença entre as duas coisas é medível: ``ceiling light fixture`` tem
 ``ceiling`` como palavra e ``fixture`` como núcleo. Casar por palavra
 classificaria uma luminária como superfície contínua; casar pelo núcleo a deixa
 corretamente indeterminada.
+
+Este módulo é também o dono da **redução lexical mínima** de um conceito livre
+a tokens comparáveis — ``singularize``, ``head_noun``, ``canonical_concept`` e
+``NON_DISCRIMINATIVE_MODIFIERS``. Ela mora aqui, e não na reconciliação que a
+introduziu, porque três políticas precisam concordar exatamente sobre "estes
+dois textos são o mesmo conceito": a coerência estrutural, a reconciliação
+intra-frame (``application/reconciliation.py``, que a reexporta) e a política
+de publicação (``domain/contextual_evidence.py``). Uma cópia por consumidor já
+divergiu uma vez neste módulo.
 """
 
 from __future__ import annotations
@@ -36,7 +45,10 @@ from visual_perception.domain.semantics import RegionKind, SemanticClaim, normal
 
 __all__ = [
     "INHERENTLY_STUFF_HEAD_NOUNS",
+    "NON_DISCRIMINATIVE_MODIFIERS",
     "StructuralVerdict",
+    "canonical_concept",
+    "concept_tokens",
     "expected_region_kind",
     "head_noun",
     "region_kind_verdict",
@@ -68,6 +80,14 @@ INHERENTLY_STUFF_HEAD_NOUNS = frozenset(
 #: Sufixos que a singularização ingênua estragaria: ``glass`` não é plural de
 #: ``glas``, e ``chassis`` não é plural de ``chassi``.
 _PROTECTED_PLURAL_SUFFIXES = ("ss", "us", "is", "as", "os")
+
+#: Modificadores que descrevem a aparência do sujeito sem mudar a identidade
+#: dele. ``plain wall`` e ``wall`` são a mesma coisa: o ``plain`` é um atributo,
+#: e o próprio contract já tem um lugar para atributos. A lista é curta e
+#: explícita de propósito — ela existe para colapsar variação de grafia, não
+#: para construir uma ontologia, e o label cru continua preservado em qualquer
+#: caso.
+NON_DISCRIMINATIVE_MODIFIERS = frozenset({"blank", "flat", "plain", "simple"})
 
 
 # Enumera o que a regra determinística consegue afirmar sobre a natureza
@@ -108,6 +128,23 @@ def singularize(word: str) -> str:
     return word[:-1]
 
 
+# Quebra um conceito livre nos tokens singularizados que as políticas comparam.
+# Existe porque head_noun, canonical_concept e a política de publicação faziam a
+# mesma quebra três vezes, e uma divergência de pontuação entre elas mudaria
+# silenciosamente qual conceito é considerado o mesmo.
+def concept_tokens(concept: str) -> tuple[str, ...]:
+    """Retorna os tokens singularizados de ``concept``, na ordem original.
+
+    Argumentos:
+        concept: o conceito livre escrito pelo produtor.
+    Retorna:
+        os tokens normalizados e singularizados; tupla vazia quando o conceito
+        não tem nenhuma palavra utilizável.
+    """
+    tokens = [token for token in normalize_claim_value(concept).replace(",", " ").split() if token]
+    return tuple(singularize(token) for token in tokens)
+
+
 # Extrai o núcleo nominal de um conceito composto. Existe porque compostos
 # nominais em inglês são de núcleo final (``ceiling light fixture`` é um tipo de
 # ``fixture``), e é essa propriedade que impede a regra de confundir uma
@@ -121,10 +158,32 @@ def head_noun(concept: str) -> str:
         a última palavra do composto, singularizada; string vazia quando o
         conceito não tem nenhuma palavra utilizável.
     """
-    tokens = [token for token in normalize_claim_value(concept).replace(",", " ").split() if token]
-    if not tokens:
-        return ""
-    return singularize(tokens[-1])
+    tokens = concept_tokens(concept)
+    return tokens[-1] if tokens else ""
+
+
+# Reduz um conceito à sua forma canônica por normalização lexical mínima.
+# Existe como função pública porque quatro consumidores precisam concordar
+# exatamente sobre "estes dois labels são o mesmo conceito": a formação de
+# grupos, a claim reconciliada, a seleção de pares para relações semânticas e a
+# política de publicação contextual.
+def canonical_concept(label: str) -> str:
+    """Retorna a forma canônica de ``label``: caixa, plural e modificadores vazios.
+
+    A transformação é deliberadamente pobre. Ela remove vírgulas, colapsa
+    espaços, singulariza cada palavra e descarta modificadores que não
+    discriminam identidade. Ela **não** consulta ontologia, não usa embedding e
+    não conhece sinônimos: qualquer uma dessas coisas transformaria um sistema
+    open-vocabulary em uma taxonomia fechada por dentro.
+
+    Argumentos:
+        label: o label cru, exatamente como o produtor o escreveu.
+    Retorna:
+        o conceito canônico, ou o label normalizado quando não há o que reduzir.
+    """
+    reduced = concept_tokens(label)
+    meaningful = [token for token in reduced if token not in NON_DISCRIMINATIVE_MODIFIERS]
+    return " ".join(meaningful or reduced)
 
 
 # Responde qual natureza um conceito exige, quando ela é inequívoca. Existe

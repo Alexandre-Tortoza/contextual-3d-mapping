@@ -79,7 +79,7 @@ def test_associate_points_colors_visible_point_and_marks_occlusion() -> None:
         tuple((index, 0, 0) for index in range(25)),
         frozenset((x, y) for y in range(5) for x in range(5)),
     )
-    region = VisualRegionEvidence("region-1", frozenset({(2, 2)}), "parede", "feature://1")
+    region = VisualRegionEvidence("region-1", frozenset((x, y) for x in range(1, 4) for y in range(1, 4)), "parede", "feature://1", grounding_status="refined", grounding_reference="fixture://grounding")
 
     result = associate_points(
         (_point("near", (0.0, 0.0, 2.0)), _point("far", (0.0, 0.0, 3.0))),
@@ -221,7 +221,7 @@ def test_associate_map_points_colors_visible_point_and_marks_occlusion() -> None
         tuple((index, 0, 0) for index in range(25)),
         frozenset((x, y) for y in range(5) for x in range(5)),
     )
-    region = VisualRegionEvidence("region-1", frozenset({(2, 2)}), "parede", "feature://1")
+    region = VisualRegionEvidence("region-1", frozenset((x, y) for x in range(1, 4) for y in range(1, 4)), "parede", "feature://1", grounding_status="refined", grounding_reference="fixture://grounding")
 
     result = associate_map_points(
         (_map_point("near", (0.0, 0.0, 2.0)), _map_point("far", (0.0, 0.0, 3.0))),
@@ -252,7 +252,7 @@ def test_associate_map_points_concorda_com_a_associacao_por_scan() -> None:
         tuple((index, 0, 0) for index in range(25)),
         frozenset((x, y) for y in range(5) for x in range(5)),
     )
-    region = VisualRegionEvidence("region-1", frozenset({(2, 2)}), "parede", "feature://1")
+    region = VisualRegionEvidence("region-1", frozenset((x, y) for x in range(1, 4) for y in range(1, 4)), "parede", "feature://1", grounding_status="refined", grounding_reference="fixture://grounding")
     coordinates = (0.0, 0.0, 2.0)
 
     by_scan = associate_points((_point("p", coordinates),), rgb, _calibration(), (region,))

@@ -83,8 +83,8 @@ def analyze_scene(
     Retorna:
         o contexto de cena validado.
     """
-    response = reasoner.analyze_scene(_scene_view(image, area_masks), config)
-    _validate_scene_response(response)
+    response = reasoner.analyze_scene(scene_view(image, area_masks), config)
+    validate_scene_response(response)
 
     provenance = ModelProvenance(
         stage="scene_context",
@@ -117,8 +117,8 @@ def analyze_scene(
 # Recorta a imagem à parte que é cena analisável: dentro do sensor e fora do
 # rig. Existe para que o rig deixe de ser inventariado como objeto do ambiente
 # sem que nenhum pixel seja alterado — recortar preserva a evidência restante,
-# pintar destruiria a que ficasse. Chamada por analyze_scene.
-def _scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> ImagePayload:
+# pintar destruiria a que ficasse. Chamada por analyze_scene e pela descoberta de conceitos.
+def scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> ImagePayload:
     """Retorna a view de cena, recortada às áreas declaradas quando existirem."""
     if area_masks is None:
         return image
@@ -155,8 +155,18 @@ def _parse_scene_confidence(raw: Any, source: str) -> ConfidenceScore | None:
 
 # Valida a forma da resposta bruta de cena antes de convertê-la em claims:
 # campos ambientais obrigatórios presentes, opcionais bem tipados, e campos do
-# contract antigo recusados em vez de ignorados. Chamada por analyze_scene.
-def _validate_scene_response(response: dict[str, Any]) -> None:
+# contract antigo recusados em vez de ignorados. Chamada por analyze_scene e
+# pelo benchmark de candidatos de raciocínio multimodal, que precisa pontuar
+# contra exatamente este contrato.
+def validate_scene_response(response: dict[str, Any]) -> None:
+    """Valida a resposta bruta de cena contra o contrato ambiental.
+
+    Argumentos:
+        response: objeto JSON devolvido pelo reasoner.
+    Levanta:
+        ValueError: se faltar campo obrigatório, algum campo tiver tipo errado ou
+            a resposta trouxer um campo recusado.
+    """
     if not isinstance(response, dict):
         raise ValueError(f"Malformed scene response: expected an object, got {type(response)!r}.")
     for required in _REQUIRED_FIELDS:

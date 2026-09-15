@@ -32,10 +32,10 @@ class RealDenseFeatureExtractionAdapter:
     privados do modelo.
     """
 
-    # Recebe (ou cria, se omitido) o lifecycle manager que carrega/libera o
-    # processor/modelo sob demanda. Compartilhar o mesmo manager entre os 4
-    # adapters reais (ver ``factory.py``) garante que no máximo um modelo
-    # pesado fica residente por vez.
+    # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
+    # residente o processor/modelo sob demanda. Compartilhar o mesmo manager
+    # entre os 4 adapters reais (ver ``factory.py``) permite reaproveitar
+    # modelos já residentes entre estágios intercalados no mesmo frame.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
         """Inicializa o adapter sem carregar o modelo DINOv2."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
@@ -44,7 +44,7 @@ class RealDenseFeatureExtractionAdapter:
     # imagem de entrada; usado pelo pooling mask-aware do pipeline canônico.
     def extract(self, image: ImagePayload, config: FeatureExtractionConfig) -> FeatureMap:
         """Retorna um grid denso DINOv2, sem tokens CLS ou register, para a imagem dada."""
-        torch, processor, model, device = self._get_runtime(config)
+        torch, processor, model, device, key = self._get_runtime(config)
         try:
             processor_options: dict[str, object] = {}
             if config.input_resolution is not None:
@@ -61,8 +61,12 @@ class RealDenseFeatureExtractionAdapter:
                 **processor_options,
             )
             inputs = {name: value.to(device) for name, value in inputs.items()}
-            with torch.inference_mode():
-                output = model(**inputs)
+
+            def _run() -> Any:
+                with torch.inference_mode():
+                    return model(**inputs)
+
+            output = self._lifecycle.call_with_eviction(key, _run)
             tokens = output.last_hidden_state[0]
             pixel_values = inputs["pixel_values"]
             grid_height, grid_width, prefix_tokens = _feature_grid_shape(
@@ -103,8 +107,8 @@ class RealDenseFeatureExtractionAdapter:
 
     # Carrega processor e modelo sob demanda, delegando residência ao
     # lifecycle manager compartilhado.
-    def _get_runtime(self, config: FeatureExtractionConfig) -> tuple[Any, Any, Any, str]:
-        """Retorna torch, processor, modelo e device para a configuração solicitada."""
+    def _get_runtime(self, config: FeatureExtractionConfig) -> tuple[Any, Any, Any, str, str]:
+        """Retorna torch, processor, modelo, device e a key residente para a configuração solicitada."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
         torch = require_module("torch", config.backend)
         device = resolve_device(torch, config.device, config.backend)
@@ -117,13 +121,19 @@ class RealDenseFeatureExtractionAdapter:
                 return processor, model
             except BackendUnavailableError:
                 raise
+            except (MemoryError, torch.cuda.OutOfMemoryError):
+                # Deixa o OOM real subir intacto até get_or_load/_load_with_eviction:
+                # convertê-lo aqui em BackendExecutionError impediria a eviction por
+                # LRU de residentes, porque o tipo deixaria de bater no catch de
+                # _OOM_EXCEPTIONS (visto na prática: load falhava mesmo havendo
+                # residentes liberáveis).
+                raise
             except Exception as error:
                 raise_backend_execution_error(config.backend, "o carregamento do DINOv2", error)
 
-        processor, model = self._lifecycle.get_or_load(
-            f"feature_extraction:{checkpoint}:{device}", factory
-        )
-        return torch, processor, model, device
+        key = f"feature_extraction:{checkpoint}:{device}"
+        processor, model = self._lifecycle.get_or_load(key, factory)
+        return torch, processor, model, device, key
 
 
 # Calcula um resize aspect-preserving cuja maior aresta é limitada pela

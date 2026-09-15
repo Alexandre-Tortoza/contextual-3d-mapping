@@ -98,14 +98,35 @@ class EmbeddingSpace:
         return f"{self.modality.value}:{self.model_id}@{self.checkpoint}/{self.dimension}/{suffix}"
 
 
-# Valida que um vetor de embedding não está vazio e não contém NaN/Inf.
-# Existe como helper compartilhado entre VisualEmbedding e LanguageEmbedding
-# para não duplicar a mesma checagem nos dois __post_init__.
-def _validate_vector(vector: tuple[float, ...], *, field_name: str) -> None:
+#: Desvio máximo da norma L2 em relação a 1 para um vetor declarado
+#: normalizado. Cobre o arredondamento de vetores ``float32`` convertidos para
+#: ``float``, sem aceitar um vetor que simplesmente não foi normalizado.
+_UNIT_NORM_TOLERANCE = 1e-4
+
+
+# Valida que um vetor de embedding não está vazio, não contém NaN/Inf e, quando
+# declarado normalizado, tem norma L2 unitária. Existe como helper
+# compartilhado entre VisualEmbedding e LanguageEmbedding; a checagem da norma
+# existe porque consumidores tratam o produto escalar de vetores normalizados
+# como cosseno, e antes um vetor de norma 5 passava com ``normalized=True``.
+def _validate_vector(vector: tuple[float, ...], *, field_name: str, normalized: bool) -> None:
+    """Rejeita vetores vazios, não finitos ou falsamente declarados normalizados.
+
+    Argumentos:
+        vector: componentes do embedding.
+        field_name: nome do campo, usado na mensagem de erro.
+        normalized: se o produtor declarou o vetor com norma L2 unitária.
+    Levanta:
+        ValueError: se alguma das condições acima for violada.
+    """
     if not vector:
         raise ValueError(f"{field_name} must not be empty.")
     if any(math.isnan(component) or math.isinf(component) for component in vector):
         raise ValueError(f"{field_name} must be finite (no NaN/Inf).")
+    if normalized:
+        norm = math.sqrt(math.fsum(component * component for component in vector))
+        if abs(norm - 1.0) > _UNIT_NORM_TOLERANCE:
+            raise ValueError(f"{field_name} is declared normalized but has L2 norm {norm:.6f}.")
 
 
 # Representa um embedding de região pooled a partir de features visuais densas.
@@ -129,7 +150,7 @@ class VisualEmbedding:
     def __post_init__(self) -> None:
         validate_identifier(self.embedding_id, field="embedding_id")
         validate_identifier(self.region_id, field="region_id")
-        _validate_vector(self.vector, field_name="VisualEmbedding.vector")
+        _validate_vector(self.vector, field_name="VisualEmbedding.vector", normalized=self.normalized)
         if len(self.vector) != self.dimension:
             raise ValueError(
                 f"VisualEmbedding dimension mismatch: declared {self.dimension}, "
@@ -159,7 +180,7 @@ class LanguageEmbedding:
     def __post_init__(self) -> None:
         validate_identifier(self.embedding_id, field="embedding_id")
         validate_identifier(self.region_id, field="region_id")
-        _validate_vector(self.vector, field_name="LanguageEmbedding.vector")
+        _validate_vector(self.vector, field_name="LanguageEmbedding.vector", normalized=self.normalized)
         if len(self.vector) != self.dimension:
             raise ValueError(
                 f"LanguageEmbedding dimension mismatch: declared {self.dimension}, "

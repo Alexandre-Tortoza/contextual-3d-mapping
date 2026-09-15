@@ -16,12 +16,110 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
-from visual_perception.domain.image_area import ImageAreaGeometry, ImageAreaMasks
+from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry, ImageAreaMasks
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot
-from visual_perception.domain.region_reasoning import SceneContextMode
+from visual_perception.domain.region_reasoning import SceneContextMode, TemporalPriorMode
+
+
+# Configura exclusivamente grounding espacial; não altera interpretação, merge,
+# frequência temporal ou a política de incerteza de sensor-association.
+@dataclass(frozen=True)
+class SemanticGroundingConfig:
+    """Localização condicionada ao conceito e segmentação com lifecycle sequencial.
+
+    Os limiares do detector seguem o exemplo oficial do Transformers; não são
+    confiança calibrada. O mínimo de um pixel apenas rejeita máscaras vazias.
+    """
+
+    backend: str = "unavailable"
+    detector_checkpoint: str = "IDEA-Research/grounding-dino-base"
+    # SAM2 (não SAM1): o checkpoint SAM1 satura numericamente sob a stack
+    # atual de torch/transformers (ver region_discovery_backend.py e
+    # semantic_grounding_backend.py._segment).
+    segmenter_checkpoint: str = "facebook/sam2.1-hiera-large"
+    device: str = "auto"
+    detection_threshold: float = 0.4
+    text_threshold: float = 0.3
+    duplicate_box_iou: float = 0.85
+    min_mask_area: int = 1
+
+    # Impede configurações silenciosamente inválidas de um stage ablatável.
+    def __post_init__(self) -> None:
+        """Valida backend, unidades e limiares de fronteira."""
+        if self.backend not in {"unavailable", "grounded_sam"}:
+            raise ValueError("semantic_grounding.backend must be unavailable or grounded_sam.")
+        if self.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("semantic_grounding.device must be auto, cpu or cuda.")
+        if not self.detector_checkpoint or not self.segmenter_checkpoint:
+            raise ValueError("Grounding checkpoints must not be empty.")
+        for name in ("detection_threshold", "text_threshold", "duplicate_box_iou"):
+            value = getattr(self, name)
+            if not isfinite(value) or not 0 < value <= 1:
+                raise ValueError(f"semantic_grounding.{name} must be in (0, 1].")
+        if type(self.min_mask_area) is not int or self.min_mask_area < 1:
+            raise ValueError("semantic_grounding.min_mask_area must be a positive integer.")
+
+
+# Configura a descoberta de conceitos concretos na cena (#277), que alimenta o
+# grounding por conceito como fonte adicional de propostas. Desligada por default:
+# o discovery genérico continua sendo a fonte obrigatória de regiões.
+@dataclass(frozen=True)
+class SceneConceptDiscoveryConfig:
+    """Teto, exclusões estruturais e versão do prompt da descoberta de conceitos."""
+
+    enabled: bool = False
+    #: Máximo de conceitos por frame. Cada conceito vira uma consulta de grounding
+    #: e pode gerar regiões que depois custam uma chamada de VLM cada.
+    max_concepts: int = 12
+    #: Conceitos estruturais genéricos descartados quando aparecem sozinhos. Frases
+    #: com evidência contextual ("wall crack", "flooded floor") são mantidas.
+    structural_exclusions: tuple[str, ...] = ("wall", "walls", "floor", "floors", "ceiling", "ceilings")
+    prompt_version: str = "concepts/v1"
+
+    # Recusa teto e versão inválidos na fronteira da config.
+    def __post_init__(self) -> None:
+        """Valida teto de conceitos, exclusões e versão do prompt."""
+        if self.max_concepts <= 0:
+            raise ValueError("scene_concept_discovery.max_concepts must be positive.")
+        if any(not item or item != item.strip().lower() for item in self.structural_exclusions):
+            raise ValueError("scene_concept_discovery.structural_exclusions must be stripped lowercase terms.")
+        if not self.prompt_version:
+            raise ValueError("scene_concept_discovery.prompt_version must not be empty.")
+
+
+# Configura o grounding por conceito (#277): cada conceito da descoberta de cena
+# vira um prompt textual do SAM3 PCS, e as máscaras entram como propostas
+# adicionais ao discovery genérico, nunca no lugar dele.
+@dataclass(frozen=True)
+class ConceptGroundingConfig:
+    """Backend, limiares e teto de regiões do grounding por conceito."""
+
+    backend: str = "unavailable"
+    checkpoint: str = "facebook/sam3"
+    device: str = "auto"
+    score_threshold: float = 0.5
+    mask_threshold: float = 0.5
+    min_mask_area: int = 500
+    #: Máximo de máscaras aceitas por conceito; um conceito genérico demais não pode
+    #: inundar o merge e as chamadas de VLM.
+    max_regions_per_concept: int = 8
+
+    # Recusa backend, device e limiares inválidos na fronteira da config.
+    def __post_init__(self) -> None:
+        """Valida backend, device, limiares e tetos."""
+        if self.backend not in {"unavailable", "sam3"}:
+            raise ValueError("concept_grounding.backend must be unavailable or sam3.")
+        if self.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("concept_grounding.device must be 'auto', 'cpu', or 'cuda'.")
+        for name in ("score_threshold", "mask_threshold"):
+            if not 0.0 <= getattr(self, name) <= 1.0:
+                raise ValueError(f"concept_grounding.{name} must be in [0, 1].")
+        if self.min_mask_area <= 0 or self.max_regions_per_concept <= 0:
+            raise ValueError("concept_grounding.min_mask_area and max_regions_per_concept must be positive.")
 
 
 # Enumera os perfis de execução que o módulo pode otimizar. Existe porque o
@@ -49,7 +147,6 @@ class RegionDiscoveryConfig:
     checkpoint: str = "none"
     score_threshold: float = 0.5
     device: str = "auto"
-    model_config: str = "configs/sam2.1/sam2.1_hiera_s.yaml"
     max_regions: int = 100
     min_mask_area: int = 64
     #: Qualidade mínima que o SAM exige da máscara predita, e estabilidade
@@ -66,12 +163,12 @@ class RegionDiscoveryConfig:
     # falhando cedo com um erro acionável em vez de deixar um threshold
     # inválido se propagar para o pipeline.
     def __post_init__(self) -> None:
+        if self.backend not in {"fake", "sam", "sam3"}:
+            raise ValueError("region_discovery.backend must be fake, sam, or sam3.")
         if not 0.0 <= self.score_threshold <= 1.0:
             raise ValueError("region_discovery.score_threshold must be in [0, 1].")
         if self.device not in {"auto", "cpu", "cuda"}:
             raise ValueError("region_discovery.device must be 'auto', 'cpu', or 'cuda'.")
-        if not self.model_config:
-            raise ValueError("region_discovery.model_config must not be empty.")
         for name in ("pred_iou_threshold", "stability_score_threshold"):
             value = getattr(self, name)
             if not 0.0 <= value <= 1.0:
@@ -90,6 +187,12 @@ class TilingConfig:
     multi_scale_enabled: bool = False
     tile_grid: str = "1x1"
     overlap_ratio: float = 0.2
+    #: Descarta propostas de tile cortadas por uma borda interna do tile. Sem isso,
+    #: superfícies grandes (céu, asfalto) viram faixas retas que o merge por
+    #: containment mútua não junta à passada global (visto em 2026-09-15 no
+    #: outdoor do corridor-02). Objetos menores que a sobreposição continuam
+    #: inteiros no tile vizinho; os maiores ficam com a passada global.
+    discard_tile_border_truncations: bool = False
 
     # Valida que ``tile_grid`` está no formato esperado ("<linhas>x<colunas>")
     # e que ``overlap_ratio`` é um invariante de fronteira válido, falhando
@@ -143,6 +246,18 @@ class ImageAreaConfig:
 
     valid_area: ImageAreaGeometry | None = None
     ego_vehicle: ImageAreaGeometry | None = None
+
+    # Recusa qualquer coisa que não seja geometria já construída. Existe porque
+    # uma config relida de disco chegava aqui com dicts no lugar das geometrias,
+    # passava calada e só quebrava quando o pipeline tentava rasterizar.
+    def __post_init__(self) -> None:
+        """Rejeita áreas que não sejam ``ImageAreaGeometry`` ou ``None``."""
+        for name in ("valid_area", "ego_vehicle"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, ImageAreaGeometry):
+                raise TypeError(
+                    f"image_area.{name} must be an ImageAreaGeometry or None, got {type(value).__name__}."
+                )
 
     # Rasteriza as geometrias declaradas na resolução do frame. Chamada uma vez
     # por frame pelo pipeline, para que a filtragem compare máscaras já prontas
@@ -298,6 +413,20 @@ class MultiContextConfig:
                 "multi_context.contextual_crop_enabled requires a positive context_expansion."
             )
 
+    # Lista os slots que o estágio de evidência efetivamente produz. Existe para
+    # que estágios que consomem slots sejam validados contra o que existe, em
+    # vez de pedirem um slot desligado e receberem sempre "indisponível".
+    def enabled_slots(self) -> frozenset[EvidenceSlot]:
+        """Retorna os slots de evidência habilitados nesta configuração."""
+        flags = {
+            EvidenceSlot.FOREGROUND_DENSE: self.foreground_enabled,
+            EvidenceSlot.MASKED_SUBJECT: self.masked_subject_enabled,
+            EvidenceSlot.TIGHT_CROP: self.tight_crop_enabled,
+            EvidenceSlot.CONTEXTUAL_CROP: self.contextual_crop_enabled,
+            EvidenceSlot.SCENE_CONDITIONED: self.scene_conditioned_enabled,
+        }
+        return frozenset(slot for slot, enabled in flags.items() if enabled)
+
 
 # Configuração do estágio de suporte de hipótese por alinhamento (#214).
 # Existe porque este estágio tem um input de modelo que é texto — o template
@@ -315,10 +444,11 @@ class HypothesisSupportConfig:
             calibração volta a não ter suporte visual independente.
         source: identidade do produtor do sinal, gravada em cada
             :class:`HypothesisSupportSignal` e nos reports.
-        slots: quais slots de evidência são comparados, na ordem canônica. Os
-            três defaults são exatamente os que possuem embedding de linguagem
-            já calculado pelo estágio de evidência: o sinal custa apenas o
-            encoding do texto.
+        slots: quais slots de evidência são comparados, na ordem canônica. Todo
+            slot listado precisa estar habilitado em ``multi_context`` — um slot
+            que não é produzido geraria sempre um sinal indisponível. Os
+            defaults são os slots de linguagem habilitados por default; o perfil
+            real acrescenta o crop contextual, que ele habilita.
         indistinguishable_margin: piso abaixo do qual a diferença entre duas
             hipóteses não é reportada como vitória de nenhuma. Medido nos
             frames de referência, a margem mediana entre primária e melhor
@@ -333,7 +463,6 @@ class HypothesisSupportConfig:
     slots: tuple[str, ...] = (
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
-        EvidenceSlot.CONTEXTUAL_CROP.value,
     )
     indistinguishable_margin: float = 0.01
     prompt_template: str = "a photo of {concept}"
@@ -372,12 +501,13 @@ class RefinementConfig:
     """Quando uma região é reinterpretada, e com qual evidência nova.
 
     Argumentos:
-        enabled: se o estágio roda.
-        max_iterations: teto de passes. O loop também para sozinho assim que
-            nenhuma região tem razão **e** caminho de evidência novo.
-        max_regions_per_iteration: teto de regiões reprocessadas por passe.
-            Existe como orçamento de latência explícito, e a seleção dentro do
-            teto é determinística por prioridade de razão.
+        enabled: se o estágio roda. O refinamento é um passe único: o
+            escalonamento é um conjunto fixo de views, então um segundo passe
+            repetiria a mesma evidência. Até a #247 existia um
+            ``max_iterations`` que, acima de 1, não mudava nada.
+        max_refined_regions: teto de regiões reprocessadas no passe. Existe
+            como orçamento de latência explícito, e a seleção dentro do teto é
+            determinística por prioridade de razão.
         escalation_views: as views usadas no passe de refinamento. Precisa ser
             diferente do conjunto do passe anterior: repetir a mesma chamada
             com a mesma evidência e temperatura zero é pedir de novo esperando
@@ -402,13 +532,11 @@ class RefinementConfig:
     """
 
     enabled: bool = True
-    max_iterations: int = 1
-    max_regions_per_iteration: int = 24
+    max_refined_regions: int = 24
     escalation_views: tuple[str, ...] = (
         EvidenceSlot.FOREGROUND_DENSE.value,
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,
-        EvidenceSlot.CONTEXTUAL_CROP.value,
     )
     small_region_area_px: int = 1024
     min_mask_fill_ratio: float = 0.15
@@ -416,10 +544,8 @@ class RefinementConfig:
     # Valida tetos, fração e o vocabulário de views de escalonamento.
     def __post_init__(self) -> None:
         """Rejeita tetos negativos, frações inválidas e views desconhecidas."""
-        if self.max_iterations < 0:
-            raise ValueError("refinement.max_iterations must not be negative.")
-        if self.max_regions_per_iteration <= 0:
-            raise ValueError("refinement.max_regions_per_iteration must be positive.")
+        if self.max_refined_regions <= 0:
+            raise ValueError("refinement.max_refined_regions must be positive.")
         if self.small_region_area_px < 0:
             raise ValueError("refinement.small_region_area_px must not be negative.")
         if not 0.0 <= self.min_mask_fill_ratio <= 1.0:
@@ -515,6 +641,40 @@ class SemanticRelationConfig:
             raise ValueError("semantic_relations.min_containment must be in [0, 1].")
 
 
+# Configuração da política de publicação contextual. Existe para que a decisão
+# "isto vale como evidência contextual?" seja versionada no fingerprint e
+# ablatável por configuração, como todo estágio contextual deste módulo: uma
+# comparação precisa conseguir atribuir o efeito da política a ela sozinha.
+@dataclass(frozen=True)
+class ContextualPublicationConfig:
+    """O que o módulo publica como evidência contextual, e o que fica como contexto.
+
+    Argumentos:
+        enabled: se a partição roda. Desligada, toda região continua sendo
+            publicada e ``structural_context`` fica vazio — que é exatamente o
+            comportamento anterior à política, preservado para ablação.
+        extra_structural_head_nouns: núcleos nominais estruturais adicionais,
+            além dos que o domínio já conhece. Existe para que uma composição
+            possa declarar o vocabulário do seu ambiente sem que o módulo
+            precise conhecê-lo de antemão; vazio por default, porque uma lista
+            longa aqui viraria a taxonomia fechada que o projeto recusa.
+    """
+
+    enabled: bool = True
+    extra_structural_head_nouns: tuple[str, ...] = ()
+
+    # Valida que cada núcleo extra é uma palavra utilizável, já que um token
+    # vazio ou com espaço nunca casaria e ficaria como configuração morta.
+    def __post_init__(self) -> None:
+        """Rejeita núcleo estrutural vazio ou composto por mais de uma palavra."""
+        for noun in self.extra_structural_head_nouns:
+            if not noun.strip() or len(noun.split()) != 1:
+                raise ValueError(
+                    "contextual_publication.extra_structural_head_nouns must contain "
+                    f"single non-empty words, got {noun!r}."
+                )
+
+
 # Configuração da fronteira de calibração semântica (#196). Existe para que
 # a regra de calibração seja selecionável e versionada por configuração, e
 # para que o artifact de calibração participe do fingerprint de cache: uma
@@ -530,6 +690,9 @@ class CalibrationConfig:
     min_visual_support: float = 0.2
     min_region_quality: float = 0.0
     domain: str = "unspecified"
+    #: SHA-256 do artifact de calibração, calculado uma vez na construção. Faz
+    #: parte do fingerprint: uma tabela diferente produz claims diferentes.
+    artifact_digest: str | None = field(default=None, init=False)
 
     # Valida o método, a versão e os limiares de abstenção, e exige um
     # artifact quando o método é orientado a dados: calibrar sem artifact
@@ -551,6 +714,14 @@ class CalibrationConfig:
                 "calibration.enabled requires an artifact_path: a calibration rule without "
                 "measured data would fabricate the confidence it claims to calibrate."
             )
+        # O artifact é lido aqui, uma única vez: antes o fingerprint relia o
+        # arquivo a cada chamada, e uma config válida na construção levantava
+        # FileNotFoundError só quando a chave de cache era calculada.
+        if self.artifact_path is not None:
+            artifact = Path(self.artifact_path)
+            if not artifact.is_file():
+                raise ValueError(f"calibration.artifact_path does not exist: {artifact}.")
+            object.__setattr__(self, "artifact_digest", hashlib.sha256(artifact.read_bytes()).hexdigest())
 
 
 # Configuração do backend de embedding alinhado com linguagem (LanguageAlignedEncoder).
@@ -578,7 +749,7 @@ class LanguageEmbeddingConfig:
 class MultimodalReasoningConfig:
     backend: str = "fake"
     checkpoint: str = "none"
-    prompt_version: str = "v7"
+    prompt_version: str = "v8"
     device: str = "auto"
     max_new_tokens: int = 256
     temperature: float = 0.0
@@ -601,9 +772,41 @@ class MultimodalReasoningConfig:
     #: ``context_assisted`` porque o modo local-first mediu levemente pior no
     #: colapso de labels, e o eco que ele elimina é residual.
     scene_context_mode: str = SceneContextMode.CONTEXT_ASSISTED.value
+    #: Se o conceito afirmado pela observação anterior para a mesma área da
+    #: imagem acompanha a região no prompt. É o terceiro canal ablatável, ao
+    #: lado de ``scene_context_mode`` (textual, dentro do frame) e
+    #: ``region_views`` (visual): este é o canal **temporal**. Vive aqui, e não
+    #: em uma sub-config própria, porque ``fingerprint_of`` carimba cada claim
+    #: de região com o fingerprint **desta** sub-config — um switch em outro
+    #: lugar deixaria dois braços de experimento indistinguíveis no artifact
+    #: por claim. O default é ``disabled``: sem ele, o request é idêntico ao
+    #: histórico.
+    temporal_prior_mode: str = TemporalPriorMode.DISABLED.value
+    #: Sobreposição mínima de caixa entre a região e a região anterior para o
+    #: casamento valer. Não é um limiar de similaridade densa: a #203 mediu o
+    #: cosseno DINOv2 em 0,660 de acurácia balanceada para separar "mesmo
+    #: label", e por isso ele entra só como desempate entre candidatos que já se
+    #: sobrepõem geometricamente.
+    temporal_prior_min_overlap: float = 0.3
+    #: Limite de espera por requisição e tentativas extras em falhas transitórias
+    #: (timeout, 429, 5xx). Só os backends remotos usam; o Qwen local ignora.
+    timeout_s: float = 60.0
+    max_retries: int = 3
+    #: Orçamento de raciocínio interno do Gemini Robotics ER. ``0`` desliga: medido
+    #: em 2026-09-15 no prompt de cena, 2,4 s contra 22,6 s com o default do modelo,
+    #: e a resposta segue no mesmo contract. Muda a saída, então entra no fingerprint.
+    thinking_budget: int = 0
 
     # Garante que a versão do prompt está definida, já que ela identifica
-    # qual template estruturado o backend deve usar. ``v7`` acrescenta o prompt
+    # qual template estruturado o backend deve usar. ``v8`` des-arredonda os dois
+    # ``confidence`` de exemplo que ainda ofereciam um valor plausível para o
+    # modelo copiar: o do prompt de **cena** (``0.9`` → ``0.63``) e o da
+    # ``alternatives`` no prompt de região (``0.2`` → ``0.18``). A mesma correção
+    # já tinha sido medida no exemplo primário do prompt de região (``v4``,
+    # 0,71) e aplicada ao de relação (``v7``, 0,42); estes dois escaparam — o de
+    # cena por ser consultado uma vez por frame, e o de alternativa por não
+    # aparecer em nenhuma distribuição que o diagnóstico resume. Fora esses dois
+    # números, os três prompts são byte-idênticos aos do ``v7``. ``v7`` acrescentou o prompt
     # de **relação** (#206); os prompts de cena e de região são idênticos aos do
     # ``v6``, byte a byte, de modo que labels e claims continuam comparáveis
     # entre os dois — o que muda é que a versão passa a identificar três
@@ -647,6 +850,21 @@ class MultimodalReasoningConfig:
                 "multimodal_reasoning.scene_context_mode must be "
                 f"{sorted(mode.value for mode in SceneContextMode)}."
             )
+        if self.temporal_prior_mode not in {mode.value for mode in TemporalPriorMode}:
+            raise ValueError(
+                "multimodal_reasoning.temporal_prior_mode must be "
+                f"{sorted(mode.value for mode in TemporalPriorMode)}."
+            )
+        if not 0.0 <= self.temporal_prior_min_overlap <= 1.0:
+            raise ValueError(
+                "multimodal_reasoning.temporal_prior_min_overlap must be within [0, 1]."
+            )
+        if self.timeout_s <= 0.0:
+            raise ValueError("multimodal_reasoning.timeout_s must be positive.")
+        if self.max_retries < 0:
+            raise ValueError("multimodal_reasoning.max_retries must not be negative.")
+        if self.thinking_budget < 0:
+            raise ValueError("multimodal_reasoning.thinking_budget must not be negative.")
 
 
 # Configuração raiz do módulo: agrega todas as sub-configs acima em um único
@@ -672,17 +890,37 @@ class ModuleConfig:
     refinement: RefinementConfig = field(default_factory=RefinementConfig)
     reconciliation: ReconciliationConfig = field(default_factory=ReconciliationConfig)
     semantic_relations: SemanticRelationConfig = field(default_factory=SemanticRelationConfig)
+    contextual_publication: ContextualPublicationConfig = field(
+        default_factory=ContextualPublicationConfig
+    )
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     image_area: ImageAreaConfig = field(default_factory=ImageAreaConfig)
     proposal_filter: ProposalFilterConfig = field(default_factory=ProposalFilterConfig)
+    semantic_grounding: SemanticGroundingConfig = field(default_factory=SemanticGroundingConfig)
+    scene_concept_discovery: SceneConceptDiscoveryConfig = field(
+        default_factory=SceneConceptDiscoveryConfig
+    )
+    concept_grounding: ConceptGroundingConfig = field(default_factory=ConceptGroundingConfig)
 
     # Valida invariantes que dependem de mais de um campo ao mesmo tempo
     # (o que os ``__post_init__`` das sub-configs não conseguem verificar
     # sozinhos), como a incompatibilidade entre o profile REDUCED_COST e
     # tiling multi-scale (#181).
     def __post_init__(self) -> None:
+        """Valida invariantes entre sub-configs."""
         if self.gpu_memory_budget_gb <= 0:
             raise ValueError("gpu_memory_budget_gb must be positive.")
+        enabled_slots = self.multi_context.enabled_slots()
+        for field_name, requested, active in (
+            ("hypothesis_support.slots", self.hypothesis_support.slots, self.hypothesis_support.enabled),
+            ("refinement.escalation_views", self.refinement.escalation_views, self.refinement.enabled),
+        ):
+            disabled = [name for name in requested if EvidenceSlot(name) not in enabled_slots]
+            if active and disabled:
+                raise ValueError(
+                    f"{field_name} requests evidence slots disabled in multi_context: {disabled}. "
+                    "Enable them in multi_context or remove them from the request."
+                )
         if (
             self.quality_profile is QualityProfile.REDUCED_COST
             and self.tiling.multi_scale_enabled
@@ -691,11 +929,17 @@ class ModuleConfig:
                 "Incompatible configuration: 'reduced_cost' quality profile does not support "
                 "multi-scale tiling (see issue #181)."
             )
+        if self.concept_grounding.backend != "unavailable" and not self.scene_concept_discovery.enabled:
+            raise ValueError(
+                "concept_grounding requires scene_concept_discovery.enabled: without concepts there is "
+                "nothing to ground."
+            )
 
     # Serializa a configuração inteira (incluindo sub-configs aninhadas) em
     # um dict simples, usado tanto para persistência quanto para o cálculo
     # de ``fingerprint``.
     def to_dict(self) -> dict[str, Any]:
+        """Serializa a configuração inteira em tipos JSON simples."""
         payload = asdict(self)
         payload["quality_profile"] = self.quality_profile.value
         return payload
@@ -705,6 +949,15 @@ class ModuleConfig:
     # um arquivo de config da aplicação.
     @staticmethod
     def from_dict(payload: dict[str, Any]) -> ModuleConfig:
+        """Reconstrói a configuração, inclusive geometrias aninhadas e tuplas.
+
+        Argumentos:
+            payload: dict produzido por ``to_dict``, direto ou relido de JSON.
+        Retorna:
+            a configuração igual à que foi serializada.
+        Levanta:
+            ValueError: se o artifact de calibração mudou desde a serialização.
+        """
         payload = dict(payload)
         payload["quality_profile"] = QualityProfile(
             payload.get("quality_profile", QualityProfile.RESEARCH_QUALITY.value)
@@ -721,12 +974,21 @@ class ModuleConfig:
             ("refinement", RefinementConfig),
             ("reconciliation", ReconciliationConfig),
             ("semantic_relations", SemanticRelationConfig),
+            ("contextual_publication", ContextualPublicationConfig),
             ("calibration", CalibrationConfig),
             ("image_area", ImageAreaConfig),
             ("proposal_filter", ProposalFilterConfig),
+            ("semantic_grounding", SemanticGroundingConfig),
+            ("scene_concept_discovery", SceneConceptDiscoveryConfig),
+            ("concept_grounding", ConceptGroundingConfig),
         ):
             if key in payload and isinstance(payload[key], dict):
-                payload[key] = config_type(**payload[key])
+                if key == "image_area":
+                    payload[key] = _image_area_from_dict(payload[key])
+                elif key == "calibration":
+                    payload[key] = _calibration_from_dict(payload[key])
+                else:
+                    payload[key] = config_type(**_as_tuples(payload[key]))
         return ModuleConfig(**payload)
 
     # Calcula uma identidade estável da configuração inteira, usada como
@@ -735,9 +997,54 @@ class ModuleConfig:
     def fingerprint(self) -> str:
         """Um hash estável da configuração completa, usado para caching (#170)."""
         payload = self.to_dict()
-        if self.calibration.artifact_path is not None:
-            payload["calibration_artifact_digest"] = hashlib.sha256(
-                Path(self.calibration.artifact_path).read_bytes()
-            ).hexdigest()
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+# Converte listas em tuplas, recursivamente. Existe porque toda sequência das
+# configs é tupla, e uma config relida de JSON chegava com listas: os campos
+# eram aceitos, mas a config deixava de ser igual à que foi escrita.
+def _as_tuples(value: Any) -> Any:
+    """Retorna ``value`` com toda lista, em qualquer profundidade, trocada por tupla."""
+    if isinstance(value, dict):
+        return {key: _as_tuples(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return tuple(_as_tuples(item) for item in value)
+    return value
+
+
+# Reconstrói uma geometria de área serializada por ``asdict``. Isolada porque
+# as duas áreas usam o mesmo formato.
+def _geometry_from_dict(payload: dict[str, Any] | None) -> ImageAreaGeometry | None:
+    """Converte o dict de uma geometria de área, ou ``None``."""
+    if payload is None:
+        return None
+    circle = payload.get("circle")
+    return ImageAreaGeometry(
+        circle=None if circle is None else CircleArea(**circle),
+        polygons=_as_tuples(payload.get("polygons", ())),
+    )
+
+
+# Reconstrói a configuração de áreas com geometrias de verdade, e não dicts.
+def _image_area_from_dict(payload: dict[str, Any]) -> ImageAreaConfig:
+    """Converte o dict de ``ImageAreaConfig`` produzido por ``to_dict``."""
+    return ImageAreaConfig(
+        valid_area=_geometry_from_dict(payload.get("valid_area")),
+        ego_vehicle=_geometry_from_dict(payload.get("ego_vehicle")),
+    )
+
+
+# Reconstrói a configuração de calibração conferindo o digest gravado. Existe
+# porque o digest é derivado do arquivo: se o artifact mudou desde que a
+# config foi escrita, reler a config reproduziria outra calibração em silêncio.
+def _calibration_from_dict(payload: dict[str, Any]) -> CalibrationConfig:
+    """Converte o dict de ``CalibrationConfig`` e valida o digest do artifact."""
+    fields = dict(payload)
+    recorded_digest = fields.pop("artifact_digest", None)
+    config = CalibrationConfig(**fields)
+    if recorded_digest is not None and recorded_digest != config.artifact_digest:
+        raise ValueError(
+            f"calibration artifact {config.artifact_path} changed since this configuration was written."
+        )
+    return config

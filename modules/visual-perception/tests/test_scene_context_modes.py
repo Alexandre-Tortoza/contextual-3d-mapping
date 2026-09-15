@@ -28,7 +28,7 @@ from visual_perception.domain.region_reasoning import (
 from visual_perception.domain.regions import ObservedRegion
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.domain.visual_observation import SceneContext
-from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import _region_prompt
+from visual_perception.infrastructure.adapters.reasoning_prompts import region_prompt
 from visual_perception.infrastructure.fakes.fake_multimodal_reasoner import FakeMultimodalReasoner
 
 
@@ -131,8 +131,8 @@ def _prompt_request(scene_claims: tuple[SemanticClaim, ...]) -> RegionReasoningR
 # medindo duas variáveis ao mesmo tempo e não valeria nada.
 def test_the_two_modes_differ_only_by_the_appended_scene_block() -> None:
     """O prompt de local-first é prefixo exato do de context-assisted."""
-    local = _region_prompt(_prompt_request(()))
-    assisted = _region_prompt(_prompt_request(_scene().claims))
+    local = region_prompt(_prompt_request(()))
+    assisted = region_prompt(_prompt_request(_scene().claims))
 
     assert assisted.startswith(local)
     assert len(assisted) > len(local)

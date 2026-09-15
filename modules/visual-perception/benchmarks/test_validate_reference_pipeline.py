@@ -18,9 +18,13 @@ sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 from validate_reference_pipeline import (  # noqa: E402
     ValidationOptions,
     evidence_state_counts,
+    load_dotenv,
+    remote_reasoning_summary,
     resolve_config,
     select_frame_paths,
 )
+from fixtures import payload_with_blobs  # noqa: E402
+from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.domain.geometry import BoundingBox, Mask  # noqa: E402
 from visual_perception.domain.region_evidence import (  # noqa: E402
     EvidenceSlot,
@@ -172,9 +176,142 @@ def test_the_reasoning_checkpoint_override_changes_only_the_checkpoint() -> None
         assert getattr(candidate, field) == getattr(baseline, field), field
 
 
+# Qwen vs Gemini (#276) só mede o modelo se o resto da config ficar idêntico: o
+# override troca backend e checkpoint e desliga o 4-bit, que é do runtime local.
+def test_the_reasoning_backend_override_changes_only_the_backend_identity() -> None:
+    """Selecionar o Gemini não altera prompts, views, tetos nem outros estágios."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(ValidationOptions(sequence_masks=None, reasoning_backend="gemini_robotics_er"))
+
+    assert candidate.multimodal_reasoning.backend == "gemini_robotics_er"
+    assert candidate.multimodal_reasoning.checkpoint == "gemini-robotics-er-2-preview"
+    assert dataclasses.replace(
+        candidate.multimodal_reasoning,
+        backend=baseline.multimodal_reasoning.backend,
+        checkpoint=baseline.multimodal_reasoning.checkpoint,
+        load_in_4bit=baseline.multimodal_reasoning.load_in_4bit,
+    ) == baseline.multimodal_reasoning
+    for field in ("region_discovery", "feature_extraction", "language_embedding",
+                  "multi_context", "hypothesis_support", "refinement",
+                  "reconciliation", "semantic_relations", "calibration"):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# O manifest resume custo e rate limit do reasoner remoto; o local não tem essa seção.
+def test_remote_reasoning_summary_aggregates_calls() -> None:
+    """Soma latência, tokens e falhas transitórias por motivo."""
+    from visual_perception.infrastructure.adapters.gemini_reasoning_backend import RemoteReasoningCall
+
+    calls = (
+        RemoteReasoningCall("scene", "m", 2.0, 1, True, prompt_tokens=1000, output_tokens=80),
+        RemoteReasoningCall(
+            "region", "m", 4.0, 3, True, prompt_tokens=1500, output_tokens=60, thought_tokens=0,
+            transient_failures=("http_429", "timeout"),
+        ),
+        RemoteReasoningCall("region", "m", 1.0, 4, False, error="falhou", transient_failures=("http_503",) * 3),
+    )
+
+    summary = remote_reasoning_summary(calls)
+
+    assert remote_reasoning_summary(None) is None
+    assert summary is not None
+    assert summary["calls"] == 3 and summary["failed_calls"] == 1
+    assert summary["calls_by_operation"] == {"region": 2, "scene": 1}
+    assert summary["total_latency_s"] == 7.0 and summary["prompt_tokens"] == 2500
+    assert summary["transient_failures"] == {"http_429": 1, "timeout": 1, "http_503": 3}
+
+
+# O .env só completa o ambiente: uma variável já exportada nunca é trocada.
+def test_load_dotenv_does_not_override_the_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exporta chaves ausentes e preserva as já definidas."""
+    env = tmp_path / ".env"
+    env.write_text("# comentário\nVP_TEST_NEW=novo\nVP_TEST_KEEP=do-arquivo\n", encoding="utf-8")
+    monkeypatch.delenv("VP_TEST_NEW", raising=False)
+    monkeypatch.setenv("VP_TEST_KEEP", "do-ambiente")
+
+    load_dotenv(env)
+    load_dotenv(tmp_path / "ausente.env")
+
+    import os
+
+    assert os.environ["VP_TEST_NEW"] == "novo"
+    assert os.environ["VP_TEST_KEEP"] == "do-ambiente"
+    monkeypatch.delenv("VP_TEST_NEW")
+
+
 # E sem o override a configuração de referência fica intacta.
 def test_without_the_override_the_reference_checkpoint_is_untouched() -> None:
     """Omitir o override preserva o checkpoint da configuração de referência."""
     config = resolve_config(ValidationOptions(sequence_masks=None))
 
     assert config.multimodal_reasoning.checkpoint == "Qwen/Qwen2.5-VL-3B-Instruct"
+
+
+# O validador compõe o perfil real sem alterar sua política de discovery: a
+# execução de referência deve incluir a imagem completa e os quatro tiles.
+def test_reference_validator_uses_hybrid_global_and_tiled_discovery() -> None:
+    """Mantém cinco chamadas de discovery por frame no perfil de referência."""
+    config = resolve_config(ValidationOptions(sequence_masks=None))
+    tiles = build_tiles(payload_with_blobs(), config.tiling)
+
+    assert config.tiling.multi_scale_enabled
+    assert len(tiles) == 5
+
+
+# O braço com prior temporal precisa diferir do braço sem ele em exatamente
+# dois campos: o modo e a versão do prompt. Se diferisse em mais, a comparação
+# entre os dois mediria mais de uma variável; se diferisse em menos, dois
+# prompts diferentes declarariam a mesma versão e a proveniência por claim
+# ficaria ambígua.
+def test_o_prior_temporal_muda_apenas_o_modo_e_a_versao_do_prompt() -> None:
+    """Ligar o prior altera dois campos, e nenhum outro."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, temporal_prior_mode="box_overlap")
+    )
+
+    assert candidate.multimodal_reasoning.temporal_prior_mode == "box_overlap"
+    assert candidate.multimodal_reasoning.prompt_version == "v9"
+    assert baseline.multimodal_reasoning.temporal_prior_mode == "disabled"
+    assert baseline.multimodal_reasoning.prompt_version == "v8"
+    assert candidate.fingerprint() != baseline.fingerprint()
+    assert dataclasses.replace(
+        candidate.multimodal_reasoning,
+        temporal_prior_mode=baseline.multimodal_reasoning.temporal_prior_mode,
+        prompt_version=baseline.multimodal_reasoning.prompt_version,
+    ) == baseline.multimodal_reasoning
+    for field in ("region_discovery", "feature_extraction", "language_embedding",
+                  "multi_context", "hypothesis_support", "refinement",
+                  "reconciliation", "semantic_relations", "calibration",
+                  "contextual_publication", "proposal_filter", "tiling", "merge"):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# E omitir a flag preserva exatamente o comportamento histórico: o prompt de
+# região volta a ser byte-idêntico ao v8, porque o bloco do prior só é
+# renderizado quando há prior.
+def test_sem_a_flag_o_prompt_de_regiao_e_identico_ao_historico() -> None:
+    """Sem prior, o prompt não ganha nenhum caractere novo."""
+    from visual_perception.domain.geometry import BoundingBox
+    from visual_perception.domain.image_payload import ImagePayload
+    from visual_perception.domain.region_evidence import EvidenceSlot, SubjectEmphasis
+    from visual_perception.domain.region_reasoning import (
+        CoordinateTransform,
+        RegionReasoningRequest,
+        RegionView,
+    )
+    from visual_perception.infrastructure.adapters.reasoning_prompts import region_prompt
+
+    box = BoundingBox(0.0, 0.0, 4.0, 4.0)
+    view = RegionView(
+        slot=EvidenceSlot.MASKED_SUBJECT,
+        payload=ImagePayload(np.zeros((4, 4, 3), dtype=np.uint8), width=4, height=4),
+        crop_box=box,
+        transform=CoordinateTransform.identity(),
+        emphasis=SubjectEmphasis.NEUTRAL_FILL,
+    )
+    request = RegionReasoningRequest(
+        region_id="region-a", region_box=box, image_width=4, image_height=4, views=(view,)
+    )
+
+    assert "PREVIOUS view" not in region_prompt(request)

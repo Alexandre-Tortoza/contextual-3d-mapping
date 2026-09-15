@@ -26,12 +26,13 @@ metadata, e os valores viajam por referência de artifact.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Any
 
 import numpy as np
 
+from visual_perception.domain.arrays import read_only_view
 from visual_perception.domain.geometry import CoordinateTransform
 
 
@@ -149,6 +150,28 @@ class FeatureMap:
                     "FeatureMap.valid_support shape must match the feature grid "
                     f"{self.data.shape[:2]}, got {self.valid_support.shape}."
                 )
+        object.__setattr__(self, "data", read_only_view(self.data))
+        if self.valid_support is not None:
+            object.__setattr__(self, "valid_support", read_only_view(self.valid_support))
+
+    # Compara dois mapas por conteúdo: metadados iguais e arrays iguais. Existe
+    # porque o tipo se apresenta como value object, e a igualdade por
+    # identidade tornava dois mapas idênticos diferentes.
+    def __eq__(self, other: object) -> bool:
+        """Indica se ``other`` descreve os mesmos dados com os mesmos metadados."""
+        if not isinstance(other, FeatureMap):
+            return NotImplemented
+        for item in fields(self):
+            mine, theirs = getattr(self, item.name), getattr(other, item.name)
+            if isinstance(mine, np.ndarray) or isinstance(theirs, np.ndarray):
+                if mine is None or theirs is None or not np.array_equal(mine, theirs):
+                    return False
+            elif mine != theirs:
+                return False
+        return True
+
+    #: Não hasheável pela mesma razão de ``Mask``: a igualdade é por conteúdo.
+    __hash__ = None  # type: ignore[assignment]
 
     # Expõe a altura da grade de features sem expor o array numpy bruto
     # diretamente.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from fixtures import payload_with_blobs
-from visual_perception.application.tiling import build_tiles, remap_to_global
+from visual_perception.application.tiling import build_tiles, is_truncated_by_tile, remap_to_global
 from visual_perception.config import TilingConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.regions import LocalRegionProposal
@@ -58,3 +58,32 @@ def test_remapping_is_deterministic_for_edge_and_overlap_cases() -> None:
     assert [(t.scale_id, t.tile_id, t.transform) for t in tiles_a] == [
         (t.scale_id, t.tile_id, t.transform) for t in tiles_b
     ]
+
+
+# Monta uma proposta local cuja máscara cobre o retângulo pedido dentro do tile.
+def _local_proposal(tile, x_min: int, y_min: int, x_max: int, y_max: int) -> LocalRegionProposal:  # type: ignore[no-untyped-def]
+    """Retorna uma proposta retangular em coordenadas do tile."""
+    data = np.zeros((tile.payload.height, tile.payload.width), dtype=np.bool_)
+    data[y_min:y_max, x_min:x_max] = True
+    mask = Mask(data, tile.payload.width, tile.payload.height)
+    return LocalRegionProposal("p0", mask, mask.bounding_box(), 0.9, "fake")
+
+
+# Regressão do outdoor do corridor-02: céu e asfalto cortados pela borda interna do
+# tile viravam faixas retas. Tocar a borda interna marca a proposta como truncada;
+# tocar a borda da imagem, não, porque ali o objeto realmente termina.
+def test_truncation_is_detected_only_on_interior_tile_borders() -> None:
+    payload = payload_with_blobs(width=32, height=32)
+    tiles = build_tiles(payload, TilingConfig(multi_scale_enabled=True, tile_grid="2x2"))
+    full = tiles[0]
+    top_left = next(tile for tile in tiles if tile.tile_id == "r0c0")
+    width, height = top_left.payload.width, top_left.payload.height
+
+    def truncated(tile, *box: int) -> bool:  # type: ignore[no-untyped-def]
+        return is_truncated_by_tile(_local_proposal(tile, *box), tile, image_width=32, image_height=32)
+
+    assert truncated(top_left, 4, 4, width, 8)
+    assert truncated(top_left, 4, 4, 8, height)
+    assert not truncated(top_left, 0, 0, 6, 6)
+    assert not truncated(top_left, 3, 3, 9, 9)
+    assert not truncated(full, 0, 0, 32, 32)

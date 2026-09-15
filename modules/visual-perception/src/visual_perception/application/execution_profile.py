@@ -5,10 +5,10 @@ Issue: #181.
 Define a política de seleção de referência de pesquisa: qualidade é o
 alvo primário de otimização *sujeito ao* budget de memória de GPU
 configurado. Latência e throughput são medidos mas nunca usados para
-rejeitar um candidato que cabe no budget de memória. Compute adicional
-(passes multi-scale, modelos maiores, reprocessamento seletivo) só é
-ligado na config de referência quando evidência de benchmark (#174,
-#175) mostra que ele realmente melhora a qualidade.
+rejeitar um candidato que cabe no budget de memória. O perfil ativa discovery
+multi-scale por default: uma passada global preserva contexto e tiles
+sobrepostos ampliam a cobertura de detalhes finos. Ablações e benchmarks que
+exigem geometria fixa desligam esse modo explicitamente.
 """
 
 from __future__ import annotations
@@ -17,14 +17,18 @@ from dataclasses import dataclass
 
 from visual_perception.config import (
     FeatureExtractionConfig,
+    HypothesisSupportConfig,
     LanguageEmbeddingConfig,
     ModuleConfig,
     MultiContextConfig,
     MultimodalReasoningConfig,
     QualityProfile,
+    RefinementConfig,
     RegionDiscoveryConfig,
+    SemanticGroundingConfig,
     TilingConfig,
 )
+from visual_perception.domain.region_evidence import EvidenceSlot
 
 
 # Representa uma opção de backend já avaliada por benchmark para um dado
@@ -65,20 +69,6 @@ def select_research_quality_backend(
     return max(affordable, key=lambda c: (c.quality_score, -c.peak_vram_gb, c.name))
 
 
-# Decide se compute adicional (ex: multi-scale, #159) deve ser habilitado,
-# a partir de uma comparação de qualidade medida por benchmark, em vez de
-# uma suposição a priori de que "mais compute é melhor".
-def additional_compute_is_justified(
-    baseline_quality: float, enhanced_quality: float, minimum_improvement: float = 0.0
-) -> bool:
-    """Indica se a evidência medida justifica habilitar compute extra (ex: multi-scale, #159).
-
-    ``minimum_improvement`` protege contra habilitar compute custoso por
-    ganhos no nível de ruído.
-    """
-    return enhanced_quality > baseline_quality + minimum_improvement
-
-
 # Backends selecionados pelo benchmark #174 sob o orçamento de referência de
 # 8GB na RTX 3060 (ver benchmarks/results/benchmark-174-*.json). Mantidos
 # aqui, próximos de research_quality_config, para que a config de referência
@@ -88,8 +78,18 @@ def additional_compute_is_justified(
 # que dão pouco sinal visual ao VLM e inflam o over-segmentation sem
 # agregar conteúdo distinto (visto na prática em #190: ~82% de falha de
 # interpretação antes de ajustar o prompt, muitas delas em crops <30x30px).
+# SAM3 roda como segment everything pelo tracker (grade de pontos,
+# class-agnostic). Prompts textuais genéricos do PCS ("all visible objects",
+# "objects", "segment everything") devolveram zero máscaras nos frames do
+# corridor-02. Os thresholds 0.80/0.90 ficam abaixo dos defaults do SAM
+# (0.88/0.95), que descartavam piso e quase todo o outdoor: na comparação de
+# 2026-09-15, a cobertura foi de 11–54% para ~65–74% por frame.
 _REAL_REGION_DISCOVERY = RegionDiscoveryConfig(
-    backend="sam", checkpoint="facebook/sam-vit-huge", min_mask_area=500
+    backend="sam3",
+    checkpoint="facebook/sam3",
+    min_mask_area=500,
+    pred_iou_threshold=0.80,
+    stability_score_threshold=0.90,
 )
 _REAL_FEATURE_EXTRACTION = FeatureExtractionConfig(
     backend="dinov2",
@@ -110,34 +110,58 @@ _REAL_MULTI_CONTEXT = MultiContextConfig(
     context_expansion=0.25,
     masked_tight_crop=False,
 )
+#: Com o crop contextual habilitado no perfil real, o suporte de hipótese e o
+#: escalonamento do refinamento também o consomem. Ficam declarados aqui, ao
+#: lado do ``multi_context`` que os habilita, porque a config recusa pedir um
+#: slot que não é produzido.
+_REAL_HYPOTHESIS_SUPPORT = HypothesisSupportConfig(
+    slots=(
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
+)
+_REAL_REFINEMENT = RefinementConfig(
+    escalation_views=(
+        EvidenceSlot.FOREGROUND_DENSE.value,
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+    )
+)
 
 
 # Monta a config de referência research-quality do módulo, combinando o
-# budget de memória com a decisão (já tomada externamente, por benchmark)
-# de habilitar ou não multi-scale, e opcionalmente os backends reais
-# selecionados pelo benchmark #174 em vez dos fakes.
+# budget de memória com o modo híbrido global+tiles do perfil e, opcionalmente,
+# os backends reais selecionados pelo benchmark #174 em vez dos fakes.
 def research_quality_config(
     *,
-    multi_scale_justified: bool,
+    multi_scale_enabled: bool = True,
     gpu_memory_budget_gb: float = 8.0,
     real_backends: bool = False,
 ) -> ModuleConfig:
     """Constrói a configuração de referência research-quality.
 
-    ``multi_scale_justified`` deve vir de uma comparação por benchmark (ver
-    :func:`additional_compute_is_justified`); esta função não decide isso
-    sozinha. ``real_backends=False`` (o default) mantém os quatro estágios
-    em ``"fake"`` — o módulo continua GPU-free por padrão; passar
+    ``multi_scale_enabled=True`` executa discovery na imagem completa e em
+    quatro tiles 2x2 sobrepostos; a imagem completa preserva contexto global
+    e os tiles elevam a cobertura de detalhes finos. Passar ``False`` é uma
+    ablação explícita que mantém somente a imagem completa.
+
+    ``real_backends=False`` (o default) mantém os quatro estágios em
+    ``"fake"`` — o módulo continua GPU-free por padrão; passar
     ``real_backends=True`` opta pelos backends reais benchmark-selecionados
     (#186-#190).
     """
     return ModuleConfig(
         quality_profile=QualityProfile.RESEARCH_QUALITY,
         gpu_memory_budget_gb=gpu_memory_budget_gb,
-        tiling=TilingConfig(multi_scale_enabled=multi_scale_justified, tile_grid="2x2"),
+        tiling=TilingConfig(multi_scale_enabled=multi_scale_enabled, tile_grid="2x2"),
         region_discovery=_REAL_REGION_DISCOVERY if real_backends else RegionDiscoveryConfig(),
         feature_extraction=_REAL_FEATURE_EXTRACTION if real_backends else FeatureExtractionConfig(),
         language_embedding=_REAL_LANGUAGE_EMBEDDING if real_backends else LanguageEmbeddingConfig(),
         multimodal_reasoning=_REAL_MULTIMODAL_REASONING if real_backends else MultimodalReasoningConfig(),
         multi_context=_REAL_MULTI_CONTEXT if real_backends else MultiContextConfig(),
+        hypothesis_support=_REAL_HYPOTHESIS_SUPPORT if real_backends else HypothesisSupportConfig(),
+        refinement=_REAL_REFINEMENT if real_backends else RefinementConfig(),
+        semantic_grounding=SemanticGroundingConfig(backend="grounded_sam" if real_backends else "unavailable"),
     )

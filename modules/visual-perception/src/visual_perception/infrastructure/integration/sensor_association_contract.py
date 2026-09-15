@@ -34,6 +34,9 @@ class RegionAssociationFixture:
     timestamp: Timestamp
     frame_id: FrameId
     coordinate_convention: str
+    #: A máscara acima é discovery legada. A presença de semantic_mask é
+    #: independente e apenas ela pode fornecer footprint forte downstream.
+    semantic_mask: Mask | None = None
 
 
 # Constrói um RegionAssociationFixture por região da observação, usando
@@ -51,6 +54,7 @@ def build_association_fixtures(observation: VisualObservation) -> tuple[RegionAs
             timestamp=observation.source.timestamp,
             frame_id=observation.source.frame_id,
             coordinate_convention=observation.coordinate_convention,
+            semantic_mask=None if region.grounding is None else region.grounding.semantic_mask,
         )
         for region in observation.regions
     )

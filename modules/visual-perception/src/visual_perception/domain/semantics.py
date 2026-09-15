@@ -60,6 +60,12 @@ class ClaimKind(StrEnum):
     CONDITION = "condition"
     MATERIAL = "material"
     HAZARD = "hazard"
+    #: A superfície estrutural que hospeda a evidência, derivada da própria
+    #: identidade afirmada pela região (``cracked wall`` → ``wall``). É um
+    #: claim **derivado**, com produtor próprio, e a sua ausência significa
+    #: host desconhecido — nunca é forçado a um valor de preenchimento. Ver
+    #: ``domain/contextual_evidence.py``.
+    HOST_SURFACE = "host_surface"
     SCENE_TYPE = "scene_type"
     #: Preservado para desserializar observações anteriores à #202. O contract
     #: de cena não produz mais prosa livre: ela era o canal por onde um objeto
@@ -85,6 +91,7 @@ UNSCORED_CLAIM_KINDS = frozenset(
         ClaimKind.CONDITION,
         ClaimKind.MATERIAL,
         ClaimKind.HAZARD,
+        ClaimKind.HOST_SURFACE,
         ClaimKind.SCENE_DESCRIPTION,
         ClaimKind.ENVIRONMENT,
         ClaimKind.LAYOUT,

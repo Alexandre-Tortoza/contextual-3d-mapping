@@ -1,0 +1,56 @@
+{
+  "frame_id": "corridor-02-02259",
+  "regions": [
+    {
+      "region_id": "region-3c2b5692bb2dea5a",
+      "label": "car bumper",
+      "region_kind": "thing",
+      "discovery_area": 26798,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 248.0,
+        "x_max": 472.0,
+        "y_max": 465.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9473595023155212,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.556226368033094,
+      "model_mask_area": 24075,
+      "clipped_pixel_count": 24075,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-dca874bac143c77a",
+      "label": "text",
+      "region_kind": "thing",
+      "discovery_area": 32677,
+      "box_before": {
+        "x_min": 382.0,
+        "y_min": 254.0,
+        "x_max": 640.0,
+        "y_max": 414.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9593643546104431,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.45144051499664783,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

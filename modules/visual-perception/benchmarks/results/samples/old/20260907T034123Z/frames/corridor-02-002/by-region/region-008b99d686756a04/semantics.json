@@ -1,0 +1,102 @@
+{
+  "region_id": "region-008b99d686756a04",
+  "geometric_confidence": 0.9606956839561462,
+  "contributing_proposal_ids": [
+    "full-whole-sam-44"
+  ],
+  "box": {
+    "x_min": 89.0,
+    "y_min": 48.0,
+    "x_max": 150.0,
+    "y_max": 85.0
+  },
+  "mask_area": 1569,
+  "primary": {
+    "label": "plain wall",
+    "confidence": 0.95,
+    "provenance": "qwen_vl"
+  },
+  "alternatives": [
+    {
+      "label": "plain floor",
+      "confidence": 0.05
+    }
+  ],
+  "claims": [
+    {
+      "kind": "label",
+      "value": "plain wall",
+      "confidence": 0.95,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    },
+    {
+      "kind": "label",
+      "value": "plain floor",
+      "confidence": 0.05,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    },
+    {
+      "kind": "attribute",
+      "value": "The subject region shows a plain wall.",
+      "confidence": null,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    },
+    {
+      "kind": "attribute",
+      "value": "smooth",
+      "confidence": null,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    },
+    {
+      "kind": "condition",
+      "value": "clean",
+      "confidence": null,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    },
+    {
+      "kind": "material",
+      "value": "plaster",
+      "confidence": null,
+      "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"plain floor\"}], \"attributes\": [\"smooth\"], \"category\": \"wall\", \"condition\": \"clean\", \"confidence\": 0.95, \"description\": \"The subject region shows a plain wall.\", \"kind\": \"thing\", \"label\": \"plain wall\", \"material\": \"plaster\"}"
+    }
+  ],
+  "views_built": [
+    "contextual_crop",
+    "foreground_dense",
+    "scene_conditioned",
+    "tight_crop"
+  ],
+  "views_delivered_to_reasoner": [
+    "foreground_dense",
+    "tight_crop"
+  ],
+  "views_present": [
+    "contextual_crop",
+    "foreground_dense",
+    "scene_conditioned",
+    "tight_crop"
+  ],
+  "views_missing": [],
+  "evidence_slots": [
+    {
+      "slot": "foreground_dense",
+      "state": "available",
+      "reason": null
+    },
+    {
+      "slot": "tight_crop",
+      "state": "available",
+      "reason": null
+    },
+    {
+      "slot": "contextual_crop",
+      "state": "available",
+      "reason": null
+    },
+    {
+      "slot": "scene_conditioned",
+      "state": "available",
+      "reason": null
+    }
+  ]
+}

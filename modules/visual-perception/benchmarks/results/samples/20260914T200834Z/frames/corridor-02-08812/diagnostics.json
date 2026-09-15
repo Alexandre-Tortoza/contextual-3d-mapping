@@ -1,0 +1,315 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-08812",
+  "input_sha256": "0886a2330beefcf9163b4a6db3af2f29d2cbb1c8b0b0be97353130c25ed851f5",
+  "latency_s": 89.69573566300096,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 7,
+  "proposal_count": 9,
+  "merged_proposal_count": 8,
+  "regions_with_multiple_proposals": 1,
+  "label_counts": [
+    [
+      "building",
+      3
+    ],
+    [
+      "plain surface",
+      2
+    ],
+    [
+      "tree",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "residential building",
+      3
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "plant",
+      1
+    ],
+    [
+      "urban",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      5
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 7,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 7,
+    "missing": 0,
+    "minimum": 0.9342485070228577,
+    "maximum": 0.9745380282402039,
+    "mean": 0.9480223655700684,
+    "median": 0.9408692717552185,
+    "distinct_values": 7,
+    "stddev": 0.013403560107607413,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 4,
+  "mode_collapse": {
+    "dominant_label": "building",
+    "dominant_fraction": 0.42857142857142855,
+    "distinct_labels": 4,
+    "dominant_category": "residential building",
+    "dominant_category_fraction": 0.42857142857142855,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "contradicts",
+        10
+      ],
+      [
+        "supports",
+        8
+      ],
+      [
+        "indistinguishable",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 3,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 1,
+    "reconciled_regions": 3,
+    "distinct_raw_labels": 4,
+    "distinct_canonical_concepts": 4,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 7,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 5
+  },
+  "published_region_count": 4,
+  "structural_context_count": 3,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      3
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-2f9f3029764d5386",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 84693,
+      "box_before": {
+        "x_min": 9.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 214.0
+      },
+      "component_count_before": 10,
+      "geometric_confidence": 0.9745380282402039,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.596782703971257,
+      "model_mask_area": 13751,
+      "clipped_pixel_count": 13751,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-8c327782153ab530",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 4823,
+      "box_before": {
+        "x_min": 50.0,
+        "y_min": 155.0,
+        "x_max": 123.0,
+        "y_max": 232.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9401060938835144,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ae2755debd3f7fff",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 13752,
+      "box_before": {
+        "x_min": 251.0,
+        "y_min": 155.0,
+        "x_max": 640.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9408692717552185,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.013659251999342814,
+      "model_mask_area": 13751,
+      "clipped_pixel_count": 198,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 13553,
+          "box": {
+            "x_min": 446.0,
+            "y_min": 155.0,
+            "x_max": 639.0,
+            "y_max": 247.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 13553,
+          "refined_overlap": 13553,
+          "detector_box_overlap": 13553,
+          "distance_to_box_center_px": 0.32188643486118107
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 13553,
+      "area_ratio": 0.9855293775450844,
+      "area_reduction_ratio": 0.014470622454915594,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 446.0,
+        "y_min": 155.0,
+        "x_max": 639.0,
+        "y_max": 247.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-f17c3e9699acc178",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1823,
+      "box_before": {
+        "x_min": 346.0,
+        "y_min": 165.0,
+        "x_max": 399.0,
+        "y_max": 211.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9500722885131836,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.44979153299937025,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-067f45454be41dc4",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-20c17118c185941a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-7e96b887023fb607",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    }
+  ]
+}

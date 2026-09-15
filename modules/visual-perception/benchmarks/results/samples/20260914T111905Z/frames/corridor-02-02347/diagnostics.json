@@ -1,0 +1,302 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-02347",
+  "input_sha256": "07555878d104027639ad4ed679058f4177863ea262102ae7e1656b4ed8d519e9",
+  "latency_s": 149.82062553000287,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 18,
+  "proposal_count": 23,
+  "merged_proposal_count": 21,
+  "regions_with_multiple_proposals": 3,
+  "label_counts": [
+    [
+      "wall",
+      9
+    ],
+    [
+      "plain wall",
+      4
+    ],
+    [
+      "ceiling",
+      3
+    ],
+    [
+      "black rectangular object",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "building interior",
+      7
+    ],
+    [
+      "wall",
+      4
+    ],
+    [
+      "indoor ceiling",
+      2
+    ],
+    [
+      "indoor wall",
+      2
+    ],
+    [
+      "ceilings",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "unknown",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      16
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 18,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.8999999999999999,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 18,
+    "missing": 0,
+    "minimum": 0.8992884755134583,
+    "maximum": 0.9715422987937927,
+    "mean": 0.9394451611571841,
+    "median": 0.9430740773677826,
+    "distinct_values": 18,
+    "stddev": 0.02407839089108387,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 12,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.5,
+    "distinct_labels": 5,
+    "dominant_category": "building interior",
+    "dominant_category_fraction": 0.3888888888888889,
+    "distinct_categories": 7
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      2
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        34
+      ],
+      [
+        "indistinguishable",
+        11
+      ],
+      [
+        "contradicts",
+        6
+      ],
+      [
+        "unavailable",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 1,
+    "region_kind_contradictions": 15,
+    "reconciled_regions": 16,
+    "distinct_raw_labels": 5,
+    "distinct_canonical_concepts": 4,
+    "entity_groups": 4,
+    "regions_in_entity_groups": 15,
+    "supported_entity_groups": 3,
+    "semantic_relations": [
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 27,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 16
+  },
+  "published_region_count": 1,
+  "structural_context_count": 17,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      17
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-9089b4a85f89ff36",
+      "label": "black rectangular object",
+      "region_kind": "thing",
+      "discovery_area": 16922,
+      "box_before": {
+        "x_min": 95.0,
+        "y_min": 251.0,
+        "x_max": 327.0,
+        "y_max": 368.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9298592209815979,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.21384900799603201,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Falha de localiza\u00e7\u00e3o: CUDA out of memory. Tried to allocate 280.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 160.06 MiB is free. Process 1485 has 4.09 MiB memory in use. Process 261633 has 28.53 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 6.58 GiB is allocated by PyTorch, and 308.38 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-1c689e4aa528e164",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-258fa2128677a7ae",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-277654f0639c3610",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-28eef3d9e54974d5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-4c9387f33ecbe057",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-58a27704b8df1223",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-62adfeeddbec9d37",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-6df2546ed78aeca6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-7108b0d13af37b25",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-79f73bfc04edbc6b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-af6ec812bd3c0d16",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c482d5450add4fdd",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-c517461c8b036835",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ca26c9d5e52de08d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-cdd479dcd3594358",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ded0fe634dcd440f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-ed48e6604d42fa13",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    }
+  ]
+}

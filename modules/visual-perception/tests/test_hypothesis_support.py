@@ -324,3 +324,36 @@ def test_the_declared_space_matches_the_configuration() -> None:
         normalized=True,
     )
     assert isinstance(FakeLanguageAlignedEncoder().encode_text("a photo of wall", _EMBEDDING_CONFIG), tuple)
+
+
+# Regressão da #243: o sinal tratava o produto escalar como cosseno mesmo com
+# ``normalize=False``, e o piso de 0,01 — calibrado em cosseno — virava uma
+# régua arbitrária que decidia vencedores.
+def test_unnormalized_embeddings_never_produce_a_verdict() -> None:
+    """Sem normalização, toda hipótese recebe sinal indisponível com o motivo."""
+    raw_config = dataclasses.replace(_EMBEDDING_CONFIG, normalize=False)
+    encoder = _ScriptedEncoder(
+        {
+            "a photo of door": [3.0, 0.0, 0.0, 0, 0, 0, 0, 0],
+            "a photo of wall panel": [0.0, 2.0, 0.0, 0, 0, 0, 0, 0],
+        }
+    )
+    region = _region((_claim("door"), _claim("wall panel", HypothesisRole.ALTERNATIVE)))
+    embedding = LanguageEmbedding(
+        embedding_id="language-region-a",
+        region_id="region-a",
+        vector=(0.9, 0.1, 0.0, 0, 0, 0, 0, 0),
+        dimension=8,
+        model_id="fake",
+        checkpoint="none",
+        normalized=False,
+    )
+
+    result = attach_hypothesis_signals((region,), (embedding,), encoder, _CONFIG, raw_config)
+
+    signals = [signal for claim in result.regions[0].claims for signal in claim.signals]
+    assert signals
+    assert {signal.status for signal in signals} == {SupportSignalStatus.UNAVAILABLE}
+    assert all("not L2-normalized" in (signal.reason or "") for signal in signals)
+    assert result.measured_signals == 0
+    assert encoder.calls == 0

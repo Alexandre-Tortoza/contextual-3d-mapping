@@ -18,7 +18,7 @@ e nenhuma métrica de acurácia é calculada: sem ground truth humano revisado
 Uso, a partir de ``modules/visual-perception``:
 
     python benchmarks/evidence_signal_probe.py \
-      --run benchmarks/results/samples/20260908T131207Z
+      --run benchmarks/results/samples/old/20260908T131207Z
 
 O relatório vai para stdout e, com ``--output``, para um JSON versionável.
 """
@@ -324,8 +324,8 @@ def probe_run(run_dir: Path, frame_ids: tuple[str, ...]) -> dict[str, Any]:
         pixels = np.asarray(Image.open(frame_dir / "raw.png").convert("RGB"))
         payload = ImagePayload(pixels, width=int(pixels.shape[1]), height=int(pixels.shape[0]))
 
-        alignment = probe_alignment(observation.regions, payload, config, encoder)
-        coherence, grid = probe_coherence(observation.regions, payload, config, extractor)
+        alignment = probe_alignment(observation.all_regions, payload, config, encoder)
+        coherence, grid = probe_coherence(observation.all_regions, payload, config, extractor)
 
         for slot_value, tally in alignment.items():
             totals[slot_value].agrees += tally.agrees
@@ -338,7 +338,7 @@ def probe_run(run_dir: Path, frame_ids: tuple[str, ...]) -> dict[str, Any]:
         frames.append(
             {
                 "frame_id": frame_dir.name,
-                "region_count": len(observation.regions),
+                "region_count": len(observation.all_regions),
                 "dense_grid": grid,
                 "alignment_arbiter": {name: tally.to_dict() for name, tally in alignment.items()},
                 "adjacent_pair_coherence": coherence.to_dict(),

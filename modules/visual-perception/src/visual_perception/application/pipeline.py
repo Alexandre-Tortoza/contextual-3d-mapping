@@ -20,8 +20,15 @@ dense features         congelada         refinamento seletivo
 evidência multi-contexto                 relações geométricas
                                          reconciliação intra-frame
                                          relações semânticas
+                                         publicação contextual
                                          audit final
 ```
+
+O penúltimo estágio decide o que o módulo **publica**: regiões cuja identidade
+afirmada é apenas superfície estrutural genérica saem de ``observation.regions``
+e ficam em ``observation.structural_context``, sem perder nada. O audit final
+continua vendo a observação inteira, porque medir a qualidade do que foi
+observado é diferente de decidir o que vale a pena publicar.
 
 Depois do merge, **nenhum estágio altera mask, box ou identidade de região**.
 Os estágios semânticos só acrescentam claims, sinais, grupos e relações — e a
@@ -41,6 +48,11 @@ import dataclasses
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from visual_perception.application.contextual_publication import (
+    PublicationResult,
+    SuppressedRegion,
+    partition_observation,
+)
 from visual_perception.application.hypothesis_support import (
     HypothesisSupportResult,
     SignalExtractionFailure,
@@ -59,17 +71,20 @@ from visual_perception.application.refinement import RefinementStep, refine_obse
 from visual_perception.application.region_merge import merge_regions
 from visual_perception.application.region_semantics import interpret_regions
 from visual_perception.application.relation_generation import generate_relations
+from visual_perception.application.scene_concept_discovery import discover_scene_concepts
 from visual_perception.application.scene_context import analyze_scene
 from visual_perception.application.semantic_calibration import (
     CalibrationFailure,
     build_calibrator,
     calibrate_observation_claims,
 )
+from visual_perception.application.semantic_grounding import ground_regions
 from visual_perception.application.semantic_relations import (
     RelationInferenceFailure,
     infer_semantic_relations,
 )
-from visual_perception.application.tiling import build_tiles, remap_to_global
+from visual_perception.application.temporal_prior import PriorAssignment, match_scene_prior
+from visual_perception.application.tiling import Tile, build_tiles, is_truncated_by_tile, remap_to_global
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.audit import AuditResult
 from visual_perception.domain.contextual_entities import ContextualEntityHypothesis
@@ -80,16 +95,21 @@ from visual_perception.domain.embeddings import (
     VisualEmbedding,
 )
 from visual_perception.domain.errors import RegionInterpretationFailure
+from visual_perception.domain.geometry import CoordinateTransform
 from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_observation import ImageObservation
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_reasoning import RegionView
+from visual_perception.domain.region_reasoning import RegionView, ScenePrior
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, RejectedProposal
+from visual_perception.domain.scene_concepts import SceneConceptSet
 from visual_perception.domain.visual_observation import SceneContext, VisualObservation
+from visual_perception.ports.concept_grounding import ConceptRegionDiscoverer
 from visual_perception.ports.feature_extraction import DenseFeatureExtractor
 from visual_perception.ports.language_embedding import LanguageAlignedEncoder
 from visual_perception.ports.multimodal_reasoning import MultimodalReasoner
 from visual_perception.ports.region_discovery import RegionDiscoverer
+from visual_perception.ports.scene_concept_discovery import SceneConceptDiscoverer
+from visual_perception.ports.semantic_grounding import SemanticGrounder
 
 
 # Agrupa os backends substituíveis contra os quais o pipeline canônico é
@@ -103,6 +123,12 @@ class PerceptionPorts:
     feature_extractor: DenseFeatureExtractor
     language_encoder: LanguageAlignedEncoder
     multimodal_reasoner: MultimodalReasoner
+    semantic_grounder: SemanticGrounder | None = None
+    #: Exigido apenas quando ``scene_concept_discovery.enabled`` (#277); a factory
+    #: entrega o mesmo VLM do ``multimodal_reasoner``.
+    scene_concept_discoverer: SceneConceptDiscoverer | None = None
+    #: Exigido apenas quando ``concept_grounding.backend`` não é ``unavailable`` (#277).
+    concept_region_discoverer: ConceptRegionDiscoverer | None = None
 
 
 # Agrupa a saída canônica do pipeline com tudo que é necessário para
@@ -131,6 +157,11 @@ class PipelineResult:
     #: WARNING: carrega as masks em resolução plena de todas as proposals.
     #: Não retenha um ``PipelineResult`` entre frames.
     proposals: tuple[RegionProposal, ...] = ()
+    #: Propostas brutas de todas as passadas de discovery, antes da política de
+    #: área e do merge. Preserva a separação entre imagem inteira e tiles para
+    #: que os artifacts de DEBUG expliquem qual passada produziu cada máscara
+    #: sem repetir uma inferência não determinística.
+    discovered_proposals: tuple[RegionProposal, ...] = ()
     #: As proposals descartadas pela filtragem, com motivo e medida. Existem
     #: aqui para que o descarte seja auditável: ``proposals`` e estas somam
     #: exatamente o que discovery produziu, e o diagnóstico as usa para afirmar
@@ -155,9 +186,23 @@ class PipelineResult:
     reconciliation_records: tuple[ReconciliationRecord, ...] = ()
     #: Falhas isoladas ao inferir uma relação semântica de um par (#206).
     relation_failures: tuple[RelationInferenceFailure, ...] = ()
+    #: As regiões que a política de publicação contextual manteve fora do
+    #: output público, com o motivo e o conceito que dispararam a regra. Elas
+    #: continuam inteiras em ``observation.structural_context``; estes registros
+    #: existem para que o descarte seja contável no diagnóstico, exatamente como
+    #: ``rejected_proposals`` é para a geometria.
+    suppressed_regions: tuple[SuppressedRegion, ...] = ()
     #: Chamadas de modelo gastas por estágio, para que o custo de cada
     #: capacidade nova seja atribuível no manifest de validação.
     stage_model_calls: Mapping[str, int] = field(default_factory=dict)
+    #: Que região recebeu qual prior temporal, e com que evidência de
+    #: casamento. Existe pelo mesmo motivo que ``suppressed_regions``: sem
+    #: registro, "o modelo repetiu porque o prior sugeriu" seria
+    #: indistinguível de "o modelo diria isso de qualquer jeito". Vazio quando
+    #: o prior está desligado, que é o default.
+    prior_assignments: tuple[PriorAssignment, ...] = ()
+    #: Conceitos propostos pela descoberta de cena (#277), ou ``None`` quando desligada.
+    scene_concepts: SceneConceptSet | None = None
 
     # Expõe os grupos propostos pela reconciliação sem obrigar o consumidor a
     # navegar até a observação. Existe porque três consumidores (diagnóstico,
@@ -177,10 +222,29 @@ def run_canonical_pipeline(
     payload: ImagePayload,
     config: ModuleConfig,
     ports: PerceptionPorts,
+    prior: ScenePrior | None = None,
 ) -> PipelineResult:
-    """Transforma uma observação de imagem validada em uma observação visual canônica."""
+    """Transforma uma observação de imagem validada em uma observação visual canônica.
+
+    ``prior`` é o que a observação anterior da mesma cena afirmou. O default
+    ``None`` é o comportamento histórico: cada frame interpretado sozinho.
+    Quem sabe que um frame precede outro é a composição — o módulo recebe
+    apenas "isto foi afirmado antes", nunca quando nem de que pose.
+    """
+    # Payload e observação precisam descrever a mesma imagem. Validado aqui,
+    # antes de qualquer port: a divergência só aparecia no fim, depois de
+    # discovery, features densas, embeddings e todas as chamadas ao reasoner.
+    if (payload.width, payload.height) != (image.width, image.height):
+        raise ValueError(
+            f"payload resolution {payload.width}x{payload.height} does not match the image "
+            f"observation {image.width}x{image.height}."
+        )
     area_masks = config.image_area.rasterize(payload.width, payload.height)
-    discovered = _discover_regions(payload, config, ports.region_discoverer)
+    scene_concepts = _discover_scene_concepts(payload, config, ports, area_masks)
+    # O grounding por conceito soma propostas ao discovery genérico e passa pelo
+    # mesmo filtro de área e pelo mesmo merge; nunca o substitui.
+    concept_proposals = _ground_scene_concepts(payload, config, ports, scene_concepts)
+    discovered = _discover_regions(payload, config, ports.region_discoverer) + concept_proposals
     # A exclusão do rig e da área fora da lente acontece aqui, sobre as
     # máscaras, e nunca pintando os pixels de entrada: a #212 mediu que zerar a
     # faixa do rig antes do SAM corrompia a análise de cena e colapsava 45 de 45
@@ -199,8 +263,15 @@ def run_canonical_pipeline(
     scene_context = analyze_scene(
         payload, ports.multimodal_reasoner, config.multimodal_reasoning, area_masks=area_masks
     )
+    assignments = match_scene_prior(regions, prior, evidence.visual_embeddings, config.multimodal_reasoning)
     regions, failures = interpret_regions(
-        regions, payload, views, scene_context, ports.multimodal_reasoner, config.multimodal_reasoning
+        regions,
+        payload,
+        views,
+        scene_context,
+        ports.multimodal_reasoner,
+        config.multimodal_reasoning,
+        {assignment.region_id: assignment.prior for assignment in assignments},
     )
 
     support = attach_hypothesis_signals(
@@ -271,14 +342,25 @@ def run_canonical_pipeline(
         context_expansion=config.multi_context.context_expansion,
     )
 
+    # A partição é o último estágio semântico de propósito: todos os anteriores
+    # precisam das superfícies estruturais para entender a cena, e só o contract
+    # público distingue evidência contextual de contexto.
+    publication = partition_observation(
+        regions, config.contextual_publication, observation_id=image.observation_id
+    )
+    grounded = ground_regions(
+        publication.published, payload, ports.semantic_grounder, config.semantic_grounding, area_masks
+    )
+
     observation = VisualObservation(
         source=image.source,
         image_width=image.width,
         image_height=image.height,
         scene_context=scene_context,
-        regions=regions,
+        regions=grounded,
         relations=geometric_relations + inferred.relations,
         entity_hypotheses=reconciliation.entities,
+        structural_context=publication.structural_context,
     )
     audit = audit_observation(observation)
     return PipelineResult(
@@ -290,6 +372,7 @@ def run_canonical_pipeline(
         evidence_metrics=evidence.metrics,
         feature_fallback_reason=feature_fallback_reason,
         proposals=proposals,
+        discovered_proposals=discovered,
         rejected_proposals=rejected_proposals,
         area_masks=area_masks,
         visual_embeddings=evidence.visual_embeddings,
@@ -298,7 +381,15 @@ def run_canonical_pipeline(
         refinement_history=refinement_history,
         reconciliation_records=reconciliation.records,
         relation_failures=inferred.failures,
-        stage_model_calls=_stage_model_calls(evidence, support, refinement_history, inferred),
+        suppressed_regions=publication.records,
+        stage_model_calls={
+            **_stage_model_calls(evidence, support, refinement_history, inferred),
+            "semantic_grounding": sum(region.grounding.prediction.model_calls for region in grounded if region.grounding is not None),
+            "scene_concept_discovery": 0 if scene_concepts is None else 1,
+            "concept_grounding": _concept_grounding_calls(config, scene_concepts),
+        },
+        prior_assignments=assignments,
+        scene_concepts=scene_concepts,
     )
 
 
@@ -387,12 +478,61 @@ def _stage_model_calls(
 # Descobre region proposals em nível de tile e as remapeia para
 # coordenadas globais da imagem; primeiro estágio de
 # run_canonical_pipeline, chamado antes do merge multi-scale.
+def _discover_scene_concepts(
+    payload: ImagePayload, config: ModuleConfig, ports: PerceptionPorts, area_masks: ImageAreaMasks
+) -> SceneConceptSet | None:
+    """Roda a descoberta de conceitos quando habilitada, ou devolve ``None``."""
+    if not config.scene_concept_discovery.enabled:
+        return None
+    if ports.scene_concept_discoverer is None:
+        raise ValueError("scene_concept_discovery.enabled exige PerceptionPorts.scene_concept_discoverer.")
+    return discover_scene_concepts(
+        payload,
+        ports.scene_concept_discoverer,
+        config.multimodal_reasoning,
+        config.scene_concept_discovery,
+        area_masks=area_masks,
+    )
+
+
+def _ground_scene_concepts(
+    payload: ImagePayload,
+    config: ModuleConfig,
+    ports: PerceptionPorts,
+    scene_concepts: SceneConceptSet | None,
+) -> tuple[RegionProposal, ...]:
+    """Segmenta os conceitos descobertos na imagem completa, quando habilitado."""
+    if _concept_grounding_calls(config, scene_concepts) == 0:
+        return ()
+    if ports.concept_region_discoverer is None:
+        raise ValueError("concept_grounding.backend exige PerceptionPorts.concept_region_discoverer.")
+    assert scene_concepts is not None
+    full = Tile("full", "whole", payload, CoordinateTransform.identity())
+    local = ports.concept_region_discoverer.discover_concept_regions(
+        payload, tuple(concept.text for concept in scene_concepts.concepts), config.concept_grounding
+    )
+    return tuple(
+        remap_to_global(proposal, full, image_width=payload.width, image_height=payload.height) for proposal in local
+    )
+
+
+def _concept_grounding_calls(config: ModuleConfig, scene_concepts: SceneConceptSet | None) -> int:
+    """Conta as consultas de conceito que o grounding faz neste frame."""
+    if config.concept_grounding.backend == "unavailable" or scene_concepts is None:
+        return 0
+    return len(scene_concepts.concepts)
+
+
 def _discover_regions(
     payload: ImagePayload, config: ModuleConfig, discoverer: RegionDiscoverer
 ) -> tuple[RegionProposal, ...]:
     proposals: list[RegionProposal] = []
     for tile in build_tiles(payload, config.tiling):
         for local_proposal in discoverer.discover(tile.payload, config.region_discovery):
+            if config.tiling.discard_tile_border_truncations and is_truncated_by_tile(
+                local_proposal, tile, image_width=payload.width, image_height=payload.height
+            ):
+                continue
             proposals.append(
                 remap_to_global(local_proposal, tile, image_width=payload.width, image_height=payload.height)
             )
@@ -402,4 +542,11 @@ def _discover_regions(
 # Mantém a assinatura anterior de views para os consumidores que a importavam
 # daqui. Existe apenas como reexport tipado; a construção continua sendo do
 # estágio de evidência.
-__all__ = ["PerceptionPorts", "PipelineResult", "RegionView", "run_canonical_pipeline"]
+__all__ = [
+    "PerceptionPorts",
+    "PipelineResult",
+    "PublicationResult",
+    "RegionView",
+    "SuppressedRegion",
+    "run_canonical_pipeline",
+]

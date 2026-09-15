@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import shutil
 from bisect import bisect_left
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from geometric_map import GeometryReference
+from geometric_map import GeometryReference, read_pcd_geometry, select_neighbourhood
 from semantic_fusion import (
     LabelledPoint,
     SemanticContribution,
@@ -19,22 +21,30 @@ from semantic_fusion import (
 )
 from sensor_association import (
     AssociationStatus,
+    BoundaryPolicy,
     CameraLidarCalibration,
     CameraModel,
     MapAnchoredPoint,
+    MeasuredSurfaceModel,
     RgbFrame,
+    SurfaceVisibilityConfig,
     VisualRegionEvidence,
     associate_map_points,
+    associate_measured_map_points,
+    boundary_diagnostics,
 )
 
 from contextual_mapping_contracts import (
     FrameId,
     MapId,
     ObservationReference,
+    Pose,
     RigidTransform,
     SourceArtifactReference,
     Timestamp,
 )
+
+from .pcd_slice import geometry_point_records
 
 # Ordem de informatividade das rejeições. Um ponto que a câmera enquadrou e
 # perdeu por oclusão diz algo sobre a cena; um ponto que ficou atrás da câmera
@@ -42,10 +52,35 @@ from contextual_mapping_contracts import (
 # rejeição mais informativa entre as observações.
 _REJECTION_PRIORITY = (
     AssociationStatus.OCCLUDED,
+    AssociationStatus.VISIBILITY_UNCONFIRMED,
     AssociationStatus.OUTSIDE_VALID_SUPPORT,
     AssociationStatus.OUTSIDE_IMAGE,
     AssociationStatus.BEHIND_CAMERA,
 )
+
+
+# Copia o layout auditável produzido por visual-perception para a run
+# contextual. Existe porque o publisher só pode servir arquivos internos à run;
+# manter URI para o diretório de benchmark quebraria a inspeção após limpeza.
+def _copy_frame_debug(source: Path, assets: Path, frame_id: str) -> dict[str, str]:
+    """Copia assets de debug de um frame e retorna URIs relativas à run.
+
+    Argumentos:
+        source: diretório ``frames/<frame-id>`` da percepção.
+        assets: diretório de assets da composição contextual.
+        frame_id: identidade estável do frame auditado.
+    Retorna:
+        mapa de artefatos de debug, indexado pelo path relativo do frame.
+    """
+    debug_source = source / "DEBUG"
+    if not debug_source.is_dir():
+        return {}
+    destination = assets / f"{frame_id}-debug"
+    shutil.copytree(debug_source, destination, dirs_exist_ok=True)
+    return {
+        str(path.relative_to(debug_source)): f"{assets.name}/{destination.name}/{path.relative_to(debug_source)}"
+        for path in sorted(debug_source.rglob("*")) if path.is_file()
+    }
 
 
 # Agrupa os arquivos de um keyframe visual e sua identidade temporal. As três
@@ -74,6 +109,7 @@ class Corridor02Keyframe:
     raw_image: Path
     overlay_image: Path
     valid_area_mask: Path
+    ego_mask: Path | None = None
 
     # Falha antes de abrir o bag quando a composição aponta para artifacts
     # ausentes, onde o erro seria atribuído à leitura do dataset.
@@ -87,6 +123,8 @@ class Corridor02Keyframe:
         ):
             if not path.is_file():
                 raise FileNotFoundError(path)
+        if self.ego_mask is not None and not self.ego_mask.is_file():
+            raise FileNotFoundError(self.ego_mask)
         if self.camera_sequence_index < 0:
             raise ValueError("camera_sequence_index must be non-negative.")
 
@@ -108,6 +146,8 @@ class Corridor02ContextRequest:
         ground_truth: trajetória do dataset, usada quando não há odometria.
         pose_anchor_ns: instante em que o mapa foi iniciado, usado para alinhar
             o ground-truth à origem do mapa FAST-LIO.
+        crop_radius_m: raio da vizinhança do trecho em torno das posições da câmera.
+        max_points: teto de pontos da geometria do trecho.
     """
 
     geometric_slice: Path
@@ -119,11 +159,39 @@ class Corridor02ContextRequest:
     odometry: Path | None = None
     ground_truth: Path | None = None
     pose_anchor_ns: int | None = None
+    boundary_policy: BoundaryPolicy = field(default_factory=BoundaryPolicy)
+    footprint_mode: str = "semantic_grounding"
+    stuff_discovery_fallback: bool = False
+    pose_sampling: str = "interpolated"
+    max_pose_gap_ns: int = 200_000_000
+    visibility_mode: str = "measured_surfaces"
+    visibility_geometry: Path | None = None
+    surface_config: SurfaceVisibilityConfig = field(default_factory=SurfaceVisibilityConfig)
+    audit_geometry_ids: frozenset[str] = frozenset()
+    #: Um trecho carrega só a vizinhança das suas poses, da nuvem em resolução
+    #: completa, e não o mapa global amostrado: o mapa inteiro pertence ao
+    #: consolidado. 15 m cobre o corredor visível e um pouco de contexto.
+    crop_radius_m: float = 15.0
+    max_points: int = 150_000
 
     # Exige uma fonte de pose e ao menos um keyframe antes de qualquer leitura,
     # porque ambos são pré-condições da composição, e não erros de dados.
     def __post_init__(self) -> None:
         """Valida arquivos, keyframes e disponibilidade de uma fonte de pose."""
+        if self.visibility_mode not in {"legacy_cells", "dense_cells", "measured_surfaces"}:
+            raise ValueError("visibility_mode must be legacy_cells, dense_cells or measured_surfaces.")
+        if self.footprint_mode not in {"semantic_grounding", "legacy_discovery"}:
+            raise ValueError("footprint_mode must be semantic_grounding or legacy_discovery.")
+        if self.pose_sampling not in {"interpolated", "nearest"}:
+            raise ValueError("pose_sampling must be interpolated or nearest.")
+        if type(self.max_pose_gap_ns) is not int or self.max_pose_gap_ns <= 0:
+            raise ValueError("max_pose_gap_ns must be a positive integer.")
+        if not math.isfinite(self.crop_radius_m) or self.crop_radius_m <= 0:
+            raise ValueError("crop_radius_m must be positive.")
+        if type(self.max_points) is not int or self.max_points <= 0:
+            raise ValueError("max_points must be a positive integer.")
+        if (self.footprint_mode == "legacy_discovery") != self.boundary_policy.allow_legacy_discovery:
+            raise ValueError("Legacy footprint ablation must explicitly enable legacy association.")
         for path in (self.geometric_slice, self.bag, self.intrinsics, self.extrinsics):
             if not path.is_file():
                 raise FileNotFoundError(path)
@@ -331,6 +399,44 @@ def _nearest_pose(samples: tuple[tuple[int, Any], ...], timestamp_ns: int) -> tu
     return samples[min(candidates, key=lambda index: abs(times[index] - timestamp_ns))]
 
 
+# Seleciona o modo temporal independentemente do footprint semântico e registra
+# as amostras usadas. Não mascara lacunas de trajetória com extrapolação.
+def _sample_pose(
+    samples: tuple[tuple[int, Any], ...], timestamp_ns: int, mode: str,
+    max_gap_ns: int = 200_000_000,
+) -> tuple[int, Any, dict[str, Any]]:
+    """Amostra pose por nearest ou interpolação, com proveniência temporal."""
+    from state_estimation import interpolate_pose
+
+    if not samples or any(right[0] <= left[0] for left, right in zip(samples, samples[1:], strict=False)):
+        raise ValueError("Pose trajectory must be nonempty and strictly increasing.")
+    if mode == "nearest":
+        stamp, matrix = _nearest_pose(samples, timestamp_ns)
+        return stamp, matrix, {"mode": mode, "support_timestamps_ns": [stamp], "fraction": None,
+                               "time_delta_ns": stamp - timestamp_ns}
+    if mode != "interpolated":
+        raise ValueError("Unknown pose sampling mode.")
+    times = [item[0] for item in samples]
+    index = bisect_left(times, timestamp_ns)
+    if index < len(samples) and times[index] == timestamp_ns:
+        return timestamp_ns, samples[index][1], {"mode": "exact", "support_timestamps_ns": [timestamp_ns], "fraction": 0.0, "time_delta_ns": 0}
+    if index == 0 or index == len(samples):
+        raise ValueError("RGB timestamp lies outside the estimated pose trajectory.")
+    before, after = samples[index - 1], samples[index]
+    if after[0] - before[0] > max_gap_ns:
+        raise ValueError("Pose sample gap exceeds the configured interpolation limit.")
+    poses = tuple(Pose(RigidTransform(
+        FrameId("body"), FrameId("map"), tuple(float(value) for value in matrix[:3, 3]),
+        _matrix_to_quaternion(matrix[:3, :3]),
+    ), stamp) for stamp, matrix in (before, after))
+    pose = interpolate_pose(poses[0], poses[1], timestamp_ns)
+    return timestamp_ns, _pose_matrix(pose.transform.translation_m, pose.transform.rotation_xyzw), {
+        "mode": mode, "support_timestamps_ns": [before[0], after[0]],
+        "fraction": (timestamp_ns - before[0]) / (after[0] - before[0]),
+        "time_delta_ns": 0, "max_gap_ns": max_gap_ns,
+    }
+
+
 # Lê uma mensagem identificada pelo instante de gravação. Existe para que a
 # composição não percorra o stream inteiro a cada keyframe: neste dataset o
 # stream RGB tem dezenas de gigabytes.
@@ -375,85 +481,65 @@ def _primary_claim(region: dict[str, Any]) -> dict[str, Any] | None:
     return next((claim for claim in labels if claim.get("role") == "primary"), labels[0] if labels else None)
 
 
-# Materializa masks não sobrepostas, priorizando regiões menores e mais
-# específicas. Isso adapta proposals sobrepostas ao contract ponto→região único.
-# Os identificadores recebem o prefixo do keyframe porque, com vários frames, o
-# mesmo identificador de região pode reaparecer em observações diferentes.
+# Converte footprints validados pela API pública de percepção no contract do
+# consumidor. Claims e abstenções continuam nos metadados mesmo sem pixels.
 def _region_evidence(
-    visual_payload: dict[str, Any], valid_mask: Any, frame_id: str
+    visual_payload: dict[str, Any], valid_mask: Any, frame_id: str,
+    *, boundary_policy: BoundaryPolicy | None = None,
+    legacy_discovery: bool = False, stuff_discovery_fallback: bool = False,
+    artifact_reference: str | None = None,
 ) -> tuple[tuple[VisualRegionEvidence, ...], dict[str, dict[str, Any]]]:
-    """Converte regiões canônicas em evidências 2D disjuntas e metadados de inspeção."""
+    """Cria evidência somente a partir de footprints semânticos auditáveis."""
     import numpy as np
 
+    from visual_perception import Mask, build_spatial_footprints, deserialize_observation
+
     height, width = valid_mask.shape
-    candidates: list[tuple[int, float, dict[str, Any], dict[str, Any], Any]] = []
-    for region in visual_payload["regions"]:
-        claim = _primary_claim(region)
-        if claim is None:
-            continue
-        mask_payload = region["mask"]
-        if (mask_payload["width"], mask_payload["height"]) != (width, height):
-            raise ValueError("visual region mask dimensions must match the RGB frame.")
-        flat = np.zeros(width * height, dtype=np.bool_)
-        cursor = 0
-        value = False
-        for run_length in mask_payload["rle"]:
-            if value:
-                flat[cursor : cursor + run_length] = True
-            cursor += run_length
-            value = not value
-        if cursor != width * height:
-            raise ValueError("visual region RLE must cover the complete image.")
-        mask = flat.reshape(height, width) & valid_mask
-        area = int(mask.sum())
-        if area:
-            confidence = claim.get("confidence") or {}
-            candidates.append((area, -float(confidence.get("value") or 0.0), region, claim, mask))
-    ownership = np.full((height, width), -1, dtype=np.int32)
+    observation = deserialize_observation(visual_payload)
+    policy = boundary_policy or BoundaryPolicy()
+    footprints = build_spatial_footprints(
+        observation.regions, Mask(valid_mask, width, height),
+        stuff_discovery_fallback=stuff_discovery_fallback, legacy_discovery=legacy_discovery,
+    )
+    raw_by_id = {region["region_id"]: region for region in visual_payload["regions"]}
     evidence: list[VisualRegionEvidence] = []
     metadata: dict[str, dict[str, Any]] = {}
-    for _, _, region, claim, mask in sorted(candidates, key=lambda item: (item[0], item[1], item[2]["region_id"])):
-        region_index = len(evidence)
-        accepted = mask & (ownership < 0)
-        y_values, x_values = np.nonzero(accepted)
-        if not len(x_values):
-            continue
-        ownership[accepted] = region_index
-        region_id = f"{frame_id}:{region['region_id']}"
-        support = region.get("support") or {}
-        evidence.append(
-            VisualRegionEvidence(
-                region_id,
-                frozenset(zip(x_values.tolist(), y_values.tolist(), strict=True)),
-                label=str(claim["value"]),
-                feature_reference=region.get("visual_embedding_ref"),
-            )
-        )
+    for footprint in footprints:
+        region = raw_by_id[footprint.region_id]
+        claim = _primary_claim(region)
+        assert claim is not None
+        support = claim.get("support") or {}
+        region_id = f"{frame_id}:{footprint.region_id}"
+        mask = np.zeros((height, width), dtype=np.bool_) if footprint.mask is None else footprint.mask.data
+        diagnostics = {**footprint.diagnostics, **boundary_diagnostics(mask, policy)}
+        reference = f"{artifact_reference or ('visual-observation:' + frame_id)}#regions/{footprint.region_id}/grounding"
+        status = "legacy_discovery" if legacy_discovery else ("refined" if footprint.strong else diagnostics["semantic_grounding_status"])
+        if footprint.mask is not None:
+            y, x = np.nonzero(mask)
+            evidence.append(VisualRegionEvidence(
+                region_id, frozenset(zip(x.tolist(), y.tolist(), strict=True)),
+                label=footprint.concept, feature_reference=region.get("visual_embedding_ref"),
+                grounding_status=status, grounding_reference=reference if footprint.strong and not legacy_discovery else None,
+            ))
         metadata[region_id] = {
-            "region_id": region_id,
-            "observation_frame_id": frame_id,
-            "label": claim["value"],
-            "confidence": claim.get("confidence"),
-            "support": claim.get("support"),
-            "category": claim.get("category"),
+            "region_id": region_id, "observation_frame_id": frame_id,
+            "label": claim["value"], "confidence": claim.get("confidence"),
+            "support": claim.get("support"), "category": claim.get("category"),
             "region_kind": claim.get("region_kind"),
             "geometric_confidence": region.get("geometric_confidence"),
             "visual_support": support.get("visual_support"),
             "region_quality": support.get("region_quality"),
-            "calibrated_confidence": support.get("calibrated_confidence"),
-            "box": region.get("box"),
-            "claims": [
-                {
-                    "kind": item.get("kind"),
-                    "value": item.get("value"),
-                    "confidence": item.get("confidence"),
-                    "support_state": (item.get("support") or {}).get("state"),
-                    "role": item.get("role"),
-                }
-                for item in region.get("claims", ())
-            ],
-            "provenance": claim.get("provenance"),
+            "calibrated_confidence": (support.get("calibrated_confidence") or {}).get("value"),
+            "box": region.get("box"), "discovery_mask": region["mask"],
+            "grounding": region.get("grounding"), "spatial_diagnostics": diagnostics,
+            "association_mask": None,
+            "claims": region.get("claims", []), "provenance": claim.get("provenance"),
         }
+        if footprint.mask is not None:
+            # O RLE pertence ao produtor; usar a serialização pública mantém a
+            # trilha pós-ownership reproduzível no artifact de composição.
+            from visual_perception import encode_mask
+            metadata[region_id]["association_mask"] = encode_mask(footprint.mask)
     return tuple(evidence), metadata
 
 
@@ -560,13 +646,14 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     laser_to_camera = _pose_matrix(
         calibration.lidar_to_camera.translation_m, calibration.lidar_to_camera.rotation_xyzw
     )
-    map_points = tuple(
-        MapAnchoredPoint(
-            GeometryReference(map_id, str(point["geometry_id"])),
-            tuple(float(value) for value in point["coordinates_m"]),
-        )
-        for point in base["points"]
-    )
+    source = base.get("source") or {}
+    geometry_path = request.visibility_geometry or Path(source.get("uri", ""))
+    if not geometry_path.is_file():
+        raise ValueError("PCD completo ausente; informe visibility_geometry para a geometria do slice.")
+    if not source.get("sha256"):
+        raise ValueError("O slice deve registrar source.sha256 para validar a geometria completa.")
+    full_geometry = read_pcd_geometry(geometry_path, map_id=map_id, frame_id=map_frame, expected_sha256=source["sha256"])
+    surfaces = MeasuredSurfaceModel(full_geometry, request.surface_config) if request.visibility_mode == "measured_surfaces" else None
     if request.odometry is not None:
         poses = _load_odometry(request.odometry)
         pose_source = "fastlio_odometry"
@@ -575,10 +662,55 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         poses = _load_ground_truth(request.ground_truth, request.pose_anchor_ns)
         pose_source = "dataset_ground_truth"
 
+    # A geometria do trecho é a vizinhança das posições da câmera nos keyframes,
+    # tirada da nuvem completa. O slice global passa a ser só o fundo que o
+    # consolidado usa, registrado abaixo como ``geometry_backdrop``.
+    camera_to_body = laser_to_imu @ np.linalg.inv(laser_to_camera)
+    camera_centers = np.array([
+        (_sample_pose(poses, keyframe.header_timestamp_ns, request.pose_sampling, request.max_pose_gap_ns)[1]
+         @ camera_to_body)[:3, 3]
+        for keyframe in request.keyframes
+    ])
+    segment_geometry, crop_stride = select_neighbourhood(
+        full_geometry, camera_centers, radius_m=request.crop_radius_m, max_points=request.max_points
+    )
+    base["points"] = geometry_point_records(
+        str(map_id),
+        [
+            (int(index), tuple(float(value) for value in coordinates),
+             None if segment_geometry.intensities is None else float(segment_geometry.intensities[position]))
+            for position, (index, coordinates) in enumerate(
+                zip(segment_geometry.source_indices, segment_geometry.coordinates_m, strict=True)
+            )
+        ],
+    )
+    base["source"] = {
+        **source,
+        "sampling_stride": crop_stride,
+        "crop": {
+            "mode": "camera_pose_radius",
+            "radius_m": request.crop_radius_m,
+            "max_points": request.max_points,
+            "camera_center_count": len(camera_centers),
+            "selected_point_count": len(segment_geometry.coordinates_m),
+        },
+    }
+    base["geometry_backdrop"] = {
+        "artifact_uri": str(request.geometric_slice.resolve()),
+        "sha256": hashlib.sha256(request.geometric_slice.read_bytes()).hexdigest(),
+    }
+    map_points = tuple(
+        MapAnchoredPoint(
+            GeometryReference(map_id, str(point["geometry_id"])),
+            tuple(float(value) for value in point["coordinates_m"]),
+        )
+        for point in base["points"]
+    )
+
     assets = request.destination.parent / f"{request.destination.stem}-assets"
     assets.mkdir(parents=True, exist_ok=True)
     associated: dict[str, list[dict[str, Any]]] = {}
-    rejected: dict[str, AssociationStatus] = {}
+    rejected: dict[str, Any] = {}
     observations: list[dict[str, Any]] = []
     regions: dict[str, dict[str, Any]] = {}
 
@@ -615,7 +747,9 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 camera_timestamp_ns,
                 keyframe.bag_timestamp_ns - camera_timestamp_ns,
             )
-            pose_timestamp_ns, body_to_map = _nearest_pose(poses, camera_timestamp_ns)
+            pose_timestamp_ns, body_to_map, pose_provenance = _sample_pose(
+                poses, camera_timestamp_ns, request.pose_sampling, request.max_pose_gap_ns
+            )
             lidar_to_map = body_to_map @ laser_to_imu
             map_to_camera_matrix = laser_to_camera @ np.linalg.inv(lidar_to_map)
             map_to_camera = RigidTransform(
@@ -626,6 +760,11 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             )
             raw_rgb = np.asarray(Image.open(keyframe.raw_image).convert("RGB"), dtype=np.uint8)
             valid_mask = np.asarray(Image.open(keyframe.valid_area_mask).convert("L"), dtype=np.uint8) > 0
+            if keyframe.ego_mask is not None:
+                ego_mask = np.asarray(Image.open(keyframe.ego_mask).convert("L"), dtype=np.uint8) > 0
+                if ego_mask.shape != valid_mask.shape:
+                    raise ValueError("ego mask dimensions must match the RGB image.")
+                valid_mask &= ~ego_mask
             if raw_rgb.shape[:2] != valid_mask.shape:
                 raise ValueError("valid-area mask dimensions must match the RGB image.")
             observation_id = f"corridor-02:camera_1:{keyframe.camera_sequence_index}"
@@ -649,25 +788,43 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 frame_id=FrameId("cmu_rc1_velodyne"),
             )
             rgb = _rgb_frame(rgb_reference, raw_rgb, valid_mask)
-            evidence, region_metadata = _region_evidence(visual_payload, valid_mask, keyframe.frame_id)
-            regions.update(region_metadata)
-            results = associate_map_points(
-                map_points,
-                rgb,
-                calibration,
-                map_to_camera,
-                evidence,
-                lidar_observation=lidar_reference,
-                max_time_delta_ns=100_000_000,
+            evidence, region_metadata = _region_evidence(
+                visual_payload, valid_mask, keyframe.frame_id, boundary_policy=request.boundary_policy,
+                legacy_discovery=request.footprint_mode == "legacy_discovery",
+                stuff_discovery_fallback=request.stuff_discovery_fallback,
+                artifact_reference=keyframe.visual_observation.resolve().as_uri(),
             )
+            regions.update(region_metadata)
+            from visual_perception import DebugRecorder
+            DebugRecorder(request.destination.parent / (request.destination.stem + "-DEBUG") / "visual-perception").record_grounding(
+                keyframe.frame_id, list(region_metadata.values())
+            )
+            if surfaces is not None:
+                batch = associate_measured_map_points(
+                    map_points, rgb, calibration, map_to_camera, surfaces, evidence,
+                    lidar_observation=lidar_reference, max_time_delta_ns=100_000_000,
+                    boundary_policy=request.boundary_policy,
+                )
+                results = batch.associations
+                for region_id, metadata in region_metadata.items():
+                    metadata["surface_support"] = batch.regions.get(region_id, {
+                        "status": "uncertain", "reason": "no_semantic_footprint", "components": [],
+                    })
+            else:
+                results = associate_map_points(
+                    map_points, rgb, calibration, map_to_camera, evidence,
+                    lidar_observation=lidar_reference, max_time_delta_ns=100_000_000,
+                    boundary_policy=request.boundary_policy,
+                    visibility_geometry=None if request.visibility_mode == "legacy_cells" else full_geometry,
+                )
             for association in results:
                 geometry_id = association.geometry.geometry_id
                 if association.status is not AssociationStatus.ASSOCIATED:
                     current = rejected.get(geometry_id)
                     if current is None or _REJECTION_PRIORITY.index(
                         association.status
-                    ) < _REJECTION_PRIORITY.index(current):
-                        rejected[geometry_id] = association.status
+                    ) < _REJECTION_PRIORITY.index(current.status):
+                        rejected[geometry_id] = association
                     continue
                 associated.setdefault(geometry_id, []).append(
                     {
@@ -677,14 +834,39 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                         "color_rgb": association.color_rgb,
                         "region_id": association.region_id,
                         "label": association.label,
+                        "tentative_label": association.tentative_label,
+                        "semantic_status": association.semantic_status.value,
+                        "distance_to_boundary_px": association.distance_to_boundary_px,
+                        "boundary_margin_px": association.boundary_margin_px,
+                        "grounding_reference": association.grounding_reference,
+                        "surface_evidence": asdict(association.surface_evidence) if association.surface_evidence else None,
                         "lidar_observation_id": lidar_reference.observation_id,
                         "lidar_timestamp_ns": lidar_timestamp_ns,
                     }
                 )
+            if request.audit_geometry_ids:
+                audit = [{
+                    "geometry_id": item.geometry.geometry_id, "status": item.status.value,
+                    "pixel": item.pixel, "label": item.label, "tentative_label": item.tentative_label,
+                    "semantic_status": item.semantic_status.value, "region_id": item.region_id,
+                    "surface_evidence": asdict(item.surface_evidence) if item.surface_evidence else None,
+                } for item in results if item.geometry.geometry_id in request.audit_geometry_ids]
+                audit_dir = request.destination.parent / (request.destination.stem + "-DEBUG") / "sensor-association"
+                audit_dir.mkdir(parents=True, exist_ok=True)
+                (audit_dir / f"{keyframe.frame_id}.json").write_text(json.dumps({
+                    "observation_id": observation_id, "visibility_mode": request.visibility_mode,
+                    "map_to_camera": asdict(map_to_camera), "points": audit,
+                }, indent=2), encoding="utf-8")
             raw_destination = assets / f"{keyframe.frame_id}-raw.png"
             overlay_destination = assets / f"{keyframe.frame_id}-regions.png"
             shutil.copyfile(keyframe.raw_image, raw_destination)
             shutil.copyfile(keyframe.overlay_image, overlay_destination)
+            frame_debug = _copy_frame_debug(keyframe.visual_observation.parent, assets, keyframe.frame_id)
+            diagnostics_source = keyframe.visual_observation.parent / "diagnostics.json"
+            diagnostics_destination = assets / f"{keyframe.frame_id}-diagnostics.json"
+            if diagnostics_source.is_file():
+                shutil.copyfile(diagnostics_source, diagnostics_destination)
+                frame_debug["diagnostics.json"] = f"{assets.name}/{diagnostics_destination.name}"
             observations.append(
                 {
                     "observation_id": observation_id,
@@ -697,6 +879,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "height": rgb.height,
                     "raw_image_uri": f"{assets.name}/{raw_destination.name}",
                     "overlay_image_uri": f"{assets.name}/{overlay_destination.name}",
+                    "debug_assets": frame_debug,
                     "scene_claims": [
                         {
                             "kind": claim.get("kind"),
@@ -713,6 +896,17 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "time_delta_ns": abs(camera_timestamp_ns - lidar_timestamp_ns),
                     "pose_source": pose_source,
                     "pose_timestamp_ns": pose_timestamp_ns,
+                    "semantic_association_counts": dict(Counter(item.semantic_status.value for item in results if item.status is AssociationStatus.ASSOCIATED)),
+                    "semantic_label_association_counts": {
+                        label: dict(Counter(item.semantic_status.value for item in results
+                            if (item.label or item.tentative_label) == label))
+                        for label in sorted({item.label or item.tentative_label for item in results
+                            if item.label or item.tentative_label})
+                    },
+                    "boundary_policy": asdict(request.boundary_policy),
+                    "pose_provenance": pose_provenance,
+                    "visibility_mode": request.visibility_mode,
+                    "visibility_counts": dict(Counter(item.status.value for item in results)),
                 }
             )
 
@@ -725,7 +919,9 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             status = rejected.get(geometry_id)
             if status is not None:
                 point["context"] = {
-                    "status": status.value,
+                    "status": status.status.value,
+                    "surface_evidence": asdict(status.surface_evidence) if status.surface_evidence else None,
+                    "observation_id": status.rgb_observation.observation_id,
                     "observations_considered": len(request.keyframes),
                 }
             continue
@@ -757,7 +953,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             contextual_point_count += 1
         else:
             fused = None
-            primary = records[0]
+            primary = next((record for record in records if record["tentative_label"]), records[0])
         # O payload por ponto carrega apenas o que é próprio do ponto. Instante,
         # scan sincronizado e calibração pertencem à observação e ao artifact, e
         # repeti-los em cada um de centenas de milhares de pontos multiplicaria
@@ -769,7 +965,19 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             "color_rgb": primary["color_rgb"],
             "region_id": primary["region_id"],
             "label": primary["label"],
+            "tentative_label": primary["tentative_label"],
+            "semantic_status": primary["semantic_status"],
+            "distance_to_boundary_px": primary["distance_to_boundary_px"],
+            "boundary_margin_px": primary["boundary_margin_px"],
+            "grounding_reference": primary["grounding_reference"],
+            "surface_evidence": primary["surface_evidence"],
         }
+        tentative = [record for record in records if record["tentative_label"]]
+        if tentative:
+            context["tentative_associations"] = [
+                {key: record[key] for key in ("observation_id", "region_id", "pixel", "tentative_label", "semantic_status", "distance_to_boundary_px", "boundary_margin_px", "grounding_reference", "surface_evidence")}
+                for record in tentative
+            ]
         if fused is not None:
             context["confidence"] = fused.confidence
         if fused is not None and fused.contribution_count > 1:
@@ -781,8 +989,13 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "region_id": item.region_id,
                     "label": item.label,
                     "confidence": item.confidence,
+                    **{key: record[key] for key in (
+                        "pixel", "semantic_status", "distance_to_boundary_px", "boundary_margin_px", "grounding_reference", "surface_evidence",
+                    )},
                 }
                 for item in fused.contributions
+                for record in records
+                if record["observation_id"] == item.observation_id and record["region_id"] == item.region_id
             ]
         point["context"] = context
 
@@ -800,6 +1013,16 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     }
     base["observations"] = observations
     base["regions"] = list(regions.values())
+    base["visibility"] = {
+        "mode": request.visibility_mode,
+        "geometry": None if request.visibility_mode == "legacy_cells" else {
+            "uri": full_geometry.source.uri, "sha256": full_geometry.source.digest,
+            "point_count": full_geometry.point_count, "finite_point_count": len(full_geometry.coordinates_m),
+            "map_id": str(map_id), "frame_id": str(map_frame), "units": "m",
+        },
+        "config": asdict(request.surface_config) if surfaces is not None else None,
+        "patch_count": surfaces.patch_count if surfaces is not None else None,
+    }
     base["context_summary"] = {
         "visual_observation_count": len(request.keyframes),
         "contextual_point_count": contextual_point_count,
@@ -809,7 +1032,45 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         "support_state_counts": support_counts,
         "pose_source": pose_source,
         "claim_status": "predição VLM não verificada",
+        "footprint_mode": request.footprint_mode,
+        "boundary_policy": asdict(request.boundary_policy),
+        "pose_sampling": request.pose_sampling,
+        "visibility_mode": request.visibility_mode,
     }
+
+    # Grava DEBUG de composição final: distribuição de labels por ponto.
+    debug_dir = request.destination.parent / (request.destination.stem + "-DEBUG")
+    if debug_dir and debug_dir.parent.exists():
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        label_counts: dict[str, int] = {}
+        support_state_samples: dict[str, list[str]] = {}
+        for point in base["points"]:
+            context = point.get("context")
+            if context:
+                label = context.get("label", "__unlabeled__")
+                label_counts[label] = label_counts.get(label, 0) + 1
+                support_state = point.get("support_state", "__unknown__")
+                if support_state not in support_state_samples:
+                    support_state_samples[support_state] = []
+                if len(support_state_samples[support_state]) < 3:
+                    support_state_samples[support_state].append(label)
+        debug_data = {
+            "segment_id": request.destination.stem.replace("-context", ""),
+            "label_distribution": label_counts,
+            "total_contextual_points": contextual_point_count,
+            "total_rgb_points": len(associated),
+            "support_state_counts": support_counts,
+            "support_state_label_samples": support_state_samples,
+            "spatial_regions": [{"region_id": region["region_id"], "label": region["label"], **region["spatial_diagnostics"]} for region in regions.values()],
+            "semantic_association_counts": dict(sum((Counter(item["semantic_association_counts"]) for item in observations), Counter())),
+            "boundary_policy": asdict(request.boundary_policy),
+            "footprint_mode": request.footprint_mode,
+            "pose_sampling": request.pose_sampling,
+            "visibility_mode": request.visibility_mode,
+        }
+        debug_file = debug_dir / "composition.json"
+        debug_file.write_text(json.dumps(debug_data, indent=2), encoding="utf-8")
+
     request.destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = request.destination.with_suffix(request.destination.suffix + ".tmp")
     temporary.write_text(json.dumps(base, separators=(",", ":")), encoding="utf-8")

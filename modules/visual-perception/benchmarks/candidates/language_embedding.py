@@ -72,20 +72,31 @@ def _extract_features(output: object) -> torch.Tensor:
     return pooler_output if pooler_output is not None else output  # type: ignore[return-value]
 
 
-# Calcula a margem entre a maior e a segunda maior similaridade de cosseno
-# (top1 - top2), limitada a [0, 1]. É o score de qualidade retornado por
-# run_once: uma margem maior indica que o embedding discrimina melhor entre
-# as classes do vocabulário candidato.
-def _margin_from_similarities(similarities: np.ndarray) -> float:
-    top_two = np.sort(similarities)[-2:]
-    margin = float(top_two[1] - top_two[0])
-    return max(0.0, min(1.0, margin))
+# Calcula a margem relativa entre a maior e a segunda maior similaridade:
+# ``(top1 - top2) / (top1 - menor)``. É o score de qualidade retornado por
+# run_once. Relativa porque a margem bruta não é comparável entre famílias: o
+# SigLIP aprende escala e viés próprios, e a margem crua premiava o modelo de
+# temperatura efetiva maior. A razão é invariante a qualquer transformação
+# afim positiva das similaridades e fica em [0, 1].
+def relative_similarity_margin(similarities: np.ndarray) -> float:
+    """Retorna a margem entre as duas maiores similaridades, relativa à amplitude.
+
+    Argumentos:
+        similarities: similaridades da imagem contra cada termo do vocabulário.
+    Retorna:
+        a margem relativa em ``[0, 1]``; ``0`` quando todas as similaridades são iguais.
+    """
+    ordered = np.sort(similarities)
+    spread = float(ordered[-1] - ordered[0])
+    if spread <= 0.0:
+        return 0.0
+    return float(ordered[-1] - ordered[-2]) / spread
 
 
 # Constrói um candidato de benchmark (nome, factory, run_once) para um
 # checkpoint da família CLIP/SigLIP: factory carrega o processor/modelo e
 # pré-calcula os embeddings de texto normalizados do vocabulário fixo; run_once
-# encoda cada frame e retorna a margem top1/top2 de similaridade (via
+# encoda cada frame e retorna a margem relativa entre as duas maiores similaridades (via
 # _margin_from_similarities). Chamada por candidates() para montar a lista de
 # candidatos comparados por backend_benchmark.py.
 def _clip_family_candidate(name: str, checkpoint: str, frames: list[Path]) -> Candidate:
@@ -117,7 +128,7 @@ def _clip_family_candidate(name: str, checkpoint: str, frames: list[Path]) -> Ca
             image_features = _extract_features(model.get_image_features(**image_inputs))
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
             similarities = (image_features @ text_features.T)[0].float().cpu().numpy()
-        return _margin_from_similarities(similarities)
+        return relative_similarity_margin(similarities)
 
     return (name, factory, run_once)
 

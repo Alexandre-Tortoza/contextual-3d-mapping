@@ -1,0 +1,59 @@
+{
+  "frame_id": "corridor-02-06620",
+  "regions": [
+    {
+      "region_id": "region-56354ee761c5c45f",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 117510,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 3.0,
+        "x_max": 640.0,
+        "y_max": 232.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9819225072860718,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.259752692974871,
+      "model_mask_area": 8142,
+      "clipped_pixel_count": 8142,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-d41921ea7c990e5f",
+      "label": "black car",
+      "region_kind": "thing",
+      "discovery_area": 85652,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 254.0,
+        "x_max": 630.0,
+        "y_max": 470.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9826378226280212,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.463919154019095,
+      "model_mask_area": 23399,
+      "clipped_pixel_count": 23399,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

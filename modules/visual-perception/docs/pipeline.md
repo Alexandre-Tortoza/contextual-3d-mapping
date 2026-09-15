@@ -6,12 +6,12 @@ A configuração `research_quality` atual usa:
 
 | Capacidade | Modelo |
 | --- | --- |
-| descoberta de regiões | SAM ViT-H, `facebook/sam-vit-huge` |
+| descoberta de regiões | SAM3 tracker (segment everything), `facebook/sam3` |
 | features visuais densas | DINOv2-base, `facebook/dinov2-base` |
 | espaço imagem-texto | CLIP ViT-L/14, `openai/clip-vit-large-patch14` |
 | raciocínio multimodal | Qwen2.5-VL-3B-Instruct, 4-bit |
 
-O adapter de region discovery aceita checkpoints SAM/SAM2 compatíveis com o pipeline `mask-generation`, mas a configuração de referência atual seleciona **SAM ViT-H**, não SAM2.
+O adapter de region discovery usa o pipeline `mask-generation` com o tracker do SAM3 e aceita checkpoints SAM/SAM2 para comparação. Os números de exemplo desta página vêm da reference run `20260910T115810Z`, anterior à troca, que usou SAM ViT-H.
 
 ## Visão geral
 
@@ -19,7 +19,7 @@ O adapter de region discovery aceita checkpoints SAM/SAM2 compatíveis com o pip
 flowchart TD
     RGB["RGB 640x480"]
 
-    RGB --> SAM["SAM ViT-H"]
+    RGB --> SAM["SAM3 tracker"]
     SAM --> MASKS["masks + boxes + geometric confidence"]
     MASKS --> MERGE["ObservedRegion[]"]
 

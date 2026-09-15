@@ -1,0 +1,100 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-15116",
+  "input_sha256": "77dbc9906d41e4bd25453821dd0a697cc3bdaf431e8dea8abf85f72194f872bf",
+  "latency_s": 16.030995347995486,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 0,
+  "proposal_count": 0,
+  "merged_proposal_count": 0,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [],
+  "category_counts": [],
+  "region_kinds": [],
+  "semantic_confidence": {
+    "count": 0,
+    "missing": 0,
+    "minimum": null,
+    "maximum": null,
+    "mean": null,
+    "median": null,
+    "distinct_values": 0,
+    "stddev": null,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 0,
+    "missing": 0,
+    "minimum": null,
+    "maximum": null,
+    "mean": null,
+    "median": null,
+    "distinct_values": 0,
+    "stddev": null,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 0,
+  "mode_collapse": {
+    "dominant_label": null,
+    "dominant_fraction": 0.0,
+    "distinct_labels": 0,
+    "dominant_category": null,
+    "dominant_category_fraction": 0.0,
+    "distinct_categories": 0
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 0,
+    "reconciled_regions": 0,
+    "distinct_raw_labels": 0,
+    "distinct_canonical_concepts": 0,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 0,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 0
+  },
+  "published_region_count": 0,
+  "structural_context_count": 0,
+  "suppressed_regions": [],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": []
+}

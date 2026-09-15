@@ -17,19 +17,30 @@ from collections.abc import Sequence
 from PIL import Image
 
 from render_layers import DrawableShape, blend_masks, draw_boxes, draw_labels
+from visual_perception.domain.contextual_evidence import contextual_evidence_claim
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, primary_label_claim
 from visual_perception.domain.visual_observation import VisualObservation
 
 
 # Converte regiões observadas em formas desenháveis, carregando os dois eixos
-# de confiança separadamente. A confiança semântica vem do claim de label
-# primário — a mesma política que o diagnóstico usa, via primary_label_claim,
-# para que overlay e diagnostics.json nunca contem labels diferentes.
+# de confiança separadamente.
+#
+# O label desenhado é o da hipótese que **carrega** a evidência contextual, e
+# só cai para o primário quando não existe nenhuma. A distinção importa: uma
+# região publicada porque o refinamento a reinterpretou como ``red wall``
+# carrega ``wall`` como primeira hipótese afirmada, e desenhar a primeira faria
+# o overlay voltar a exibir exatamente o label que a política tira da frente.
+# Uma região de contexto estrutural não tem hipótese portadora, e por isso a
+# camada esmaecida continua mostrando o label do produtor.
+#
+# ``primary_label_claim`` segue sendo a política única de *quem conta labels* —
+# ela responde "o que o produtor elegeu", que é outra pergunta e continua
+# comparável entre runs em ``diagnostics.json``.
 def region_shapes(regions: Sequence[ObservedRegion]) -> tuple[DrawableShape, ...]:
     """Retorna as formas desenháveis das regiões, com label e confianças."""
     shapes: list[DrawableShape] = []
     for region in regions:
-        claim = primary_label_claim(region)
+        claim = contextual_evidence_claim(region) or primary_label_claim(region)
         confidence = None if claim is None or claim.confidence is None else claim.confidence.value
         shapes.append(
             DrawableShape(
@@ -61,10 +72,24 @@ def proposal_shapes(proposals: Sequence[RegionProposal]) -> tuple[DrawableShape,
     )
 
 
+# Converte em formas as superfícies que a política de publicação manteve fora
+# do output público. Existe para que a supressão seja inspecionável: o overlay
+# principal mostra o que o módulo publica, e esta camada mostra o que ele
+# decidiu não publicar — sem ela, "sumiu" e "nunca foi observado" ficariam
+# indistinguíveis no artifact.
+def structural_context_shapes(observation: VisualObservation) -> tuple[DrawableShape, ...]:
+    """Retorna as formas das regiões mantidas como contexto estrutural."""
+    return region_shapes(observation.structural_context)
+
+
 # Desenha máscaras, caixas e rótulos de uma observação sobre a imagem original.
 # Mantida com a assinatura de sempre para os consumidores existentes, mas agora
 # composta das primitivas — o artifact completo é uma composição das camadas,
 # não uma implementação paralela a elas.
+#
+# Desenha ``observation.regions``, que desde a política de publicação contextual
+# contém apenas evidência contextual: uma cena inteiramente normal produz um
+# overlay quase vazio, e isso é o comportamento correto.
 def render_overlay(image: Image.Image, observation: VisualObservation) -> Image.Image:
     """Retorna uma cópia de ``image`` com as regiões da observação desenhadas por cima."""
     shapes = region_shapes(observation.regions)

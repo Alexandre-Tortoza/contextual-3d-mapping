@@ -23,6 +23,8 @@ import statistics
 from collections import Counter
 from dataclasses import dataclass, field
 
+from visual_perception.application.contextual_publication import SuppressedRegion
+from visual_perception.application.temporal_prior import PriorAssignment
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.regions import (
@@ -219,6 +221,30 @@ class ContextualDiagnostics:
     competing_assertions: int = 0
 
 
+# Resume o que o prior temporal fez com este frame. Existe porque os dois
+# contadores de eco existentes (`scene_echo_label_count` e
+# `contextual.scene_echo_any_assertion`) comparam **apenas** contra as claims de
+# cena: um conceito vindo do frame anterior não aparece em nenhum dos dois, e a
+# pergunta "o modelo repetiu porque a sugestão estava lá?" ficaria sem medida.
+@dataclass(frozen=True)
+class PriorStats:
+    """O que a sugestão da observação anterior produziu neste frame.
+
+    Argumentos:
+        regions_with_prior: regiões que receberam alguma sugestão anterior.
+        echoed: regiões cuja identidade concluída é exatamente a sugerida.
+        contradicted: regiões que receberam sugestão e concluíram outra coisa.
+        mean_overlap: sobreposição média dos casamentos, ou ``None`` sem nenhum.
+        applied: se o prior estava ligado neste frame.
+    """
+
+    regions_with_prior: int = 0
+    echoed: int = 0
+    contradicted: int = 0
+    mean_overlap: float | None = None
+    applied: bool = False
+
+
 # Agrega tudo que se pode afirmar sobre uma observação sem reexecutar modelo
 # nenhum. Consumido pelo harness de validação, que o serializa junto dos
 # artifacts do frame.
@@ -244,6 +270,10 @@ class ObservationDiagnostics:
         fisheye: exclusão da área fora da lente.
         rejected_proposals: histograma ``(motivo, contagem)`` dos descartes.
         scene_echo_label_count: regiões cujo label repete uma claim de cena.
+        published_region_count: regiões publicadas como evidência contextual.
+        structural_context_count: regiões mantidas como contexto estrutural.
+        suppressed_regions: histograma ``(motivo, contagem)`` das supressões da
+            política de publicação contextual.
     """
 
     region_count: int
@@ -262,6 +292,44 @@ class ObservationDiagnostics:
     fisheye: ValidAreaStats = field(default_factory=ValidAreaStats)
     rejected_proposals: tuple[tuple[str, int], ...] = field(default_factory=tuple)
     contextual: ContextualDiagnostics = field(default_factory=ContextualDiagnostics)
+    published_region_count: int = 0
+    structural_context_count: int = 0
+    suppressed_regions: tuple[tuple[str, int], ...] = field(default_factory=tuple)
+    prior: PriorStats = field(default_factory=PriorStats)
+
+
+# Mede o eco do prior comparando a sugestão recebida com a identidade que a
+# região concluiu. Usa a mesma normalização de `_scene_echo_count` — caixa e
+# espaçamento — e por isso herda a mesma limitação declarada: `carpet` sugerido
+# e `carpeted floor` concluído não conta como eco. Isso é medição, nunca filtro:
+# nenhuma região é descartada por este número.
+def _prior_stats(
+    observation: VisualObservation, assignments: tuple[PriorAssignment, ...], applied: bool
+) -> PriorStats:
+    """Conta eco e contradição entre a sugestão anterior e a conclusão do frame."""
+    if not assignments:
+        return PriorStats(applied=applied)
+    suggested = {assignment.region_id: assignment.prior for assignment in assignments}
+    echoed = contradicted = 0
+    for region in observation.all_regions:
+        hypothesis = suggested.get(region.region_id)
+        if hypothesis is None:
+            continue
+        claim = primary_label_claim(region)
+        if claim is None:
+            continue
+        if _normalized(claim.value) == _normalized(hypothesis.concept):
+            echoed += 1
+        else:
+            contradicted += 1
+    overlaps = [assignment.prior.overlap for assignment in assignments]
+    return PriorStats(
+        regions_with_prior=len(assignments),
+        echoed=echoed,
+        contradicted=contradicted,
+        mean_overlap=sum(overlaps) / len(overlaps),
+        applied=applied,
+    )
 
 
 # Resume uma lista de valores opcionais em ConfidenceStats. Recebe os ausentes
@@ -327,7 +395,7 @@ def _scene_echo_count(observation: VisualObservation) -> int:
     if not scene_values:
         return 0
     echoes = 0
-    for region in observation.regions:
+    for region in observation.all_regions:
         claim = primary_label_claim(region)
         if claim is not None and _normalized(claim.value) in scene_values:
             echoes += 1
@@ -432,6 +500,9 @@ def diagnose_observation(
     discovered_proposals: int,
     kept_proposals: tuple[RegionProposal, ...] = (),
     proposal_rejections: tuple[RejectedProposal, ...] = (),
+    region_suppressions: tuple[SuppressedRegion, ...] = (),
+    prior_assignments: tuple[PriorAssignment, ...] = (),
+    prior_applied: bool = False,
     area_masks: ImageAreaMasks | None = None,
     ego_overlap_threshold: float = _DEFAULT_EGO_OVERLAP_THRESHOLD,
     valid_area_threshold: float = _DEFAULT_VALID_AREA_THRESHOLD,
@@ -448,6 +519,12 @@ def diagnose_observation(
             válida ou sobre o rig.
         proposal_rejections: os descartes registrados pela filtragem, usados
             para contar exclusão de ego e de área válida por motivo.
+        region_suppressions: os registros da política de publicação contextual,
+            usados para contar por motivo o que ficou fora do output público.
+        prior_assignments: os casamentos do prior temporal, para medir eco e
+            contradição. Vazio quando o prior está desligado.
+        prior_applied: se o prior estava ligado, para distinguir "nenhum
+            casamento" de "o canal nem existia neste frame".
         area_masks: as áreas declaradas do frame, para medir quanto delas ainda
             aparece nas regiões finais. ``None`` significa nenhuma declarada, e
             o diagnóstico registra isso em vez de fingir que houve filtragem.
@@ -458,7 +535,12 @@ def diagnose_observation(
     Retorna:
         o diagnóstico do frame, pronto para ser serializado por quem chama.
     """
-    regions = observation.regions
+    # As estatísticas descrevem tudo que o frame observou, publicado ou não.
+    # Contá-las só sobre a metade publicada quebraria a comparabilidade com
+    # todos os runs anteriores à política e esconderia exatamente a
+    # over-segmentação de superfície que ``mode_collapse`` existe para medir.
+    # Quanto disso chegou ao output público está em ``published_region_count``.
+    regions = observation.all_regions
     labels: Counter[str] = Counter()
     categories: Counter[str] = Counter()
     region_kinds: Counter[str] = Counter()
@@ -499,6 +581,7 @@ def diagnose_observation(
         duplicate_label_hypotheses=_duplicate_hypothesis_regions(regions),
         mode_collapse=_mode_collapse(labels, categories, len(regions)),
         scene_echo_label_count=_scene_echo_count(observation),
+        prior=_prior_stats(observation, prior_assignments, prior_applied),
         ego=EgoExclusionStats(
             proposals_rejected=rejections[ProposalRejectionReason.EGO_VEHICLE_OVERLAP.value],
             proposals_overlapping_ego=0
@@ -533,6 +616,11 @@ def diagnose_observation(
         ),
         rejected_proposals=_histogram(rejections),
         contextual=_contextual_diagnostics(observation),
+        published_region_count=len(observation.regions),
+        structural_context_count=len(observation.structural_context),
+        suppressed_regions=_histogram(
+            Counter(record.reason.value for record in region_suppressions)
+        ),
     )
 
 
@@ -547,7 +635,7 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
     raw_labels: set[str] = set()
     concepts: set[str] = set()
 
-    for region in observation.regions:
+    for region in observation.all_regions:
         primary = primary_label_claim(region)
         if primary is not None:
             raw_labels.add(_normalized(primary.value))
@@ -578,7 +666,7 @@ def _contextual_diagnostics(observation: VisualObservation) -> ContextualDiagnos
     }
     echo_any = 0
     competing = 0
-    for region in observation.regions:
+    for region in observation.all_regions:
         asserted = [
             claim
             for claim in region.claims

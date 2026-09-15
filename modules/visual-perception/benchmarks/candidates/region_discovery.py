@@ -15,7 +15,6 @@ import itertools
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-import numpy as np
 import torch
 from PIL import Image
 
@@ -40,10 +39,15 @@ def _sam_family_candidate(name: str, checkpoint: str, frames: list[Path]) -> Can
     frame_iter = _frame_cycle(frames)
 
     # Carrega o pipeline "mask-generation" do transformers para o checkpoint
-    # indicado, na GPU; chamada uma única vez por benchmark_candidate.
+    # indicado, na GPU; chamada uma única vez por benchmark_candidate. O SAM3
+    # entra pelo tracker, que o AutoModel de mask-generation não resolve sozinho.
     def factory() -> object:
-        from transformers import pipeline
+        from transformers import Sam3TrackerModel, Sam3TrackerProcessor, pipeline
 
+        if checkpoint == "facebook/sam3":
+            tracker = Sam3TrackerModel.from_pretrained(checkpoint).to("cuda").eval()
+            processor = Sam3TrackerProcessor.from_pretrained(checkpoint)
+            return pipeline("mask-generation", model=tracker, image_processor=processor.image_processor, device=0)
         return pipeline("mask-generation", model=checkpoint, device=0, dtype=torch.float32)
 
     # Gera masks para o próximo frame do ciclo e retorna a média das
@@ -81,7 +85,9 @@ def _fastsam_candidate(checkpoint: str, frames: list[Path]) -> Candidate:
     # encontrada); é o run_once exigido pelo contrato de benchmark_candidate.
     def run_once(model: object) -> float:
         image = next(frame_iter)
-        results = model(np.array(image), device=0, retina_masks=True, verbose=False)  # type: ignore[operator]
+        # A imagem vai como PIL, que o ultralytics trata como RGB — os candidatos SAM
+        # recebem a mesma imagem. Um ``np.ndarray`` é interpretado como BGR (#249).
+        results = model(image, device=0, retina_masks=True, verbose=False)  # type: ignore[operator]
         result = results[0]
         if result.boxes is None or result.boxes.conf is None or len(result.boxes.conf) == 0:
             return 0.0
@@ -92,10 +98,11 @@ def _fastsam_candidate(checkpoint: str, frames: list[Path]) -> Candidate:
 
 
 # Monta a lista de candidatos de region discovery avaliados pelo benchmark da
-# #174: duas variantes SAM/SAM2 e um FastSAM. Chamada por
+# #174: SAM3 tracker, SAM, SAM2 e um FastSAM. Chamada por
 # run_backend_benchmark.py ao selecionar o stage "region_discovery".
 def candidates(frames: list[Path]) -> list[Candidate]:
     return [
+        _sam_family_candidate("sam3:facebook/sam3", "facebook/sam3", frames),
         _sam_family_candidate("sam:facebook/sam-vit-huge", "facebook/sam-vit-huge", frames),
         _sam_family_candidate(
             "sam2:facebook/sam2.1-hiera-large", "facebook/sam2.1-hiera-large", frames

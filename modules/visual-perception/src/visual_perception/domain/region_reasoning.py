@@ -27,8 +27,10 @@ região.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import StrEnum
+from math import sqrt
 
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
 from visual_perception.domain.identifiers import validate_identifier
@@ -63,6 +65,98 @@ class SceneContextMode(StrEnum):
     LOCAL_FIRST = "local_first"
     #: As claims de cena acompanham a região, para desambiguação.
     CONTEXT_ASSISTED = "context_assisted"
+
+
+# Enumera se o raciocínio de uma região enxerga o que o frame anterior afirmou
+# sobre a mesma área da imagem. Existe pelo mesmo motivo que SceneContextMode:
+# a única garantia estrutural contra o modelo copiar uma sugestão é a sugestão
+# não entrar no request. Selecionado por
+# MultimodalReasoningConfig.temporal_prior_mode e aplicado em
+# select_region_prior.
+class TemporalPriorMode(StrEnum):
+    """Se a observação anterior da mesma área atravessa a fronteira do raciocínio."""
+
+    #: Cada frame é interpretado sozinho. É o comportamento histórico.
+    DISABLED = "disabled"
+    #: A região recebe o conceito afirmado antes para a área que ela cobre,
+    #: casada por sobreposição de caixa.
+    BOX_OVERLAP = "box_overlap"
+
+
+# Descreve uma região que o frame anterior afirmou, reduzida ao mínimo que o
+# casamento e o prompt precisam. Existe para que o prior seja um value object
+# fechado em vez de um ``ObservedRegion`` inteiro: reter a região anterior
+# traria máscara em resolução plena entre frames, que é exatamente o que
+# docs/api-contracts.md desaconselha ao proibir reter um PipelineResult.
+@dataclass(frozen=True)
+class PriorRegion:
+    """Uma região afirmada pelo frame anterior, candidata a informar o atual."""
+
+    region_id: str
+    box: BoundingBox
+    concept: str
+    category: str | None = None
+    #: Embedding denso da região anterior, usado **apenas** para desempatar
+    #: candidatos que já se sobrepõem. Vazio quando o slot denso não rodou.
+    embedding: tuple[float, ...] = field(default_factory=tuple)
+
+    # Rejeita um prior sem identidade ou sem conceito: os dois são obrigatórios
+    # para que a sugestão seja atribuível a uma observação anterior concreta.
+    def __post_init__(self) -> None:
+        """Valida identidade e conceito da região anterior."""
+        validate_identifier(self.region_id, field="region_id")
+        if not self.concept.strip():
+            raise ValueError(f"PriorRegion({self.region_id!r}) requires a non-empty concept.")
+
+
+# Reúne o que o frame anterior afirmou, sem nenhum metadado de sequência.
+# Existe para que ``visual-perception`` continue sem conhecer tempo, pose ou
+# gravação: quem sabe que um frame vem antes de outro é a composição, e o
+# módulo recebe apenas "isto foi afirmado antes", nunca "isto foi afirmado em t".
+@dataclass(frozen=True)
+class ScenePrior:
+    """As regiões afirmadas pela observação anterior da mesma cena."""
+
+    regions: tuple[PriorRegion, ...] = field(default_factory=tuple)
+
+    # Rejeita identidades repetidas, que tornariam o casamento não determinístico.
+    def __post_init__(self) -> None:
+        """Valida que cada região anterior aparece uma única vez."""
+        identifiers = [region.region_id for region in self.regions]
+        if len(set(identifiers)) != len(identifiers):
+            raise ValueError("ScenePrior must not contain repeated region ids.")
+
+
+# Carrega a sugestão que uma região recebeu, junto da evidência que justificou
+# o casamento. Existe porque "esta região recebeu um prior" precisa ser
+# auditável depois do fato: sem overlap e similarity registrados, não haveria
+# como distinguir um prior bem ancorado de um casamento de sorte.
+@dataclass(frozen=True)
+class PriorHypothesis:
+    """O que o frame anterior afirmou sobre a área que esta região cobre."""
+
+    concept: str
+    source_region_id: str
+    overlap: float
+    category: str | None = None
+    #: Cosseno entre os embeddings densos, quando ambos existem. ``None``
+    #: significa que o desempate não teve como ser feito, e não similaridade zero.
+    similarity: float | None = None
+
+    # Valida o que atravessa a fronteira do prompt. Era o único value object de
+    # domínio sem validação: sobreposição e similaridade fora de faixa e
+    # conceito vazio chegavam ao reasoner.
+    def __post_init__(self) -> None:
+        """Rejeita conceito vazio, identidade inválida e medidas fora de faixa."""
+        if not self.concept.strip():
+            raise ValueError("PriorHypothesis requires a non-empty concept.")
+        validate_identifier(self.source_region_id, field="source_region_id")
+        if not math.isfinite(self.overlap) or not 0.0 <= self.overlap <= 1.0:
+            raise ValueError(f"PriorHypothesis.overlap must be in [0, 1], got {self.overlap}.")
+        if self.similarity is not None and (
+            not math.isfinite(self.similarity) or not -1.0 <= self.similarity <= 1.0
+        ):
+            raise ValueError(f"PriorHypothesis.similarity must be in [-1, 1], got {self.similarity}.")
 
 
 #: As claims de cena que podem acompanhar uma região no prompt: **apenas** as
@@ -147,6 +241,10 @@ class RegionReasoningRequest:
     image_height: int
     views: tuple[RegionView, ...]
     scene_claims: tuple[SemanticClaim, ...] = field(default_factory=tuple)
+    #: O que a observação anterior afirmou sobre a área que esta região cobre.
+    #: ``None`` é o caso normal e o default: sem prior, o request é idêntico ao
+    #: histórico, o que mantém os runs anteriores comparáveis.
+    prior: PriorHypothesis | None = None
 
     # Impõe as invariantes que tornam o request interpretável: identidade
     # válida, pelo menos uma view de foreground (sem ela não há evidência
@@ -264,3 +362,89 @@ def select_region_scene_claims(
     if scene_context is None:
         return ()
     return tuple(claim for claim in scene_context.claims if claim.kind in REGION_SCENE_CLAIM_KINDS)
+
+
+# Calcula o cosseno entre dois embeddings densos. Existe local e privada porque
+# é usada só para desempatar candidatos que já se sobrepõem: promover isso a
+# utilitário público sugeriria que o módulo tem um comparador de embeddings
+# entre frames, que é justamente o que a #203 mediu como insuficiente sozinho
+# (acurácia balanceada de 0,660 para separar "mesmo label" de "label diferente").
+def _cosine(left: tuple[float, ...], right: tuple[float, ...]) -> float | None:
+    """Retorna o cosseno entre dois vetores, ou ``None`` se algum for vazio ou nulo."""
+    if not left or not right or len(left) != len(right):
+        return None
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
+    left_norm = sqrt(sum(a * a for a in left))
+    right_norm = sqrt(sum(b * b for b in right))
+    if left_norm == 0.0 or right_norm == 0.0:
+        return None
+    return max(-1.0, min(1.0, dot / (left_norm * right_norm)))
+
+
+# Casa uma região com o que o frame anterior afirmou sobre a mesma área da
+# imagem. Existe como par de select_region_scene_claims: os dois decidem o que
+# atravessa a fronteira do raciocínio, um no eixo da cena e outro no eixo do
+# tempo, e os dois devolvem vazio por decisão de modo em vez de por ausência.
+#
+# O casamento é por **sobreposição de caixa**, e não por similaridade de
+# embedding, por uma razão medida: a #203 registra que o cosseno DINOv2 separa
+# "mesmo label" de "label diferente" com acurácia balanceada de apenas 0,660, e
+# o módulo o usa como corroboração e nunca como gate. Em amostragem densa a
+# câmera mal se desloca entre frames vizinhos, e a sobreposição de caixa é o
+# sinal forte nesse regime; o embedding entra só para desempatar candidatos que
+# já se sobrepõem, que é exatamente o papel de corroboração que ele sustenta.
+def select_region_prior(
+    region_box: BoundingBox,
+    prior: ScenePrior | None,
+    *,
+    mode: TemporalPriorMode = TemporalPriorMode.DISABLED,
+    min_overlap: float = 0.3,
+    embedding: tuple[float, ...] = (),
+) -> PriorHypothesis | None:
+    """Retorna o que a observação anterior afirmou sobre a área desta região.
+
+    Argumentos:
+        region_box: caixa da região no frame atual.
+        prior: o que a observação anterior afirmou, ou ``None``.
+        mode: se a observação anterior acompanha a região.
+        min_overlap: sobreposição mínima de caixa para o casamento valer.
+        embedding: embedding denso da região atual, usado só no desempate.
+    Retorna:
+        a hipótese anterior casada, ou ``None`` quando nada se sobrepõe o
+        bastante — que é uma saída normal, e não um erro.
+    Levanta:
+        ValueError: se ``min_overlap`` estiver fora de ``[0, 1]``.
+    """
+    if not 0.0 <= min_overlap <= 1.0:
+        raise ValueError("min_overlap must be within [0, 1].")
+    if mode is TemporalPriorMode.DISABLED or prior is None:
+        return None
+    candidates = [
+        (region_box.iou(previous.box), previous)
+        for previous in prior.regions
+        if region_box.iou(previous.box) >= min_overlap
+    ]
+    if not candidates:
+        return None
+    # Ordena por similaridade densa e só depois por sobreposição, mas apenas
+    # entre candidatos que já passaram no gate geométrico. A ordenação final por
+    # region_id existe para que dois candidatos empatados em tudo produzam
+    # sempre o mesmo resultado.
+    scored = [
+        (overlap, _cosine(embedding, previous.embedding), previous) for overlap, previous in candidates
+    ]
+    overlap, similarity, chosen = max(
+        scored,
+        key=lambda item: (
+            item[1] if item[1] is not None else -2.0,
+            item[0],
+            item[2].region_id,
+        ),
+    )
+    return PriorHypothesis(
+        concept=chosen.concept,
+        source_region_id=chosen.region_id,
+        overlap=overlap,
+        category=chosen.category,
+        similarity=similarity,
+    )

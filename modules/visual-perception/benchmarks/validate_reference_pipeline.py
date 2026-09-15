@@ -21,6 +21,7 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -31,43 +32,76 @@ from pathlib import Path
 from typing import Any
 
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_ROOT = _MODULE_ROOT.parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(_MODULE_ROOT / "tests"))
 for relative in ("src", "../../contracts", "../../adapters/datasets", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / relative).resolve()))
 
 import numpy as np  # noqa: E402
+from contextual_mapping_adapters import (  # noqa: E402
+    ROSBAG_CLOCK_ID,
+    ExtractedFrameProvenance,
+    read_frame_provenance,
+)
+from contextual_mapping_contracts import (  # noqa: E402
+    FrameId,
+    ObservationReference,
+    SourceArtifactReference,
+    Timestamp,
+)
 from PIL import Image  # noqa: E402
 
-from fixtures import image_observation  # noqa: E402
 from frame_artifacts import (  # noqa: E402
     FRAME_ARTIFACT_LAYOUT_VERSION,
     FrameInputs,
     write_frame_artifacts,
 )
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
-from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
+from visual_perception.application.lifecycle import ModelLifecycleManager, StageMetrics  # noqa: E402
 from visual_perception.application.observation_diagnostics import diagnose_observation  # noqa: E402
 from visual_perception.application.pipeline import (  # noqa: E402
     PerceptionPorts,
     PipelineResult,
     run_canonical_pipeline,
 )
+from visual_perception.application.temporal_prior import prior_from  # noqa: E402
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.config import (  # noqa: E402
+    ConceptGroundingConfig,
     ImageAreaConfig,
     ModuleConfig,
     MultiContextConfig,
+    SceneConceptDiscoveryConfig,
+    TilingConfig,
 )
 from visual_perception.domain.errors import VisualPerceptionError  # noqa: E402
 from visual_perception.domain.image_area import CircleArea, ImageAreaGeometry  # noqa: E402
+from visual_perception.domain.image_observation import ImageObservation  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
 from visual_perception.domain.region_evidence import EvidenceSlot, EvidenceState  # noqa: E402
-from visual_perception.domain.region_reasoning import SceneContextMode  # noqa: E402
+from visual_perception.domain.region_reasoning import (  # noqa: E402
+    SceneContextMode,
+    ScenePrior,
+    TemporalPriorMode,
+)
 from visual_perception.domain.visual_observation import VisualObservation  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
+from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (  # noqa: E402
+    DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
+    RemoteReasoningCall,
+)
 
 FRAMES_DIR = Path(__file__).resolve().parent / ".local" / "corridor-02-frames"
+
+#: Variantes de tiling comparadas na #277. Vivem aqui para que o harness completo e o
+#: benchmark só de discovery (``tiling_benchmark.py``) usem exatamente as mesmas.
+TILING_VARIANTS: dict[str, TilingConfig] = {
+    "1x1": TilingConfig(multi_scale_enabled=False),
+    "2x2": TilingConfig(multi_scale_enabled=True, tile_grid="2x2"),
+    "2x2-discard": TilingConfig(multi_scale_enabled=True, tile_grid="2x2", discard_tile_border_truncations=True),
+    "3x3": TilingConfig(multi_scale_enabled=True, tile_grid="3x3"),
+    "3x3-discard": TilingConfig(multi_scale_enabled=True, tile_grid="3x3", discard_tile_border_truncations=True),
+}
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 #: Como run_validation obtém seus backends. Existe para que um teste injete
@@ -127,6 +161,22 @@ class ValidationOptions:
     #: anterior — ela foi feita antes de os estágios contextuais existirem.
     #: ``None`` mantém o checkpoint da configuração de referência.
     reasoning_checkpoint: str | None = None
+    #: Troca o backend do reasoner mantendo prompts, views e estágios (#276).
+    #: ``gemini_robotics_er`` envia frames e crops para a API do Gemini; ``None``
+    #: mantém o Qwen local da configuração de referência.
+    reasoning_backend: str | None = None
+    #: Variante de tiling do benchmark da #277 (``1x1``, ``2x2``, ``2x2-discard``,
+    #: ``3x3``, ``3x3-discard``); ``None`` mantém a da configuração de referência.
+    tiling_variant: str | None = None
+    #: Liga descoberta de conceitos na cena e grounding por SAM3 PCS (#277) como
+    #: fonte adicional de propostas.
+    concept_discovery: bool = False
+    #: Encadeia o que cada frame afirmou no frame seguinte (prior temporal).
+    #: A ordem dos frames é uma decisão de composição, e por isso vive aqui e
+    #: não no módulo: ``visual_perception`` recebe apenas "isto foi afirmado
+    #: antes", sem timestamp nem pose. ``None`` mantém o default da
+    #: configuração, que é desligado.
+    temporal_prior_mode: str | None = None
     #: Geometria de área da sequência (círculo útil da lente e silhueta do
     #: rig). A exclusão acontece dentro do pipeline, na filtragem de proposals,
     #: e nunca pintando pixels: até a #202 este harness tinha um
@@ -206,6 +256,51 @@ def _geometry_from_dict(payload: dict[str, Any] | None) -> ImageAreaGeometry | N
     )
 
 
+# Recusa uma geometria de área pedida que não existe. Existe porque a CLI
+# convertia um caminho inexistente em "sem geometria", e um erro de digitação
+# rodava o frame inteiro sem exclusão do rig e da vinheta, sem nada no
+# manifest que denunciasse. Rodar sem geometria é pedido explícito
+# (``--no-sequence-masks``), nunca consequência de um caminho errado.
+def require_sequence_masks(path: Path | None) -> None:
+    """Valida que a geometria de área pedida existe.
+
+    Argumentos:
+        path: arquivo de geometria, ou ``None`` quando o run não declara nenhuma.
+    Levanta:
+        ValueError: se um caminho foi pedido e não é um arquivo.
+    """
+    if path is not None and not path.is_file():
+        raise ValueError(
+            f"sequence masks file not found: {path}. Pass --no-sequence-masks to run without "
+            "declared area geometry."
+        )
+
+
+# Pico de VRAM de um conjunto de estágios, ou ``None`` quando nenhum mediu GPU.
+# Existe para que o manifest não registre zero onde não houve medida.
+def _peak_vram_bytes(metrics: tuple[StageMetrics, ...]) -> int | None:
+    """Retorna o maior pico de VRAM medido, ou ``None`` sem medida de GPU."""
+    measured = [metric.peak_vram_bytes for metric in metrics if metric.peak_vram_bytes is not None]
+    return max(measured, default=None)
+
+
+# Resume a memória do run para o summary e o terminal, com GPU e host sob
+# nomes distintos. Antes, o "pico de VRAM" do summary vinha de
+# ``peak_memory_bytes``, que é RSS do host quando não há CUDA, e discordava do
+# manifest do mesmo run.
+def _memory_summary(metrics: tuple[StageMetrics, ...], budget_gb: float) -> str:
+    """Retorna a linha de memória do run, sem apresentar RSS do host como VRAM."""
+    vram = _peak_vram_bytes(metrics)
+    vram_text = (
+        "Pico de VRAM: não medido (nenhum estágio rodou em CUDA)"
+        if vram is None
+        else f"Pico de VRAM: {vram / 1024**3:.2f} GB (budget: {budget_gb} GB)"
+    )
+    host = max((metric.peak_cpu_rss_bytes for metric in metrics), default=None)
+    host_text = "" if host is None else f" · Pico de RSS do host: {host / 1024**3:.2f} GB"
+    return vram_text + host_text
+
+
 # Retorna o hash curto do commit atual, ou "unknown" fora de um git worktree;
 # usado no manifest para amarrar as amostras à revisão de código que as gerou.
 def _git_revision() -> str:
@@ -228,6 +323,24 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+# Resume no manifest a proveniência com que a observação do frame foi montada,
+# para que o run registre de onde vieram timestamp, sensor e artifact.
+def _provenance_record(observation: ImageObservation) -> dict[str, object]:
+    """Retorna a proveniência da observação de entrada em forma serializável."""
+    source = observation.source
+    return {
+        "observation_id": source.observation_id,
+        "dataset_id": source.dataset_id,
+        "sequence_id": source.sequence_id,
+        "sensor_id": source.sensor_id,
+        "sequence_index": source.sequence_index,
+        "timestamp_ns": source.timestamp.nanoseconds,
+        "clock_id": source.timestamp.clock_id,
+        "frame_id": source.frame_id.value,
+        "artifact_uri": observation.image.uri,
+    }
 
 
 # Resolve IDs explícitos contra o diretório de frames e preserva sua ordem;
@@ -264,6 +377,68 @@ def select_frame_paths(
     return selected
 
 
+# Lê a proveniência registrada na extração de cada frame selecionado, antes de
+# qualquer modelo ser carregado. Existe porque o PNG não carrega timestamp nem
+# posição no stream: sem o registro, a validação antiga montava a observação
+# com valores fixos de um fixture de teste, e todos os frames saíam com o
+# mesmo instante (#239). Um frame sem registro interrompe o run.
+def load_frame_provenance(frames: tuple[Path, ...]) -> dict[Path, ExtractedFrameProvenance]:
+    """Lê e valida a proveniência de todos os frames selecionados.
+
+    Argumentos:
+        frames: PNGs selecionados para o run.
+    Retorna:
+        a proveniência de cada frame, indexada pelo caminho.
+    Levanta:
+        ValueError: se algum frame não tiver registro, tiver registro inválido
+            ou não declarar frame de coordenadas.
+    """
+    provenance: dict[Path, ExtractedFrameProvenance] = {}
+    for frame_path in frames:
+        try:
+            record = read_frame_provenance(frame_path)
+        except (FileNotFoundError, ValueError) as error:
+            raise ValueError(f"{frame_path.stem}: {error}") from error
+        if record.frame_id is None:
+            raise ValueError(
+                f"{frame_path.stem}: the source message declares no header.frame_id, so the "
+                "observation has no coordinate frame to carry."
+            )
+        provenance[frame_path] = record
+    return provenance
+
+
+# Monta a observação canônica de um frame a partir do que a extração
+# registrou, sem nenhum valor inventado: identidade pelo nome do frame,
+# gravação como dataset e sequência, tópico como sensor, e o artifact
+# apontando para o próprio PNG processado.
+def observation_from_frame(
+    frame_path: Path, provenance: ExtractedFrameProvenance, *, width: int, height: int
+) -> ImageObservation:
+    """Constrói a ``ImageObservation`` de um frame com sua proveniência real.
+
+    Argumentos:
+        frame_path: PNG processado.
+        provenance: registro lido por ``load_frame_provenance``.
+        width: largura dos pixels carregados.
+        height: altura dos pixels carregados.
+    Retorna:
+        a observação de entrada do pipeline.
+    """
+    assert provenance.frame_id is not None, "load_frame_provenance rejects frames without frame_id"
+    source = ObservationReference(
+        observation_id=frame_path.stem,
+        dataset_id=provenance.recording_id,
+        sequence_id=provenance.recording_id,
+        sensor_id=provenance.topic,
+        sequence_index=provenance.sequence_index,
+        timestamp=Timestamp(nanoseconds=provenance.timestamp_ns, clock_id=ROSBAG_CLOCK_ID),
+        frame_id=FrameId(provenance.frame_id),
+    )
+    image = SourceArtifactReference(uri=frame_path.resolve().as_uri(), media_type="image/png")
+    return ImageObservation(width=width, height=height, encoding="rgb8", image=image, source=source)
+
+
 # Resume o estado observado de cada slot sem confundir slot desabilitado
 # (missing) com falha operacional (failed). Consumido pelo manifest por frame.
 def evidence_state_counts(observation: VisualObservation) -> dict[str, dict[str, int]]:
@@ -272,7 +447,7 @@ def evidence_state_counts(observation: VisualObservation) -> dict[str, dict[str,
         slot.value: {state.value: 0 for state in EvidenceState}
         for slot in EvidenceSlot
     }
-    for region in observation.regions:
+    for region in observation.all_regions:
         for evidence in region.evidence:
             counts[evidence.slot.value][evidence.state.value] += 1
     return counts
@@ -284,7 +459,7 @@ def model_call_counts(
     payload: ImagePayload, config: ModuleConfig, result: PipelineResult
 ) -> dict[str, int]:
     """Conta chamadas por capacidade e devolve também o total do frame."""
-    region_count = len(result.observation.regions)
+    region_count = len(result.observation.all_regions)
     evidence_calls = sum(metric.model_calls for metric in result.evidence_metrics)
     stage_calls = dict(result.stage_model_calls)
     counts = {
@@ -298,8 +473,131 @@ def model_call_counts(
         "hypothesis_support_text": stage_calls.get("hypothesis_support_text", 0),
         "region_refinement": stage_calls.get("region_refinement", 0),
         "semantic_relations": stage_calls.get("semantic_relations", 0),
+        "scene_concept_discovery": stage_calls.get("scene_concept_discovery", 0),
+        "concept_grounding": stage_calls.get("concept_grounding", 0),
     }
     return {**counts, "total": sum(counts.values())}
+
+
+# Resume a geometria produzida por discovery antes e depois da filtragem e do
+# merge. Existe para comparar configurações de discovery sem tratar contagem bruta de masks
+# como qualidade: tamanho, sobreposição e fragmentação explicam se propostas
+# extras carregam cobertura nova ou apenas repetem a mesma evidência.
+def discovery_telemetry(
+    payload: ImagePayload, result: PipelineResult
+) -> dict[str, int | float | None]:
+    """Calcula telemetria geométrica de region discovery para um frame.
+
+    Argumentos:
+        payload: frame que define a área de normalização das masks.
+        result: saída do pipeline com proposals cruas, filtradas e regiões finais.
+    Retorna:
+        contagens, estatísticas de área, sobreposição média e fragmentação.
+    """
+    frame_area = payload.width * payload.height
+    raw = result.discovered_proposals
+    kept = result.proposals
+    areas = np.asarray([proposal.mask.area() / frame_area for proposal in kept], dtype=np.float64)
+    overlaps = [
+        left.mask.iou(right.mask)
+        for index, left in enumerate(kept)
+        for right in kept[index + 1 :]
+    ]
+    region_count = len(result.observation.all_regions)
+    return {
+        "raw_proposal_count": len(raw),
+        "kept_proposal_count": len(kept),
+        "merged_region_count": region_count,
+        "area_fraction_min": None if not len(areas) else float(areas.min()),
+        "area_fraction_median": None if not len(areas) else float(np.median(areas)),
+        "area_fraction_max": None if not len(areas) else float(areas.max()),
+        "mean_pairwise_iou": None if not overlaps else float(np.mean(overlaps)),
+        "fragmentation_ratio": None if not region_count else len(kept) / region_count,
+    }
+
+
+# Resume custo e falhas das consultas a um reasoner remoto. Existe porque latência,
+# tokens e rate limit da API não aparecem nas métricas de VRAM do lifecycle; ``None``
+# quando o reasoner é local e não registra consultas.
+def remote_reasoning_summary(calls: tuple[RemoteReasoningCall, ...] | None) -> dict[str, object] | None:
+    """Agrega a telemetria de consultas remotas do run.
+
+    Argumentos:
+        calls: consultas registradas pelo adapter remoto, ou ``None``.
+    Retorna:
+        contagens, latência, tokens e falhas transitórias por motivo.
+    """
+    if calls is None:
+        return None
+    transient: dict[str, int] = {}
+    for call in calls:
+        for reason in call.transient_failures:
+            transient[reason] = transient.get(reason, 0) + 1
+    latencies = [call.latency_s for call in calls]
+    return {
+        "model": calls[0].model if calls else None,
+        "calls": len(calls),
+        "failed_calls": sum(not call.succeeded for call in calls),
+        "calls_by_operation": {op: sum(call.operation == op for call in calls) for op in sorted({c.operation for c in calls})},
+        "total_latency_s": sum(latencies),
+        "mean_latency_s": (sum(latencies) / len(latencies)) if latencies else None,
+        "prompt_tokens": sum(call.prompt_tokens or 0 for call in calls),
+        "output_tokens": sum(call.output_tokens or 0 for call in calls),
+        "thought_tokens": sum(call.thought_tokens or 0 for call in calls),
+        "transient_failures": transient,
+    }
+
+
+# Resume o que a descoberta de conceitos (#277) produziu e quanto disso virou região.
+# ``concepts_without_region`` é o gatilho natural do refinamento adaptativo: um
+# conceito que o VLM viu mas o grounding não localizou.
+def concept_discovery_report(result: PipelineResult) -> dict[str, object] | None:
+    """Retorna conceitos, descartes e a contribuição deles para as regiões do frame.
+
+    Argumentos:
+        result: saída do pipeline para o frame.
+    Retorna:
+        o relatório, ou ``None`` quando a descoberta de conceitos estava desligada.
+    """
+    if result.scene_concepts is None:
+        return None
+    concept_by_proposal = {p.proposal_id: p.concept for p in result.discovered_proposals if p.concept}
+    kept_concepts = {p.concept for p in result.proposals if p.concept}
+    regions_with_concept = 0
+    regions_only_from_concepts = 0
+    grounded_concepts: set[str] = set()
+    for region in result.observation.all_regions:
+        contributing = [concept_by_proposal.get(pid) for pid in region.contributing_proposal_ids]
+        concepts = {concept for concept in contributing if concept}
+        grounded_concepts |= concepts
+        regions_with_concept += int(bool(concepts))
+        regions_only_from_concepts += int(bool(contributing) and all(contributing))
+    texts = [concept.text for concept in result.scene_concepts.concepts]
+    return {
+        "prompt_version": result.scene_concepts.provenance.prompt_version,
+        "concepts": [
+            {"text": c.text, "kind": c.kind.value, "confidence": c.confidence} for c in result.scene_concepts.concepts
+        ],
+        "discarded": [list(item) for item in result.scene_concepts.discarded],
+        "concept_proposals": len(concept_by_proposal),
+        "concept_proposals_after_area_filter": sum(1 for p in result.proposals if p.concept),
+        "regions_with_concept": regions_with_concept,
+        "regions_only_from_concepts": regions_only_from_concepts,
+        "concepts_without_region": [text for text in texts if text not in grounded_concepts],
+        "concepts_filtered_out": [text for text in texts if text not in kept_concepts],
+    }
+
+
+# Carrega variáveis de um ``.env`` sem sobrescrever o ambiente. Existe só no ponto
+# de entrada: a chave nunca passa pela config nem pelo manifest.
+def load_dotenv(path: Path) -> None:
+    """Exporta pares ``CHAVE=valor`` de ``path`` que ainda não estão no ambiente."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, separator, value = line.partition("=")
+        if separator and key.strip() and not key.strip().startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip())
 
 
 # Resolve a configuração de um run a partir das opções, sem executar nada.
@@ -314,7 +612,7 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
     Retorna:
         a configuração de referência com os overrides declarados aplicados.
     """
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(real_backends=True)
     # A geometria de área da sequência entra na configuração do módulo, e não
     # num passo do harness: assim ela participa do fingerprint e do manifest, e
     # a exclusão acontece dentro do pipeline em vez de sobre os pixels.
@@ -322,6 +620,18 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
         config, image_area=load_image_area_config(options.sequence_masks)
     )
     if options.context_profile == "baseline":
+        # Desligar o crop contextual exige tirá-lo também de quem o consome: a
+        # config recusa pedir um slot que não é produzido.
+        without_context = tuple(
+            name
+            for name in config.hypothesis_support.slots
+            if name != EvidenceSlot.CONTEXTUAL_CROP.value
+        )
+        escalation_without_context = tuple(
+            name
+            for name in config.refinement.escalation_views
+            if name != EvidenceSlot.CONTEXTUAL_CROP.value
+        )
         config = dataclasses.replace(
             config,
             multi_context=MultiContextConfig(
@@ -329,6 +639,10 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 tight_crop_enabled=True,
                 contextual_crop_enabled=False,
                 scene_conditioned_enabled=False,
+            ),
+            hypothesis_support=dataclasses.replace(config.hypothesis_support, slots=without_context),
+            refinement=dataclasses.replace(
+                config.refinement, escalation_views=escalation_without_context
             ),
         )
     if options.region_views is not None:
@@ -338,11 +652,43 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 config.multimodal_reasoning, region_views=options.region_views
             ),
         )
+    if options.reasoning_backend == "gemini_robotics_er":
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning,
+                backend="gemini_robotics_er",
+                checkpoint=DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
+                load_in_4bit=False,
+            ),
+        )
+    if options.tiling_variant is not None:
+        config = dataclasses.replace(config, tiling=TILING_VARIANTS[options.tiling_variant])
+    if options.concept_discovery:
+        config = dataclasses.replace(
+            config,
+            scene_concept_discovery=SceneConceptDiscoveryConfig(enabled=True),
+            concept_grounding=ConceptGroundingConfig(backend="sam3"),
+        )
     if options.reasoning_checkpoint is not None:
         config = dataclasses.replace(
             config,
             multimodal_reasoning=dataclasses.replace(
                 config.multimodal_reasoning, checkpoint=options.reasoning_checkpoint
+            ),
+        )
+    if options.temporal_prior_mode is not None:
+        # A versão do prompt é bumpada **junto** com o modo, e não em separado,
+        # porque o texto dos prompts é um literal no adapter e nada bumpa a
+        # versão sozinho: dois braços com prompts diferentes declarando a mesma
+        # versão seriam indistinguíveis na proveniência de cada claim.
+        enabled = options.temporal_prior_mode != TemporalPriorMode.DISABLED.value
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning,
+                temporal_prior_mode=options.temporal_prior_mode,
+                prompt_version="v9" if enabled else config.multimodal_reasoning.prompt_version,
             ),
         )
     if options.scene_context_mode is not None:
@@ -373,6 +719,8 @@ def run_validation(
     """
     try:
         frames = select_frame_paths(options.frames_dir, options.frame_ids, options.limit)
+        frame_provenance = load_frame_provenance(frames)
+        require_sequence_masks(options.sequence_masks)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     if not frames:
@@ -393,6 +741,13 @@ def run_validation(
 
     summary_rows: list[str] = []
     frame_reports: list[dict[str, object]] = []
+    # O prior do próximo frame é derivado do resultado deste. Este laço é o
+    # único lugar do sistema que sabe que um frame precede outro: o módulo
+    # recebe um ScenePrior sem nenhum metadado de tempo ou pose.
+    prior_enabled = (
+        config.multimodal_reasoning.temporal_prior_mode != TemporalPriorMode.DISABLED.value
+    )
+    prior: ScenePrior | None = None
 
     for frame_path in frames:
         name = frame_path.stem
@@ -415,11 +770,17 @@ def run_validation(
         ego_mask = None if area_masks.ego_vehicle is None else area_masks.ego_vehicle.data
         valid_mask = None if area_masks.valid_area is None else area_masks.valid_area.data
         payload = ImagePayload(raw_pixels, width=width, height=height)
-        raw_payload = ImagePayload(raw_pixels, width=width, height=height)
-        observation_input = image_observation(observation_id=name, width=width, height=height)
+        # Cópia independente: a garantia "o pipeline recebeu os pixels de
+        # origem" só é verificável contra um buffer que o pipeline não alcança.
+        # Com o mesmo array nos dois lados a comparação era verdadeira por
+        # identidade, e um pré-processamento destrutivo passava em silêncio.
+        raw_payload = ImagePayload(raw_pixels.copy(), width=width, height=height)
+        observation_input = observation_from_frame(
+            frame_path, frame_provenance[frame_path], width=width, height=height
+        )
 
         try:
-            result = run_canonical_pipeline(observation_input, payload, config, ports)
+            result = run_canonical_pipeline(observation_input, payload, config, ports, prior)
         except VisualPerceptionError as error:
             print(f"  FAILED: {error!r}")
             frame_reports.append(
@@ -430,6 +791,7 @@ def run_validation(
                         "sha256": _sha256(frame_path),
                         "width": width,
                         "height": height,
+                        "provenance": _provenance_record(observation_input),
                     },
                     "failed": True,
                     "reason": repr(error),
@@ -437,15 +799,25 @@ def run_validation(
                 }
             )
             summary_rows.append(f"## {name}\n\n**FALHOU:** `{error!r}`\n")
+            # Um frame que falhou não deixa herança: manter o prior do frame
+            # anterior faria uma afirmação atravessar um buraco da sequência e
+            # alcançar um viewpoint que ninguém observou.
+            prior = None
             continue
 
         canonical_observation = result.observation
+        prior = (
+            prior_from(canonical_observation, result.visual_embeddings) if prior_enabled else None
+        )
         frame_latency_s = time.monotonic() - frame_start
         diagnostics = diagnose_observation(
             canonical_observation,
             discovered_proposals=len(result.proposals) + len(result.rejected_proposals),
             kept_proposals=result.proposals,
             proposal_rejections=result.rejected_proposals,
+            region_suppressions=result.suppressed_regions,
+            prior_assignments=result.prior_assignments,
+            prior_applied=prior_enabled,
             area_masks=result.area_masks,
             ego_overlap_threshold=config.proposal_filter.max_ego_overlap,
             valid_area_threshold=config.proposal_filter.min_valid_overlap,
@@ -466,8 +838,11 @@ def run_validation(
                 "input_sha256": _sha256(frame_path),
                 "latency_s": frame_latency_s,
                 "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+                "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
+                "prompt_version": config.multimodal_reasoning.prompt_version,
                 "region_views": list(config.multimodal_reasoning.region_views),
             },
+            config=config,
         )
         overlay_path = frame_dir / artifacts["regions_overlay"]
 
@@ -478,7 +853,9 @@ def run_validation(
         )
         audit_status = "pass" if result.audit.passed else "FAIL"
         print(
-            f"  canonical_regions={len(canonical_observation.regions)} "
+            f"  canonical_regions={len(canonical_observation.all_regions)} "
+            f"published={len(canonical_observation.regions)} "
+            f"structural_context={len(canonical_observation.structural_context)} "
             f"relations={len(result.observation.relations)} "
             f"interpretation_failures={len(result.region_interpretation_failures)} "
             f"audit={audit_status} warnings={len(result.audit.warnings)}"
@@ -498,9 +875,16 @@ def run_validation(
                     "sha256": _sha256(frame_path),
                     "width": width,
                     "height": height,
+                    "provenance": _provenance_record(observation_input),
                 },
                 "failed": False,
-                "canonical_region_count": len(canonical_observation.regions),
+                # Continua contando a observação inteira, para que a série
+                # histórica desta métrica siga comparável com os runs
+                # anteriores à política de publicação contextual. Quanto disso
+                # chegou ao output público está nos dois campos seguintes.
+                "canonical_region_count": len(canonical_observation.all_regions),
+                "published_region_count": len(canonical_observation.regions),
+                "structural_context_count": len(canonical_observation.structural_context),
                 "relation_count": len(result.observation.relations),
                 "interpretation_failure_count": len(result.region_interpretation_failures),
                 "evidence_failure_count": len(result.evidence_failures),
@@ -519,10 +903,15 @@ def run_validation(
                 "audit_warning_count": len(result.audit.warnings),
                 "latency_s": frame_latency_s,
                 "model_lifecycle_events": len(frame_metrics),
-                "peak_vram_bytes": max(
-                    (metric.peak_vram_bytes or 0 for metric in frame_metrics), default=0
+                # ``None`` quando nenhum estágio mediu GPU: zero seria uma medida
+                # que não aconteceu. A memória do host fica num campo próprio.
+                "peak_vram_bytes": _peak_vram_bytes(frame_metrics),
+                "peak_host_rss_bytes": max(
+                    (metric.peak_cpu_rss_bytes for metric in frame_metrics), default=None
                 ),
                 "proposal_count": diagnostics.proposal_count,
+                "discovery_telemetry": discovery_telemetry(payload, result),
+                "concept_discovery": concept_discovery_report(result),
                 "dominant_label": diagnostics.mode_collapse.dominant_label,
                 "dominant_label_fraction": diagnostics.mode_collapse.dominant_fraction,
                 "distinct_labels": diagnostics.mode_collapse.distinct_labels,
@@ -531,11 +920,11 @@ def run_validation(
                 # Sem estes campos, ligar ou desligar qualquer um deles não
                 # mudaria nada de comparável entre dois manifests.
                 "contextual": asdict(diagnostics.contextual),
+                "prior": asdict(diagnostics.prior),
                 "signal_failure_count": len(result.signal_failures),
                 "relation_failure_count": len(result.relation_failures),
                 "refinement": [
                     {
-                        "iteration": step.iteration,
                         "previous_evidence": list(step.previous_evidence),
                         "new_evidence": list(step.new_evidence),
                         "producer": step.producer,
@@ -548,7 +937,15 @@ def run_validation(
                             for target in step.targets
                         ],
                         "refined_region_ids": list(step.refined_region_ids),
-                        "failures": [asdict(failure) for failure in step.failures],
+                        # `RegionInterpretationFailure` é uma exception (#165), não um
+                        # dataclass — `asdict()` levanta TypeError nela. Isso derrubava
+                        # o run inteiro sempre que a etapa de refinement isolava uma
+                        # falha por região (ex: OOM real do backend durante o retry),
+                        # o oposto do propósito da isolação por região.
+                        "failures": [
+                            {"region_id": failure.region_id, "reason": failure.reason}
+                            for failure in step.failures
+                        ],
                     }
                     for step in result.refinement_history
                 ],
@@ -564,14 +961,16 @@ def run_validation(
             f"## {name}\n\n"
             f"![{name}]({overlay_path.relative_to(out_dir)})\n\n"
             f"**scene_type:** {scene_type} · "
-            f"**regiões canônicas:** {len(canonical_observation.regions)} · "
+            f"**regiões canônicas:** {len(canonical_observation.all_regions)} "
+            f"({len(canonical_observation.regions)} publicadas, "
+            f"{len(canonical_observation.structural_context)} contexto estrutural) · "
             f"**relações:** {len(result.observation.relations)} · "
             f"**falhas de interpretação:** {len(result.region_interpretation_failures)} · "
             f"**audit:** {'✅ pass' if result.audit.passed else '❌ FAIL'} "
             f"({len(result.audit.warnings)} warnings)\n"
         )
 
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     manifest = {
         "run_id": run_id,
@@ -588,24 +987,25 @@ def run_validation(
         "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
         "context_profile": options.context_profile,
         "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+        "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
+        "prompt_version": config.multimodal_reasoning.prompt_version,
         "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
         "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
+        "remote_reasoning": remote_reasoning_summary(getattr(ports.multimodal_reasoner, "calls", None)),
         "frames": frame_reports,
     }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-    peak_vram_gb = max((m.peak_memory_bytes / (1024**3) for m in lifecycle.metrics), default=0.0)
+    memory_line = _memory_summary(lifecycle.metrics, config.gpu_memory_budget_gb)
     summary_header = (
         f"# Validação do pipeline real — {run_id}\n\n"
-        f"Revisão: `{manifest['git_revision']}` · Frames: {len(frames)} · "
-        f"Pico de VRAM observado: {peak_vram_gb:.2f} GB "
-        f"(budget: {config.gpu_memory_budget_gb} GB)\n\n"
+        f"Revisão: `{manifest['git_revision']}` · Frames: {len(frames)} · {memory_line}\n\n"
         "Ver `manifest.json` para configuração completa e log de estágios.\n\n"
     )
-    (out_dir / "summary.md").write_text(summary_header + "\n".join(summary_rows))
+    (out_dir / "summary.md").write_text(summary_header + "\n".join(summary_rows), encoding="utf-8")
 
     print(f"\nWrote samples to {out_dir}")
-    print(f"Peak VRAM across the run: {peak_vram_gb:.2f} GB (budget {config.gpu_memory_budget_gb} GB)")
+    print(memory_line)
     return out_dir
 
 
@@ -626,6 +1026,27 @@ def _argument_parser() -> argparse.ArgumentParser:
             "resto constante (#218). Trocar prompt e modelo na mesma comparação torna "
             "as duas mudanças ininterpretáveis."
         ),
+    )
+    parser.add_argument(
+        "--reasoning-backend",
+        choices=("qwen_vl", "gemini_robotics_er"),
+        default=None,
+        help=(
+            "gemini_robotics_er consulta a API do Gemini com os mesmos prompts e views do "
+            "Qwen (#276); frames e crops saem da máquina. Lê GEMINI_API_KEY do ambiente ou do .env"
+        ),
+    )
+    parser.add_argument(
+        "--tiling",
+        dest="tiling_variant",
+        choices=tuple(TILING_VARIANTS),
+        default=None,
+        help="variante de tiling do benchmark da #277; discard descarta propostas truncadas pela borda do tile",
+    )
+    parser.add_argument(
+        "--concept-discovery",
+        action="store_true",
+        help="liga descoberta de conceitos na cena e grounding por SAM3 PCS como fonte adicional de propostas (#277)",
     )
     parser.add_argument(
         "--context-profile",
@@ -650,13 +1071,28 @@ def _argument_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--temporal-prior-mode",
+        choices=tuple(mode.value for mode in TemporalPriorMode),
+        default=None,
+        help=(
+            "encadeia o que cada frame afirmou no frame seguinte; box_overlap casa "
+            "por sobreposição de caixa e bumpa prompt_version para v9, porque o "
+            "prompt deixa de ser byte-idêntico ao v8"
+        ),
+    )
+    parser.add_argument(
         "--sequence-masks",
         type=Path,
         default=SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json",
         help=(
             "geometria de área da sequência (círculo útil da lente e silhueta do rig); "
-            "passe um caminho inexistente para rodar sem exclusão declarada"
+            "um caminho inexistente interrompe o run — use --no-sequence-masks para rodar sem"
         ),
+    )
+    parser.add_argument(
+        "--no-sequence-masks",
+        action="store_true",
+        help="roda sem geometria de área declarada para uma sequência genérica",
     )
     return parser
 
@@ -666,6 +1102,7 @@ def _argument_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     """Executa o CLI de validação real."""
     arguments = _argument_parser().parse_args(argv)
+    load_dotenv(_REPOSITORY_ROOT / ".env")
     run_validation(
         ValidationOptions(
             frames_dir=arguments.frames_dir,
@@ -674,9 +1111,13 @@ def main(argv: list[str] | None = None) -> None:
             limit=arguments.limit,
             context_profile=arguments.context_profile,
             reasoning_checkpoint=arguments.reasoning_checkpoint,
+            reasoning_backend=arguments.reasoning_backend,
+            tiling_variant=arguments.tiling_variant,
+            concept_discovery=arguments.concept_discovery,
             region_views=tuple(arguments.region_views) or None,
             scene_context_mode=arguments.scene_context_mode,
-            sequence_masks=arguments.sequence_masks if arguments.sequence_masks.is_file() else None,
+            temporal_prior_mode=arguments.temporal_prior_mode,
+            sequence_masks=None if arguments.no_sequence_masks else arguments.sequence_masks,
         )
     )
 

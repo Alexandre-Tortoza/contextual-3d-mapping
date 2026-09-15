@@ -1,0 +1,53 @@
+{
+  "frame_id": "corridor-02-00017",
+  "regions": [
+    {
+      "region_id": "region-68221b12b8155fa6",
+      "label": "door frame",
+      "region_kind": "thing",
+      "discovery_area": 7464,
+      "box_before": {
+        "x_min": 480.0,
+        "y_min": 5.0,
+        "x_max": 535.0,
+        "y_max": 305.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9722568988800049,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 107.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 1.04 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    },
+    {
+      "region_id": "region-84043c7454f551b4",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 5982,
+      "box_before": {
+        "x_min": 196.0,
+        "y_min": 99.0,
+        "x_max": 241.0,
+        "y_max": 285.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 7.65 GiB of which 107.56 MiB is free. Process 1485 has 4.34 MiB memory in use. Including non-PyTorch memory, this process has 7.03 GiB memory in use. Of the allocated memory 5.84 GiB is allocated by PyTorch, and 1.04 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)"
+    }
+  ]
+}

@@ -17,7 +17,10 @@ from fixtures import image_observation  # noqa: E402
 from visual_perception.application.execution_profile import research_quality_config  # noqa: E402
 from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
 from visual_perception.application.pipeline import run_canonical_pipeline  # noqa: E402
+from visual_perception.domain.geometry import Mask  # noqa: E402
+from visual_perception.domain.grounding import GroundingRequest, GroundingStatus  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402
+from visual_perception.domain.semantics import RegionKind  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
 
 requires_gpu = pytest.mark.skipif(
@@ -49,13 +52,13 @@ def _real_test_payload(width: int = 64, height: int = 64) -> ImagePayload:
 @requires_gpu
 def test_real_region_discovery_adapter_finds_regions_on_gpu() -> None:
     """O adapter real de region discovery roda SAM de verdade e retorna geometria válida."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
 
     proposals = ports.region_discoverer.discover(payload, config.region_discovery)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert len(proposals) > 0
     for proposal in proposals:
@@ -67,13 +70,13 @@ def test_real_region_discovery_adapter_finds_regions_on_gpu() -> None:
 @requires_gpu
 def test_real_feature_extraction_adapter_returns_finite_grid_on_gpu() -> None:
     """O adapter real de feature extraction roda DINOv2 de verdade e retorna um grid finito."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
 
     feature_map = ports.feature_extractor.extract(payload, config.feature_extraction)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert feature_map.dimension > 0
     assert feature_map.grid_height > 0 and feature_map.grid_width > 0
@@ -83,14 +86,14 @@ def test_real_feature_extraction_adapter_returns_finite_grid_on_gpu() -> None:
 @requires_gpu
 def test_real_language_embedding_adapter_returns_normalized_vector_on_gpu() -> None:
     """O adapter real de language embedding roda CLIP de verdade e normaliza a saída."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
 
     image_vector = ports.language_encoder.encode_image(payload, config.language_embedding)
     text_vector = ports.language_encoder.encode_text("a green square", config.language_embedding)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     for vector in (image_vector, text_vector):
         assert len(vector) == config.language_embedding.dimension
@@ -101,13 +104,13 @@ def test_real_language_embedding_adapter_returns_normalized_vector_on_gpu() -> N
 @requires_gpu
 def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
     """O adapter real de multimodal reasoning roda o VLM de verdade e retorna JSON parseável."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()
 
     response = ports.multimodal_reasoner.analyze_scene(payload, config.multimodal_reasoning)
-    lifecycle.release_active()
+    lifecycle.release_all()
 
     assert isinstance(response, dict)
     # O contract de cena é ambiental desde a #202: sem prosa livre e sem
@@ -118,6 +121,86 @@ def test_real_multimodal_reasoning_adapter_returns_scene_json_on_gpu() -> None:
 
 
 @requires_gpu
+def test_real_semantic_grounding_adapter_grounds_regions_on_gpu() -> None:
+    """O adapter real de semantic_grounding roda SAM2 promptado de verdade e refina a região.
+
+    Regressão: o mesmo checkpoint SAM1 que quebrava region_discovery
+    (facebook/sam-vit-huge, ver test_real_region_discovery_adapter_finds_regions_on_gpu)
+    também era usado aqui via ``transformers.SamModel``, saturando numericamente e
+    devolvendo score/mask NaN — capturado pelo guard de ``_segment`` (a claim vira
+    ``status=grounding_failed`` com o motivo "scores devem ser valores finitos", em vez
+    de propagar a exception crua). O guard funciona, mas o efeito observável era o
+    mesmo de um bug silencioso: **toda** claim saía ``grounding_failed`` por esse
+    motivo, com um conceito trivialmente localizável (bloco verde saturado sobre
+    gradiente). Por isso a asserção central aqui é ``status is REFINED`` — não
+    condicional: um teste que só checa "se refinou, os números são finitos" passa
+    mesmo quando nada nunca refina, que foi exatamente como esta regressão escapou na
+    primeira versão deste teste.
+    """
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
+    lifecycle = ModelLifecycleManager()
+    ports = create_perception_ports(config, lifecycle)
+    payload = _real_test_payload()
+
+    discovery_mask = np.zeros((payload.height, payload.width), dtype=np.bool_)
+    discovery_mask[16:48, 16:48] = True
+    request = GroundingRequest(
+        region_id="region-green-square",
+        concept="green square",
+        region_kind=RegionKind.THING,
+        discovery_mask=Mask(discovery_mask, payload.width, payload.height),
+    )
+
+    predictions = ports.semantic_grounder.ground(payload, (request,), config.semantic_grounding)
+    lifecycle.release_all()
+
+    assert len(predictions) == 1
+    prediction = predictions[0]
+    assert prediction.status is GroundingStatus.REFINED, prediction.reason
+    assert prediction.model_mask is not None
+    assert prediction.model_mask.data.any()
+    assert prediction.geometric_confidence is not None
+    assert np.isfinite(prediction.geometric_confidence)
+    assert 0.0 <= prediction.geometric_confidence <= 1.0
+
+
+# Regressão da mitigação de thrashing de VRAM (ver semantic_grounding_backend.py):
+# grounding é o último estágio do pipeline canônico por frame, então libera os
+# modelos residentes dos estágios anteriores antes de carregar os seus próprios.
+# Sem isso, os 6 modelos reais (4 canônicos + grounding-dino + SAM2 promptado) não
+# cabem nos 8GB de referência ao mesmo tempo, e a eviction reativa por LRU
+# thrasheava várias recargas completas por frame em vez de uma por estágio.
+@requires_gpu
+def test_semantic_grounding_releases_prior_residency_before_loading_its_own() -> None:
+    """`ground()` libera os modelos residentes de outros estágios antes de carregar os seus."""
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
+    lifecycle = ModelLifecycleManager()
+    ports = create_perception_ports(config, lifecycle)
+    payload = _real_test_payload()
+
+    ports.region_discoverer.discover(payload, config.region_discovery)
+    assert lifecycle.resident_keys, "region_discovery deveria deixar seu modelo residente"
+
+    discovery_mask = np.zeros((payload.height, payload.width), dtype=np.bool_)
+    discovery_mask[16:48, 16:48] = True
+    request = GroundingRequest(
+        region_id="region-green-square",
+        concept="green square",
+        region_kind=RegionKind.THING,
+        discovery_mask=Mask(discovery_mask, payload.width, payload.height),
+    )
+    ports.semantic_grounder.ground(payload, (request,), config.semantic_grounding)
+
+    resident_after = lifecycle.resident_keys
+    lifecycle.release_all()
+
+    assert not any(key.startswith("region_discovery:") for key in resident_after), (
+        f"region_discovery deveria ter sido liberado antes do grounding carregar o seu, "
+        f"residentes: {resident_after}"
+    )
+
+
+@requires_gpu
 def test_real_backends_pipeline_runs_end_to_end_within_vram_budget() -> None:
     """O pipeline canônico completo roda com os 4 backends reais sem estourar o budget de VRAM.
 
@@ -125,7 +208,7 @@ def test_real_backends_pipeline_runs_end_to_end_within_vram_budget() -> None:
     os 4 modelos nunca fiquem residentes ao mesmo tempo; sem isso, a soma dos
     picos individuais (SAM+DINOv2+CLIP+Qwen) estoura os 8GB de referência.
     """
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=True)
     lifecycle = ModelLifecycleManager()
     ports = create_perception_ports(config, lifecycle)
     payload = _real_test_payload()

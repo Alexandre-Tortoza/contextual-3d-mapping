@@ -1,0 +1,53 @@
+{
+  "frame_id": "corridor-02-01450",
+  "regions": [
+    {
+      "region_id": "region-d1fe3a04cd2cb57a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 5985,
+      "box_before": {
+        "x_min": 142.0,
+        "y_min": 96.0,
+        "x_max": 240.0,
+        "y_max": 287.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9804210662841797,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.299529905998497,
+      "model_mask_area": 6034,
+      "clipped_pixel_count": 78,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 5956,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 97.0,
+            "x_max": 240.0,
+            "y_max": 286.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 5956,
+          "refined_overlap": 5956,
+          "detector_box_overlap": 5956,
+          "distance_to_box_center_px": 0.07960028567080671
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 5956,
+      "area_ratio": 0.9951545530492899,
+      "area_reduction_ratio": 0.004845446950710097,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 196.0,
+        "y_min": 97.0,
+        "x_max": 240.0,
+        "y_max": 286.0
+      },
+      "reason": null
+    }
+  ]
+}

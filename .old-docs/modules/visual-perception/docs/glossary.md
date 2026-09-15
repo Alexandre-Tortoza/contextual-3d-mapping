@@ -72,6 +72,27 @@ box, confiança geométrica, propostas contribuintes, claims semânticos e refer
 seus embeddings. É a unidade estável consumida pelos estágios seguintes e por módulos
 downstream.
 
+### Evidência contextual
+
+Informação visualmente observável que discrimina algo sobre o ambiente e por isso merece
+ser preservada em um mapa contextual: dano, texto, marcação, objeto, condição de
+superfície, risco, estado funcional. É o que `VisualObservation.regions` publica.
+
+### Contexto estrutural
+
+Superfície estrutural genérica — `wall`, `floor`, `ceiling`, `ceiling tiles` — que o
+módulo observa e usa internamente para entender a cena, mas **não** publica como
+observação contextual. Ela vive em `VisualObservation.structural_context`, inteira e
+referenciável. A distinção é o contract do módulo: uma parede não é evidência contextual,
+uma rachadura na parede é.
+
+### Superfície hospedeira
+
+A superfície sobre a qual uma evidência publicada está, quando o próprio conceito afirmado
+a nomeia (`cracked wall` → `host_surface: wall`). É uma pista 2D derivada de texto, nunca
+de geometria; a associação com uma superfície física do mundo pertence a
+`sensor-association` e `semantic-fusion`. Ausência significa desconhecido.
+
 ### Mask e box
 
 Uma `Mask` indica, pixel a pixel, a forma ocupada por uma região. Uma `BoundingBox` é o

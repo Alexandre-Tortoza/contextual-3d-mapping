@@ -1,0 +1,221 @@
+{
+  "frame_id": "corridor-02-13092",
+  "regions": [
+    {
+      "region_id": "region-97e243e7ded87431",
+      "label": "sky",
+      "region_kind": "thing",
+      "discovery_area": 97369,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 4.0,
+        "x_max": 605.0,
+        "y_max": 235.0
+      },
+      "component_count_before": 9,
+      "geometric_confidence": 0.9755570292472839,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.863436044048285,
+      "model_mask_area": 98037,
+      "clipped_pixel_count": 808,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 93938,
+          "box": {
+            "x_min": 4.0,
+            "y_min": 4.0,
+            "x_max": 540.0,
+            "y_max": 235.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 93938,
+          "refined_overlap": 93938,
+          "detector_box_overlap": 93938,
+          "distance_to_box_center_px": 0.2885570978294413
+        },
+        {
+          "component_id": 2,
+          "area": 30,
+          "box": {
+            "x_min": 499.0,
+            "y_min": 4.0,
+            "x_max": 515.0,
+            "y_max": 6.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 30,
+          "refined_overlap": 30,
+          "detector_box_overlap": 30,
+          "distance_to_box_center_px": 225.45320277315142
+        },
+        {
+          "component_id": 3,
+          "area": 3076,
+          "box": {
+            "x_min": 519.0,
+            "y_min": 5.0,
+            "x_max": 605.0,
+            "y_max": 94.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3076,
+          "refined_overlap": 3076,
+          "detector_box_overlap": 3076,
+          "distance_to_box_center_px": 240.74084340146607
+        },
+        {
+          "component_id": 4,
+          "area": 2,
+          "box": {
+            "x_min": 601.0,
+            "y_min": 163.0,
+            "x_max": 602.0,
+            "y_max": 165.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 296.74128005383363
+        },
+        {
+          "component_id": 5,
+          "area": 6,
+          "box": {
+            "x_min": 601.0,
+            "y_min": 167.0,
+            "x_max": 603.0,
+            "y_max": 172.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 6,
+          "refined_overlap": 6,
+          "detector_box_overlap": 6,
+          "distance_to_box_center_px": 297.3165645275651
+        },
+        {
+          "component_id": 6,
+          "area": 1,
+          "box": {
+            "x_min": 601.0,
+            "y_min": 175.0,
+            "x_max": 602.0,
+            "y_max": 176.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 298.62458715157055
+        },
+        {
+          "component_id": 7,
+          "area": 15,
+          "box": {
+            "x_min": 601.0,
+            "y_min": 181.0,
+            "x_max": 604.0,
+            "y_max": 187.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 15,
+          "refined_overlap": 15,
+          "detector_box_overlap": 15,
+          "distance_to_box_center_px": 299.74200979037806
+        },
+        {
+          "component_id": 8,
+          "area": 160,
+          "box": {
+            "x_min": 585.0,
+            "y_min": 192.0,
+            "x_max": 604.0,
+            "y_max": 206.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 160,
+          "refined_overlap": 160,
+          "detector_box_overlap": 160,
+          "distance_to_box_center_px": 288.8669892275182
+        },
+        {
+          "component_id": 9,
+          "area": 1,
+          "box": {
+            "x_min": 593.0,
+            "y_min": 206.0,
+            "x_max": 594.0,
+            "y_max": 207.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 297.9383760169138
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 93938,
+      "area_ratio": 0.9647629122205219,
+      "area_reduction_ratio": 0.03523708777947809,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 4.0,
+        "y_min": 4.0,
+        "x_max": 540.0,
+        "y_max": 235.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-f8710f424dd57327",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 747,
+      "box_before": {
+        "x_min": 206.0,
+        "y_min": 211.0,
+        "x_max": 240.0,
+        "y_max": 240.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8911823034286499,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 2,
+      "latency_s": 0.5088732529839035,
+      "model_mask_area": 908,
+      "clipped_pixel_count": 161,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 747,
+          "box": {
+            "x_min": 206.0,
+            "y_min": 211.0,
+            "x_max": 240.0,
+            "y_max": 240.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 747,
+          "refined_overlap": 747,
+          "detector_box_overlap": 747,
+          "distance_to_box_center_px": 0.6945414008616607
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 747,
+      "area_ratio": 1.0,
+      "area_reduction_ratio": 0.0,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 206.0,
+        "y_min": 211.0,
+        "x_max": 240.0,
+        "y_max": 240.0
+      },
+      "reason": null
+    }
+  ]
+}

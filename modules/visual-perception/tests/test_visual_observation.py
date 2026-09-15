@@ -85,3 +85,68 @@ def test_unknown_region_lookup_raises_key_error() -> None:
     observation = VisualObservation(_source(), 4, 4, SceneContext(), (), ())
     with pytest.raises(KeyError):
         observation.region_by_id("missing")
+
+
+# A partição não pode transformar uma relação em referência pendurada: a
+# evidência publicada precisa poder apontar para a superfície que a hospeda,
+# e a superfície não é publicada.
+def test_a_relation_may_reference_a_structural_context_region() -> None:
+    """Relações e grupos são validados contra a união das duas metades."""
+    from visual_perception.domain.references import ModelProvenance
+    from visual_perception.domain.relations import CandidateRelation, RelationSource
+    from visual_perception.domain.semantics import Evidence
+
+    relation = CandidateRelation(
+        relation_id="relation-1",
+        subject_region_id="region-crack",
+        object_region_id="region-wall",
+        predicate="part_of",
+        confidence=None,
+        evidence=(Evidence("measured containment"),),
+        provenance=ModelProvenance(stage="s", producer="p", config_fingerprint="fp"),
+        source=RelationSource.MODEL_INFERRED,
+    )
+    observation = VisualObservation(
+        _source(),
+        4,
+        4,
+        SceneContext(),
+        (_region("region-crack"),),
+        (relation,),
+        structural_context=(_region("region-wall"),),
+    )
+
+    assert observation.region_by_id("region-wall").region_id == "region-wall"
+    assert len(observation.all_regions) == 2
+
+
+# Uma mesma região não pode estar dos dois lados da partição: se pudesse, todo
+# consumidor que varre a união a contaria duas vezes.
+def test_rejects_a_region_id_present_in_both_halves() -> None:
+    """A unicidade de ``region_id`` vale sobre a união, não sobre cada metade."""
+    with pytest.raises(ValueError, match="unique region_id"):
+        VisualObservation(
+            _source(),
+            4,
+            4,
+            SceneContext(),
+            (_region("region-1"),),
+            (),
+            structural_context=(_region("region-1"),),
+        )
+
+
+# A resolução da máscara é validada nas duas metades: uma região suprimida
+# continua sendo evidência, e evidência inconsistente precisa falhar igual.
+def test_rejects_structural_context_mask_resolution_mismatch() -> None:
+    """Uma máscara fora de resolução no contexto estrutural é recusada."""
+    with pytest.raises(ValueError, match="mask resolution"):
+        VisualObservation(
+            _source(),
+            4,
+            4,
+            SceneContext(),
+            (),
+            (),
+            structural_context=(_region("region-1", width=8, height=8),),
+        )

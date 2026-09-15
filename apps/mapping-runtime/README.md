@@ -89,6 +89,22 @@ contextual precisa para reencontrar cada frame.
 O trecho começa `SEGMENT_LEAD_S` segundos antes da janela pedida, para o
 estimator inercial convergir antes do intervalo que será mapeado.
 
+O comando também aceita uma rosbag inteira e pode selecionar todas as imagens:
+
+```bash
+python -m mapping_runtime bag-window \
+  --bag datasets/raw/<dataset>/<run>.bag \
+  --whole-bag \
+  --all-frames \
+  --camera-topic /camera/image_raw \
+  --recording-id <run> \
+  --output artifacts/<run>-window.json
+```
+
+`recording_id` e `frame_id_prefix` preservam a identidade da gravação nos
+artifacts. Leitores continuam aceitando windows antigas que não possuem esses
+campos, usando `corridor-02` como prefixo compatível.
+
 ## Contexto de um trecho
 
 Extraia os keyframes da janela, rode `visual-perception` sobre eles e componha:
@@ -125,6 +141,16 @@ Claims de região e de cena continuam sendo predições VLM com estado de suport
 proveniência; não são promovidos a ground truth. Os previews de cada keyframe
 ficam no diretório homônimo com sufixo `-assets`.
 
+O alvo Make `corridor-02-context` grava por default em
+`artifacts/runs/<AAAA-MM-DD>-run-<número>-<segment-id>/context.json`, preservando
+versões do mesmo segmento. Por exemplo, `2026-09-12-run-010-corridor-02`. O
+número sequencial absoluto facilita identificar a última run no catálogo local.
+`M1_CONTEXT_ARTIFACT` permite escolher o destino explicitamente.
+A [CLI](../cli/README.md#salvar-e-comparar-runs-com-contexto) também preserva
+uma cópia da janela e do manifest de percepção em cada composição e publica
+automaticamente o resultado para comparação no viewer. O publisher de
+`map-explorer` mantém sua própria pasta imutável com mapa, previews e hashes.
+
 ### Fonte de pose
 
 A pose que registra o mapa na câmera vem, por ordem de preferência:
@@ -138,3 +164,57 @@ A primeira é preferida porque, com o contexto ancorado nos pontos do mapa, um
 erro de pose entra direto na projeção: vira pixel errado e, portanto, label
 errado. O ground-truth permanece como alternativa auditável, e é aproximado —
 ele não compartilha a origem nem o alinhamento gravitacional do FAST-LIO.
+
+A amostragem padrão interpola translação e rotação para o timestamp RGB exato.
+O runtime rejeita extrapolação e intervalos maiores que `max_pose_gap_ns`
+(200 ms por default). `--pose-sampling nearest` preserva a seleção histórica
+para ablação; a proveniência registra qual modo e quais amostras foram usados.
+O realinhamento inicial do ground-truth permanece igual ao anterior.
+
+### Footprints e comparação espacial
+
+`corridor-02-context` consome `ObservedRegion.grounding` por default. Artifacts
+visuais antigos continuam legíveis, mas não possuem grounding e não autorizam
+labels fortes. Claims, structural context e falhas continuam preservados.
+`--footprint-mode legacy_discovery` é uma ablação explícita do comportamento
+histórico. O runtime não carrega modelos: o grounding é produzido previamente
+por `visual-perception`, apenas nas candidatas a publicação contextual.
+
+`--disable-boundary-policy` isola o grounding; `--registration-sigma-px` informa
+incerteza adicional em pixels. `--stuff-discovery-fallback` permite footprint
+de discovery somente como evidência tentativa para `stuff`. Nunca é fallback
+forte para `thing`, `part` ou natureza desconhecida.
+
+Cada região registra discovery, predição do segmentador, máscara semântica e
+RLE da máscara após ownership, inclusive componentes rejeitados e falhas.
+Cada ponto mantém a distância à boundary, a margem e a referência ao grounding.
+As contribuições multi-frame preservam seu próprio pixel, para que uma projeção
+possa ser inspecionada sem usar o pixel da observação vencedora por engano.
+
+`experiments/visual_perception_experiments/grounding_validation.py` reexecuta
+somente grounding sobre observações congeladas de uma janela de até dez
+segundos e exporta braços independentes de discovery, grounding, boundary e
+pose, com comparações 2D/3D e métricas. Não gera outro mapa nem repete o VLM.
+
+## Geometria integral e visibilidade
+
+`corridor-02-context` usa `--visibility-mode measured_surfaces` por default.
+Carrega o PCD completo em `geometric_slice.source.uri` e verifica
+`source.sha256` antes de associar os pontos de exibição. Quando a origem foi
+movida, `--visibility-geometry /caminho/mapa.pcd` indica seu novo caminho; o
+hash precisa continuar igual. Ausência de PCD ou digest é erro acionável.
+
+`--visibility-mode legacy_cells` e `--visibility-mode dense_cells` selecionam
+os braços da comparação ativa. Pelo Make, use
+`M1_VISIBILITY_MODE=measured_surfaces` (default). Recompor reutiliza mapa,
+trajetória, imagens e percepção; não executa FAST-LIO nem inferência visual.
+
+O artifact registra `visibility` com configuração, origem, contagem de pontos
+e patches; cada observação registra `visibility_counts`; regiões registram
+`surface_support`. Pontos, contribuições e hipóteses tentativas preservam
+`surface_evidence`. Geometria rejeitada continua no mapa com motivo explícito.
+A opção de composição `audit_geometry_ids` grava o resultado por frame dos IDs
+solicitados em `context-DEBUG/sensor-association/`, para regressões auditáveis.
+
+Algoritmo e limitações pertencem a
+[`sensor-association`](../../modules/sensor-association/docs/measured-visibility.md).

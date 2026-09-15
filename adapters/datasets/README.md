@@ -12,3 +12,17 @@ parsing de formato, leitura de ROS bag ou decodificação de payload.
 O pacote público `contextual_mapping_adapters` expõe um protocolo `MultimodalDatasetAdapter` estreito e valores `CanonicalObservation` independentes de payload. Toda observação preserva identidade de origem, timestamp em nanossegundos inteiro, clock, frame, sensor, calibração e referência de artifact externo. Metadados de manifest inválidos falham antes da iteração.
 
 `synchronize` cria um grupo por observação âncora configurada. A ordem de entrada é ignorada; a observação não utilizada mais próxima de cada tipo esperado é selecionada dentro de uma tolerância inclusiva. Empates são resolvidos por timestamp, índice de sequência e id de observação. Os timestamps originais são preservados e tipos ausentes são explícitos. Uma chamada aceita exatamente uma sequência e um clock; interpretação, interpolação e fusão permanecem responsabilidades downstream.
+
+`rosbag_images` contém a integração concreta de leitura de streams RGB em
+rosbags. Sua API pública inspeciona duração e tópicos, seleciona o stream RGB
+principal e extrai imagens identificadas por timestamp e índice original. A
+CLI usa essa fronteira para não duplicar parsing ROS ou regras de encoding; o
+harness histórico de `visual-perception` delega à mesma implementação.
+
+Cada PNG extraído ganha, ao lado, um registro `<frame>.json`
+(`rosbag-frame-provenance/1`) com os fatos da mensagem de origem: gravação,
+tópico, `header.frame_id`, timestamp de gravação no relógio `rosbag` e posição
+no stream. O PNG sozinho não carrega nada disso, e um consumidor que precisasse
+desses valores acabava inventando-os. `read_frame_provenance` é a leitura
+pública; um frame sem registro falha pedindo nova extração, e só a versão atual
+do formato é lida.

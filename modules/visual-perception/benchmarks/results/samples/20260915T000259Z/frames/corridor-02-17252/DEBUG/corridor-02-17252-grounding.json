@@ -1,0 +1,173 @@
+{
+  "frame_id": "corridor-02-17252",
+  "regions": [
+    {
+      "region_id": "region-21c403b721a56d25",
+      "label": "red door",
+      "region_kind": "thing",
+      "discovery_area": 17367,
+      "box_before": {
+        "x_min": 440.0,
+        "y_min": 45.0,
+        "x_max": 557.0,
+        "y_max": 287.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9891017079353333,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 8.476098853978328,
+      "model_mask_area": 17248,
+      "clipped_pixel_count": 31,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 17217,
+          "box": {
+            "x_min": 457.0,
+            "y_min": 45.0,
+            "x_max": 557.0,
+            "y_max": 287.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 17217,
+          "refined_overlap": 17217,
+          "detector_box_overlap": 17217,
+          "distance_to_box_center_px": 0.5169158434316489
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 17217,
+      "area_ratio": 0.9913629296942477,
+      "area_reduction_ratio": 0.008637070305752337,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 457.0,
+        "y_min": 45.0,
+        "x_max": 557.0,
+        "y_max": 287.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-269c5563fda416c4",
+      "label": "black rectangular object",
+      "region_kind": "thing",
+      "discovery_area": 5443,
+      "box_before": {
+        "x_min": 8.0,
+        "y_min": 261.0,
+        "x_max": 240.0,
+        "y_max": 355.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8881348967552185,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.5319247629959136,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-48a80692c3f5f5f6",
+      "label": "white wall",
+      "region_kind": "thing",
+      "discovery_area": 21261,
+      "box_before": {
+        "x_min": 500.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 286.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9710155129432678,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.5218696740048472,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-69ce67017f69efbc",
+      "label": "wall",
+      "region_kind": "thing",
+      "discovery_area": 2752,
+      "box_before": {
+        "x_min": 377.0,
+        "y_min": 188.0,
+        "x_max": 422.0,
+        "y_max": 263.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9425347447395325,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.5163097970071249,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ebb37e0af4e7d26b",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 4360,
+      "box_before": {
+        "x_min": 425.0,
+        "y_min": 115.0,
+        "x_max": 463.0,
+        "y_max": 270.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9739521741867065,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 2,
+      "latency_s": 0.5600509560026694,
+      "model_mask_area": 4399,
+      "clipped_pixel_count": 50,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4349,
+          "box": {
+            "x_min": 425.0,
+            "y_min": 115.0,
+            "x_max": 463.0,
+            "y_max": 270.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 4349,
+          "refined_overlap": 4349,
+          "detector_box_overlap": 4349,
+          "distance_to_box_center_px": 0.2956428765816838
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 4349,
+      "area_ratio": 0.9974770642201835,
+      "area_reduction_ratio": 0.0025229357798165486,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 425.0,
+        "y_min": 115.0,
+        "x_max": 463.0,
+        "y_max": 270.0
+      },
+      "reason": null
+    }
+  ]
+}

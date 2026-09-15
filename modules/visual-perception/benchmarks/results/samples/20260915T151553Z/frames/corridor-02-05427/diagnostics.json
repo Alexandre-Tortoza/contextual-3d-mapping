@@ -1,0 +1,590 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-05427",
+  "input_sha256": "153def857b9e503b64c0a99ccc00f3e6322ea9a1814d225801ddbc16d30078de",
+  "latency_s": 443.07828080799663,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 71,
+  "proposal_count": 184,
+  "merged_proposal_count": 159,
+  "regions_with_multiple_proposals": 49,
+  "label_counts": [
+    [
+      "wall",
+      31
+    ],
+    [
+      "ceiling",
+      20
+    ],
+    [
+      "floor",
+      7
+    ],
+    [
+      "tile",
+      6
+    ],
+    [
+      "floor tiles",
+      3
+    ],
+    [
+      "wall tiles",
+      2
+    ],
+    [
+      "ceiling tiles",
+      1
+    ],
+    [
+      "empty corridor",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "flooring",
+      16
+    ],
+    [
+      "wall",
+      14
+    ],
+    [
+      "ceilings",
+      13
+    ],
+    [
+      "indoor wall",
+      10
+    ],
+    [
+      "indoor ceiling",
+      8
+    ],
+    [
+      "indoor",
+      5
+    ],
+    [
+      "building interior",
+      4
+    ],
+    [
+      "corridor",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      58
+    ],
+    [
+      "stuff",
+      13
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 71,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 71,
+    "missing": 0,
+    "minimum": 0.8608816266059875,
+    "maximum": 0.9817002415657043,
+    "mean": 0.9332248031253546,
+    "median": 0.9356104135513306,
+    "distinct_values": 71,
+    "stddev": 0.024455406416290668,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 16,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.43661971830985913,
+    "distinct_labels": 8,
+    "dominant_category": "flooring",
+    "dominant_category_fraction": 0.22535211267605634,
+    "distinct_categories": 8
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 1,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 2,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      22
+    ],
+    [
+      "outside_valid_area",
+      2
+    ],
+    [
+      "ego_vehicle_overlap",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        103
+      ],
+      [
+        "contradicts",
+        55
+      ],
+      [
+        "indistinguishable",
+        55
+      ]
+    ],
+    "regions_with_unsupported_primary": 6,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 57,
+    "reconciled_regions": 58,
+    "distinct_raw_labels": 8,
+    "distinct_canonical_concepts": 8,
+    "entity_groups": 9,
+    "regions_in_entity_groups": 68,
+    "supported_entity_groups": 6,
+    "semantic_relations": [
+      [
+        "covers",
+        3
+      ]
+    ],
+    "geometric_relations": 633,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 23
+  },
+  "published_region_count": 1,
+  "structural_context_count": 70,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      70
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-ab3306e123674770",
+      "label": "empty corridor",
+      "region_kind": "thing",
+      "discovery_area": 11619,
+      "box_before": {
+        "x_min": 370.0,
+        "y_min": 192.0,
+        "x_max": 640.0,
+        "y_max": 311.0
+      },
+      "component_count_before": 24,
+      "geometric_confidence": 0.9482401013374329,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.367809799987299,
+      "model_mask_area": 29465,
+      "clipped_pixel_count": 29465,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-0380c98b99a9e272",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-07f4c9f47a7a5f6c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-094993e5bee1c73e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-103ac531bebe95a0",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-10a8f6cd731de6f1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-130585e876d11722",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-153dc1f4047c2d9e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-15f0181a413bb24e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-1964185f872f1539",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-20e373165f8b5ae0",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-2235d65b0af4ea08",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-26e81f58c75a96a7",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-2c90de48184547dc",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-2d36e781dfec312e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall tiles"
+    },
+    {
+      "region_id": "region-321a60f6c473bb4e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-379e3cea2caf7965",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-3844e5b43b8f02c1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-38f7acb70f0e04fa",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor tiles"
+    },
+    {
+      "region_id": "region-3b054da26f0111a1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-3d70d36f5ed093f1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor tiles"
+    },
+    {
+      "region_id": "region-3f42c25289657e62",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-407825285c8acb34",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-41224189b67b1a4c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-42faef7d76993df5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-460a45805726e9f9",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-472838c6a714cee0",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-4afd0427b97abbdc",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-4bed25b15beeda99",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-4e44a63ee44dec56",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-500d5339a2002271",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall tiles"
+    },
+    {
+      "region_id": "region-52b5aa5b88ff0137",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-55d7eeef745eb7be",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-5630c1dc419493ef",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-5f6e147f75d5ea38",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-6423dbcc40f99bb9",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-64f77087a393a74a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-698d54c498d1f86e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling tiles"
+    },
+    {
+      "region_id": "region-77ffe324f47472ef",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-79fe8746e4849531",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-80b8b25d69154225",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-8723831b98c9a387",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-8a4cafdac3bcdb38",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-91d8e084e0bb201d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-9ed5a574d80fadaf",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-a025a58b0d890b3c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-a52f5db0514934c1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-a7a62821af7e9d79",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ae9118e04cfa451a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-b1dc1966f9bcdef7",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-b4a4edf4ac4a8436",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-b54d86b21895e5c1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor tiles"
+    },
+    {
+      "region_id": "region-b66d8dd49f31ecf8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-bb80032ec76129e2",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-bbb2c9663dfd0d4d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-bbf450e5badca696",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-c020bd4b35be8750",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-c499b5a985316800",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-cab548a8e029f47f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-daf3ab220a94f6bb",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-dd25e51475152ebd",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-e14fc5f574610ab1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-e3b77f5f98223003",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-e9a4b4971975b7d8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-ebb04a018abaa5be",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "tile"
+    },
+    {
+      "region_id": "region-f36dbe8fc7079453",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-f673c37d0ba3621e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-f6dcc18aec52665e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-f9d8211d75feea0e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-fa37a87dd840f798",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-fd1e0387f3719636",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    }
+  ]
+}

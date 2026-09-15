@@ -68,26 +68,18 @@ from visual_perception.domain.semantics import (
     normalize_claim_value,
 )
 from visual_perception.domain.structural_consistency import (
+    NON_DISCRIMINATIVE_MODIFIERS,
     StructuralVerdict,
+    canonical_concept,
     expected_region_kind,
     head_noun,
     region_kind_verdict,
-    singularize,
 )
 
 #: Nome do estágio e do produtor em ``ModelProvenance``. Uma claim reconciliada
 #: nunca se apresenta como se o VLM a tivesse escrito.
 STAGE = "intra_frame_reconciliation"
 PRODUCER = "intra_frame_reconciliation"
-
-#: Modificadores que descrevem a aparência do sujeito sem mudar a identidade
-#: dele. ``plain wall`` e ``wall`` são a mesma coisa: o ``plain`` é um atributo,
-#: e o próprio contract já tem um lugar para atributos. A lista é curta e
-#: explícita de propósito — ela existe para colapsar variação de grafia, não
-#: para construir uma ontologia, e o label cru continua preservado em qualquer
-#: caso.
-NON_DISCRIMINATIVE_MODIFIERS = frozenset({"blank", "flat", "plain", "simple"})
-
 
 # Registra o que a reconciliação decidiu sobre uma região, para que a decisão
 # seja auditável sem reabrir os claims. Existe porque "por que esta região
@@ -125,30 +117,6 @@ class ReconciliationResult:
     regions: tuple[ObservedRegion, ...]
     entities: tuple[ContextualEntityHypothesis, ...] = ()
     records: tuple[ReconciliationRecord, ...] = ()
-
-
-# Reduz um conceito à sua forma canônica por normalização lexical mínima.
-# Existe como função pública porque três consumidores precisam concordar
-# exatamente sobre "estes dois labels são o mesmo conceito": a formação de
-# grupos, a claim reconciliada e a seleção de pares para relações semânticas.
-def canonical_concept(label: str) -> str:
-    """Retorna a forma canônica de ``label``: caixa, plural e modificadores vazios.
-
-    A transformação é deliberadamente pobre. Ela remove vírgulas, colapsa
-    espaços, singulariza cada palavra e descarta modificadores que não
-    discriminam identidade. Ela **não** consulta ontologia, não usa embedding e
-    não conhece sinônimos: qualquer uma dessas coisas transformaria um sistema
-    open-vocabulary em uma taxonomia fechada por dentro.
-
-    Argumentos:
-        label: o label cru, exatamente como o produtor o escreveu.
-    Retorna:
-        o conceito canônico, ou o label normalizado quando não há o que reduzir.
-    """
-    tokens = [token for token in normalize_claim_value(label).replace(",", " ").split() if token]
-    reduced = [singularize(token) for token in tokens]
-    meaningful = [token for token in reduced if token not in NON_DISCRIMINATIVE_MODIFIERS]
-    return " ".join(meaningful or reduced)
 
 
 # Ponto de entrada público do estágio: reconcilia identidade e natureza entre
@@ -534,9 +502,11 @@ def region_concept(region: ObservedRegion) -> str:
     return "" if claim is None else claim.value
 
 
-# Expõe o núcleo nominal de um conceito para consumidores que precisam agrupar
-# por ele. Reexportado daqui para que quem já importa a reconciliação não
-# precise conhecer ``domain/structural_consistency.py``.
+# Expõe a redução lexical mínima — núcleo nominal, conceito canônico e os
+# modificadores não discriminativos — para consumidores que já importam a
+# reconciliação. Ela é de posse de ``domain/structural_consistency.py`` desde
+# que a política de publicação contextual passou a precisar da mesma regra;
+# reexportar daqui evita quebrar quem a importava deste módulo.
 __all__ = [
     "NON_DISCRIMINATIVE_MODIFIERS",
     "PRODUCER",

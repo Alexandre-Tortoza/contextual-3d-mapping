@@ -18,8 +18,12 @@ frames/<frame-id>/
     regions-boxes.png     só as boxes finais
     regions-labels.png    labels no centróide, sem caixas
     regions-overlay.png   tudo junto
+    structural-context.png  as superfícies não publicadas, esmaecidas
+    semantic-overlay.png  máscaras grounded, só quando alguma região tem uma
+    valid-area-mask.png   área útil do sensor, quando declarada
     ego-mask.png          máscara de exclusão, quando existe
     pipeline-input.png    só quando difere de raw.png
+    DEBUG/<frame-id>-grounding.json  trilha de grounding, só quando houve grounding
 ```
 
 As views por região (foreground, tight, contextual) não são persistidas aqui:
@@ -37,19 +41,27 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from render_layers import binary_mask_image, blend_masks, draw_boxes, draw_labels
-from render_overlay import proposal_shapes, region_shapes
+from render_layers import DrawableShape, binary_mask_image, blend_masks, draw_boxes, draw_labels
+from render_overlay import proposal_shapes, region_shapes, structural_context_shapes
 from visual_perception.application.observation_diagnostics import ObservationDiagnostics
 from visual_perception.application.pipeline import PipelineResult
+from visual_perception.application.region_views import build_region_views
+from visual_perception.application.tiling import build_tiles
+from visual_perception.config import ModuleConfig
 from visual_perception.domain.image_payload import ImagePayload
+from visual_perception.infrastructure.debug_recorder import DebugRecorder
+from visual_perception.infrastructure.embedding_archive import write_embedding_archive
 from visual_perception.infrastructure.serialization import serialize_observation
 
 #: Versão do layout de artifacts por frame, gravada no manifest. Um leitor que
 #: espera outro layout falha explicitamente em vez de ler o diretório errado em
-#: silêncio. A ``frames/2`` acrescenta ``embeddings.npz``: até a #217 os vetores
-#: eram calculados e descartados dentro do pipeline, e o que ficava no artifact
-#: era só a string de ``artifact_ref``, apontando para nada.
-FRAME_ARTIFACT_LAYOUT_VERSION = "frames/2"
+#: silêncio. A ``frames/3`` acrescenta ``structural-context.png`` e os registros
+#: por região da política de publicação contextual, para que a supressão seja
+#: inspecionável no artifact e não apenas contável. A ``frames/2`` havia
+#: acrescentado ``embeddings.npz``: até a #217 os vetores eram calculados e
+#: descartados dentro do pipeline, e o que ficava no artifact era só a string de
+#: ``artifact_ref``, apontando para nada.
+FRAME_ARTIFACT_LAYOUT_VERSION = "frames/3"
 
 
 # Agrupa os pixels distinguíveis de um frame e as máscaras de exclusão do rig.
@@ -89,6 +101,64 @@ def _to_image(payload: ImagePayload) -> Image.Image:
     return Image.fromarray(payload.pixels.astype(np.uint8), mode="RGB")
 
 
+# Persiste as entradas e propostas de cada passada do discovery. Existe porque
+# ``proposals.png`` agrega a imagem inteira e escondia se uma máscara veio da
+# passagem global ou de um tile; usa as proposals já retornadas pelo pipeline,
+# portanto não reexecuta SAM nem altera a inferência auditada.
+def _write_discovery_debug(
+    root: Path, image: ImagePayload, config: ModuleConfig, result: PipelineResult,
+) -> None:
+    """Grava a entrada e o overlay de propostas de cada passada do discovery.
+
+    Argumentos:
+        root: diretório DEBUG do frame.
+        image: pixels exatos recebidos pelo pipeline.
+        config: configuração que define a malha de tiles.
+        result: saída com as propostas brutas anteriores à filtragem.
+    """
+    discovery_root = root / "discovery"
+    discovery_root.mkdir(parents=True, exist_ok=True)
+    shapes = proposal_shapes(result.discovered_proposals)
+    global_overlay = draw_boxes(blend_masks(_to_image(image), shapes), shapes)
+    for tile in build_tiles(image, config.tiling):
+        offset_x = int(tile.transform.offset_x)
+        offset_y = int(tile.transform.offset_y)
+        bounds = (offset_x, offset_y, offset_x + tile.payload.width, offset_y + tile.payload.height)
+        stem = f"{tile.scale_id}-{tile.tile_id}"
+        _to_image(tile.payload).save(discovery_root / f"{stem}-input.png")
+        global_overlay.crop(bounds).save(discovery_root / f"{stem}-proposals.png")
+
+
+# Materializa as três views entregues ao reasoner. Existe para permitir revisão
+# visual de uma run sem reconstruir recortes nem depender do script auxiliar;
+# é chamada depois da observação final, cuja geometria é congelada após merge.
+def _write_region_view_debug(
+    root: Path, image: ImagePayload, config: ModuleConfig, result: PipelineResult,
+) -> None:
+    """Grava masked subject, tight crop e contextual crop por região final.
+
+    Argumentos:
+        root: diretório DEBUG do frame.
+        image: pixels exatos recebidos pelo pipeline.
+        config: configuração que define quais views existem.
+        result: observação final usada pelo reasoner e pela publicação.
+    """
+    filenames = {
+        "masked_subject": "masked-subject.png",
+        "tight_crop": "tight-crop.png",
+        "contextual_crop": "contextual-crop.png",
+    }
+    views_by_region = build_region_views(result.observation.all_regions, image, config)
+    for region_id, views in views_by_region.items():
+        region_root = root / "regions" / region_id
+        for view in views:
+            filename = filenames.get(view.slot.value)
+            if filename is None:
+                continue
+            region_root.mkdir(parents=True, exist_ok=True)
+            _to_image(view.payload).save(region_root / filename)
+
+
 # Escreve os artifacts de um frame e devolve o mapa de nome lógico para caminho
 # relativo. O mapa vai para o manifest, de modo que um leitor encontre cada
 # camada pelo nome em vez de reconstruir convenções de caminho.
@@ -99,6 +169,7 @@ def write_frame_artifacts(
     result: PipelineResult,
     diagnostics: ObservationDiagnostics,
     extra_diagnostics: Mapping[str, object] | None = None,
+    config: ModuleConfig | None = None,
 ) -> dict[str, str]:
     """Persiste as camadas de inspeção de um frame e retorna seus caminhos relativos.
 
@@ -109,10 +180,25 @@ def write_frame_artifacts(
         diagnostics: o resumo estatístico já calculado para a observação.
         extra_diagnostics: campos adicionais do harness (identidade do frame,
             hash da entrada, latência) mesclados no ``diagnostics.json``.
+        config: configuração efetiva da run; quando presente, grava os
+            artifacts detalhados de discovery e de views no diretório DEBUG.
     Retorna:
         mapa de nome lógico do artifact para o caminho relativo a ``frame_dir``.
     """
     frame_dir.mkdir(parents=True, exist_ok=True)
+    grounding_diagnostics = [
+        dict(region.grounding.diagnostics)
+        for region in result.observation.regions
+        if region.grounding is not None
+    ]
+    # A trilha de grounding só existe quando houve grounding: um arquivo com a
+    # lista vazia por frame não informa nada e poluía o run versionado.
+    if grounding_diagnostics:
+        DebugRecorder(frame_dir / "DEBUG").record_grounding(frame_dir.name, grounding_diagnostics)
+    if config is not None:
+        debug_root = frame_dir / "DEBUG"
+        _write_discovery_debug(debug_root, inputs.pipeline_input, config, result)
+        _write_region_view_debug(debug_root, inputs.pipeline_input, config, result)
     written: dict[str, str] = {}
 
     # Um write_text por artifact, com o nome lógico registrado no mesmo passo,
@@ -121,20 +207,19 @@ def write_frame_artifacts(
         written[name] = str(path.relative_to(frame_dir))
 
     observation_path = frame_dir / "observation.json"
-    observation_path.write_text(json.dumps(serialize_observation(result.observation), indent=2))
+    observation_path.write_text(
+        json.dumps(serialize_observation(result.observation), indent=2), encoding="utf-8"
+    )
     _record("observation", observation_path)
 
     # Os vetores viajam **por referência**: a observação guarda o
     # ``artifact_ref`` de cada slot, e o arquivo abaixo é o artifact que aquela
     # referência resolve. Embutí-los no JSON inflaria a observação canônica em
     # duas ordens de grandeza sem tornar nada mais auditável.
-    embeddings = {
-        embedding.embedding_id: np.asarray(embedding.vector, dtype=np.float32)
-        for embedding in (*result.visual_embeddings, *result.language_embeddings)
-    }
-    if embeddings:
+    all_embeddings = (*result.visual_embeddings, *result.language_embeddings)
+    if all_embeddings:
         embeddings_path = frame_dir / "embeddings.npz"
-        np.savez_compressed(embeddings_path, **embeddings)
+        write_embedding_archive(embeddings_path, all_embeddings)
         _record("embeddings", embeddings_path)
 
     raw_image = _to_image(inputs.raw)
@@ -184,6 +269,32 @@ def write_frame_artifacts(
     draw_labels(draw_boxes(blend_masks(raw_image, regions), regions), regions).save(overlay_path)
     _record("regions_overlay", overlay_path)
 
+    # O preview semântico usa somente a máscara explicitamente grounded. As
+    # camadas anteriores continuam mostrando discovery para comparação.
+    grounded_shapes = [
+        DrawableShape(region.region_id, region.grounding.semantic_mask,
+            region.grounding.semantic_mask.bounding_box(), region.grounding.prediction.concept)
+        for region in result.observation.regions
+        if region.grounding is not None and region.grounding.semantic_mask is not None
+    ]
+    # Escrito só quando há o que desenhar: sem nenhuma máscara grounded o PNG
+    # saía idêntico a raw.png e era registrado como artifact de grounding, e
+    # "o grounding falhou" ficava igual a "não havia nada". O motivo de cada
+    # falha continua em ``semantic_grounding`` no diagnóstico.
+    if grounded_shapes:
+        semantic_path = frame_dir / "semantic-overlay.png"
+        draw_labels(blend_masks(raw_image, grounded_shapes), grounded_shapes).save(semantic_path)
+        _record("semantic_overlay", semantic_path)
+
+    # A camada do contexto estrutural usa alpha baixo de propósito: ela existe
+    # para responder "o que foi suprimido, e onde", e não para competir
+    # visualmente com a evidência que o módulo de fato publica.
+    structural = structural_context_shapes(result.observation)
+    if structural:
+        structural_path = frame_dir / "structural-context.png"
+        draw_labels(blend_masks(raw_image, structural, alpha=0.25), structural).save(structural_path)
+        _record("structural_context", structural_path)
+
     payload: dict[str, object] = {
         "layout_version": FRAME_ARTIFACT_LAYOUT_VERSION,
         **dict(extra_diagnostics or {}),
@@ -195,9 +306,22 @@ def write_frame_artifacts(
         "ego_vehicle_mask_applied": diagnostics.ego.applied,
         "valid_fisheye_mask": "applied" if diagnostics.fisheye.applied else "unavailable",
         **asdict(diagnostics),
+        "semantic_grounding": grounding_diagnostics,
+        "semantic_overlay_written": bool(grounded_shapes),
+        # O histograma por motivo vive em ``diagnostics.suppressed_regions``.
+        # Esta lista é a rastreabilidade por região que o histograma não dá:
+        # qual região saiu do output público, com que conceito, e por quê.
+        "suppressed_region_records": [
+            {
+                "region_id": record.region_id,
+                "suppressed_reason": record.reason.value,
+                "concept": record.concept,
+            }
+            for record in result.suppressed_regions
+        ],
     }
     diagnostics_path = frame_dir / "diagnostics.json"
-    diagnostics_path.write_text(json.dumps(payload, indent=2))
+    diagnostics_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     _record("diagnostics", diagnostics_path)
 
     return written

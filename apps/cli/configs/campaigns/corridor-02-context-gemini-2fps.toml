@@ -1,0 +1,24 @@
+# Campanha curta com o Gemini Robotics ER como reasoner (#276), em trechos novos,
+# diferentes dos da campanha 10x4fps: dois indoor e um outdoor, a 2 fps.
+# Composta sobre a mesma geometria global, entra no mesmo mapa consolidado do Qwen.
+campaign_id = "corridor-02-context-gemini-2fps"
+duration_s = 1.0
+keyframe_offsets_s = [0.0, 0.5]
+voxel_size_m = 0.05
+max_viewer_points = 150000
+reasoning_backend = "gemini_robotics_er"
+
+[[segments]]
+id = "indoor-t030"
+environment = "indoor"
+start_s = 30.0
+
+[[segments]]
+id = "outdoor-t400"
+environment = "outdoor"
+start_s = 400.0
+
+[[segments]]
+id = "indoor-t760"
+environment = "indoor"
+start_s = 760.0

@@ -1,0 +1,32 @@
+{
+  "frame_id": "corridor-02-04363",
+  "regions": [
+    {
+      "region_id": "region-eebcf0841c04e1d2",
+      "label": "flat surface",
+      "region_kind": "thing",
+      "discovery_area": 4967,
+      "box_before": {
+        "x_min": 433.0,
+        "y_min": 272.0,
+        "x_max": 640.0,
+        "y_max": 343.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.968360960483551,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 7.080793242988875,
+      "model_mask_area": 68332,
+      "clipped_pixel_count": 68332,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

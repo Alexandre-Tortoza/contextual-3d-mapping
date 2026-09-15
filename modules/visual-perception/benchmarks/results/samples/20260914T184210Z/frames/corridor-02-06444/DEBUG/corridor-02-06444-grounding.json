@@ -1,0 +1,48 @@
+{
+  "frame_id": "corridor-02-06444",
+  "regions": [
+    {
+      "region_id": "region-9205c8b1b84e0a37",
+      "label": "silhouette of a building",
+      "region_kind": "thing",
+      "discovery_area": 116081,
+      "box_before": {
+        "x_min": 18.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 249.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9793623685836792,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.494799568987219,
+      "model_mask_area": 6994,
+      "clipped_pixel_count": 6987,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 7,
+          "box": {
+            "x_min": 493.0,
+            "y_min": 248.0,
+            "x_max": 500.0,
+            "y_max": 249.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 7,
+          "refined_overlap": 7,
+          "detector_box_overlap": 7,
+          "distance_to_box_center_px": 29.744772768034565
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

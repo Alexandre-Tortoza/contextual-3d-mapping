@@ -630,7 +630,7 @@ def main() -> None:
     from visual_perception.infrastructure.adapters.factory import create_perception_ports
 
     real = not arguments.fake_backends
-    config = research_quality_config(multi_scale_justified=False, real_backends=real)
+    config = research_quality_config(multi_scale_enabled=False, real_backends=real)
     if real:
         ports = create_perception_ports(config, ModelLifecycleManager())
     else:

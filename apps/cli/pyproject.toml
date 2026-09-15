@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "contextual-mapping-cli"
+version = "0.1.0"
+description = "CLI interativa para os workflows do contextual-3d-mapping."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26",
+    "pillow>=10",
+    "questionary>=2.0",
+    "rich>=13.0",
+    "rosbags>=0.9",
+    "scipy>=1.10",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+contextual-3d-mapping-cli = "contextual_mapping_cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/contextual_mapping_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "../../contracts", "../../datasets", "../../adapters/datasets", "../mapping-runtime/src"]

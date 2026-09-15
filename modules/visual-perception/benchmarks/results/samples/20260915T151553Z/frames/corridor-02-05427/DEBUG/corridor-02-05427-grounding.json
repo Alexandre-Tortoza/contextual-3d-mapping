@@ -1,0 +1,32 @@
+{
+  "frame_id": "corridor-02-05427",
+  "regions": [
+    {
+      "region_id": "region-ab3306e123674770",
+      "label": "empty corridor",
+      "region_kind": "thing",
+      "discovery_area": 11619,
+      "box_before": {
+        "x_min": 370.0,
+        "y_min": 192.0,
+        "x_max": 640.0,
+        "y_max": 311.0
+      },
+      "component_count_before": 24,
+      "geometric_confidence": 0.9482401013374329,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.367809799987299,
+      "model_mask_area": 29465,
+      "clipped_pixel_count": 29465,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

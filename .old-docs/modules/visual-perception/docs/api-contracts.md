@@ -137,7 +137,12 @@ result = run_canonical_pipeline(image, payload, config, ports)
 - `visual_embeddings` / `language_embeddings`, os vetores por região que o estágio de
   evidência produziu. Eles existem aqui desde a #217: antes eram calculados — 121
   chamadas de encoder por frame na configuração real — e descartados dentro do pipeline,
-  de modo que o `artifact_ref` gravado em cada slot apontava para nada;
+  de modo que o `artifact_ref` gravado em cada slot apontava para nada. Persistir e
+  resolver esses vetores de volta a partir de `embedding_id`/`artifact_ref` é fronteira
+  pública do módulo — `write_embedding_archive`/`resolve_embedding_vector`
+  (`infrastructure/embedding_archive.py`, exportadas em `visual_perception/__init__.py`) —
+  para que um consumidor fora do módulo (sensor-association, semantic-fusion) não precise
+  conhecer o formato `.npz` do artifact nem reimplementar a leitura;
 - `signal_failures`, `refinement_history`, `reconciliation_records` e `relation_failures`,
   o registro auditável dos estágios contextuais;
 - `stage_model_calls`, quantas chamadas de modelo cada estágio gastou, para que o custo
@@ -156,9 +161,16 @@ Essas falhas usam a hierarquia definida em
 
 ## `VisualObservation`
 
-`VisualObservation` é a saída canônica do módulo. O `schema_version` atual é **3**: ela
-acrescentou `entity_hypotheses` (#205) e os sinais de suporte por claim (#214). Payloads
-das versões 1 e 2 continuam legíveis e desserializam com os campos novos vazios.
+`VisualObservation` é a saída canônica do módulo. O `schema_version` atual é **5**
+(`SUPPORTED_SCHEMA_VERSION` em `infrastructure/serialization.py` é a fonte da verdade): ela
+acrescentou `ObservedRegion.grounding`, separando o grounding espacial da máscara e da box
+de discovery. A **4** havia acrescentado `structural_context`, a partição entre evidência
+contextual publicada e superfície estrutural preservada como contexto; a **3**,
+`entity_hypotheses` (#205) e os sinais de suporte por claim (#214).
+
+O código ainda lê payloads das versões 1 a 4, desserializando-os com os campos novos
+vazios. Pela regra de legado do `AGENTS.md`, essa leitura tolerante é legado a remover:
+payloads antigos devem ser regerados, não migrados.
 
 Código dono:
 [`domain/visual_observation.py`](../src/visual_perception/domain/visual_observation.py)
@@ -169,7 +181,8 @@ Ela contém:
 - dimensões da imagem;
 - convenção de coordenadas;
 - contexto de cena;
-- regiões observadas;
+- regiões publicadas como evidência contextual (`regions`);
+- superfícies estruturais preservadas como contexto (`structural_context`);
 - relações candidatas;
 - versão de schema.
 
@@ -187,9 +200,58 @@ Quem consome:
 O que **não** significa:
 
 - não é um mapa 3D;
+- não é uma segmentação semântica completa da cena;
 - não representa fusão temporal entre observações;
 - não garante que um label seja verdadeiro no mundo;
 - não confirma relações espaciais em 3D.
+
+### A partição publicado / contexto estrutural
+
+`regions` contém a **evidência contextual** que o módulo publica. `structural_context`
+contém as regiões cuja identidade afirmada é apenas superfície estrutural genérica —
+`wall`, `floor`, `ceiling`, `ceiling tiles`, `wooden panel`.
+
+Elas continuam inteiras: máscara, box, claims, embeddings e evidência preservados,
+alcançáveis por `region_by_id`, e alvos válidos de relação e de grupo de entidade. A
+propriedade `all_regions` devolve as duas metades, e é o que audit, diagnóstico e
+qualquer leitor que precise medir *o que foi observado* devem usar. Um consumidor que
+queira apenas *o que o módulo afirma valer a pena preservar* lê `regions`.
+
+Invariantes que a fronteira impõe:
+
+- `region_id` é único sobre a **união** das duas metades;
+- a resolução de máscara é validada nas duas;
+- relações e membros de grupo são resolvidos contra a união, de modo que uma evidência
+  publicada pode apontar para a superfície não publicada que a hospeda sem virar
+  referência pendurada.
+
+A regra que decide a partição é determinística e mora em
+[`domain/contextual_evidence.py`](../src/visual_perception/domain/contextual_evidence.py):
+uma região é publicada **a menos que** toda hipótese de identidade afirmada tenha núcleo
+nominal estrutural e nenhum token residual além de nomes estruturais, modificadores não
+discriminativos, e modificadores que a própria região já declarou como `material`.
+
+```text
+wall                                    -> structural_context
+plain wall                              -> structural_context
+ceiling tiles                           -> structural_context
+wooden floor  (+ material: wood)        -> structural_context
+cracked wall                            -> regions, host_surface = wall
+graffiti on wall                        -> regions, host_surface = wall
+peeled paint                            -> regions, sem host_surface
+door                                    -> regions
+wall  (+ alternative: door)             -> structural_context, e nunca vira "door"
+```
+
+O motivo de cada supressão é registrado em `PipelineResult.suppressed_regions`
+(`region_id`, `reason`, `concept`), contado no diagnóstico do frame em
+`suppressed_regions`, e listado por região em `diagnostics.json` sob
+`suppressed_region_records`. `RegionSuppressionReason` é um vocabulário fechado, no molde
+de `ProposalRejectionReason`; hoje o único valor é `generic_structural_surface`.
+
+A política é desligável por `contextual_publication.enabled`, e desligada devolve
+exatamente o comportamento anterior a ela: tudo publicado, `structural_context` vazio,
+nenhuma claim derivada anexada.
 
 ## `ObservedRegion`
 
@@ -417,6 +479,35 @@ são diferentes" transformaria cada condição nova em contradição.
 A mesma política serve os dois consumidores — `contradiction_support` na calibração e
 `contradicting_claims` na auditoria. Antes eram duas implementações separadas, erradas do
 mesmo jeito.
+
+## `ClaimKind.HOST_SURFACE`
+
+Código dono:
+[`domain/contextual_evidence.py`](../src/visual_perception/domain/contextual_evidence.py)
+
+Uma claim `host_surface` diz **sobre o que** a evidência publicada está:
+
+```text
+label:        cracked wall
+host_surface: wall
+```
+
+Propriedades do contract:
+
+- é **derivada**, com `ModelProvenance.stage = "contextual_publication"`. Ela nunca se
+  apresenta como se o VLM a tivesse escrito;
+- é não pontuada (está em `UNSCORED_CLAIM_KINDS`): não há score bruto de produtor a
+  reportar;
+- vem **apenas** do texto que o produtor afirmou. Nunca de contenção geométrica com uma
+  região vizinha — isso seria lavar geometria como semântica;
+- **ausência significa desconhecido**, e é um desfecho legítimo. Ela não é emitida quando
+  a identidade não cita superfície nenhuma, quando cita mais de uma, ou quando hipóteses
+  afirmadas concorrentes discordam. Não existe `host_surface: unknown`, pela mesma razão
+  que `SemanticClaim.confidence` é `None` em vez de `0.0`;
+- o label cru **não é reescrito**. `cracked wall` continua `cracked wall`.
+
+Decidir que essa evidência pertence a uma superfície física do mundo é outra pergunta, e
+pertence a `sensor-association`/`semantic-fusion`.
 
 ## `RegionKind`
 

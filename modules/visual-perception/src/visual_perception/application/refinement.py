@@ -139,9 +139,8 @@ class RefinementTarget:
 # fingerprint, e com qual desfecho.
 @dataclass(frozen=True)
 class RefinementStep:
-    """O que uma iteração de refinamento fez, e com base em quê."""
+    """O que o passe de refinamento fez, e com base em quê."""
 
-    iteration: int
     targets: tuple[RefinementTarget, ...]
     previous_evidence: tuple[str, ...]
     new_evidence: tuple[str, ...]
@@ -153,7 +152,7 @@ class RefinementStep:
     # Expõe os ids alvo, que é o campo mais consultado por quem lê o histórico.
     @property
     def target_region_ids(self) -> tuple[str, ...]:
-        """Os ids das regiões que esta iteração tentou reinterpretar."""
+        """Os ids das regiões que o passe tentou reinterpretar."""
         return tuple(target.region_id for target in self.targets)
 
 
@@ -236,7 +235,7 @@ def select_refinement_targets(
             continue
         targets.append(RefinementTarget(region_id=region.region_id, reasons=reasons))
     targets.sort(key=lambda target: target.priority)
-    return tuple(targets[: config.max_regions_per_iteration])
+    return tuple(targets[: config.max_refined_regions])
 
 
 # Ponto de entrada do estágio: reinterpreta as regiões que têm razão explícita,
@@ -250,11 +249,11 @@ def refine_observation(
     multimodal_config: MultimodalReasoningConfig,
     refinement_config: RefinementConfig,
 ) -> tuple[VisualObservation, tuple[RefinementStep, ...]]:
-    """Reinterpreta seletivamente as regiões com evidência não resolvida.
+    """Reinterpreta seletivamente, num passe único, as regiões com evidência não resolvida.
 
-    O loop termina por qualquer um de três motivos, todos determinísticos:
-    nenhuma região tem razão, o escalonamento não oferece evidência diferente da
-    já usada, ou ``max_iterations`` foi atingido.
+    O passe não acontece quando nenhuma região tem razão ou quando o
+    escalonamento não oferece evidência diferente da já usada. É um passe só
+    porque o escalonamento é fixo: um segundo passe repetiria a mesma evidência.
 
     Argumentos:
         observation: a observação canônica a refinar.
@@ -267,9 +266,9 @@ def refine_observation(
             escalonamento deriva dela trocando apenas as views.
         refinement_config: orçamento, limiares e views de escalonamento.
     Retorna:
-        a observação refinada e o histórico append-only de cada iteração.
+        a observação refinada e o histórico, com no máximo um passo.
     """
-    if not refinement_config.enabled or refinement_config.max_iterations <= 0:
+    if not refinement_config.enabled:
         return observation, ()
 
     previous_evidence = tuple(multimodal_config.region_views)
@@ -279,67 +278,38 @@ def refine_observation(
     new_evidence = tuple(escalated_config.region_views)
     if set(new_evidence) <= set(previous_evidence):
         return observation, ()
+    targets = select_refinement_targets(observation, refinement_config)
+    if not targets:
+        return observation, ()
 
-    current = observation
-    history: list[RefinementStep] = []
-    used_evidence: set[tuple[str, ...]] = {previous_evidence}
+    target_ids = {target.region_id for target in targets}
+    order = {region.region_id: index for index, region in enumerate(observation.regions)}
+    selected = tuple(region for region in observation.regions if region.region_id in target_ids)
+    untouched = tuple(region for region in observation.regions if region.region_id not in target_ids)
+    step = RefinementStep(
+        targets=targets,
+        previous_evidence=previous_evidence,
+        new_evidence=new_evidence,
+        producer=escalated_config.backend,
+        config_fingerprint=fingerprint_of(escalated_config),
+    )
 
-    for iteration in range(refinement_config.max_iterations):
-        if new_evidence in used_evidence:
-            break
-        targets = select_refinement_targets(current, refinement_config)
-        if not targets:
-            break
-
-        target_ids = {target.region_id for target in targets}
-        order = {region.region_id: index for index, region in enumerate(current.regions)}
-        selected = tuple(region for region in current.regions if region.region_id in target_ids)
-        untouched = tuple(region for region in current.regions if region.region_id not in target_ids)
-
-        try:
-            refined, failures = interpret_regions(
-                selected, image, views, current.scene_context, reasoner, escalated_config
-            )
-        except VisualPerceptionError as error:
-            # O passe escalonado manda mais imagens por região — no perfil de
-            # referência, o frame inteiro entra junto do sujeito — e é o ponto
-            # do pipeline com mais chance de esbarrar no budget de VRAM. Uma
-            # falha aqui custa o refinamento, e só ele: a observação
-            # pré-refinamento continua válida e é o que sai.
-            history.append(
-                RefinementStep(
-                    iteration=iteration,
-                    targets=targets,
-                    previous_evidence=previous_evidence,
-                    new_evidence=new_evidence,
-                    producer=escalated_config.backend,
-                    config_fingerprint=fingerprint_of(escalated_config),
-                    failures=tuple(
-                        RegionInterpretationFailure(target.region_id, str(error))
-                        for target in targets
-                    ),
-                )
-            )
-            break
-        current = dataclasses.replace(
-            current,
-            regions=tuple(sorted(untouched + refined, key=lambda region: order[region.region_id])),
+    try:
+        refined, failures = interpret_regions(
+            selected, image, views, observation.scene_context, reasoner, escalated_config
         )
-        failed_ids = {failure.region_id for failure in failures}
-        history.append(
-            RefinementStep(
-                iteration=iteration,
-                targets=targets,
-                previous_evidence=previous_evidence,
-                new_evidence=new_evidence,
-                producer=escalated_config.backend,
-                config_fingerprint=fingerprint_of(escalated_config),
-                failures=failures,
-                refined_region_ids=tuple(
-                    sorted(target.region_id for target in targets if target.region_id not in failed_ids)
-                ),
-            )
-        )
-        used_evidence.add(new_evidence)
+    except VisualPerceptionError as error:
+        # O passe escalonado manda mais imagens por região e é o ponto do
+        # pipeline com mais chance de esbarrar no budget de VRAM. Uma falha aqui
+        # custa o refinamento, e só ele: a observação pré-refinamento continua
+        # válida e é o que sai.
+        failed = tuple(RegionInterpretationFailure(target.region_id, str(error)) for target in targets)
+        return observation, (dataclasses.replace(step, failures=failed),)
 
-    return current, tuple(history)
+    current = dataclasses.replace(
+        observation,
+        regions=tuple(sorted(untouched + refined, key=lambda region: order[region.region_id])),
+    )
+    failed_ids = {failure.region_id for failure in failures}
+    refined_ids = tuple(sorted(target.region_id for target in targets if target.region_id not in failed_ids))
+    return current, (dataclasses.replace(step, failures=failures, refined_region_ids=refined_ids),)

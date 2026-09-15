@@ -1,0 +1,286 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-12988",
+  "input_sha256": "4349130dc42087cb1dc4d5b26dbced50e35053517ef58722ac7958cf29989ba2",
+  "latency_s": 82.7150932509976,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 6,
+  "proposal_count": 6,
+  "merged_proposal_count": 6,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "plain wall",
+      2
+    ],
+    [
+      "building",
+      1
+    ],
+    [
+      "building roof",
+      1
+    ],
+    [
+      "pink flower",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "industrial",
+      3
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "industrial building",
+      1
+    ],
+    [
+      "plant",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      5
+    ],
+    [
+      "stuff",
+      1
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 6,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 6,
+    "missing": 0,
+    "minimum": 0.8926050066947937,
+    "maximum": 0.9865906238555908,
+    "mean": 0.944243590037028,
+    "median": 0.9394910037517548,
+    "distinct_values": 6,
+    "stddev": 0.032478290624731336,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "plain wall",
+    "dominant_fraction": 0.3333333333333333,
+    "distinct_labels": 5,
+    "dominant_category": "industrial",
+    "dominant_category_fraction": 0.5,
+    "distinct_categories": 4
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        14
+      ],
+      [
+        "contradicts",
+        2
+      ],
+      [
+        "indistinguishable",
+        2
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 2,
+    "reconciled_regions": 3,
+    "distinct_raw_labels": 5,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 8,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 3
+  },
+  "published_region_count": 3,
+  "structural_context_count": 3,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      3
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-40b8d91b3071f83b",
+      "label": "pink flower",
+      "region_kind": "thing",
+      "discovery_area": 879,
+      "box_before": {
+        "x_min": 67.0,
+        "y_min": 237.0,
+        "x_max": 102.0,
+        "y_max": 270.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9331996440887451,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.8795850119786337,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-709136c4c50458a9",
+      "label": "building roof",
+      "region_kind": "thing",
+      "discovery_area": 101637,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 3.0,
+        "x_max": 632.0,
+        "y_max": 257.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9816439747810364,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 3.2597891069890466,
+      "model_mask_area": 31440,
+      "clipped_pixel_count": 31440,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-94bc2ab16f7818b0",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 31398,
+      "box_before": {
+        "x_min": 406.0,
+        "y_min": 124.0,
+        "x_max": 640.0,
+        "y_max": 274.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9865906238555908,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.5104546319926158,
+      "model_mask_area": 31442,
+      "clipped_pixel_count": 243,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 31199,
+          "box": {
+            "x_min": 406.0,
+            "y_min": 124.0,
+            "x_max": 640.0,
+            "y_max": 274.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 31199,
+          "refined_overlap": 31199,
+          "detector_box_overlap": 31199,
+          "distance_to_box_center_px": 0.45549751397892907
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 31199,
+      "area_ratio": 0.993662016688961,
+      "area_reduction_ratio": 0.006337983311038964,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 406.0,
+        "y_min": 124.0,
+        "x_max": 640.0,
+        "y_max": 274.0
+      },
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-56ba3f5af3aca07c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-d4592d2742598390",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain wall"
+    },
+    {
+      "region_id": "region-fac1cfccfb431256",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    }
+  ]
+}

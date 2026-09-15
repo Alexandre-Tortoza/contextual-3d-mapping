@@ -1,0 +1,104 @@
+{
+  "frame_id": "corridor-02-10724",
+  "regions": [
+    {
+      "region_id": "region-632aab74e12728d7",
+      "label": "branch",
+      "region_kind": "thing",
+      "discovery_area": 1118,
+      "box_before": {
+        "x_min": 602.0,
+        "y_min": 151.0,
+        "x_max": 640.0,
+        "y_max": 187.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9316112995147705,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.8286025279958267,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e01ea51c2e2a5af9",
+      "label": "building silhouette",
+      "region_kind": "thing",
+      "discovery_area": 91760,
+      "box_before": {
+        "x_min": 13.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 209.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9836267828941345,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 2.936979980993783,
+      "model_mask_area": 9803,
+      "clipped_pixel_count": 9803,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-eef5eaa0fc7f4c72",
+      "label": "field",
+      "region_kind": "thing",
+      "discovery_area": 105893,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 222.0,
+        "x_max": 640.0,
+        "y_max": 472.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9782026410102844,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 2,
+      "latency_s": 0.4674646500207018,
+      "model_mask_area": 105494,
+      "clipped_pixel_count": 5107,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 100387,
+          "box": {
+            "x_min": 3.0,
+            "y_min": 223.0,
+            "x_max": 639.0,
+            "y_max": 424.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 100387,
+          "refined_overlap": 100387,
+          "detector_box_overlap": 100387,
+          "distance_to_box_center_px": 0.31423723413784194
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 100387,
+      "area_ratio": 0.948004117363754,
+      "area_reduction_ratio": 0.051995882636245994,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 3.0,
+        "y_min": 223.0,
+        "x_max": 639.0,
+        "y_max": 424.0
+      },
+      "reason": null
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "frame_id": "corridor-02-00017",
+  "regions": [
+    {
+      "region_id": "region-7b14a755e9b0a5d6",
+      "label": "red door",
+      "region_kind": "thing",
+      "discovery_area": 6092,
+      "box_before": {
+        "x_min": 196.0,
+        "y_min": 96.0,
+        "x_max": 272.0,
+        "y_max": 285.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9800108671188354,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.232983281981433,
+      "model_mask_area": 6009,
+      "clipped_pixel_count": 7,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 6002,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 98.0,
+            "x_max": 240.0,
+            "y_max": 285.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 6002,
+          "refined_overlap": 6002,
+          "detector_box_overlap": 6002,
+          "distance_to_box_center_px": 0.2308591697130908
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 6002,
+      "area_ratio": 0.9852265265922522,
+      "area_reduction_ratio": 0.014773473407747817,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 196.0,
+        "y_min": 98.0,
+        "x_max": 240.0,
+        "y_max": 285.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-c575a8b238afc58d",
+      "label": "ceiling light fixture",
+      "region_kind": "thing",
+      "discovery_area": 7080,
+      "box_before": {
+        "x_min": 246.0,
+        "y_min": 3.0,
+        "x_max": 492.0,
+        "y_max": 84.0
+      },
+      "component_count_before": 7,
+      "geometric_confidence": 0.981414258480072,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.4654787129838951,
+      "model_mask_area": 6902,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 6899,
+          "box": {
+            "x_min": 246.0,
+            "y_min": 3.0,
+            "x_max": 410.0,
+            "y_max": 51.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 6899,
+          "refined_overlap": 6899,
+          "detector_box_overlap": 6899,
+          "distance_to_box_center_px": 0.1547056261750172
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 6899,
+      "area_ratio": 0.9744350282485875,
+      "area_reduction_ratio": 0.02556497175141248,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 246.0,
+        "y_min": 3.0,
+        "x_max": 410.0,
+        "y_max": 51.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-cc312ccc487614af",
+      "label": "wooden door",
+      "region_kind": "thing",
+      "discovery_area": 5700,
+      "box_before": {
+        "x_min": 534.0,
+        "y_min": 263.0,
+        "x_max": 640.0,
+        "y_max": 334.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.951223611831665,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45247251697583124,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

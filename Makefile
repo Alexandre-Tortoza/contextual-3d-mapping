@@ -12,16 +12,21 @@ SEGMENT_LEAD_S ?= 3
 SEGMENT_ID ?= corridor-02-fastlio-176s-30s
 M1_PCD_SOURCE ?= artifacts/$(SEGMENT_ID).pcd
 M1_PCD_ARTIFACT ?= artifacts/$(SEGMENT_ID).json
-M1_CONTEXT_ARTIFACT ?= artifacts/$(SEGMENT_ID)-context.json
+CONTEXT_RUN_ID := $(shell date -u +%Y%m%dT%H%M%S%NZ)-$(SEGMENT_ID)
+M1_CONTEXT_ARTIFACT ?= artifacts/runs/$(CONTEXT_RUN_ID)/context.json
 M1_SEGMENT_WINDOW ?= artifacts/$(SEGMENT_ID)-window.json
 M1_ODOMETRY ?= artifacts/$(SEGMENT_ID)-odometry.csv
 M1_MAX_POINTS ?= 150000
-M1_VISUAL_RUN ?= modules/visual-perception/benchmarks/results/samples/20260909T135428Z
-MAP_EXPLORER_ARTIFACT ?= $(M1_CONTEXT_ARTIFACT)
-MAP_EXPLORER_ASSETS := $(basename $(MAP_EXPLORER_ARTIFACT))-assets
-M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/apps/mapping-runtime/src
+M1_VISIBILITY_MODE ?= measured_surfaces
+M1_VISUAL_RUN ?= modules/visual-perception/benchmarks/results/samples/old/20260909T135428Z
+GLOBAL_SEGMENT_ID ?= corridor-02-global
+GLOBAL_PCD_SOURCE ?= artifacts/$(GLOBAL_SEGMENT_ID).pcd
+GLOBAL_PCD_ARTIFACT ?= artifacts/$(GLOBAL_SEGMENT_ID).json
+MAP_EXPLORER_ARTIFACT ?=
+MAP_EXPLORER_RUN_ID ?=
+M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/modules/semantic-map/src:$(CURDIR)/modules/visual-perception/src:$(CURDIR)/apps/mapping-runtime/src
 
-.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-serve
+.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-map-from-window corridor-02-global-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-publish map-explorer-serve
 
 verify: test lint typecheck
 
@@ -55,6 +60,11 @@ corridor-02-window:
 		--output "$(M1_SEGMENT_WINDOW)"
 
 corridor-02-map: corridor-02-window
+	$(MAKE) corridor-02-map-from-window PYTHON="$(PYTHON)"
+
+# Consome uma window já resolvida sem sobrescrevê-la. A CLI usa esta fronteira
+# depois de selecionar trecho, bag inteiro e política de keyframes.
+corridor-02-map-from-window:
 	offset=$$($(RESOLVED_PYTHON) -c "import json;print(json.load(open('$(M1_SEGMENT_WINDOW)'))['play_offset_s'])"); \
 	duration=$$($(RESOLVED_PYTHON) -c "import json;print(json.load(open('$(M1_SEGMENT_WINDOW)'))['play_duration_s'])"); \
 	docker compose --profile ros1 run --rm fastlio-ros1 bash \
@@ -66,6 +76,23 @@ corridor-02-map: corridor-02-window
 		"$$offset"
 	$(MAKE) m1-pcd-slice PYTHON="$(PYTHON)"
 
+# Processa a rosbag completa uma única vez. A ausência de ``--duration`` no
+# script preserva toda a trajetória e cria o frame global comum à campanha.
+corridor-02-global-map:
+	docker compose --profile ros1 run --rm fastlio-ros1 bash \
+		/workspace/apps/mapping-runtime/scripts/run_fastlio_ros1_segment.sh \
+		/workspace/datasets/raw/corridor-02/corridor-02.bag \
+		/workspace/modules/state-estimation/configs/corridor-02-velodyne.yaml \
+		whole \
+		/workspace/$(GLOBAL_PCD_SOURCE) \
+		0
+	PYTHONPATH="$(M1_PYTHONPATH)" $(RESOLVED_PYTHON) -m mapping_runtime pcd-slice \
+		"$(GLOBAL_PCD_SOURCE)" \
+		--output "$(GLOBAL_PCD_ARTIFACT)" \
+		--map-id "$(GLOBAL_SEGMENT_ID)" \
+		--map-frame map \
+		--max-points $(M1_MAX_POINTS)
+
 corridor-02-context:
 	PYTHONPATH="$(M1_PYTHONPATH)" $(RESOLVED_PYTHON) -m mapping_runtime corridor-02-context \
 		--geometric-slice "$(M1_PCD_ARTIFACT)" \
@@ -74,6 +101,7 @@ corridor-02-context:
 		--extrinsics datasets/raw/corridor-02/corridor-02-extrinsics.yaml \
 		--window "$(M1_SEGMENT_WINDOW)" \
 		--visual-run "$(M1_VISUAL_RUN)" \
+		--visibility-mode "$(M1_VISIBILITY_MODE)" \
 		--odometry "$(M1_ODOMETRY)" \
 		--ground-truth datasets/raw/corridor-02/corridor-02-gt.txt \
 		--output "$(M1_CONTEXT_ARTIFACT)"
@@ -96,11 +124,10 @@ map-explorer-test:
 map-explorer-build:
 	cd apps/map-explorer/web && npm run build
 
-map-explorer-serve:
-	mkdir -p apps/map-explorer/web/public
-	mkdir -p apps/map-explorer/web/public/maps
-	cp "$(MAP_EXPLORER_ARTIFACT)" apps/map-explorer/web/public/current-map.json
-	cp "$(M1_PCD_ARTIFACT)" "apps/map-explorer/web/public/maps/$(SEGMENT_ID)-geometry.json"
-	if [ -d "$(MAP_EXPLORER_ASSETS)" ]; then cp -R "$(MAP_EXPLORER_ASSETS)" apps/map-explorer/web/public/; fi
-	$(RESOLVED_PYTHON) apps/map-explorer/scripts/publish_map_index.py apps/map-explorer/web/public
+map-explorer-publish:
+	$(RESOLVED_PYTHON) apps/map-explorer/scripts/publish_map_index.py apps/map-explorer/web/public \
+		$(if $(MAP_EXPLORER_ARTIFACT),--artifact "$(MAP_EXPLORER_ARTIFACT)",) \
+		$(if $(MAP_EXPLORER_RUN_ID),--run-id "$(MAP_EXPLORER_RUN_ID)",)
+
+map-explorer-serve: map-explorer-publish
 	cd apps/map-explorer/web && npm run dev -- --host 0.0.0.0

@@ -105,13 +105,13 @@ def score_observation(
 ) -> QualityMetrics:
     """Pontua uma observação canônica contra suas regiões de ground-truth."""
     if not ground_truth:
-        hallucinated = 1.0 if observation.regions else 0.0
-        return QualityMetrics(0.0 if observation.regions else 1.0, 0.0, 0.0, hallucinated)
+        hallucinated = 1.0 if observation.all_regions else 0.0
+        return QualityMetrics(0.0 if observation.all_regions else 1.0, 0.0, 0.0, hallucinated)
 
     matched_gt: set[int] = set()
     matched_predictions: list[tuple[float, bool]] = []  # (iou, label_matched)
 
-    for region in observation.regions:
+    for region in observation.all_regions:
         best_iou, best_index, best_label_match = 0.0, None, False
         for gt_index, gt in enumerate(ground_truth):
             if gt_index in matched_gt:
@@ -129,8 +129,8 @@ def score_observation(
     mean_iou = sum(iou for iou, _ in matched_predictions) / match_count if match_count else 0.0
     label_matches = [matched for _, matched in matched_predictions if matched]
     label_match_rate = len(label_matches) / match_count if match_count else 0.0
-    hallucinations = len(observation.regions) - len(matched_predictions)
-    hallucination_rate = hallucinations / len(observation.regions) if observation.regions else 0.0
+    hallucinations = len(observation.all_regions) - len(matched_predictions)
+    hallucination_rate = hallucinations / len(observation.all_regions) if observation.all_regions else 0.0
 
     return QualityMetrics(region_coverage, mean_iou, label_match_rate, hallucination_rate)
 

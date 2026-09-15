@@ -139,6 +139,23 @@ A geometria persistente tem um único dono autoritativo, `geometric-map`. Capaci
 
 ## Fronteira semântica
 
+`visual-perception` separa discovery, reconhecimento e grounding espacial.
+Uma claim reconhecida não autoriza a máscara de discovery como footprint.
+O produtor preserva a geometria original e entrega uma máscara semântica com
+proveniência, ou uma abstenção explícita. Ownership e conectividade das máscaras
+também pertencem a esse produtor.
+
+`geometric-map` fornece a geometria medida integral e sua proveniência à
+associação, separadamente da amostra de renderização. `sensor-association`
+é dono da visibilidade e do vínculo entre componentes 3D e footprints visuais.
+Recebe o footprint validado e distingue interior, boundary incerta e ausência
+de suporte de superfície. Visibilidade RGB não basta para atribuir a identidade
+da região ao ponto; aberturas sem superfície medida conservam evidência 2D. A aplicação entrega à fusão somente associações
+semânticas fortes e preserva as tentativas nos artifacts. A interpolação de
+pose pertence a `state-estimation` e tem configuração independente do grounding.
+Ver [grounding semântico](../modules/visual-perception/docs/semantic-grounding.md)
+e [incerteza de associação](../modules/sensor-association/README.md).
+
 `semantic-map` enriquece a geometria persistente com informação semântica.
 
 `semantic-memory`, `scene-graph` e `context-reasoning` derivam estruturas de recuperação e estruturas contextuais de nível mais alto a partir da informação mapeada.
@@ -156,6 +173,14 @@ Os papéis iniciais de aplicação são:
 - `cli`: fornece automação não gráfica, inspeção, debugging, avaliação e workflows de exportação.
 
 Aplicações selecionam implementações concretas, conectam entradas e saídas de módulos, gerenciam o ciclo de vida do runtime e expõem pontos de entrada voltados ao usuário.
+
+A CLI preserva cada composição contextual em `artifacts/runs/<run-id>/`, com
+referências às entradas e snapshots da janela e do manifest de percepção.
+`map-explorer` é dono da publicação estática: mapa, previews e hashes ficam em
+pastas independentes, e seu catálogo público alimenta tanto a CLI quanto o
+seletor web. Republicar o mesmo conteúdo é idempotente; outro conteúdo não pode
+substituir uma identidade publicada. O contract e os comandos estão no
+[README da aplicação](../apps/map-explorer/README.md#pastas-de-runs).
 
 Algoritmos de pesquisa permanecem de posse de seus módulos de capacidade.
 

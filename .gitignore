@@ -10,6 +10,10 @@ htmlcov/
 
 .venv/
 .venv-*/
+
+# Credenciais locais (ex.: GEMINI_API_KEY) nunca entram no histórico Git.
+.env
+.env.*
 node_modules/
 *.egg-info/
 dist/
@@ -18,8 +22,12 @@ build/
 /apps/map-explorer/web/public/current-map.json
 /apps/map-explorer/web/public/*-assets/
 /apps/map-explorer/web/public/maps/
+/apps/map-explorer/web/public/runs/
 
 # Dados brutos e artefatos locais permanecem fora do histórico Git.
 datasets/raw/
 modules/*/benchmarks/.local/
 modules/*/benchmarks/runs/
+
+# DEBUG outputs por execução de pipeline.
+/artifacts/*-DEBUG/

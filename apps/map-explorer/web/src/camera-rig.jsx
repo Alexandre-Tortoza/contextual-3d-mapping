@@ -12,6 +12,7 @@ export const CameraRig = forwardRef(function CameraRig(
   forwardedRef,
 ) {
   const controlsRef = useRef(null);
+  const fittedMapKey = useRef(null);
   const pressedKeys = useRef(new Set());
   const scale = useMemo(() => navigationScale(metrics.diagonal), [metrics.diagonal]);
 
@@ -52,11 +53,13 @@ export const CameraRig = forwardRef(function CameraRig(
     },
   }), [metrics, reducedMotion, scale.focusDistance]);
 
-  // Faz o enquadramento uma única vez por mapa aberto. Alterações posteriores
-  // de seleção, camada ou filtro não reexecutam este efeito.
+  // Preserva o enquadramento entre runs da mesma geometria para permitir
+  // comparar o contexto no mesmo ângulo. Outro mapa recebe uma vista inicial.
   useEffect(() => {
+    if (fittedMapKey.current === mapKey) return;
     const pose = cameraPreset(metrics, "isometric");
     controlsRef.current?.setLookAt(...pose.position, ...pose.target, false);
+    fittedMapKey.current = mapKey;
   }, [mapKey, metrics]);
 
   // Mantém o conjunto de teclas pressionadas somente durante modo voo e limpa

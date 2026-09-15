@@ -1,0 +1,249 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-10732",
+  "input_sha256": "5f1a600e2a84fde5c8cc669f441e0285f668e59bcc79afcb940697a48459009f",
+  "latency_s": 81.8697914800141,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 6,
+  "proposal_count": 7,
+  "merged_proposal_count": 6,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "wall",
+      2
+    ],
+    [
+      "building",
+      1
+    ],
+    [
+      "ground",
+      1
+    ],
+    [
+      "plain surface",
+      1
+    ],
+    [
+      "tree branches",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "building",
+      2
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "residential building",
+      1
+    ],
+    [
+      "terrain",
+      1
+    ],
+    [
+      "vegetation",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      4
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 6,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 6,
+    "missing": 0,
+    "minimum": 0.9167156219482422,
+    "maximum": 0.9830107688903809,
+    "mean": 0.9469631711641947,
+    "median": 0.9369702637195587,
+    "distinct_values": 6,
+    "stddev": 0.025258375813829673,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 3,
+  "mode_collapse": {
+    "dominant_label": "wall",
+    "dominant_fraction": 0.3333333333333333,
+    "distinct_labels": 5,
+    "dominant_category": "building",
+    "dominant_category_fraction": 0.3333333333333333,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 1,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "outside_valid_area",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        10
+      ],
+      [
+        "indistinguishable",
+        5
+      ],
+      [
+        "contradicts",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 2,
+    "reconciled_regions": 4,
+    "distinct_raw_labels": 5,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "part_of",
+        2
+      ]
+    ],
+    "geometric_relations": 5,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 4
+  },
+  "published_region_count": 2,
+  "structural_context_count": 4,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      4
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-440c5a4936bc7f65",
+      "label": "tree branches",
+      "region_kind": "thing",
+      "discovery_area": 1044,
+      "box_before": {
+        "x_min": 605.0,
+        "y_min": 150.0,
+        "x_max": 640.0,
+        "y_max": 186.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9167156219482422,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 3.8156337560212705,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-55a7c95f3e5910a4",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 90578,
+      "box_before": {
+        "x_min": 14.0,
+        "y_min": 4.0,
+        "x_max": 638.0,
+        "y_max": 206.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9830107688903809,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4498327319743112,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-15267c28a614c665",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-5101dff2a64b3377",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    },
+    {
+      "region_id": "region-751541bd0860ba03",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ground"
+    },
+    {
+      "region_id": "region-a96ff77bd3747c3a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    }
+  ]
+}

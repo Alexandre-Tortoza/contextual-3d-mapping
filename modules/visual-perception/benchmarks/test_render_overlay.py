@@ -8,6 +8,7 @@ nada sobre o label. O caveat está registrado em ``docs/known-limitations.md``.
 
 from __future__ import annotations
 
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -21,7 +22,12 @@ from PIL import Image  # noqa: E402
 
 from fixtures import image_observation  # noqa: E402
 from render_layers import DrawableShape, confidence_caption, label_caption  # noqa: E402
-from render_overlay import proposal_shapes, region_shapes, render_overlay  # noqa: E402
+from render_overlay import (  # noqa: E402
+    proposal_shapes,
+    region_shapes,
+    render_overlay,
+    structural_context_shapes,
+)
 from visual_perception.domain.geometry import Mask  # noqa: E402
 from visual_perception.domain.references import ModelProvenance  # noqa: E402
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, TileProvenance  # noqa: E402
@@ -163,3 +169,62 @@ def test_proposals_carry_no_semantics() -> None:
     assert shapes[0].label is None
     assert shapes[0].semantic_confidence is None
     assert shapes[0].geometric_confidence == 0.88
+
+
+# O overlay é o artifact que mostra o que o módulo **publica**. Uma superfície
+# suprimida não pode reaparecer nele: se reaparecesse, a imagem continuaria
+# cheia de caixas ``wall``/``floor``/``ceiling`` e a política não teria efeito
+# observável onde ela mais importa.
+def test_the_overlay_does_not_draw_a_suppressed_structural_surface() -> None:
+    """O overlay desenha só as regiões publicadas, nunca o contexto estrutural."""
+    published = _region(semantic=0.9, geometric=0.97)
+    suppressed = dataclasses.replace(published, region_id="region-b")
+    observation = dataclasses.replace(
+        _observation(published), regions=(), structural_context=(suppressed,)
+    )
+
+    rendered = render_overlay(_base_image(), observation)
+
+    # Nada foi desenhado: a imagem continua sendo a base intacta.
+    assert np.array_equal(np.array(rendered), np.array(_base_image()))
+    assert region_shapes(observation.regions) == ()
+    assert [shape.shape_id for shape in structural_context_shapes(observation)] == ["region-b"]
+
+
+# A camada de inspeção existe para que "suprimido" e "nunca observado"
+# continuem distinguíveis no artifact.
+def test_the_structural_context_layer_carries_the_suppressed_surfaces() -> None:
+    """As formas do contexto estrutural preservam label e os dois eixos de confiança."""
+    suppressed = _region(semantic=0.9, geometric=0.97)
+    observation = dataclasses.replace(
+        _observation(suppressed), regions=(), structural_context=(suppressed,)
+    )
+
+    (shape,) = structural_context_shapes(observation)
+
+    assert shape.label == "wall"
+    assert shape.semantic_confidence == 0.9
+    assert shape.geometric_confidence == 0.97
+
+
+# O label desenhado precisa ser o da hipótese que sustenta a publicação. Uma
+# região publicada porque o refinamento a reinterpretou carrega o conceito
+# estrutural como primeira hipótese afirmada, e desenhá-lo faria o overlay
+# exibir exatamente o label que a política tira da frente.
+def test_the_overlay_draws_the_hypothesis_that_made_the_region_publishable() -> None:
+    """Uma região publicada por ``red wall`` não é rotulada ``wall``."""
+    base = _region(semantic=0.9, geometric=0.97)
+    refined = SemanticClaim(
+        ClaimKind.LABEL,
+        "red wall",
+        ConfidenceScore(0.55, "fake"),
+        (Evidence(description="raw multimodal region response"),),
+        ModelProvenance(stage="region_refinement", producer="fake", config_fingerprint="fp"),
+        role=HypothesisRole.PRIMARY,
+    )
+    region = dataclasses.replace(base, claims=(*base.claims, refined))
+
+    (shape,) = region_shapes((region,))
+
+    assert shape.label == "red wall"
+    assert shape.semantic_confidence == 0.55

@@ -47,6 +47,13 @@ def _parser() -> argparse.ArgumentParser:
         help="contextualiza o slice FAST-LIO do corridor-02 com os keyframes de um trecho",
     )
     context.add_argument("--geometric-slice", type=Path, required=True)
+    context.add_argument(
+        "--crop-radius-m", type=float, default=15.0,
+        help="raio da geometria do trecho em torno das posições da câmera nos keyframes",
+    )
+    context.add_argument(
+        "--max-points", type=int, default=150_000, help="teto de pontos da geometria do trecho",
+    )
     context.add_argument("--bag", type=Path, required=True)
     context.add_argument("--intrinsics", type=Path, required=True)
     context.add_argument("--extrinsics", type=Path, required=True)
@@ -70,6 +77,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     context.add_argument("--ground-truth", type=Path, default=None)
     context.add_argument("--output", type=Path, required=True)
+    context.add_argument("--footprint-mode", choices=("semantic_grounding", "legacy_discovery"), default="semantic_grounding")
+    context.add_argument("--disable-boundary-policy", action="store_true", help="ablação explícita da incerteza de boundary")
+    context.add_argument("--registration-sigma-px", type=float, default=0.0)
+    context.add_argument("--visibility-mode", choices=("measured_surfaces", "dense_cells", "legacy_cells"), default="measured_surfaces")
+    context.add_argument("--visibility-geometry", type=Path, help="PCD completo referenciado pelo slice")
+    context.add_argument("--pose-sampling", choices=("interpolated", "nearest"), default="interpolated")
+    context.add_argument("--stuff-discovery-fallback", action="store_true", help="permite discovery de stuff apenas como evidência tentativa")
     window = commands.add_parser(
         "bag-window",
         help="resolve um trecho da rosbag e seus keyframes RGB nos dois relógios do arquivo",
@@ -78,10 +92,23 @@ def _parser() -> argparse.ArgumentParser:
     window.add_argument(
         "--start-s",
         type=float,
-        required=True,
+        default=0.0,
         help="início da janela, em segundos após o primeiro frame RGB",
     )
-    window.add_argument("--duration-s", type=float, required=True, help="duração da janela")
+    window.add_argument(
+        "--keyframe-offset-s",
+        action="append",
+        type=float,
+        default=None,
+        help="posição explícita de keyframe após o início; pode ser repetida",
+    )
+    duration = window.add_mutually_exclusive_group(required=True)
+    duration.add_argument("--duration-s", type=float, help="duração da janela")
+    duration.add_argument(
+        "--whole-bag",
+        action="store_true",
+        help="usa todo o stream RGB do bag",
+    )
     window.add_argument(
         "--keyframe-interval-s",
         type=float,
@@ -95,6 +122,12 @@ def _parser() -> argparse.ArgumentParser:
         help="prefixo reproduzido antes da janela para o estimator convergir",
     )
     window.add_argument("--camera-topic", default="/camera_1/image_raw", help="tópico RGB")
+    window.add_argument(
+        "--all-frames",
+        action="store_true",
+        help="seleciona todos os frames RGB dentro da janela",
+    )
+    window.add_argument("--recording-id", default=None, help="identidade estável da gravação")
     window.add_argument("--output", type=Path, default=None, help="arquivo JSON de destino")
     return parser
 
@@ -125,12 +158,12 @@ def main(arguments: Sequence[str] | None = None) -> int:
     elif options.command == "corridor-02-context":
         # Importa dependências opcionais apenas no workflow real, mantendo o
         # demo e os testes mínimos executáveis sem rosbags/Pillow/PyYAML.
+        from sensor_association import BoundaryPolicy
+
         from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
         from .keyframe_inputs import resolve_keyframe_inputs
 
-        keyframes, skipped, pose_anchor_ns = resolve_keyframe_inputs(
-            options.window, options.visual_run
-        )
+        keyframes, skipped, pose_anchor_ns = resolve_keyframe_inputs(options.window, options.visual_run)
         if skipped:
             print(f"AVISO: {len(skipped)} keyframes sem percepção visual: {', '.join(skipped)}")
         odometry = options.odometry
@@ -148,6 +181,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 odometry=odometry,
                 ground_truth=options.ground_truth,
                 pose_anchor_ns=pose_anchor_ns,
+                footprint_mode=options.footprint_mode,
+                boundary_policy=BoundaryPolicy(enabled=not options.disable_boundary_policy,
+                    registration_sigma_px=options.registration_sigma_px,
+                    allow_legacy_discovery=options.footprint_mode == "legacy_discovery"),
+                pose_sampling=options.pose_sampling,
+                visibility_mode=options.visibility_mode,
+                visibility_geometry=options.visibility_geometry,
+                stuff_discovery_fallback=options.stuff_discovery_fallback,
+                crop_radius_m=options.crop_radius_m,
+                max_points=options.max_points,
             )
         )
         print(destination)
@@ -159,10 +202,13 @@ def main(arguments: Sequence[str] | None = None) -> int:
         window = resolve_bag_window(
             options.bag,
             start_s=options.start_s,
-            duration_s=options.duration_s,
+            duration_s=None if options.whole_bag else options.duration_s,
             keyframe_interval_s=options.keyframe_interval_s,
             lead_s=options.lead_s,
             camera_topic=options.camera_topic,
+            all_frames=options.all_frames,
+            keyframe_offsets_s=None if options.keyframe_offset_s is None else tuple(options.keyframe_offset_s),
+            recording_id=options.recording_id,
         )
         if options.output is not None:
             export_bag_window(window, options.output)

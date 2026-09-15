@@ -1,0 +1,29 @@
+{
+  "frame_id": "corridor-02-12893",
+  "regions": [
+    {
+      "region_id": "region-abcbc8dc6d4ece98",
+      "label": "pink tree",
+      "region_kind": "thing",
+      "discovery_area": 848,
+      "box_before": {
+        "x_min": 438.0,
+        "y_min": 210.0,
+        "x_max": 480.0,
+        "y_max": 244.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8986729383468628,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 4.040342502994463,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

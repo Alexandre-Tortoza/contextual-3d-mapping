@@ -1,0 +1,83 @@
+{
+  "frame_id": "corridor-02-17212",
+  "regions": [
+    {
+      "region_id": "region-01292e4fa0e3be03",
+      "label": "black belt",
+      "region_kind": "thing",
+      "discovery_area": 3440,
+      "box_before": {
+        "x_min": 447.0,
+        "y_min": 252.0,
+        "x_max": 640.0,
+        "y_max": 304.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9600417017936707,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 4.114131768990774,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-436989cbcdfcfece",
+      "label": "car bumper",
+      "region_kind": "thing",
+      "discovery_area": 71384,
+      "box_before": {
+        "x_min": 26.0,
+        "y_min": 248.0,
+        "x_max": 640.0,
+        "y_max": 469.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9714403748512268,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 3.3543945610290393,
+      "model_mask_area": 23889,
+      "clipped_pixel_count": 23889,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-90b87502e339b21d",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 43259,
+      "box_before": {
+        "x_min": 377.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 278.0
+      },
+      "component_count_before": 13,
+      "geometric_confidence": 0.9784876704216003,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.5082326779956929,
+      "model_mask_area": 3191,
+      "clipped_pixel_count": 3191,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

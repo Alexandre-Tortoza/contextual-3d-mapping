@@ -6,7 +6,6 @@ import pytest
 
 from visual_perception.application.execution_profile import (
     BackendCandidate,
-    additional_compute_is_justified,
     research_quality_config,
     select_research_quality_backend,
 )
@@ -40,31 +39,31 @@ def test_no_candidate_fitting_budget_raises() -> None:
         select_research_quality_backend(candidates, memory_budget_gb=8.0)
 
 
-# Verifica o threshold de melhoria mínima que justifica compute adicional (ex: habilitar
-# tiling multi-scale) — só compensa se o ganho de qualidade for mensurável.
-def test_additional_compute_requires_measured_improvement() -> None:
-    assert additional_compute_is_justified(0.70, 0.85)
-    assert not additional_compute_is_justified(0.70, 0.71, minimum_improvement=0.05)
+# Confirma que o perfil research-quality usa o fluxo híbrido por default, mas
+# conserva o braço full-only para ablações com geometria de regiões fixa.
+def test_research_quality_config_enables_multi_scale_by_default_and_allows_ablation() -> None:
+    default = research_quality_config()
+    full_only = research_quality_config(multi_scale_enabled=False)
 
-
-# Confirma que a config de research-quality só habilita tiling multi-scale quando o
-# chamador já determinou (via benchmark) que o ganho de qualidade justifica o custo.
-def test_research_quality_config_only_enables_multi_scale_when_justified() -> None:
-    justified = research_quality_config(multi_scale_justified=True)
-    unjustified = research_quality_config(multi_scale_justified=False)
-    assert justified.tiling.multi_scale_enabled
-    assert not unjustified.tiling.multi_scale_enabled
-    assert justified.quality_profile is QualityProfile.RESEARCH_QUALITY
+    assert default.tiling.multi_scale_enabled
+    assert default.tiling.tile_grid == "2x2"
+    assert default.tiling.overlap_ratio == 0.2
+    assert not full_only.tiling.multi_scale_enabled
+    assert default.quality_profile is QualityProfile.RESEARCH_QUALITY
 
 
 # Confirma que o perfil de referência real declara os quatro slots em vez
 # de herdar defaults que mantinham contexto e cena desabilitados (#209).
 def test_real_research_profile_enables_every_multi_context_slot_explicitly() -> None:
     """Habilita foreground, crop justo, crop contextual e cena no perfil real."""
-    config = research_quality_config(multi_scale_justified=False, real_backends=True)
+    config = research_quality_config(real_backends=True)
 
     assert config.multi_context.foreground_enabled
     assert config.multi_context.tight_crop_enabled
     assert config.multi_context.contextual_crop_enabled
     assert config.multi_context.scene_conditioned_enabled
     assert config.feature_extraction.input_resolution == 448
+    assert config.region_discovery.backend == "sam3"
+    assert config.region_discovery.checkpoint == "facebook/sam3"
+    assert config.region_discovery.pred_iou_threshold == 0.80
+    assert config.region_discovery.stability_score_threshold == 0.90

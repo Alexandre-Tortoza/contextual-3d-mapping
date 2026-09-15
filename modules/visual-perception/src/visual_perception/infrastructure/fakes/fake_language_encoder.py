@@ -26,19 +26,23 @@ class FakeLanguageAlignedEncoder:
     def encode_image(self, image: ImagePayload, config: LanguageEmbeddingConfig) -> tuple[float, ...]:
         mean_rgb = image.pixels.astype(np.float64).mean(axis=(0, 1)) / 255.0
         seed = int(hashlib.sha256(mean_rgb.tobytes()).hexdigest(), 16) % (2**32)
-        return self._vector(seed, config.dimension)
+        return self._vector(seed, config.dimension, normalize=config.normalize)
 
     # Gera o embedding fake de um texto a partir do hash do próprio texto,
     # usado como seed determinística.
     def encode_text(self, text: str, config: LanguageEmbeddingConfig) -> tuple[float, ...]:
         seed = int(hashlib.sha256(text.encode()).hexdigest(), 16) % (2**32)
-        return self._vector(seed, config.dimension)
+        return self._vector(seed, config.dimension, normalize=config.normalize)
 
     # Helper compartilhado por encode_image/encode_text: converte uma seed
-    # inteira em um vetor normalizado da dimensão pedida.
+    # inteira em um vetor da dimensão pedida, normalizado só quando a config
+    # pede — como o adapter real. Antes o fake normalizava sempre, e o caminho
+    # ``normalize=False`` nunca era exercitado pelos testes.
     @staticmethod
-    def _vector(seed: int, dimension: int) -> tuple[float, ...]:
+    def _vector(seed: int, dimension: int, *, normalize: bool) -> tuple[float, ...]:
+        """Retorna um vetor determinístico, com norma unitária quando ``normalize``."""
         rng = np.random.default_rng(seed)
         vector = rng.normal(size=dimension)
-        vector /= np.linalg.norm(vector)
+        if normalize:
+            vector /= np.linalg.norm(vector)
         return tuple(vector.tolist())

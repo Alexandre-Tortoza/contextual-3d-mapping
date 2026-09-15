@@ -87,4 +87,35 @@ def remap_to_global(
         geometric_confidence=local_proposal.geometric_confidence,
         source=local_proposal.source,
         tile=TileProvenance(scale_id=tile.scale_id, tile_id=tile.tile_id),
+        concept=local_proposal.concept,
+    )
+
+
+# Diz se uma proposta local foi cortada por uma borda do tile que não é borda da
+# imagem. Existe porque a máscara truncada descreve o recorte, não o objeto, e o
+# pipeline descarta essas propostas quando ``discard_tile_border_truncations`` está
+# ligado; a passada da imagem completa nunca é truncada.
+def is_truncated_by_tile(
+    local_proposal: LocalRegionProposal, tile: Tile, *, image_width: int, image_height: int
+) -> bool:
+    """Retorna ``True`` quando a máscara toca uma borda interna do tile.
+
+    Argumentos:
+        local_proposal: proposta em coordenadas do tile.
+        tile: tile que a produziu, com offset em pixels globais.
+        image_width: largura da imagem original.
+        image_height: altura da imagem original.
+    Retorna:
+        se algum pixel da máscara está numa borda do tile interior à imagem.
+    """
+    data = local_proposal.mask.data
+    left = int(tile.transform.offset_x)
+    top = int(tile.transform.offset_y)
+    right = left + tile.payload.width
+    bottom = top + tile.payload.height
+    return bool(
+        (left > 0 and data[:, 0].any())
+        or (top > 0 and data[0, :].any())
+        or (right < image_width and data[:, -1].any())
+        or (bottom < image_height and data[-1, :].any())
     )

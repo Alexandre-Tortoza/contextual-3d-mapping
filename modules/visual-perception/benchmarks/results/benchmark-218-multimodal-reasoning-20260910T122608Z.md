@@ -7,9 +7,9 @@ quantização 4-bit e os tetos de todos os estágios contextuais são idênticos
 
 | braço | run | revisão |
 | --- | --- | --- |
-| referência, Qwen2.5-VL-3B-Instruct | `samples/20260910T115810Z/` | `7001803` |
-| Qwen3-VL-2B-Instruct | `samples/20260910T121258Z/` | `7001803` |
-| Qwen3-VL-4B-Instruct | `samples/20260910T122608Z/` | `7001803` |
+| referência, Qwen2.5-VL-3B-Instruct | `samples/old/20260910T115810Z/` | `7001803` |
+| Qwen3-VL-2B-Instruct | `samples/old/20260910T121258Z/` | `7001803` |
+| Qwen3-VL-4B-Instruct | `samples/old/20260910T122608Z/` | `7001803` |
 
 Os três: 94 regiões, zero falha de interpretação, zero falha de evidência, zero erro de
 audit, sem fallback, pico de 4,57 GiB. A geometria é idêntica nos três, como tem de ser —
@@ -121,6 +121,6 @@ python benchmarks/validate_reference_pipeline.py --context-profile full \
   --frame-id corridor-02-000 --frame-id corridor-02-008 --frame-id corridor-02-017
 
 python benchmarks/compare_runs.py \
-  --baseline benchmarks/results/samples/20260910T115810Z \
+  --baseline benchmarks/results/samples/old/20260910T115810Z \
   --candidate benchmarks/results/samples/<braço>
 ```

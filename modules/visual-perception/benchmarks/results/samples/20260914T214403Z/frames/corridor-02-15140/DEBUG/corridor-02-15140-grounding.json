@@ -1,0 +1,29 @@
+{
+  "frame_id": "corridor-02-15140",
+  "regions": [
+    {
+      "region_id": "region-d0cad411dc1817f2",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 50192,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 6.0,
+        "x_max": 423.0,
+        "y_max": 322.0
+      },
+      "component_count_before": 14,
+      "geometric_confidence": 0.973869264125824,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 4.173762677033665,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

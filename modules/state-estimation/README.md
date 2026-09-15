@@ -26,7 +26,14 @@ A associação câmera-LiDAR permanece de posse de `sensor-association`. A capac
 
 ## Implementações externas
 
-Sistemas concretos de odometria LiDAR-inercial são integrados por trás de adapters. O alvo inicial de integração é o FAST-LIO, mas os contracts públicos do módulo permanecem independentes de implementação, para que outros estimators, ground truth de simulador ou poses fornecidas por dataset possam ser substituídos mais tarde.
+`interpolate_pose(before, after, timestamp_ns)` amostra um intervalo fechado de
+poses: translação linear em metros e SLERP pelo menor arco de quaternion xyzw.
+Exige timestamps crescentes e o mesmo par de frames; não extrapola. As poses
+devem já compartilhar o relógio da composição. O runtime preserva os timestamps
+de suporte, a fração interpolada e a lacuna máxima permitida. Selecionar
+interpolação não altera estimativas medidas nem o alinhamento original do mapa.
+
+Sistemas concretos de odometria LiDAR-inercial são integrados por trás de adapters. O alvo inicial de integração é o FAST-LIO, mas os contracts públicos do módulo permanecem independentes de implementação, para que outros estimators, ground truth de simulador, ou poses fornecidas por dataset possam ser substituídos mais tarde.
 
 ## Estrutura atual
 

@@ -1,0 +1,11 @@
+# Perfil de composição do dataset de referência. Paths são relativos à raiz do
+# repositório para manter o workflow reproduzível entre máquinas.
+profile_id = "corridor-02"
+bag = "datasets/raw/corridor-02/corridor-02.bag"
+camera_topic = "/camera_1/image_raw"
+intrinsics = "datasets/raw/corridor-02/corridor-02-Intrinsics.yaml"
+extrinsics = "datasets/raw/corridor-02/corridor-02-extrinsics.yaml"
+ground_truth = "datasets/raw/corridor-02/corridor-02-gt.txt"
+sequence_masks = "modules/visual-perception/benchmarks/sequence-masks/corridor-02.json"
+map_target = "corridor-02-map-from-window"
+context_target = "corridor-02-context"

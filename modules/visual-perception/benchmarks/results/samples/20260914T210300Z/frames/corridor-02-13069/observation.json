@@ -1,0 +1,5950 @@
+{
+  "schema_version": 5,
+  "coordinate_convention": "top-left-origin,half-open-xyxy",
+  "source": {
+    "observation_id": "corridor-02-13069",
+    "dataset_id": "corridor-02",
+    "sequence_id": "corridor-02",
+    "sensor_id": "/camera_1/image_raw",
+    "sequence_index": 13069,
+    "timestamp": {
+      "nanoseconds": 1724621633493512746,
+      "clock_id": "rosbag"
+    },
+    "frame_id": "d",
+    "calibration_id": null
+  },
+  "image_width": 640,
+  "image_height": 480,
+  "scene_context": {
+    "claims": [
+      {
+        "kind": "scene_type",
+        "value": "rural",
+        "confidence": {
+          "value": 0.75,
+          "source": "qwen_vl"
+        },
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "raw",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "environment",
+        "value": "outdoor",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "layout",
+        "value": "open field with sparse vegetation, trees, and buildings in the distance",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "lighting",
+        "value": "dusk or dawn, with a pinkish hue due to the time of day",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "visibility",
+        "value": "clear, with distant objects visible but not in sharp focus",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      },
+      {
+        "kind": "navigability",
+        "value": "moderate, with some obstacles like trees and poles",
+        "confidence": null,
+        "evidence": [
+          {
+            "description": "raw multimodal scene response",
+            "artifact": null,
+            "raw_response_json": "{\"confidence\": 0.75, \"environment\": \"outdoor\", \"layout\": \"open field with sparse vegetation, trees, and buildings in the distance\", \"lighting\": \"dusk or dawn, with a pinkish hue due to the time of day\", \"navigability\": \"moderate, with some obstacles like trees and poles\", \"scene_type\": \"rural\", \"visibility\": \"clear, with distant objects visible but not in sharp focus\"}"
+          }
+        ],
+        "provenance": {
+          "stage": "scene_context",
+          "producer": "qwen_vl",
+          "config_fingerprint": "9c50c5f86031f1ce",
+          "model_id": null,
+          "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+          "prompt_version": "v8"
+        },
+        "support": {
+          "state": "unknown",
+          "source_reliability": null,
+          "visual_support": null,
+          "region_quality": null,
+          "contradiction_support": 0.0,
+          "calibrated_confidence": null,
+          "evidence": [],
+          "domain": "unspecified",
+          "reason": null,
+          "calibration_version": null,
+          "calibration_artifact": null
+        },
+        "role": null,
+        "category": null,
+        "region_kind": null,
+        "signals": []
+      }
+    ]
+  },
+  "regions": [
+    {
+      "region_id": "region-bd828fa3d3dfbefb",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          2709,
+          12,
+          3,
+          24,
+          1,
+          14,
+          1,
+          4,
+          2,
+          8,
+          3,
+          1,
+          3,
+          2,
+          6,
+          5,
+          16,
+          3,
+          9,
+          1,
+          4,
+          7,
+          7,
+          2,
+          4,
+          7,
+          2,
+          2,
+          3,
+          3,
+          1,
+          13,
+          3,
+          3,
+          5,
+          5,
+          7,
+          3,
+          4,
+          6,
+          7,
+          2,
+          5,
+          8,
+          5,
+          2,
+          4,
+          10,
+          4,
+          3,
+          2,
+          10,
+          5,
+          3,
+          4,
+          6,
+          14,
+          70,
+          263,
+          380,
+          259,
+          383,
+          255,
+          387,
+          252,
+          389,
+          249,
+          392,
+          247,
+          394,
+          244,
+          399,
+          239,
+          402,
+          237,
+          404,
+          234,
+          408,
+          231,
+          410,
+          230,
+          411,
+          228,
+          413,
+          224,
+          418,
+          221,
+          421,
+          218,
+          423,
+          216,
+          425,
+          213,
+          429,
+          210,
+          431,
+          208,
+          433,
+          205,
+          436,
+          202,
+          440,
+          199,
+          442,
+          197,
+          444,
+          195,
+          447,
+          192,
+          449,
+          190,
+          450,
+          189,
+          453,
+          185,
+          457,
+          181,
+          460,
+          180,
+          461,
+          178,
+          463,
+          176,
+          466,
+          173,
+          468,
+          170,
+          470,
+          169,
+          472,
+          165,
+          477,
+          162,
+          479,
+          161,
+          480,
+          159,
+          482,
+          157,
+          483,
+          156,
+          485,
+          154,
+          408,
+          5,
+          74,
+          152,
+          399,
+          4,
+          3,
+          9,
+          74,
+          150,
+          396,
+          21,
+          76,
+          145,
+          395,
+          24,
+          77,
+          143,
+          393,
+          28,
+          77,
+          142,
+          391,
+          31,
+          76,
+          141,
+          390,
+          33,
+          76,
+          141,
+          389,
+          34,
+          77,
+          139,
+          390,
+          34,
+          78,
+          137,
+          391,
+          35,
+          77,
+          135,
+          393,
+          36,
+          77,
+          132,
+          395,
+          36,
+          78,
+          130,
+          397,
+          36,
+          77,
+          130,
+          397,
+          36,
+          78,
+          128,
+          398,
+          37,
+          77,
+          127,
+          400,
+          23,
+          1,
+          12,
+          78,
+          125,
+          402,
+          20,
+          5,
+          11,
+          77,
+          124,
+          403,
+          17,
+          10,
+          9,
+          78,
+          123,
+          404,
+          15,
+          11,
+          9,
+          79,
+          121,
+          406,
+          7,
+          5,
+          1,
+          13,
+          9,
+          78,
+          120,
+          409,
+          2,
+          22,
+          9,
+          79,
+          118,
+          435,
+          9,
+          78,
+          117,
+          437,
+          8,
+          78,
+          116,
+          438,
+          9,
+          78,
+          114,
+          439,
+          9,
+          79,
+          111,
+          442,
+          8,
+          79,
+          111,
+          442,
+          9,
+          78,
+          110,
+          444,
+          8,
+          79,
+          109,
+          444,
+          8,
+          79,
+          108,
+          445,
+          9,
+          79,
+          107,
+          446,
+          8,
+          79,
+          106,
+          447,
+          8,
+          80,
+          104,
+          449,
+          8,
+          79,
+          102,
+          451,
+          9,
+          79,
+          99,
+          453,
+          9,
+          79,
+          99,
+          454,
+          8,
+          80,
+          97,
+          455,
+          9,
+          79,
+          97,
+          455,
+          9,
+          79,
+          96,
+          457,
+          9,
+          78,
+          95,
+          458,
+          9,
+          79,
+          94,
+          459,
+          9,
+          78,
+          93,
+          460,
+          9,
+          79,
+          92,
+          460,
+          9,
+          79,
+          91,
+          462,
+          9,
+          79,
+          89,
+          463,
+          9,
+          46,
+          2,
+          31,
+          89,
+          464,
+          9,
+          40,
+          11,
+          27,
+          88,
+          465,
+          9,
+          29,
+          5,
+          3,
+          16,
+          25,
+          87,
+          466,
+          9,
+          21,
+          37,
+          20,
+          86,
+          468,
+          8,
+          20,
+          39,
+          18,
+          86,
+          469,
+          9,
+          17,
+          42,
+          17,
+          85,
+          470,
+          9,
+          15,
+          44,
+          15,
+          87,
+          471,
+          8,
+          14,
+          46,
+          13,
+          87,
+          472,
+          9,
+          12,
+          48,
+          9,
+          90,
+          473,
+          8,
+          10,
+          50,
+          7,
+          91,
+          474,
+          9,
+          7,
+          53,
+          2,
+          95,
+          474,
+          9,
+          6,
+          150,
+          476,
+          9,
+          4,
+          150,
+          477,
+          163,
+          477,
+          162,
+          478,
+          162,
+          478,
+          161,
+          479,
+          159,
+          482,
+          157,
+          483,
+          156,
+          479,
+          161,
+          479,
+          161,
+          478,
+          161,
+          478,
+          162,
+          478,
+          161,
+          478,
+          162,
+          478,
+          161,
+          478,
+          162,
+          478,
+          162,
+          477,
+          162,
+          475,
+          165,
+          473,
+          166,
+          473,
+          166,
+          473,
+          167,
+          472,
+          167,
+          473,
+          167,
+          472,
+          167,
+          473,
+          167,
+          472,
+          167,
+          472,
+          167,
+          472,
+          168,
+          471,
+          168,
+          471,
+          169,
+          471,
+          169,
+          470,
+          169,
+          471,
+          169,
+          471,
+          169,
+          470,
+          169,
+          471,
+          169,
+          470,
+          169,
+          471,
+          169,
+          471,
+          168,
+          471,
+          169,
+          472,
+          168,
+          472,
+          167,
+          472,
+          168,
+          472,
+          167,
+          473,
+          166,
+          474,
+          166,
+          474,
+          165,
+          475,
+          165,
+          476,
+          163,
+          477,
+          163,
+          478,
+          161,
+          479,
+          161,
+          480,
+          160,
+          480,
+          160,
+          481,
+          158,
+          483,
+          157,
+          483,
+          157,
+          484,
+          156,
+          485,
+          154,
+          487,
+          153,
+          488,
+          152,
+          489,
+          150,
+          490,
+          150,
+          491,
+          149,
+          491,
+          149,
+          492,
+          147,
+          493,
+          147,
+          493,
+          147,
+          493,
+          146,
+          494,
+          146,
+          494,
+          145,
+          495,
+          145,
+          495,
+          144,
+          495,
+          145,
+          495,
+          145,
+          495,
+          144,
+          496,
+          144,
+          496,
+          144,
+          496,
+          144,
+          497,
+          142,
+          499,
+          1,
+          3,
+          137,
+          504,
+          30,
+          1,
+          105,
+          504,
+          30,
+          1,
+          104,
+          506,
+          134,
+          507,
+          133,
+          508,
+          132,
+          508,
+          132,
+          509,
+          130,
+          510,
+          130,
+          510,
+          130,
+          483,
+          3,
+          24,
+          130,
+          480,
+          9,
+          21,
+          92,
+          5,
+          33,
+          479,
+          11,
+          21,
+          89,
+          7,
+          33,
+          478,
+          14,
+          19,
+          88,
+          8,
+          33,
+          477,
+          15,
+          18,
+          86,
+          2,
+          1,
+          8,
+          32,
+          457,
+          10,
+          11,
+          15,
+          17,
+          87,
+          11,
+          32,
+          455,
+          16,
+          7,
+          16,
+          8,
+          95,
+          11,
+          32,
+          454,
+          40,
+          5,
+          98,
+          12,
+          31,
+          452,
+          42,
+          4,
+          99,
+          12,
+          30,
+          452,
+          43,
+          1,
+          101,
+          13,
+          30,
+          451,
+          44,
+          1,
+          101,
+          13,
+          30,
+          451,
+          146,
+          14,
+          29,
+          449,
+          148,
+          14,
+          29,
+          448,
+          149,
+          14,
+          29,
+          447,
+          151,
+          13,
+          28,
+          447,
+          153,
+          12,
+          28,
+          446,
+          156,
+          7,
+          31,
+          446,
+          194,
+          445,
+          195,
+          445,
+          195,
+          445,
+          195,
+          445,
+          195,
+          445,
+          195,
+          444,
+          196,
+          443,
+          197,
+          89,
+          1,
+          4,
+          3,
+          336,
+          2,
+          8,
+          197,
+          86,
+          13,
+          332,
+          6,
+          5,
+          198,
+          83,
+          19,
+          327,
+          211,
+          81,
+          23,
+          324,
+          211,
+          81,
+          26,
+          214,
+          3,
+          105,
+          211,
+          80,
+          28,
+          208,
+          16,
+          96,
+          213,
+          77,
+          31,
+          204,
+          21,
+          93,
+          214,
+          76,
+          34,
+          198,
+          27,
+          90,
+          215,
+          75,
+          35,
+          194,
+          33,
+          88,
+          215,
+          74,
+          38,
+          190,
+          37,
+          85,
+          216,
+          69,
+          44,
+          188,
+          40,
+          82,
+          216,
+          69,
+          46,
+          186,
+          42,
+          80,
+          216,
+          69,
+          48,
+          132,
+          7,
+          46,
+          43,
+          78,
+          218,
+          66,
+          50,
+          129,
+          15,
+          40,
+          45,
+          20,
+          1,
+          55,
+          220,
+          34,
+          6,
+          24,
+          51,
+          127,
+          21,
+          36,
+          45,
+          20,
+          2,
+          53,
+          220,
+          35,
+          7,
+          22,
+          53,
+          125,
+          24,
+          34,
+          46,
+          19,
+          3,
+          37,
+          6,
+          8,
+          221,
+          35,
+          7,
+          22,
+          54,
+          124,
+          26,
+          32,
+          46,
+          19,
+          3,
+          11,
+          2,
+          22,
+          237,
+          34,
+          9,
+          20,
+          55,
+          122,
+          29,
+          30,
+          47,
+          18,
+          5,
+          8,
+          5,
+          16,
+          242,
+          33,
+          10,
+          19,
+          56,
+          122,
+          30,
+          29,
+          48,
+          17,
+          18,
+          7,
+          251,
+          32,
+          12,
+          17,
+          57,
+          122,
+          30,
+          30,
+          48,
+          16,
+          20,
+          2,
+          253,
+          33,
+          12,
+          17,
+          58,
+          121,
+          30,
+          29,
+          53,
+          2,
+          285,
+          32,
+          13,
+          16,
+          59,
+          121,
+          32,
+          27,
+          341,
+          30,
+          15,
+          14,
+          61,
+          120,
+          33,
+          26,
+          341,
+          30,
+          15,
+          13,
+          62,
+          120,
+          33,
+          26,
+          342,
+          29,
+          15,
+          12,
+          63,
+          120,
+          34,
+          24,
+          343,
+          28,
+          16,
+          10,
+          66,
+          119,
+          35,
+          21,
+          345,
+          28,
+          18,
+          7,
+          67,
+          119,
+          35,
+          19,
+          347,
+          28,
+          20,
+          4,
+          69,
+          118,
+          35,
+          16,
+          351,
+          27,
+          21,
+          3,
+          69,
+          23,
+          3,
+          54,
+          7,
+          29,
+          39,
+          6,
+          360,
+          25,
+          24,
+          1,
+          69,
+          22,
+          6,
+          4,
+          3,
+          30,
+          2,
+          5,
+          17,
+          24,
+          408,
+          25,
+          93,
+          23,
+          7,
+          2,
+          6,
+          27,
+          26,
+          22,
+          410,
+          23,
+          94,
+          22,
+          17,
+          25,
+          29,
+          16,
+          414,
+          23,
+          93,
+          22,
+          18,
+          25,
+          30,
+          11,
+          419,
+          21,
+          94,
+          22,
+          19,
+          22,
+          462,
+          21,
+          93,
+          23,
+          18,
+          22,
+          463,
+          20,
+          94,
+          15,
+          4,
+          3,
+          22,
+          17,
+          466,
+          19,
+          94,
+          15,
+          30,
+          15,
+          468,
+          18,
+          94,
+          14,
+          32,
+          13,
+          470,
+          17,
+          95,
+          14,
+          34,
+          6,
+          475,
+          16,
+          95,
+          13,
+          526,
+          5,
+          100,
+          4,
+          531,
+          5,
+          635,
+          6,
+          635,
+          4,
+          638,
+          1,
+          138856
+        ]
+      },
+      "box": {
+        "x_min": 0.0,
+        "y_min": 4.0,
+        "x_max": 614.0,
+        "y_max": 264.0
+      },
+      "geometric_confidence": 0.9775102734565735,
+      "contributing_proposal_ids": [
+        "full-whole-sam-0"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "pole",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "lighting fixture",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.17262387354762268,
+              "margin": 0.008412221049285934,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "tight_crop",
+              "status": "indistinguishable",
+              "score": 0.17059109290327926,
+              "margin": -0.009696991036779706,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "contextual_crop",
+              "status": "indistinguishable",
+              "score": 0.16454701505962438,
+              "margin": -0.0002850798600609883,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "street light",
+          "confidence": {
+            "value": 0.8,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "street light",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.16421165249833675,
+              "margin": -0.008412221049285934,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "street light",
+              "slot": "tight_crop",
+              "status": "indistinguishable",
+              "score": 0.18028808394005896,
+              "margin": 0.009696991036779706,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "street light",
+              "slot": "contextual_crop",
+              "status": "indistinguishable",
+              "score": 0.16483209491968537,
+              "margin": 0.0002850798600609883,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "a tall pole with a street light attached to it",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "tall",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "dark",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "illuminated",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "metal",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.8, \"label\": \"street light\"}], \"attributes\": [\"tall\", \"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a street light attached to it\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "pole",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.3333333333333333,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:pole",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:pole",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "lighting fixture",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.17262387354762268,
+              "margin": -0.0066217472012743694,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.17059109290327926,
+              "margin": -0.03279607906404189,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "pole",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.16454701505962438,
+              "margin": -0.02419802667119242,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "tree",
+          "confidence": {
+            "value": 0.05,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.6666666666666666,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:tree",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "masked_subject",
+              "status": "indistinguishable",
+              "score": 0.17924562074889705,
+              "margin": 0.0066217472012743694,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.20338717196732115,
+              "margin": 0.023099088027262182,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "tree",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.1887450417308168,
+              "margin": 0.02391294681113143,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "a tall pole with a light fixture at the top",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "dark",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "illuminated",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "metal",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-bd828fa3d3dfbefb from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"tree\"}], \"attributes\": [\"dark\"], \"category\": \"lighting fixture\", \"condition\": \"illuminated\", \"confidence\": 0.9, \"description\": \"a tall pole with a light fixture at the top\", \"kind\": \"thing\", \"label\": \"pole\", \"material\": \"metal\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9775102734565735,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-bd828fa3d3dfbefb",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-bd828fa3d3dfbefb",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-bd828fa3d3dfbefb",
+      "language_embedding_ref": "language-region-bd828fa3d3dfbefb",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-bd828fa3d3dfbefb",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 4.0,
+            "x_max": 614.0,
+            "y_max": 264.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-bd828fa3d3dfbefb",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-bd828fa3d3dfbefb",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.6988035580055124,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-bd828fa3d3dfbefb",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 4.0,
+            "x_max": 614.0,
+            "y_max": 264.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 4.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-bd828fa3d3dfbefb",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-bd828fa3d3dfbefb",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.6988035580055124,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-bd828fa3d3dfbefb",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 4.0,
+            "x_max": 614.0,
+            "y_max": 264.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 4.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-bd828fa3d3dfbefb",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.6988035580055124,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-bd828fa3d3dfbefb",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640,
+            "y_max": 296.5
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-bd828fa3d3dfbefb",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-bd828fa3d3dfbefb",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.5888777449324324,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-bd828fa3d3dfbefb",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": {
+        "status": "semantic_mask_inconsistent",
+        "semantic_mask": null,
+        "support_pixel": [
+          534,
+          147
+        ],
+        "diagnostics": {
+          "region_id": "region-bd828fa3d3dfbefb",
+          "label": "pole",
+          "region_kind": "thing",
+          "discovery_area": 111557,
+          "box_before": {
+            "x_min": 0.0,
+            "y_min": 4.0,
+            "x_max": 614.0,
+            "y_max": 264.0
+          },
+          "component_count_before": 3,
+          "geometric_confidence": 0.9775102734565735,
+          "visual_support": 0.0,
+          "model_calls": 3,
+          "latency_s": 6.472755065944511,
+          "model_mask_area": 1489,
+          "clipped_pixel_count": 1489,
+          "components": [],
+          "semantic_grounding_status": "semantic_mask_inconsistent",
+          "semantic_area": 0,
+          "area_ratio": 0.0,
+          "area_reduction_ratio": 1.0,
+          "component_count_after": 0,
+          "box_after": null,
+          "reason": null
+        },
+        "prediction": {
+          "region_id": "region-bd828fa3d3dfbefb",
+          "concept": "pole",
+          "model_mask": {
+            "width": 640,
+            "height": 480,
+            "rle": [
+              31221,
+              2,
+              636,
+              5,
+              623,
+              6,
+              5,
+              7,
+              619,
+              21,
+              616,
+              25,
+              612,
+              28,
+              610,
+              31,
+              608,
+              32,
+              608,
+              24,
+              3,
+              5,
+              608,
+              22,
+              5,
+              6,
+              607,
+              22,
+              6,
+              5,
+              608,
+              21,
+              6,
+              6,
+              607,
+              21,
+              7,
+              5,
+              608,
+              19,
+              8,
+              6,
+              607,
+              16,
+              12,
+              5,
+              608,
+              12,
+              15,
+              6,
+              608,
+              8,
+              19,
+              5,
+              609,
+              3,
+              23,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              7,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              7,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              634,
+              6,
+              635,
+              5,
+              635,
+              5,
+              635,
+              5,
+              635,
+              5,
+              635,
+              5,
+              635,
+              5,
+              636,
+              3,
+              142163
+            ]
+          },
+          "prompt_box": {
+            "x_min": 473.3880920410156,
+            "y_min": 45.813453674316406,
+            "x_max": 560.0377197265625,
+            "y_max": 256.949951171875
+          },
+          "detection_confidence": 0.463802307844162,
+          "geometric_confidence": 0.9064262509346008,
+          "provenance": [
+            {
+              "stage": "semantic_localization",
+              "producer": "grounding_dino",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "IDEA-Research/grounding-dino-base",
+              "prompt_version": null
+            },
+            {
+              "stage": "prompted_segmentation",
+              "producer": "sam",
+              "config_fingerprint": "9b582468dbc33581",
+              "model_id": null,
+              "checkpoint": "facebook/sam2.1-hiera-large",
+              "prompt_version": null
+            }
+          ],
+          "reason": null,
+          "status": "refined",
+          "model_calls": 3,
+          "latency_s": 6.472755065944511,
+          "prompt_boxes": [
+            {
+              "x_min": 473.3880920410156,
+              "y_min": 45.813453674316406,
+              "x_max": 560.0377197265625,
+              "y_max": 256.949951171875
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "relations": [
+    {
+      "relation_id": "rel-overlaps-region-11ff2bdcc3466b84-region-8028dada0f709bb4",
+      "subject_region_id": "region-11ff2bdcc3466b84",
+      "predicate": "overlaps",
+      "object_region_id": "region-8028dada0f709bb4",
+      "confidence": {
+        "value": 0.0026088374368172184,
+        "source": "geometric_2d"
+      },
+      "source": "geometric_2d",
+      "evidence": [
+        {
+          "description": "mask overlap between region-11ff2bdcc3466b84 and region-8028dada0f709bb4",
+          "artifact": null,
+          "raw_response_json": null
+        }
+      ],
+      "provenance": {
+        "stage": "relation_generation",
+        "producer": "geometric_2d",
+        "config_fingerprint": "fccaf521066dc7cb",
+        "model_id": null,
+        "checkpoint": null,
+        "prompt_version": null
+      }
+    },
+    {
+      "relation_id": "rel-near-region-11ff2bdcc3466b84-region-bd828fa3d3dfbefb",
+      "subject_region_id": "region-11ff2bdcc3466b84",
+      "predicate": "near",
+      "object_region_id": "region-bd828fa3d3dfbefb",
+      "confidence": {
+        "value": 1.0,
+        "source": "geometric_2d"
+      },
+      "source": "geometric_2d",
+      "evidence": [
+        {
+          "description": "mask overlap between region-11ff2bdcc3466b84 and region-bd828fa3d3dfbefb",
+          "artifact": null,
+          "raw_response_json": null
+        }
+      ],
+      "provenance": {
+        "stage": "relation_generation",
+        "producer": "geometric_2d",
+        "config_fingerprint": "fccaf521066dc7cb",
+        "model_id": null,
+        "checkpoint": null,
+        "prompt_version": null
+      }
+    },
+    {
+      "relation_id": "rel-near-region-8028dada0f709bb4-region-bd828fa3d3dfbefb",
+      "subject_region_id": "region-8028dada0f709bb4",
+      "predicate": "near",
+      "object_region_id": "region-bd828fa3d3dfbefb",
+      "confidence": {
+        "value": 1.0,
+        "source": "geometric_2d"
+      },
+      "source": "geometric_2d",
+      "evidence": [
+        {
+          "description": "mask overlap between region-8028dada0f709bb4 and region-bd828fa3d3dfbefb",
+          "artifact": null,
+          "raw_response_json": null
+        }
+      ],
+      "provenance": {
+        "stage": "relation_generation",
+        "producer": "geometric_2d",
+        "config_fingerprint": "fccaf521066dc7cb",
+        "model_id": null,
+        "checkpoint": null,
+        "prompt_version": null
+      }
+    }
+  ],
+  "entity_hypotheses": [],
+  "structural_context": [
+    {
+      "region_id": "region-11ff2bdcc3466b84",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          39633,
+          1,
+          639,
+          1,
+          639,
+          2,
+          638,
+          3,
+          637,
+          4,
+          636,
+          4,
+          637,
+          5,
+          636,
+          4,
+          636,
+          5,
+          636,
+          4,
+          636,
+          6,
+          634,
+          7,
+          634,
+          7,
+          633,
+          8,
+          633,
+          7,
+          633,
+          8,
+          632,
+          9,
+          632,
+          8,
+          632,
+          10,
+          631,
+          9,
+          631,
+          10,
+          631,
+          9,
+          631,
+          10,
+          630,
+          10,
+          631,
+          9,
+          631,
+          11,
+          630,
+          11,
+          629,
+          11,
+          629,
+          12,
+          629,
+          11,
+          629,
+          12,
+          628,
+          12,
+          628,
+          13,
+          628,
+          13,
+          627,
+          14,
+          625,
+          15,
+          625,
+          16,
+          623,
+          17,
+          622,
+          19,
+          618,
+          22,
+          615,
+          26,
+          611,
+          31,
+          606,
+          34,
+          605,
+          35,
+          604,
+          37,
+          603,
+          37,
+          603,
+          37,
+          604,
+          37,
+          603,
+          38,
+          602,
+          39,
+          601,
+          39,
+          602,
+          39,
+          601,
+          39,
+          602,
+          38,
+          602,
+          39,
+          601,
+          39,
+          602,
+          39,
+          601,
+          39,
+          601,
+          40,
+          601,
+          39,
+          602,
+          39,
+          601,
+          39,
+          601,
+          40,
+          601,
+          40,
+          600,
+          40,
+          600,
+          40,
+          601,
+          40,
+          600,
+          40,
+          600,
+          40,
+          601,
+          40,
+          600,
+          41,
+          600,
+          40,
+          600,
+          40,
+          600,
+          40,
+          600,
+          42,
+          599,
+          41,
+          599,
+          41,
+          599,
+          41,
+          599,
+          41,
+          600,
+          40,
+          600,
+          40,
+          600,
+          40,
+          600,
+          40,
+          601,
+          39,
+          601,
+          39,
+          602,
+          38,
+          602,
+          38,
+          602,
+          38,
+          602,
+          38,
+          603,
+          37,
+          603,
+          37,
+          603,
+          37,
+          604,
+          36,
+          604,
+          36,
+          604,
+          36,
+          605,
+          35,
+          605,
+          35,
+          605,
+          35,
+          605,
+          35,
+          605,
+          35,
+          606,
+          34,
+          606,
+          34,
+          606,
+          34,
+          606,
+          34,
+          607,
+          33,
+          607,
+          33,
+          607,
+          33,
+          607,
+          33,
+          608,
+          32,
+          608,
+          32,
+          608,
+          32,
+          608,
+          32,
+          609,
+          31,
+          609,
+          31,
+          609,
+          31,
+          609,
+          31,
+          610,
+          30,
+          610,
+          30,
+          610,
+          30,
+          610,
+          30,
+          611,
+          29,
+          611,
+          29,
+          611,
+          29,
+          611,
+          29,
+          611,
+          29,
+          612,
+          28,
+          612,
+          28,
+          612,
+          28,
+          612,
+          28,
+          612,
+          28,
+          612,
+          28,
+          613,
+          27,
+          613,
+          27,
+          613,
+          27,
+          613,
+          27,
+          613,
+          27,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          616,
+          24,
+          616,
+          24,
+          616,
+          24,
+          616,
+          24,
+          616,
+          24,
+          616,
+          24,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          617,
+          23,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          618,
+          22,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          619,
+          21,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          620,
+          20,
+          621,
+          19,
+          621,
+          19,
+          621,
+          19,
+          621,
+          19,
+          621,
+          19,
+          621,
+          19,
+          622,
+          18,
+          623,
+          17,
+          625,
+          15,
+          636,
+          1,
+          141443
+        ]
+      },
+      "box": {
+        "x_min": 588.0,
+        "y_min": 61.0,
+        "x_max": 640.0,
+        "y_max": 259.0
+      },
+      "geometric_confidence": 0.9552708864212036,
+      "contributing_proposal_ids": [
+        "full-whole-sam-2"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "wall",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.14285714285714285,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "structural:region_kind:wall",
+                "source": "structural_consistency",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": null
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "building exterior",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.19199907125296461,
+              "margin": 0.04694154233610909,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.24352737908280342,
+              "margin": 0.035157461928358974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.21988128952208608,
+              "margin": 0.036970959750940974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "ceiling",
+          "confidence": {
+            "value": 0.05,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.5,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.14505752891685553,
+              "margin": -0.04694154233610909,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.20836991715444445,
+              "margin": -0.035157461928358974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.1829103297711451,
+              "margin": -0.036970959750940974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "The wall appears to be part of a building structure.",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "smooth",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "clean",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "concrete",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"smooth\"], \"category\": \"building exterior\", \"condition\": \"clean\", \"confidence\": 0.9, \"description\": \"The wall appears to be part of a building structure.\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"concrete\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "wall",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.14285714285714285,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:wall",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "structural:region_kind:wall",
+                "source": "structural_consistency",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": null
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "building exterior",
+          "region_kind": "thing",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.19199907125296461,
+              "margin": 0.04694154233610909,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.24352737908280342,
+              "margin": 0.035157461928358974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wall",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.21988128952208608,
+              "margin": 0.036970959750940974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "ceiling",
+          "confidence": {
+            "value": 0.05,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.5,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:ceiling",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.14505752891685553,
+              "margin": -0.04694154233610909,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.20836991715444445,
+              "margin": -0.035157461928358974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "ceiling",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.1829103297711451,
+              "margin": -0.036970959750940974,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "wall with a pinkish hue due to the time of day",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "pink",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "dusk or dawn",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "wood",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-11ff2bdcc3466b84 from [foreground_dense, masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.05, \"label\": \"ceiling\"}], \"attributes\": [\"pink\"], \"category\": \"building exterior\", \"condition\": \"dusk or dawn\", \"confidence\": 0.9, \"description\": \"wall with a pinkish hue due to the time of day\", \"kind\": \"thing\", \"label\": \"wall\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9a6494b529937dc9",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9552708864212036,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-11ff2bdcc3466b84",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-11ff2bdcc3466b84",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "wall",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "reconciled from raw label 'wall'; structural evidence rules 'thing' out for this concept; reconciled to 'stuff'",
+              "artifact": null,
+              "raw_response_json": null
+            }
+          ],
+          "provenance": {
+            "stage": "intra_frame_reconciliation",
+            "producer": "intra_frame_reconciliation",
+            "config_fingerprint": "249192ca21cc2388",
+            "model_id": null,
+            "checkpoint": null,
+            "prompt_version": null
+          },
+          "support": null,
+          "role": "reconciled",
+          "category": "building exterior",
+          "region_kind": "stuff",
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-11ff2bdcc3466b84",
+      "language_embedding_ref": "language-region-11ff2bdcc3466b84",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-11ff2bdcc3466b84",
+          "state": "available",
+          "crop_box": {
+            "x_min": 588.0,
+            "y_min": 61.0,
+            "x_max": 640.0,
+            "y_max": 259.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-11ff2bdcc3466b84",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-11ff2bdcc3466b84",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.4936868686868687,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-11ff2bdcc3466b84",
+          "state": "available",
+          "crop_box": {
+            "x_min": 588.0,
+            "y_min": 61.0,
+            "x_max": 640.0,
+            "y_max": 259.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 588.0,
+            "offset_y": 61.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-11ff2bdcc3466b84",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-11ff2bdcc3466b84",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.4936868686868687,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-11ff2bdcc3466b84",
+          "state": "available",
+          "crop_box": {
+            "x_min": 588.0,
+            "y_min": 61.0,
+            "x_max": 640.0,
+            "y_max": 259.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 588.0,
+            "offset_y": 61.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-11ff2bdcc3466b84",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.4936868686868687,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-11ff2bdcc3466b84",
+          "state": "available",
+          "crop_box": {
+            "x_min": 581.5,
+            "y_min": 36.25,
+            "x_max": 640,
+            "y_max": 283.75
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 581.5,
+            "offset_y": 36.25
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-11ff2bdcc3466b84",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-11ff2bdcc3466b84",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.3487957181088314,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-11ff2bdcc3466b84",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": null
+    },
+    {
+      "region_id": "region-8028dada0f709bb4",
+      "mask": {
+        "width": 640,
+        "height": 480,
+        "rle": [
+          136925,
+          12,
+          622,
+          18,
+          618,
+          23,
+          615,
+          25,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          26,
+          614,
+          26,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          616,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          25,
+          615,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          614,
+          26,
+          615,
+          25,
+          630,
+          10,
+          632,
+          7,
+          636,
+          1,
+          142103
+        ]
+      },
+      "box": {
+        "x_min": 592.0,
+        "y_min": 213.0,
+        "x_max": 621.0,
+        "y_max": 258.0
+      },
+      "geometric_confidence": 0.9615335464477539,
+      "contributing_proposal_ids": [
+        "full-whole-sam-1"
+      ],
+      "claims": [
+        {
+          "kind": "label",
+          "value": "plain surface",
+          "confidence": {
+            "value": 0.9,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 1.0,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:plain surface",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:plain surface",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:plain surface",
+                "source": "clip_alignment",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "primary",
+          "category": "floor",
+          "region_kind": "stuff",
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "plain surface",
+              "slot": "masked_subject",
+              "status": "supports",
+              "score": 0.20231975315527956,
+              "margin": 0.024014795976330078,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "plain surface",
+              "slot": "tight_crop",
+              "status": "supports",
+              "score": 0.1974774583262448,
+              "margin": 0.01423730837333853,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "plain surface",
+              "slot": "contextual_crop",
+              "status": "supports",
+              "score": 0.20040603539089288,
+              "margin": 0.035894264749726124,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "label",
+          "value": "wooden floor",
+          "confidence": {
+            "value": 0.4,
+            "source": "qwen_vl"
+          },
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "raw",
+            "source_reliability": null,
+            "visual_support": 0.0,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.75,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:masked_subject:wooden floor",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:tight_crop:wooden floor",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "signal:clip_alignment:contextual_crop:wooden floor",
+                "source": "clip_alignment",
+                "polarity": "contradictory",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": "alternative",
+          "category": null,
+          "region_kind": null,
+          "signals": [
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wooden floor",
+              "slot": "masked_subject",
+              "status": "contradicts",
+              "score": 0.17830495717894948,
+              "margin": -0.024014795976330078,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wooden floor",
+              "slot": "tight_crop",
+              "status": "contradicts",
+              "score": 0.18324014995290627,
+              "margin": -0.01423730837333853,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            },
+            {
+              "source": "clip_alignment",
+              "hypothesis": "wooden floor",
+              "slot": "contextual_crop",
+              "status": "contradicts",
+              "score": 0.16451177064116676,
+              "margin": -0.035894264749726124,
+              "space": {
+                "model_id": "clip",
+                "checkpoint": "openai/clip-vit-large-patch14",
+                "dimension": 768,
+                "modality": "language_aligned",
+                "normalized": true
+              },
+              "reason": null
+            }
+          ]
+        },
+        {
+          "kind": "attribute",
+          "value": "The subject appears to be a plain surface, likely a floor.",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "attribute",
+          "value": "flat",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "condition",
+          "value": "smooth",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "material",
+          "value": "wood",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "raw multimodal region response for region-8028dada0f709bb4 from [masked_subject, tight_crop, contextual_crop]",
+              "artifact": null,
+              "raw_response_json": "{\"alternatives\": [{\"confidence\": 0.4, \"label\": \"wooden floor\"}], \"attributes\": [\"flat\"], \"category\": \"floor\", \"condition\": \"smooth\", \"confidence\": 0.9, \"description\": \"The subject appears to be a plain surface, likely a floor.\", \"kind\": \"stuff\", \"label\": \"plain surface\", \"material\": \"wood\"}"
+            }
+          ],
+          "provenance": {
+            "stage": "region_semantics",
+            "producer": "qwen_vl",
+            "config_fingerprint": "9c50c5f86031f1ce",
+            "model_id": null,
+            "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+            "prompt_version": "v8"
+          },
+          "support": {
+            "state": "unknown",
+            "source_reliability": null,
+            "visual_support": null,
+            "region_quality": 0.9615335464477539,
+            "contradiction_support": 0.0,
+            "calibrated_confidence": null,
+            "evidence": [
+              {
+                "artifact_uri": "visual-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "foreground_dense"
+              },
+              {
+                "artifact_uri": "language-subject-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "masked_subject"
+              },
+              {
+                "artifact_uri": "language-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "tight_crop"
+              },
+              {
+                "artifact_uri": "language-context-region-8028dada0f709bb4",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "contextual_crop"
+              },
+              {
+                "artifact_uri": "language-scene",
+                "source": "qwen_vl",
+                "polarity": "supportive",
+                "region_id": "region-8028dada0f709bb4",
+                "slot": "scene_conditioned"
+              }
+            ],
+            "domain": "unspecified",
+            "reason": null,
+            "calibration_version": null,
+            "calibration_artifact": null
+          },
+          "role": null,
+          "category": null,
+          "region_kind": null,
+          "signals": []
+        },
+        {
+          "kind": "label",
+          "value": "surface",
+          "confidence": null,
+          "evidence": [
+            {
+              "description": "reconciled from raw label 'plain surface'; canonical concept 'surface'",
+              "artifact": null,
+              "raw_response_json": null
+            }
+          ],
+          "provenance": {
+            "stage": "intra_frame_reconciliation",
+            "producer": "intra_frame_reconciliation",
+            "config_fingerprint": "249192ca21cc2388",
+            "model_id": null,
+            "checkpoint": null,
+            "prompt_version": null
+          },
+          "support": null,
+          "role": "reconciled",
+          "category": "floor",
+          "region_kind": "stuff",
+          "signals": []
+        }
+      ],
+      "visual_embedding_ref": "visual-region-8028dada0f709bb4",
+      "language_embedding_ref": "language-region-8028dada0f709bb4",
+      "evidence": [
+        {
+          "slot": "foreground_dense",
+          "region_id": "region-8028dada0f709bb4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 592.0,
+            "y_min": 213.0,
+            "x_max": 621.0,
+            "y_max": 258.0
+          },
+          "transform": {
+            "scale_x": 20.0,
+            "scale_y": 20.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "mask_aware_pooling:pixel_nearest_highres",
+          "artifact_ref": "visual-region-8028dada0f709bb4",
+          "space": {
+            "model_id": "dinov2",
+            "checkpoint": "facebook/dinov2-base",
+            "dimension": 768,
+            "modality": "visual_dense",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-8028dada0f709bb4",
+          "support_ratio": 1.0,
+          "mask_fill_ratio": 0.8168582375478928,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "masked_subject",
+          "region_id": "region-8028dada0f709bb4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 592.0,
+            "y_min": 213.0,
+            "x_max": 621.0,
+            "y_max": 258.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 592.0,
+            "offset_y": 213.0
+          },
+          "preprocessing": "neutral_masked_crop:expansion=0.0",
+          "artifact_ref": "language-subject-region-8028dada0f709bb4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-8028dada0f709bb4",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.8168582375478928,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "tight_crop",
+          "region_id": "region-8028dada0f709bb4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 592.0,
+            "y_min": 213.0,
+            "x_max": 621.0,
+            "y_max": 258.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 592.0,
+            "offset_y": 213.0
+          },
+          "preprocessing": "crop:expansion=0.0",
+          "artifact_ref": "language-region-8028dada0f709bb4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": 0.8168582375478928,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "contextual_crop",
+          "region_id": "region-8028dada0f709bb4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 588.375,
+            "y_min": 207.375,
+            "x_max": 624.625,
+            "y_max": 263.625
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 588.375,
+            "offset_y": 207.375
+          },
+          "preprocessing": "contour_crop:expansion=0.25",
+          "artifact_ref": "language-context-region-8028dada0f709bb4",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": "mask-region-8028dada0f709bb4",
+          "support_ratio": null,
+          "mask_fill_ratio": 0.5287698412698413,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        },
+        {
+          "slot": "scene_conditioned",
+          "region_id": "region-8028dada0f709bb4",
+          "state": "available",
+          "crop_box": {
+            "x_min": 0.0,
+            "y_min": 0.0,
+            "x_max": 640.0,
+            "y_max": 480.0
+          },
+          "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0
+          },
+          "preprocessing": "full_image",
+          "artifact_ref": "language-scene",
+          "space": {
+            "model_id": "clip",
+            "checkpoint": "openai/clip-vit-large-patch14",
+            "dimension": 768,
+            "modality": "language_aligned",
+            "normalized": true
+          },
+          "mask_ref": null,
+          "support_ratio": null,
+          "mask_fill_ratio": null,
+          "reason": null,
+          "view_id": null,
+          "source_artifact_refs": []
+        }
+      ],
+      "grounding": null
+    }
+  ]
+}

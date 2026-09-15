@@ -48,8 +48,11 @@ sleep 2
 rostopic echo -p "${odometry_topic}" >"${odometry_path}" 2>"${artifact_directory}/fastlio-odometry.log" &
 odometry_pid=$!
 
-rosbag play "${bag_path}" --start="${start_seconds}" --duration="${duration_seconds}" \
-    >"${artifact_directory}/fastlio-rosbag.log" 2>&1
+play_arguments=("${bag_path}" "--start=${start_seconds}")
+if [[ "${duration_seconds}" != "whole" ]]; then
+    play_arguments+=("--duration=${duration_seconds}")
+fi
+rosbag play "${play_arguments[@]}" >"${artifact_directory}/fastlio-rosbag.log" 2>&1
 sleep 2
 
 kill -INT "${odometry_pid}" 2>/dev/null || true

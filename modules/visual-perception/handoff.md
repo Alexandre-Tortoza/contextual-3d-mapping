@@ -15,11 +15,12 @@ dela só apareceram na execução real, com a suíte inteira verde. Leia
 - Data do handoff: 2026-09-10.
 - Branch: `main`.
 - Revisões desta rodada: `39e6888`, `3c546a7`, `4ce4e3c`, `89ed955`.
-- `prompt_version` atual: `v7`. Os prompts de cena e de região são byte-idênticos aos do
-  `v6`; o `v7` acrescentou o prompt de **relação**.
-- `schema_version` da `VisualObservation`: **3**. Ela ganhou `entity_hypotheses` e os
-  sinais de suporte por claim; payloads v1 e v2 continuam legíveis.
-- Layout de artifacts por frame: **`frames/2`**, com `embeddings.npz`.
+- Versões: a fonte da verdade é o código, não este documento —
+  `MultimodalReasoningConfig.prompt_version` (`config.py`),
+  `SUPPORTED_SCHEMA_VERSION` (`infrastructure/serialization.py`) e
+  `FRAME_ARTIFACT_LAYOUT_VERSION` (`benchmarks/frame_artifacts.py`). Na data desta
+  revisão (2026-09-12) são `v8`, **5** e **`frames/3`**. O `v7` acrescentou o prompt de
+  **relação**; o schema 3 acrescentou `entity_hypotheses` e os sinais de suporte por claim.
 - Suíte: 491 verificações determinísticas mais os testes de GPU, todas verdes por
   `make verify`.
 
@@ -47,15 +48,26 @@ Inalterados. Use exatamente estes IDs, nesta ordem, com estes hashes:
 | `corridor-02-008` | `2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b` |
 | `corridor-02-017` | `f7ea622db269c79244af5dfc5ae66bd5d1fbe2b5babee60cb51d71acccd5a20a` |
 
-## Baselines que não devem ser apagadas
+## Runs registrados desta rodada
+
+Registro histórico, sem força normativa. Pela regra de legado do `AGENTS.md`, tudo que já
+foi rodado é descartável: estes runs são reproduzíveis a partir da revisão e da
+configuração indicadas, e não justificam manter código ou formato antigo vivo. O que eles
+ensinaram está no texto abaixo, não nos artifacts.
+
+> **A proveniência destes runs é inválida.** `validate_reference_pipeline.py` constrói a
+> `ImageObservation` de cada frame com o fixture de teste `image_observation()`, que só
+> sobrescreve `observation_id`: todo frame sai com o mesmo `timestamp`, `sequence_index=0`
+> e `uri="mem://frame-0001"`. As conclusões sobre regiões, claims e eco continuam de pé;
+> qualquer uso a jusante que dependa de timestamp ou de origem do artifact não.
 
 ```text
-benchmarks/results/samples/20260908T131207Z/   baseline sem estágios contextuais (03ec593)
-benchmarks/results/samples/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
-benchmarks/results/samples/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
-benchmarks/results/samples/20260909T135428Z/   superado, registro do defeito de escalonamento
-benchmarks/results/samples/20260910T121258Z/   braço #218, Qwen3-VL-2B
-benchmarks/results/samples/20260910T122608Z/   braço #218, Qwen3-VL-4B
+benchmarks/results/samples/old/20260908T131207Z/   baseline sem estágios contextuais (03ec593)
+benchmarks/results/samples/old/20260910T115810Z/   REFERÊNCIA desta rodada (7001803)
+benchmarks/results/samples/old/20260909T205243Z/   16 keyframes, corroboração em escala (478fe63)
+benchmarks/results/samples/old/20260909T135428Z/   superado, registro do defeito de escalonamento
+benchmarks/results/samples/old/20260910T121258Z/   braço #218, Qwen3-VL-2B
+benchmarks/results/samples/old/20260910T122608Z/   braço #218, Qwen3-VL-4B
 benchmarks/results/comparison-contextual-20260910T115810Z.md
 benchmarks/results/benchmark-218-multimodal-reasoning-20260910T122608Z.md
 ```
@@ -64,7 +76,7 @@ A comparação é reproduzível:
 
 ```bash
 python benchmarks/compare_runs.py \
-  --baseline benchmarks/results/samples/20260908T131207Z \
+  --baseline benchmarks/results/samples/old/20260908T131207Z \
   --candidate benchmarks/results/samples/<novo>
 ```
 
@@ -93,11 +105,12 @@ O `20260909T205243Z` (16 keyframes, mesma configuração) corrobora em escala: *
    comparação de backends. Mudar os dois juntos torna ambos ininterpretáveis — é a regra
    que esta rodada já pagou para aprender duas vezes.
 
-2. **#219 e #220** dependem de você aceitar as licenças de `facebook/dinov3-*` e
-   `facebook/sam3` no Hugging Face e configurar um token. O bloqueio não é técnico: o
-   código da versão instalada de `transformers` já suporta os dois.
+2. **#219** depende de você aceitar a licença de `facebook/dinov3-*` no Hugging Face e
+   configurar um token. O acesso a `facebook/sam3` foi aprovado e o provider `sam3` roda
+   o tracker como segment everything (0.80/0.90); prompts PCS genéricos devolviam zero
+   masks. Falta medir o SAM2 com os mesmos thresholds para separar modelo de threshold.
 
-3. **Calibrar os tetos dos estágios novos.** `refinement.max_regions_per_iteration` e
+3. **Calibrar os tetos dos estágios novos.** `refinement.max_refined_regions` e
    `semantic_relations.max_pairs` foram escolhidos como orçamento plausível, **não**
    medidos. O custo hoje é 1,74x da baseline em latência, com VRAM inalterada.
 

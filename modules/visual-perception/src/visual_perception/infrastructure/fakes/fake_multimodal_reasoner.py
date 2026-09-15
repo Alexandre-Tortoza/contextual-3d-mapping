@@ -15,6 +15,7 @@ from visual_perception.domain.region_reasoning import RegionReasoningRequest, Re
 SceneResponseFn = Callable[[ImagePayload], dict[str, Any]]
 RegionResponseFn = Callable[[RegionReasoningRequest], dict[str, Any]]
 RelationResponseFn = Callable[[RegionRelationRequest], dict[str, Any]]
+ConceptResponseFn = Callable[[ImagePayload], dict[str, Any]]
 
 
 # Implementação fake do port MultimodalReasoner. Existe para permitir testar
@@ -38,11 +39,13 @@ class FakeMultimodalReasoner:
         region_response_fn: RegionResponseFn | None = None,
         fail_on_region_ids: frozenset[str] = frozenset(),
         relation_response_fn: RelationResponseFn | None = None,
+        concept_response_fn: ConceptResponseFn | None = None,
     ) -> None:
         self._scene_response_fn = scene_response_fn
         self._region_response_fn = region_response_fn
         self._fail_on_region_ids = fail_on_region_ids
         self._relation_response_fn = relation_response_fn
+        self._concept_response_fn = concept_response_fn
 
     # Gera a análise fake de cena completa: usa o hook injetado se houver,
     # senão deriva um resultado determinístico a partir do brilho médio da
@@ -62,6 +65,18 @@ class FakeMultimodalReasoner:
             "visibility": "clear",
             "navigability": "unobstructed",
             "confidence": 0.95,
+        }
+
+    # Propõe conceitos determinísticos: sempre um contextual e um estrutural
+    # genérico, para que a suíte exercite prioridade e exclusão da application.
+    def discover_concepts(
+        self, image: ImagePayload, config: MultimodalReasoningConfig, *, max_concepts: int
+    ) -> dict[str, Any]:
+        if self._concept_response_fn is not None:
+            return self._concept_response_fn(image)
+        return {
+            "entities": [{"concept": "reddish object", "confidence": 0.61}, {"concept": "wall"}],
+            "contextual_features": [{"concept": "debris pile", "confidence": 0.47}],
         }
 
     # Gera a análise fake de uma região: usa o hook injetado se houver, senão

@@ -333,3 +333,84 @@ def test_a_v2_payload_is_read_without_signals_or_entities() -> None:
     assert migrated.schema_version == SUPPORTED_SCHEMA_VERSION
     assert migrated.entity_hypotheses == ()
     assert all(claim.signals == () for region in migrated.regions for claim in region.claims)
+
+
+# Constrói uma observação com as duas metades da partição preenchidas, para que
+# o round-trip exercite a fronteira que a v4 acrescentou.
+def _partitioned_observation() -> VisualObservation:
+    data = np.zeros((32, 32), dtype=np.bool_)
+    data[4:12, 4:12] = True
+    published_mask = Mask(data, 32, 32)
+    other = np.zeros((32, 32), dtype=np.bool_)
+    other[16:28, 16:28] = True
+    structural_mask = Mask(other, 32, 32)
+    provenance = ModelProvenance(stage="region_semantics", producer="fake", config_fingerprint="abc")
+
+    def _label(value: str) -> SemanticClaim:
+        return SemanticClaim(
+            ClaimKind.LABEL,
+            value,
+            ConfidenceScore(0.9, source="fake"),
+            (Evidence("raw"),),
+            provenance,
+            role=HypothesisRole.PRIMARY,
+            region_kind=RegionKind.THING,
+        )
+
+    image = image_observation(width=32, height=32)
+    return VisualObservation(
+        source=image.source,
+        image_width=32,
+        image_height=32,
+        scene_context=SceneContext(),
+        regions=(
+            ObservedRegion(
+                "region-crack",
+                published_mask,
+                published_mask.bounding_box(),
+                0.9,
+                ("p-1",),
+                claims=(_label("structural crack"),),
+            ),
+        ),
+        relations=(),
+        structural_context=(
+            ObservedRegion(
+                "region-wall",
+                structural_mask,
+                structural_mask.bounding_box(),
+                0.9,
+                ("p-2",),
+                claims=(_label("wall"),),
+            ),
+        ),
+    )
+
+
+# A superfície suprimida precisa viajar no artifact, e não só na memória do
+# processo: sem ela, uma relação que a referencia deixaria de ser resolvível ao
+# recarregar a observação.
+def test_the_structural_context_survives_the_round_trip() -> None:
+    """As duas metades da partição sobrevivem a serialize/deserialize."""
+    observation = _partitioned_observation()
+
+    document = serialize_observation(observation)
+    round_tripped = deserialize_observation(document)
+
+    assert [region["region_id"] for region in document["structural_context"]] == ["region-wall"]
+    assert round_tripped == observation
+
+
+# Um payload da v3 é anterior à política: tudo que ele traz é output publicado,
+# e o contexto estrutural vazio é a leitura correta, não uma perda.
+def test_a_v3_payload_is_read_with_an_empty_structural_context() -> None:
+    """Um payload anterior à partição desserializa sem contexto estrutural."""
+    document = serialize_observation(_partitioned_observation())
+    document["schema_version"] = 3
+    document.pop("structural_context")
+
+    migrated = deserialize_observation(document)
+
+    assert migrated.schema_version == SUPPORTED_SCHEMA_VERSION
+    assert migrated.structural_context == ()
+    assert [region.region_id for region in migrated.regions] == ["region-crack"]

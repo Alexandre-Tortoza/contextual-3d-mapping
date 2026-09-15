@@ -1,0 +1,29 @@
+{
+  "frame_id": "corridor-02-13132",
+  "regions": [
+    {
+      "region_id": "region-3657a633d170ca30",
+      "label": "road markings",
+      "region_kind": "thing",
+      "discovery_area": 120997,
+      "box_before": {
+        "x_min": 9.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 240.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9790703058242798,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 4.181820419995347,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

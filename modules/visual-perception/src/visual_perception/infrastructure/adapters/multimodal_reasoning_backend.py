@@ -6,16 +6,13 @@ em 4-bit, ver ``benchmarks/results/benchmark-174-multimodal_reasoning-*.json``).
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from visual_perception.application.lifecycle import ModelLifecycleManager
 from visual_perception.config import MultimodalReasoningConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
 from visual_perception.domain.image_payload import ImagePayload
-from visual_perception.domain.region_evidence import EvidenceSlot
 from visual_perception.domain.region_reasoning import RegionReasoningRequest, RegionRelationRequest
-from visual_perception.domain.relations import NO_RELATION_PREDICATE, SEMANTIC_RELATION_PREDICATES
 from visual_perception.infrastructure.adapters._runtime import (
     payload_to_pil,
     raise_backend_execution_error,
@@ -23,14 +20,23 @@ from visual_perception.infrastructure.adapters._runtime import (
     require_module,
     resolve_device,
 )
+from visual_perception.infrastructure.adapters.reasoning_prompts import (
+    concept_prompt,
+    parse_json_object,
+    region_prompt,
+    relation_prompt,
+    scene_prompt,
+)
 
 #: Limita o número de tokens visuais que encoders de resolução dinâmica (ex:
-#: Qwen2.5-VL) produzem por imagem. Ver uso em ``_get_runtime``.
-_MAX_PIXELS = 640 * 480
+#: Qwen2.5-VL) produzem por imagem: sem isso, uma imagem de 640x480 já estoura
+#: os ~7,6 GB úteis da 3060 de referência. Público porque o benchmark de
+#: candidatos precisa medir o custo sob exatamente o mesmo limite.
+MAXIMUM_VISUAL_PIXELS = 640 * 480
 
 
 # Implementa o port MultimodalReasoner com um VLM compatível com Transformers,
-# mantendo prompts e parsing de transporte locais ao adapter.
+# com prompts e parsing compartilhados em ``reasoning_prompts``.
 class RealMultimodalReasoningAdapter:
     """Satisfaz :class:`~visual_perception.ports.multimodal_reasoning.MultimodalReasoner`.
 
@@ -38,12 +44,13 @@ class RealMultimodalReasoningAdapter:
     converte transporte e JSON; a validação semântica permanece em application.
     """
 
-    # Recebe (ou cria, se omitido) o lifecycle manager que carrega/libera o
-    # VLM sob demanda. Compartilhar o mesmo manager entre os 4 adapters
-    # reais (ver ``factory.py``) garante que no máximo um modelo pesado
-    # fica residente por vez — inclusive entre chamadas repetidas de
-    # analyze_scene/analyze_region dentro do mesmo pipeline, que reusam o
-    # VLM já carregado via o cache do próprio manager.
+    # Recebe (ou cria, se omitido) o lifecycle manager que carrega e mantém
+    # residente o VLM sob demanda. Compartilhar o mesmo manager entre os 4
+    # adapters reais (ver ``factory.py``) permite reaproveitar modelos já
+    # residentes entre estágios intercalados no mesmo frame — inclusive
+    # entre chamadas repetidas de analyze_scene/analyze_region dentro do
+    # mesmo pipeline, que reusam o VLM já carregado via o cache do próprio
+    # manager.
     def __init__(self, lifecycle: ModelLifecycleManager | None = None) -> None:
         """Inicializa o adapter sem carregar VLM ou checkpoint."""
         self._lifecycle = lifecycle or ModelLifecycleManager()
@@ -53,26 +60,15 @@ class RealMultimodalReasoningAdapter:
     # permanece bruta para que scene_context faça sua própria validação.
     def analyze_scene(self, image: ImagePayload, config: MultimodalReasoningConfig) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para o contexto da cena."""
-        # O prompt descreve o **ambiente**, e nunca pede um inventário de
-        # objetos. Medido em corridor-02-002 com o contract anterior: o modelo
-        # devolveu ``attributes: ["fisheye lens", "carpeted floor", "suitcase"]``,
-        # onde a "mala" era o próprio quad que carrega a câmera — e aquele texto
-        # ia para o prompt de cada uma das 60 regiões. Não há frase que conserte
-        # isso: o campo que pedia objetos precisou sair (#202).
-        prompt = (
-            "Describe the ENVIRONMENT shown in this image. Do NOT list or name individual "
-            "objects. Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
-            "fences) with exactly these keys: scene_type (string), environment (string), layout "
-            "(string), lighting (string), visibility (string), navigability (string), confidence "
-            "(float between 0 and 1). Example of the exact shape required:\n"
-            '{"scene_type": "<one noun naming the kind of place>", '
-            '"environment": "<indoor or outdoor>", '
-            '"layout": "<how the space is arranged, in one clause>", '
-            '"lighting": "<how the space is lit>", '
-            '"visibility": "<how far and how clearly one can see>", '
-            '"navigability": "<how traversable the space is>", "confidence": 0.9}'
-        )
-        return self._generate_json((image,), prompt, config)
+        return self._generate_json((image,), scene_prompt(), config)
+
+    # Propõe conceitos concretos para o grounding (#277) com o mesmo VLM residente;
+    # satisfaz o port SceneConceptDiscoverer.
+    def discover_concepts(
+        self, image: ImagePayload, config: MultimodalReasoningConfig, *, max_concepts: int
+    ) -> dict[str, Any]:
+        """Retorna a resposta JSON bruta do VLM com conceitos a localizar."""
+        return self._generate_json((image,), concept_prompt(max_concepts), config)
 
     # Analisa uma região a partir das suas views mask-aware, apresentadas ao
     # VLM como imagens numeradas e rotuladas pelo seu papel, seguidas do
@@ -102,7 +98,7 @@ class RealMultimodalReasoningAdapter:
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para uma região da imagem."""
         return self._generate_json(
-            tuple(view.payload for view in request.views), _region_prompt(request), config
+            tuple(view.payload for view in request.views), region_prompt(request), config
         )
 
     # Julga a relação entre duas regiões a partir da view de par (#206). O
@@ -110,13 +106,13 @@ class RealMultimodalReasoningAdapter:
     # calculada: sem a saída de escape, um vocabulário fechado faz o modelo
     # escolher o predicado menos ruim, e a aresta inventada entra no grafo como
     # se fosse observação. O quanto essa saída é *anunciada* também importa, e
-    # está medido em ``_relation_prompt``.
+    # está medido em ``relation_prompt``.
     def analyze_relation(
         self, request: RegionRelationRequest, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM sobre a relação entre duas regiões."""
         return self._generate_json(
-            tuple(view.payload for view in request.views), _relation_prompt(request), config
+            tuple(view.payload for view in request.views), relation_prompt(request), config
         )
 
     # Executa a conversa multimodal e converte sua resposta textual em objeto
@@ -126,7 +122,7 @@ class RealMultimodalReasoningAdapter:
         self, images: tuple[ImagePayload, ...], prompt: str, config: MultimodalReasoningConfig
     ) -> dict[str, Any]:
         """Gera e extrai um objeto JSON de uma consulta multimodal ao VLM."""
-        torch, processor, model, device = self._get_runtime(config)
+        torch, processor, model, device, key = self._get_runtime(config)
         try:
             content: list[dict[str, Any]] = [
                 {"type": "image", "image": payload_to_pil(image, config.backend)}
@@ -143,11 +139,15 @@ class RealMultimodalReasoningAdapter:
                 generation_kwargs.update({"do_sample": True, "temperature": config.temperature})
             else:
                 generation_kwargs["do_sample"] = False
-            with torch.inference_mode():
-                generated = model.generate(**inputs, **generation_kwargs)
+
+            def _run() -> Any:
+                with torch.inference_mode():
+                    return model.generate(**inputs, **generation_kwargs)
+
+            generated = self._lifecycle.call_with_eviction(key, _run)
             prompt_tokens = int(inputs["input_ids"].shape[1])
             text = processor.batch_decode(generated[:, prompt_tokens:], skip_special_tokens=True)[0]
-            return _parse_json_object(text)
+            return parse_json_object(text)
         except BackendExecutionError:
             raise
         except Exception as error:
@@ -156,8 +156,8 @@ class RealMultimodalReasoningAdapter:
     # Carrega o VLM e seu processor apenas quando o backend real é composto,
     # delegando residência ao lifecycle manager compartilhado. O modo 4-bit
     # delega o posicionamento de layers ao Transformers.
-    def _get_runtime(self, config: MultimodalReasoningConfig) -> tuple[Any, Any, Any, str]:
-        """Retorna torch, processor, modelo e device para a configuração solicitada."""
+    def _get_runtime(self, config: MultimodalReasoningConfig) -> tuple[Any, Any, Any, str, str]:
+        """Retorna torch, processor, modelo, device e a key residente para a configuração solicitada."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
         torch = require_module("torch", config.backend)
         device = resolve_device(torch, config.device, config.backend)
@@ -165,12 +165,12 @@ class RealMultimodalReasoningAdapter:
         def factory() -> tuple[Any, Any]:
             try:
                 transformers = require_module("transformers", config.backend)
-                # _MAX_PIXELS limita o encoder de resolução dinâmica de
+                # MAXIMUM_VISUAL_PIXELS limita o encoder de resolução dinâmica de
                 # modelos como o Qwen2.5-VL: sem isso, uma única imagem já
                 # é o suficiente para estourar os ~7.6GB úteis da 3060 de
                 # referência (visto na prática durante o benchmark #174).
                 processor = transformers.AutoProcessor.from_pretrained(
-                    checkpoint, max_pixels=_MAX_PIXELS
+                    checkpoint, max_pixels=MAXIMUM_VISUAL_PIXELS
                 )
                 model_kwargs: dict[str, Any] = {}
                 if config.load_in_4bit:
@@ -180,6 +180,11 @@ class RealMultimodalReasoningAdapter:
                         bnb_4bit_compute_dtype=torch.float16,
                     )
                     model_kwargs["device_map"] = device
+                    # Sem isso, a conversão para 4-bit materializa os pesos
+                    # fp16 inteiros na GPU antes de quantizar, dobrando o
+                    # pico de VRAM só durante o load (visto na prática: OOM
+                    # no carregamento mesmo sem nenhum outro modelo residente).
+                    model_kwargs["low_cpu_mem_usage"] = True
                 model = transformers.AutoModelForImageTextToText.from_pretrained(
                     checkpoint, **model_kwargs
                 )
@@ -189,163 +194,15 @@ class RealMultimodalReasoningAdapter:
                 return processor, model
             except BackendUnavailableError:
                 raise
+            except (MemoryError, torch.cuda.OutOfMemoryError):
+                # Ver comentário equivalente em feature_extraction_backend.py:
+                # preserva o tipo de OOM para que _load_with_eviction possa
+                # liberar residentes por LRU e tentar de novo.
+                raise
             except Exception as error:
                 raise_backend_execution_error(config.backend, "o carregamento do VLM", error)
 
         key = f"multimodal_reasoning:{checkpoint}:{device}:{config.load_in_4bit}"
         processor, model = self._lifecycle.get_or_load(key, factory)
         self._device = device
-        return torch, processor, model, device
-
-
-# Monta o prompt de região a partir do request. É uma função pura: não toca
-# em modelo, device nem checkpoint, o que permite testar o contrato textual do
-# prompt sem GPU — o mesmo motivo pelo qual _describe_views e
-# _describe_scene_claims vivem separados. Chamada por
-# RealMultimodalReasoningAdapter.analyze_region.
-def _region_prompt(request: RegionReasoningRequest) -> str:
-    """Retorna o prompt de região correspondente a ``request``."""
-    return (
-        f"{_describe_views(request)}"
-        "Describe ONLY what is actually visible in the subject region shown above, "
-        "even if it is small or blurry — a plain surface (wall, floor, ceiling) is a "
-        "valid, specific answer. Do not restate the whole-scene description, and do "
-        "NOT name an object merely because this kind of scene usually contains one: "
-        "if the pixels show a blank wall, the answer is a wall. Use the context "
-        "image(s) only to disambiguate the subject, never to describe the surroundings "
-        "instead. Respond with EXACTLY ONE JSON object (never a list/array, "
-        "never markdown fences) with exactly these keys: "
-        '"label" (non-empty short string, singular — the single best description), '
-        '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
-        'uncountable surface or material, "part" for a component of a larger object, or '
-        '"unknown"), "category" (short coarse category string, optional), "confidence" '
-        "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
-        'cannot estimate it, never guess 1.0), "alternatives" (list of '
-        '{"label", "confidence"} objects for competing hypotheses, may be empty), '
-        '"description" (string, optional), "attributes" (list of strings, optional), '
-        '"condition" (string, optional), "material" (string, optional). '
-        "The SHAPE below is the required format. Every value in it is a placeholder "
-        "describing what to write there — never copy a placeholder or the example "
-        "values into your answer:\n"
-        '{"label": "<one noun naming the subject>", "kind": "thing", '
-        '"category": "<coarse category>", "confidence": 0.71, '
-        '"alternatives": [{"label": "<competing noun>", "confidence": 0.2}], '
-        '"description": "<one short sentence>", "attributes": ["<adjective>"], '
-        '"condition": "<state>", "material": "<material>"}'
-        f"{_describe_scene_claims(request)}"
-    )
-
-
-# Monta o prompt de relação a partir do request. Função pura, pelo mesmo motivo
-# que ``_region_prompt``: o contrato textual precisa ser testável sem GPU.
-# Chamada por RealMultimodalReasoningAdapter.analyze_relation.
-#
-# A primeira redação deste prompt dizia que ``none`` era "a resposta esperada
-# para a maioria dos pares, e melhor que um chute plausível". Medido em
-# ``corridor-02-000``: o modelo respondeu ``none`` em **16 de 16** pares, quinze
-# deles com ``confidence`` exatamente 0,95 — inclusive para um ``ceiling tile``
-# inteiramente contido num ``ceiling``, que é literalmente ``part_of``.
-#
-# É a mesma lição que a #212 já tinha registrado do outro lado: uma frase que
-# tenta impedir alucinação com força demais deixa de medir qualquer coisa.
-# ``none`` continua disponível e continua sendo a resposta certa quando nenhuma
-# relação é visível — mas ela deixou de ser anunciada como o desfecho esperado.
-def _relation_prompt(request: RegionRelationRequest) -> str:
-    """Retorna o prompt de relação correspondente a ``request``."""
-    predicates = ", ".join(f'"{predicate}"' for predicate in sorted(SEMANTIC_RELATION_PREDICATES))
-    return (
-        "You are given one image showing two regions of the same scene. The FIRST region is "
-        "outlined in GREEN and the SECOND region is outlined in BLUE.\n"
-        f"The green region was described as: {request.subject_concept} "
-        f"({request.subject_kind}).\n"
-        f"The blue region was described as: {request.object_concept} ({request.object_kind}).\n"
-        f"Measured geometry: {request.geometric_summary}.\n"
-        "State how the GREEN region relates to the BLUE region, using ONLY what the pixels show. "
-        f'Use "{NO_RELATION_PREDICATE}" when none of the listed relations is visible in the image. '
-        "Do NOT infer depth, distance, or which one is in front: this is a single image and those "
-        "are not visible. Respond with EXACTLY ONE JSON object (never a list/array, never markdown fences) "
-        'with exactly these keys: "predicate" (exactly one of '
-        f'"{NO_RELATION_PREDICATE}", {predicates}), "confidence" (number between 0 and 1 — YOUR '
-        "ACTUAL CERTAINTY; omit the key entirely if you cannot estimate it, never guess 1.0). "
-        "The SHAPE below is the required format; every value in it is a placeholder:\n"
-        '{"predicate": "<one of the listed values>", "confidence": 0.42}'
-    )
-
-
-#: Como cada slot de evidência é apresentado ao VLM. O texto diz ao modelo o
-#: que ele está olhando e, para os slots de contexto, que aquilo NÃO é o
-#: sujeito — sem isso o modelo tende a descrever o objeto mais saliente da
-#: imagem de contexto em vez da região pedida.
-_VIEW_ROLES = {
-    EvidenceSlot.FOREGROUND_DENSE: (
-        "the SUBJECT REGION isolated on a black background (black pixels are not part of it)"
-    ),
-    # Cinza, e não preto: nestes frames o preto é a cor da vinheta do fisheye, e
-    # dizer "black is not part of it" faria o modelo tratar a borda da lente
-    # como fundo removido em vez de conteúdo ausente (#202).
-    EvidenceSlot.MASKED_SUBJECT: (
-        "the SUBJECT REGION isolated on a flat grey background (grey pixels are not part of it)"
-    ),
-    EvidenceSlot.TIGHT_CROP: "the SUBJECT REGION's bounding box, background included",
-    EvidenceSlot.CONTEXTUAL_CROP: (
-        "the subject plus its surroundings, with the subject outlined in green; "
-        "the surroundings are CONTEXT ONLY"
-    ),
-    EvidenceSlot.SCENE_CONDITIONED: "CONTEXT ONLY: the whole scene the subject belongs to",
-}
-
-
-# Descreve, em texto, o que cada imagem enviada representa. Existe porque um
-# VLM que recebe várias imagens sem rótulo não sabe qual delas é o sujeito;
-# esta é a metade textual da evidência distinguível exigida pela #203.
-# Chamada por analyze_region ao montar o prompt.
-def _describe_views(request: RegionReasoningRequest) -> str:
-    """Retorna o preâmbulo que numera e rotula cada view enviada ao modelo."""
-    lines = [
-        f"Image {index}: {_VIEW_ROLES[view.slot]}."
-        for index, view in enumerate(request.views, start=1)
-    ]
-    return "You are given {count} image(s) of the same subject region.\n{lines}\n".format(
-        count=len(request.views), lines="\n".join(lines)
-    )
-
-
-# Converte as claims de cena estruturadas em texto agrupado por kind,
-# preservando a confiança quando ela existe. Existe para que o contexto de
-# cena chegue ao modelo inteiro (#202) em vez de achatado em uma única
-# descrição, e para instruir explicitamente que ele não é verdade sobre a
-# região. Chamada por analyze_region ao montar o prompt.
-def _describe_scene_claims(request: RegionReasoningRequest) -> str:
-    """Retorna o bloco de contexto de cena, ou string vazia se não houver claims."""
-    if not request.scene_claims:
-        return ""
-    grouped: dict[str, list[str]] = {}
-    for claim in request.scene_claims:
-        score = "" if claim.confidence is None else f" (confidence {claim.confidence.value:.2f})"
-        grouped.setdefault(claim.kind.value, []).append(f"{claim.value}{score}")
-    rendered = "; ".join(f"{kind}: {', '.join(values)}" for kind, values in sorted(grouped.items()))
-    return (
-        "\nScene context, for disambiguation only — these are properties of the SCENE, "
-        f"never of the subject region, and must not be repeated as the label: {rendered}"
-    )
-
-
-# Extrai um único objeto JSON de uma resposta textual, tolerando fences de
-# markdown e texto residual produzido pelo modelo. Respostas inválidas ficam
-# vazias para a validação de schema da camada application.
-def _parse_json_object(text: str) -> dict[str, Any]:
-    """Extrai um objeto JSON de texto do VLM ou retorna objeto vazio."""
-    stripped = text.strip()
-    candidates = [stripped]
-    start = stripped.find("{")
-    end = stripped.rfind("}")
-    if start >= 0 and end > start:
-        candidates.append(stripped[start : end + 1])
-    for candidate in candidates:
-        try:
-            value = json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            return value
-    return {}
+        return torch, processor, model, device, key

@@ -43,6 +43,8 @@ class BagWindow:
         play_duration_s: valor de ``rosbag play --duration`` correspondente.
         lead_s: prefixo reproduzido antes da janela para o estimator convergir.
         keyframes: frames RGB selecionados dentro da janela.
+        recording_id: identidade da gravação de origem.
+        frame_id_prefix: prefixo usado nos artifacts de frame.
     """
 
     camera_topic: str
@@ -52,6 +54,8 @@ class BagWindow:
     play_duration_s: float
     lead_s: float
     keyframes: tuple[Keyframe, ...]
+    recording_id: str = "corridor-02"
+    frame_id_prefix: str = "corridor-02"
 
     # Serializa para o formato consumido por scripts e pela composição, sem
     # expor objetos de terceiros nem o layout interno do bag.
@@ -64,6 +68,8 @@ class BagWindow:
             "play_offset_s": self.play_offset_s,
             "play_duration_s": self.play_duration_s,
             "lead_s": self.lead_s,
+            "recording_id": self.recording_id,
+            "frame_id_prefix": self.frame_id_prefix,
             "keyframes": [
                 {
                     "sequence_index": keyframe.sequence_index,
@@ -176,20 +182,27 @@ def resolve_bag_window(
     bag: Path,
     *,
     start_s: float,
-    duration_s: float,
+    duration_s: float | None,
     keyframe_interval_s: float = 0.0,
     lead_s: float = 3.0,
     camera_topic: str = "/camera_1/image_raw",
+    all_frames: bool = False,
+    keyframe_offsets_s: tuple[float, ...] | None = None,
+    recording_id: str | None = None,
 ) -> BagWindow:
     """Resolve uma janela temporal e seus keyframes RGB em uma rosbag.
 
     Argumentos:
         bag: rosbag de origem.
         start_s: início da janela, em segundos após o primeiro frame RGB.
-        duration_s: duração da janela em segundos.
+        duration_s: duração da janela em segundos; ``None`` cobre todo o stream RGB.
         keyframe_interval_s: espaçamento entre keyframes; zero seleciona só o primeiro.
         lead_s: prefixo reproduzido antes da janela para o estimator convergir.
         camera_topic: tópico RGB usado como referência temporal.
+        all_frames: seleciona todas as imagens da janela em vez de amostrar.
+        keyframe_offsets_s: posições explícitas, em segundos após o início da
+            janela. Quando informadas, substituem ``keyframe_interval_s``.
+        recording_id: identidade estável da gravação; usa o stem do bag quando ausente.
     Retorna:
         janela resolvida com offset de reprodução e keyframes identificados.
     Levanta:
@@ -197,8 +210,17 @@ def resolve_bag_window(
     """
     from rosbags.highlevel import AnyReader
 
-    if start_s < 0 or duration_s < 0:
+    if start_s < 0 or (duration_s is not None and duration_s < 0):
         raise ValueError("start_s and duration_s must be non-negative.")
+    if keyframe_offsets_s is not None:
+        if all_frames:
+            raise ValueError("keyframe_offsets_s and all_frames are mutually exclusive.")
+        if duration_s is None:
+            raise ValueError("keyframe_offsets_s requires a finite duration_s.")
+        if not keyframe_offsets_s or any(offset < 0 or offset > duration_s for offset in keyframe_offsets_s):
+            raise ValueError("keyframe_offsets_s must be non-empty and stay inside duration_s.")
+        if tuple(sorted(keyframe_offsets_s)) != keyframe_offsets_s or len(set(keyframe_offsets_s)) != len(keyframe_offsets_s):
+            raise ValueError("keyframe_offsets_s must be strictly increasing.")
     with AnyReader([bag]) as reader:
         connections = [item for item in reader.connections if item.topic == camera_topic]
         if not connections:
@@ -214,29 +236,54 @@ def resolve_bag_window(
         if not bag_times:
             raise ValueError(f"bag does not contain messages on {camera_topic}.")
         first_header_ns = _header_at(reader, connections, bag_times[0])
+        last_header_ns = _header_at(reader, connections, bag_times[-1])
         clock_offset_ns = bag_times[0] - first_header_ns
         start_header_ns = first_header_ns + int(start_s * 1_000_000_000)
-        duration_ns = int(duration_s * 1_000_000_000)
-        targets = keyframe_targets_ns(
-            start_header_ns, duration_ns, int(keyframe_interval_s * 1_000_000_000)
-        )
-        keyframes: list[Keyframe] = []
-        for target in targets:
-            keyframe = _locate(reader, connections, bag_times, target, clock_offset_ns)
-            if keyframes and keyframe.sequence_index == keyframes[-1].sequence_index:
-                continue
-            keyframes.append(keyframe)
-        if keyframes[0].header_timestamp_ns > start_header_ns + duration_ns:
+        if start_header_ns > last_header_ns:
             raise ValueError("requested window starts after the last RGB frame.")
+        end_header_ns = (
+            last_header_ns if duration_s is None else start_header_ns + int(duration_s * 1_000_000_000)
+        )
+        if end_header_ns > last_header_ns:
+            raise ValueError("requested window ends after the last RGB frame.")
+        duration_ns = end_header_ns - start_header_ns
+        if all_frames:
+            keyframes = []
+            for sequence_index, (connection, bag_timestamp_ns, rawdata) in enumerate(
+                reader.messages(connections=connections)
+            ):
+                header_timestamp_ns = _header_timestamp_ns(reader.deserialize(rawdata, connection.msgtype))
+                if header_timestamp_ns < start_header_ns:
+                    continue
+                if header_timestamp_ns > end_header_ns:
+                    break
+                keyframes.append(Keyframe(sequence_index, header_timestamp_ns, bag_timestamp_ns))
+        else:
+            targets = (
+                tuple(start_header_ns + int(offset * 1_000_000_000) for offset in keyframe_offsets_s)
+                if keyframe_offsets_s is not None
+                else keyframe_targets_ns(start_header_ns, duration_ns, int(keyframe_interval_s * 1_000_000_000))
+            )
+            keyframes = []
+            for target in targets:
+                keyframe = _locate(reader, connections, bag_times, target, clock_offset_ns)
+                if keyframes and keyframe.sequence_index == keyframes[-1].sequence_index:
+                    continue
+                keyframes.append(keyframe)
+        if not keyframes:
+            raise ValueError("requested window does not contain RGB frames.")
         window_bag_ns = keyframes[0].bag_timestamp_ns
+        resolved_recording_id = recording_id or bag.stem
         return BagWindow(
             camera_topic=camera_topic,
             start_header_ns=start_header_ns,
-            end_header_ns=start_header_ns + duration_ns,
+            end_header_ns=end_header_ns,
             play_offset_s=play_offset_seconds(window_bag_ns, reader.start_time, lead_s),
-            play_duration_s=duration_s + lead_s,
+            play_duration_s=duration_ns / 1_000_000_000 + lead_s,
             lead_s=lead_s,
             keyframes=tuple(keyframes),
+            recording_id=resolved_recording_id,
+            frame_id_prefix=resolved_recording_id,
         )
 
 

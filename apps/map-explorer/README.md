@@ -22,6 +22,8 @@ map-explorer/
 ```
 
 A API e o frontend são camadas de entrega. Não devem depender diretamente de implementações privadas de módulo nem de schemas específicos de armazenamento.
+`scripts/publish_map_index.py` é dono da publicação estática de runs, consumida
+pela CLI, pelo Makefile e pelo frontend.
 
 ## Execução local
 
@@ -35,28 +37,98 @@ npm run dev
 ```
 
 O viewer valida a versão e os campos mínimos do artifact antes de renderizar.
-Ele abre `/current-map.json` por default e aceita outra URL pelo parâmetro
-`?artifact=`.
+O catálogo atual contém somente mapas com contexto
+(`artifact_type: contextual_rgb_lidar_slice`, schema 2). A geometria é desenhada
+como referência para os overlays; mapas de geometria pura não entram no seletor.
 
-O seletor compacto no mapa alterna entre os artifacts publicados. A lista vem de
-`public/maps/index.json`, gravado pela publicação a partir do que existe no
-diretório servido, e cada rótulo é derivado do próprio artifact: quantos
-keyframes o contextualizam, ou que é geometria pura. Um trecho novo aparece no
-seletor sem alterar código do viewer.
-
-Para visualizar um trecho real, execute `make corridor-02-map` na raiz e abra o
-artifact gerado. O viewer enquadra automaticamente os limites da nuvem e permite
-órbita, zoom e inspeção de cada ponto amostrado.
-
-Em uma sessão SSH, publique o artifact pelo próprio servidor para evitar o
-seletor de arquivos do computador cliente:
+Publique um resultado existente e abra o viewer pela CLI:
 
 ```bash
-make map-explorer-serve
+apps/cli/.venv/bin/contextual-3d-mapping-cli publish \
+  --artifact artifacts/grounding-validation/pose.json \
+  --run-id context-run \
+  --label 'Minha run com grounding'
+apps/cli/.venv/bin/contextual-3d-mapping-cli serve --run-id context-run
 ```
 
-Depois acesse `http://<ip-do-servidor>:5173/?artifact=/current-map.json`. O
-arquivo publicado é local e ignorado pelo Git.
+Também é possível publicar e servir usando Make:
+
+```bash
+make map-explorer-serve \
+  MAP_EXPLORER_ARTIFACT=artifacts/grounding-validation/pose.json \
+  MAP_EXPLORER_RUN_ID=context-run
+```
+
+Sem `MAP_EXPLORER_ARTIFACT`, Make apenas atualiza o catálogo existente e serve
+o viewer. `make map-explorer-publish` publica sem iniciar o servidor.
+
+Acesse `http://localhost:5173` ou, em uma sessão SSH,
+`http://<ip-do-servidor>:5173`. A primeira abertura seleciona a publicação mais
+recente. O parâmetro `?artifact=/runs/<run-id>/context.json` fixa uma versão.
+Sem catálogo, `/current-map.json` permanece como fallback para mapas contextuais
+históricos; ele deixa de ser o destino das novas publicações.
+
+## Pastas de runs
+
+Cada publicação possui uma pasta independente:
+
+```text
+web/public/
+├── maps/index.json
+└── runs/<run-id>/
+    ├── context.json
+    ├── manifest.json
+    └── <pastas de previews referenciadas pelo mapa>/
+```
+
+O JSON e as URLs relativas são preservados. Todas as imagens originais e
+overlays referenciados são copiados para a pasta da run. A publicação rejeita
+previews ausentes, externos ou fora da pasta de origem. O manifest registra
+identidade, nome, instante UTC da publicação (`created_at`), origem do artifact,
+frame espacial, quantidade de frames e pontos com contexto, além dos hashes
+SHA-256 do mapa e das imagens. O instante da publicação não representa o início
+da inferência.
+
+O fingerprint inclui o mapa e seus previews. A mesma publicação é idempotente;
+usar uma identidade existente para outro conteúdo produz erro. A pasta só entra
+no catálogo depois que a cópia completa termina. Os resultados ficam ignorados
+pelo Git e a exclusão da origem não quebra os previews já publicados.
+
+`public/maps/index.json` é a fronteira de leitura compartilhada com a CLI:
+cada entrada expõe `run_id`, `url`, `label`, `artifact_type`, `created_at`,
+`map_id`, `frame_count` e `contextual_point_count`, ordenadas pela publicação
+mais recente. O publisher aceita `--result-file` para entregar à CLI os
+metadados da pasta efetivamente salva ou reutilizada.
+
+O seletor **Run** alterna entre essas entradas. O catálogo é atualizado a cada
+30 segundos e quando a janela recupera foco, preservando a seleção atual.
+Ao alternar versões com o mesmo frame, origem geométrica e quantidade de pontos,
+a câmera permanece na posição escolhida. Uma geometria diferente é enquadrada
+automaticamente. A comparação ocorre pela alternância no mesmo viewport.
+
+## Mapas consolidados
+
+Depois de cada publicação, o catálogo reconstrói automaticamente um mapa
+consolidado para cada grupo de runs sobre a mesma nuvem de origem (mesmo PCD,
+mapa e frame). Esse artifact é derivado das pastas imutáveis em `runs/`: não
+altera nenhuma run de origem e preserva a identidade, o hash, as observações e
+as regiões que contribuíram.
+
+Uma run de trecho carrega só a vizinhança das suas poses. Quando ela declara
+`geometry_backdrop`, o publisher copia esse slice global uma vez para
+`maps/geometry/<sha256>.json`, depois de conferir o digest e a origem. O
+consolidado usa esse fundo como geometria do mapa geral e acrescenta apenas os
+pontos com contexto de cada run.
+
+O seletor separa **Runs** de **Mapas consolidados**. Cada ponto consolidado
+recebe no máximo um voto por run; variantes como `pallet` e `wooden pallet`
+formam a mesma família textual. Uma maioria estrita decide o label. Quando não
+há maioria, o claim de maior qualidade vence, mas aparece atenuado e identificado
+como desempate por qualidade no inspector. O painel permite abrir a evidência de
+cada run contribuinte sem duplicar suas previews.
+
+Runs com `map_id` igual, mas pontos ou coordenadas diferentes, não são unidas.
+O viewer não faz registro espacial entre aquisições distintas.
 
 ## Cores e sustentação
 
@@ -87,17 +159,16 @@ vizinhança geométrica — e a legenda oferece atenuar quem falha nos dois
 claim é reescrito: a atenuação é decisão de desenho, e o inspector mostra os
 dois números e o estado.
 
-Artifacts contextuais expõem geometria, associações RGB e claims do VLM. O
-mapa usa uma única camada de cores contextuais e distingue três estados: pontos
-com label recebem a cor da classe, pontos que a câmera observou sem classificar
-aparecem em cinza neutro, e pontos que nenhuma observação alcançou permanecem em
-cinza discreto. A distinção existe porque os dois últimos casos têm diagnósticos
-diferentes — um aponta para a máscara ou para o reasoner, o outro para cobertura
-de frames. Ao selecionar um ponto observado, o painel mostra o frame de origem,
-o pixel projetado, a região, a confiança, o estado de suporte e a proveniência.
-O alvo
-`map-explorer-serve` usa por default o artifact contextual e copia seus previews;
-outro arquivo pode ser selecionado com `MAP_EXPLORER_ARTIFACT=artifacts/outro.json`.
+Artifacts contextuais expõem geometria, associações RGB e claims do VLM. A
+legenda separa a **evidência contextual publicada**, colorida por família, da
+**cobertura visual**. Nesta última, pontos vistos sem evidência publicada
+aparecem em cinza neutro e pontos que nenhum keyframe alcançou permanecem em
+cinza discreto. A distinção evita tratar a ausência legítima de evidência
+contextual como falha de classificação e mantém a falta de cobertura visível.
+Ao selecionar um ponto observado, o painel mostra o frame de origem, o pixel
+projetado, a região, a confiança, o estado de suporte e a proveniência. O frame
+pode ser ampliado em um modal e alternado entre a imagem original, sem qualquer
+marcação, e o overlay das regiões VLM.
 
 Um ponto sem label declara o motivo no painel de detalhes — fora do campo de
 visão, projetado fora da imagem, fora do suporte óptico válido, ou ocluído por
@@ -126,3 +197,30 @@ mapa continua desenhado, atenuado, como referência espacial. Pontos atenuados
 seguem selecionáveis. O frontend consome a nuvem por uma
 fronteira interna compatível com bounds e LOD futuros; o artifact local atual
 continua sendo servido como um único chunk estático.
+
+Cada linha da legenda carrega quatro leituras. O swatch diz ao mesmo tempo a cor
+da classe e o estado do filtro — cheio em foco, vazado oculto, meio a meio para
+a família cujos labels estão parcialmente em foco. A contagem vem acompanhada de
+uma barra de proporção comparada **dentro da própria seção**, já que contra a
+cobertura visual toda classe publicada viraria um traço invisível. O contador de
+labels abre a família, e o alvo isola a linha. O cabeçalho resume o recorte
+atual — quantos pontos estão em foco, quantas classes estão ocultas — e oferece
+`Padrão`, que volta ao recorte de abertura com as estruturas genéricas ocultas,
+e `Tudo`, que traz todas as classes de volta. Cada botão fica desabilitado
+quando já é o estado atual.
+
+Nomes de classe cortados pela largura do painel e ações representadas só por
+ícone abrem uma dica ao passar o ponteiro ou ao receber foco de teclado. A dica
+é medida a partir do próprio elemento: um nome que coube inteiro não ganha
+tooltip redundante.
+
+## Inspeção de visibilidade
+
+Artifacts com `surface_evidence` mostram distância do ponto, distância da
+primeira superfície medida, tolerância e motivo. O vínculo do rótulo aparece
+separadamente da visibilidade RGB e da corroboração entre frames.
+
+Um ponto RGB com `tentative_label` aparece como **Hipótese 2D · sem rótulo 3D**
+no inspector. A preview preserva a máscara e o claim original, inclusive para
+uma janela sem suporte 3D. `visibility_unconfirmed` explica a ausência de
+superfície compatível; `occluded` identifica uma superfície anterior no raio.

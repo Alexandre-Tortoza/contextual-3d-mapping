@@ -107,10 +107,13 @@ npm ci
 npm run dev
 ```
 
-Execute `make map-explorer-serve` e use o seletor compacto do viewer para
-alternar entre o trecho geométrico e o artifact contextual publicado. A lista do
-seletor vem de `public/maps/index.json`, gravado na publicação, e não de uma
-lista fixa no frontend.
+Publique o artifact contextual com `contextual-3d-mapping-cli publish --artifact
+<mapa.json>` e abra-o com `contextual-3d-mapping-cli serve`. O seletor **Run**
+alterna entre resultados com contexto preservados em pastas independentes.
+A lista vem de `public/maps/index.json`; mapas de geometria pura ficam fora
+dessa comparação. A [CLI](../apps/cli/README.md#salvar-e-comparar-runs-com-contexto)
+e o [viewer](../apps/map-explorer/README.md#pastas-de-runs) documentam os
+comandos completos, incluindo a alternativa com Make.
 
 Um ponto selecionado deve exibir coordenadas de mapa, observação LiDAR,
 observação RGB, pixel, cor, região, claim visual, feature reference e artifact de

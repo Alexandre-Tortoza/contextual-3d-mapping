@@ -1,0 +1,101 @@
+{
+  "frame_id": "corridor-02-15015",
+  "regions": [
+    {
+      "region_id": "region-217f6ff4e835c21a",
+      "label": "blue fabric",
+      "region_kind": "thing",
+      "discovery_area": 5375,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 192.0,
+        "x_max": 47.0,
+        "y_max": 383.0
+      },
+      "component_count_before": 9,
+      "geometric_confidence": 0.9298340082168579,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.689521913001954,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-263663a4150ed93f",
+      "label": "curved wall",
+      "region_kind": "thing",
+      "discovery_area": 16377,
+      "box_before": {
+        "x_min": 11.0,
+        "y_min": 12.0,
+        "x_max": 242.0,
+        "y_max": 298.0
+      },
+      "component_count_before": 24,
+      "geometric_confidence": 0.9655831456184387,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45523960100399563,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c3ab3762df62f6b0",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 8655,
+      "box_before": {
+        "x_min": 465.0,
+        "y_min": 126.0,
+        "x_max": 640.0,
+        "y_max": 295.0
+      },
+      "component_count_before": 10,
+      "geometric_confidence": 0.9661997556686401,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.45370041800197214,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-cd9fd6e31adc6227",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 16239,
+      "box_before": {
+        "x_min": 458.0,
+        "y_min": 79.0,
+        "x_max": 552.0,
+        "y_max": 293.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9632539749145508,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

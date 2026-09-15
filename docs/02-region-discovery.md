@@ -15,7 +15,7 @@ flowchart LR
 
 Encontrar áreas visuais coerentes que merecem análise separada. A etapa é geométrica e class-agnostic: ela não decide que uma região é `door`, `wall` ou `pallet`.
 
-Na configuração `research_quality` atual, o backend selecionado é **SAM ViT-H**, checkpoint `facebook/sam-vit-huge`. O adapter é genérico o suficiente para aceitar checkpoints SAM/SAM2 compatíveis com `mask-generation`, mas a reference run documentada aqui não usa SAM2.
+Na configuração `research_quality` atual, o backend selecionado é o **SAM3 tracker** (`facebook/sam3`), em modo *segment everything* com `pred_iou_threshold=0.80` e `stability_score_threshold=0.90`. O prompt textual do SAM3 (PCS) não é usado na descoberta, porque prompts genéricos devolvem zero máscaras; ver [backends de modelos](../modules/visual-perception/docs/model-backends.md#region-discovery). O mesmo adapter aceita checkpoints SAM/SAM2 para comparação. A reference run documentada nesta página (`20260910T115810Z`) é anterior à troca e usou **SAM ViT-H** (`facebook/sam-vit-huge`); os exemplos abaixo refletem aquela run.
 
 ## O que o SAM produz
 

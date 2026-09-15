@@ -1,0 +1,152 @@
+{
+  "frame_id": "corridor-02-08788",
+  "regions": [
+    {
+      "region_id": "region-1e0b8cee792426a9",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 13851,
+      "box_before": {
+        "x_min": 440.0,
+        "y_min": 166.0,
+        "x_max": 640.0,
+        "y_max": 258.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9521266222000122,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.622501081990777,
+      "model_mask_area": 13771,
+      "clipped_pixel_count": 168,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 13603,
+          "box": {
+            "x_min": 446.0,
+            "y_min": 166.0,
+            "x_max": 640.0,
+            "y_max": 258.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 13603,
+          "refined_overlap": 13603,
+          "detector_box_overlap": 13603,
+          "distance_to_box_center_px": 0.46950271094446494
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 13603,
+      "area_ratio": 0.9820951555844344,
+      "area_reduction_ratio": 0.017904844415565613,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 446.0,
+        "y_min": 166.0,
+        "x_max": 640.0,
+        "y_max": 258.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-c2b505f0e3bb86dd",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1870,
+      "box_before": {
+        "x_min": 344.0,
+        "y_min": 182.0,
+        "x_max": 398.0,
+        "y_max": 228.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9531118273735046,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.44793745898641646,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    },
+    {
+      "region_id": "region-fad405c6fa5572dd",
+      "label": "building",
+      "region_kind": "thing",
+      "discovery_area": 93193,
+      "box_before": {
+        "x_min": 6.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 227.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9820485711097717,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.013222958979895338,
+      "model_mask_area": 13771,
+      "clipped_pixel_count": 13771,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-fc50cdd65003f17d",
+      "label": "tree",
+      "region_kind": "thing",
+      "discovery_area": 1774,
+      "box_before": {
+        "x_min": 247.0,
+        "y_min": 179.0,
+        "x_max": 298.0,
+        "y_max": 234.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9364693760871887,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.013953440997283906,
+      "model_mask_area": 1742,
+      "clipped_pixel_count": 1,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1741,
+          "box": {
+            "x_min": 247.0,
+            "y_min": 179.0,
+            "x_max": 298.0,
+            "y_max": 234.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 1741,
+          "refined_overlap": 1741,
+          "detector_box_overlap": 1741,
+          "distance_to_box_center_px": 0.2715328700890683
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 1741,
+      "area_ratio": 0.9813979706877114,
+      "area_reduction_ratio": 0.018602029312288604,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 247.0,
+        "y_min": 179.0,
+        "x_max": 298.0,
+        "y_max": 234.0
+      },
+      "reason": null
+    }
+  ]
+}

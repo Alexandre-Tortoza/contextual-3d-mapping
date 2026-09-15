@@ -1,6 +1,25 @@
 """Contract de saída canônico de observação visual.
 
 Issues: #154 (contract), #205 (hipóteses de entidade contextual).
+
+A observação carrega **dois** conjuntos de regiões, e a diferença entre eles é
+o contract do módulo:
+
+```text
+regions             evidência contextual publicada
+structural_context  superfície estrutural genérica, preservada como contexto
+```
+
+Uma parede não é evidência contextual — uma rachadura na parede é. Regiões cuja
+identidade afirmada é apenas superfície estrutural genérica saem de ``regions``
+e continuam em ``structural_context``, onde seguem alimentando reconciliação,
+relações, audit e diagnóstico. Nada é apagado: a política decide o que o módulo
+**publica**, não o que ele observou. Ver ``domain/contextual_evidence.py``.
+
+Relações e grupos de entidade são validados contra a **união** dos dois
+conjuntos. É o que permite a um grupo de reconciliação agrupar fragmentos de uma
+mesma parede e a uma evidência publicada apontar para a superfície que a
+hospeda, sem que a partição transforme nenhuma delas em referência pendurada.
 """
 
 from __future__ import annotations
@@ -54,7 +73,13 @@ class VisualObservation:
     #: membro é removido, nenhuma geometria muda, e nenhuma identidade 3D é
     #: afirmada. Vazio quando a reconciliação não rodou ou não encontrou grupo.
     entity_hypotheses: tuple[ContextualEntityHypothesis, ...] = field(default_factory=tuple)
-    schema_version: int = 3
+    #: Regiões que a política de publicação contextual manteve fora do output
+    #: público por descreverem apenas superfície estrutural genérica. Elas
+    #: continuam sendo evidência: relações e grupos podem referenciá-las, o
+    #: audit continua medindo-as, e o motivo de cada supressão é registrado no
+    #: diagnóstico do frame.
+    structural_context: tuple[ObservedRegion, ...] = field(default_factory=tuple)
+    schema_version: int = 5
     coordinate_convention: str = COORDINATE_CONVENTION
 
     # Valida a resolução da imagem, a unicidade de region_id entre as
@@ -63,16 +88,19 @@ class VisualObservation:
     # conhecidas.
     def __post_init__(self) -> None:
         """Valida identidade, geometria e versão da fronteira canônica."""
-        if self.schema_version not in (1, 2, 3):
-            raise ValueError("VisualObservation supports schema versions 1, 2 and 3.")
+        if self.schema_version not in (1, 2, 3, 4, 5):
+            raise ValueError("VisualObservation supports schema versions 1 through 5.")
         if self.coordinate_convention != COORDINATE_CONVENTION:
             raise ValueError("Unsupported image coordinate convention.")
         if self.image_width <= 0 or self.image_height <= 0:
             raise ValueError("image_width and image_height must be positive.")
-        region_ids = [region.region_id for region in self.regions]
+        region_ids = [region.region_id for region in self.all_regions]
         if len(region_ids) != len(set(region_ids)):
-            raise ValueError("VisualObservation.regions must have unique region_id values.")
-        for region in self.regions:
+            raise ValueError(
+                "VisualObservation regions must have unique region_id values across "
+                "regions and structural_context."
+            )
+        for region in self.all_regions:
             if (region.mask.image_width, region.mask.image_height) != (
                 self.image_width,
                 self.image_height,
@@ -94,17 +122,27 @@ class VisualObservation:
                     f"{unknown}: a group must not outlive the regions it groups."
                 )
 
+    # Expõe todas as regiões que a observação conhece, publicadas ou não.
+    # Existe porque validação de referência, audit e diagnóstico precisam ver a
+    # observação inteira: uma relação da rachadura para a parede que a hospeda
+    # não é uma referência pendurada só porque a parede não foi publicada.
+    @property
+    def all_regions(self) -> tuple[ObservedRegion, ...]:
+        """Retorna as regiões publicadas seguidas das de contexto estrutural."""
+        return self.regions + self.structural_context
+
     # Expõe o observation_id a partir de source, sem duplicar o campo no
     # próprio VisualObservation.
     @property
     def observation_id(self) -> str:
         return str(self.source.observation_id)
 
-    # Busca uma região pelo seu region_id. Usada por consumidores que
-    # recebem um region_id (ex: de uma relação) e precisam do objeto
-    # ObservedRegion completo.
+    # Busca uma região pelo seu region_id, publicada ou de contexto estrutural.
+    # Usada por consumidores que recebem um region_id (ex: de uma relação) e
+    # precisam do objeto ObservedRegion completo — inclusive quando o alvo é a
+    # superfície hospedeira, que por política não é publicada.
     def region_by_id(self, region_id: str) -> ObservedRegion:
-        for region in self.regions:
+        for region in self.all_regions:
             if region.region_id == region_id:
                 return region
         raise KeyError(f"No region with region_id={region_id!r}.")

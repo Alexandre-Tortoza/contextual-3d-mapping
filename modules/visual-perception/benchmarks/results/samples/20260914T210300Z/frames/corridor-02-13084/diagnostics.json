@@ -1,0 +1,243 @@
+{
+  "layout_version": "frames/3",
+  "frame_id": "corridor-02-13084",
+  "input_sha256": "def02686f107dd89953f66d766384623991fd302abe46d0375cb945d1db32621",
+  "latency_s": 68.55878279998433,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 3,
+  "proposal_count": 3,
+  "merged_proposal_count": 3,
+  "regions_with_multiple_proposals": 0,
+  "label_counts": [
+    [
+      "plain surface",
+      1
+    ],
+    [
+      "purple fabric",
+      1
+    ],
+    [
+      "sky",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "sky",
+      1
+    ],
+    [
+      "textile",
+      1
+    ],
+    [
+      "wall",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      2
+    ],
+    [
+      "stuff",
+      1
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 3,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 3,
+    "missing": 0,
+    "minimum": 0.9663432240486145,
+    "maximum": 0.9741420745849609,
+    "mean": 0.9693179329236349,
+    "median": 0.9674685001373291,
+    "distinct_values": 3,
+    "stddev": 0.003441977982242647,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "plain surface",
+    "dominant_fraction": 0.3333333333333333,
+    "distinct_labels": 3,
+    "dominant_category": "sky",
+    "dominant_category_fraction": 0.3333333333333333,
+    "distinct_categories": 3
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "indistinguishable",
+        6
+      ],
+      [
+        "supports",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 2,
+    "region_kind_contradictions": 1,
+    "reconciled_regions": 2,
+    "distinct_raw_labels": 3,
+    "distinct_canonical_concepts": 3,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 3,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 3
+  },
+  "published_region_count": 2,
+  "structural_context_count": 1,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      1
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-c131de38276a6972",
+      "label": "sky",
+      "region_kind": "thing",
+      "discovery_area": 98466,
+      "box_before": {
+        "x_min": 3.0,
+        "y_min": 4.0,
+        "x_max": 610.0,
+        "y_max": 239.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9741420745849609,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 6.451005058042938,
+      "model_mask_area": 99981,
+      "clipped_pixel_count": 1586,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 98183,
+          "box": {
+            "x_min": 4.0,
+            "y_min": 4.0,
+            "x_max": 604.0,
+            "y_max": 239.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 98183,
+          "refined_overlap": 98183,
+          "detector_box_overlap": 98183,
+          "distance_to_box_center_px": 0.3309138601260543
+        },
+        {
+          "component_id": 2,
+          "area": 212,
+          "box": {
+            "x_min": 589.0,
+            "y_min": 188.0,
+            "x_max": 610.0,
+            "y_max": 203.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 212,
+          "refined_overlap": 212,
+          "detector_box_overlap": 212,
+          "distance_to_box_center_px": 289.3594145172013
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 98183,
+      "area_ratio": 0.9971259114821359,
+      "area_reduction_ratio": 0.002874088517864082,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 4.0,
+        "y_min": 4.0,
+        "x_max": 604.0,
+        "y_max": 239.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-e916c4d586935f6a",
+      "label": "purple fabric",
+      "region_kind": "thing",
+      "discovery_area": 4679,
+      "box_before": {
+        "x_min": 591.0,
+        "y_min": 83.0,
+        "x_max": 640.0,
+        "y_max": 252.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9663432240486145,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.5009984330099542,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-0961ee06579d7580",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "plain surface"
+    }
+  ]
+}
