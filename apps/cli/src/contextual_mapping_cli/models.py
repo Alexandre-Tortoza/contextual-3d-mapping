@@ -49,6 +49,8 @@ class ExtractionRequest:
         keyframe_interval_s: espaçamento da amostragem.
         all_frames: seleciona todas as imagens da janela.
         camera_topic: tópico explícito ou ``None`` para detecção.
+        keyframe_offsets_s: posições explícitas após o início da janela, quando
+            a campanha não usa espaçamento regular.
     """
 
     bag: Path
@@ -58,6 +60,7 @@ class ExtractionRequest:
     keyframe_interval_s: float = 2.0
     all_frames: bool = False
     camera_topic: str | None = None
+    keyframe_offsets_s: tuple[float, ...] | None = None
 
 
 # Agrupa os artifacts produzidos na extração para evitar convenções de path

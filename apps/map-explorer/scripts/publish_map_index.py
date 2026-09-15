@@ -54,6 +54,13 @@ def read_context(artifact: Path) -> dict:
         raise ValueError(f"{artifact}: mapa contextual sem points ou regions.")
     if not isinstance(payload.get("observations"), list) or not payload["observations"]:
         raise ValueError(f"{artifact}: mapa contextual sem observações.")
+    # Uma run estruturalmente válida mas sem regiões ou pontos contextuais indica
+    # falha silenciosa da percepção ou da associação; o viewer só recebe contexto real.
+    if not payload["regions"]:
+        raise ValueError(f"{artifact}: mapa contextual sem regiões; a percepção não produziu contexto.")
+    contextual_points = payload.get("context_summary", {}).get("contextual_point_count")
+    if not isinstance(contextual_points, int) or contextual_points <= 0:
+        raise ValueError(f"{artifact}: mapa contextual sem pontos contextuais associados.")
     return payload
 
 
@@ -71,8 +78,13 @@ def preview_files(artifact: Path, payload: dict) -> dict[Path, Path]:
     previews = {}
     source_directory = artifact.parent.resolve()
     for observation in payload["observations"]:
-        for key in ("raw_image_uri", "overlay_image_uri"):
-            uri = observation.get(key)
+        debug_assets = observation.get("debug_assets", {})
+        if not isinstance(debug_assets, dict) or not all(isinstance(uri, str) for uri in debug_assets.values()):
+            raise ValueError(f"{artifact}: debug_assets inválido.")
+        for key, uri in (
+            *( (key, observation.get(key)) for key in ("raw_image_uri", "overlay_image_uri") ),
+            *( (f"debug_assets.{name}", value) for name, value in debug_assets.items() ),
+        ):
             if not isinstance(uri, str) or not uri:
                 raise ValueError(f"{artifact}: observação sem {key}.")
             parsed = urlsplit(uri)

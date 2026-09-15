@@ -129,6 +129,7 @@ class Workflows:
             keyframe_interval_s=request.keyframe_interval_s,
             camera_topic=selected_topic.name,
             all_frames=request.all_frames,
+            keyframe_offsets_s=request.keyframe_offsets_s,
             recording_id=request.bag.stem,
         )
         required_bytes = len(window.keyframes) * 1_000_000
@@ -195,6 +196,7 @@ class Workflows:
         frames_dir: Path,
         sequence_masks: Path | None,
         frame_ids: tuple[str, ...] = (),
+        reasoning_backend: str | None = None,
     ) -> Path:
         """Executa visual-perception sobre todos os PNGs de um diretório.
 
@@ -202,6 +204,7 @@ class Workflows:
             frames_dir: imagens extraídas.
             sequence_masks: geometria do rig ou ``None`` para bag genérico.
             frame_ids: seleção explícita ou tupla vazia para todos.
+            reasoning_backend: backend do reasoner; ``None`` mantém o da referência.
         Retorna:
             diretório do novo run.
         Levanta:
@@ -230,12 +233,41 @@ class Workflows:
             command.extend(("--sequence-masks", str(sequence_masks.resolve())))
         for frame_id in frame_ids:
             command.extend(("--frame-id", frame_id))
+        if reasoning_backend is not None:
+            command.extend(("--reasoning-backend", reasoning_backend))
         self.runner.run(command, cwd=module)
         created = set(self.project.available_runs()) - before
         candidates = created or set(self.project.available_runs())
         if not candidates:
             raise FileNotFoundError("visual-perception terminou sem publicar um run")
         return max(candidates, key=lambda path: path.stat().st_mtime_ns)
+
+    # Recusa uma run de percepção que terminou sem erro de processo, mas falhou
+    # por frame ou não descobriu regiões. Compor sobre ela publicaria mapas sem
+    # contexto; a campanha chama esta validação antes de qualquer composição.
+    def validate_perception_run(self, visual_run: Path) -> None:
+        """Confere que todos os frames da run de percepção produziram propostas.
+
+        Argumentos:
+            visual_run: diretório publicado por visual-perception.
+        Levanta:
+            ValueError: se não houver frames ou se algum frame falhou, reprovou
+                a auditoria ou não teve propostas de região.
+        """
+        manifest = json.loads((visual_run / "manifest.json").read_text(encoding="utf-8"))
+        frames = manifest.get("frames") or []
+        if not frames:
+            raise ValueError(f"run de percepção sem frames: {visual_run}")
+        invalid = [
+            str(frame.get("frame_id"))
+            for frame in frames
+            if frame.get("failed") or not frame.get("audit_passed") or not frame.get("proposal_count")
+        ]
+        if invalid:
+            raise ValueError(
+                f"percepção inválida em {len(invalid)}/{len(frames)} frames de {visual_run} "
+                f"(falha, auditoria reprovada ou zero propostas): {', '.join(invalid)}"
+            )
 
     # Executa o alvo existente de FAST-LIO com as variáveis do segmento. Só é
     # chamado quando o bag possui um DatasetProfile completo.
@@ -274,6 +306,8 @@ class Workflows:
         visual_run: Path,
         visibility_mode: str = "measured_surfaces",
         run_name: str | None = None,
+        odometry: Path | None = None,
+        publish: bool = True,
     ) -> Path:
         """Compõe o artifact contextual de um segmento conhecido.
 
@@ -285,6 +319,10 @@ class Workflows:
             visibility_mode: superfícies medidas ou uma ablação de células explícita.
             run_name: sufixo legível da run publicada; quando ausente, usa o
                 ``segment_id`` geométrico.
+            odometry: trajetória a usar para poses; necessária quando a
+                geometria compartilhada vem de uma campanha global.
+            publish: ``False`` adia a publicação para quem compõe um conjunto
+                e só deve expor ao viewer depois de todas as composições.
         Retorna:
             artifact contextual publicado.
         """
@@ -309,6 +347,10 @@ class Workflows:
             f"M1_CONTEXT_ARTIFACT={destination}",
             f"M1_VISIBILITY_MODE={visibility_mode}",
         ]
+        if odometry is not None:
+            if not odometry.is_file():
+                raise FileNotFoundError(f"odometria ausente: {odometry}")
+            command.append(f"M1_ODOMETRY={odometry}")
         self.runner.run(command, cwd=self.project.root)
         if not destination.is_file():
             raise FileNotFoundError(f"composição não publicou {destination}")
@@ -321,7 +363,8 @@ class Workflows:
             "window": "window.json", "perception_manifest": "perception-manifest.json",
             "visibility_mode": visibility_mode,
         }, indent=2), encoding="utf-8")
-        self.publish_context(destination, run_id=run_id)
+        if publish:
+            self.publish_context(destination, run_id=run_id)
         return destination
 
     # Delega a cópia atômica ao publisher dono do formato servido. A mesma

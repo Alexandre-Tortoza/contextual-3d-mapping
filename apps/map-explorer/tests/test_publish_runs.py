@@ -20,9 +20,9 @@ def context_artifact(directory: Path) -> Path:
     artifact = directory / "source.json"
     artifact.write_text(json.dumps({
         "schema_version": 2, "artifact_type": "contextual_rgb_lidar_slice",
-        "map_id": "shared-map", "map_frame": "map", "points": [], "regions": [],
+        "map_id": "shared-map", "map_frame": "map", "points": [], "regions": [{"region_id": "region-1"}],
         "observations": [{"raw_image_uri": "source-assets/raw.png", "overlay_image_uri": "source-assets/overlay.png"}],
-        "context_summary": {"visual_observation_count": 1, "contextual_point_count": 0},
+        "context_summary": {"visual_observation_count": 1, "contextual_point_count": 1},
     }))
     return artifact
 
@@ -56,6 +56,26 @@ def test_runs_preserve_context_and_previews(tmp_path: Path) -> None:
     assert consolidated[0]["url"].startswith("/maps/consolidated/")
 
 
+# O debug é evidência da mesma run e precisa sobreviver à cópia imutável do
+# publisher para que o inspector não aponte de volta ao diretório de trabalho.
+def test_publication_copies_declared_debug_assets(tmp_path: Path) -> None:
+    """Publica imagem e diagnóstico de debug declarados por uma observação."""
+    artifact = context_artifact(tmp_path / "input")
+    debug = artifact.parent / "source-assets" / "DEBUG"
+    debug.mkdir()
+    (debug / "sam3.png").write_bytes(b"sam3")
+    (debug / "diagnostics.json").write_text("{}")
+    payload = json.loads(artifact.read_text())
+    payload["observations"][0]["debug_assets"] = {
+        "sam3": "source-assets/DEBUG/sam3.png",
+        "diagnostics": "source-assets/DEBUG/diagnostics.json",
+    }
+    artifact.write_text(json.dumps(payload))
+    saved = save_run(tmp_path / "public", artifact, run_id="debug")
+    assert (saved / "source-assets/DEBUG/sam3.png").read_bytes() == b"sam3"
+    assert (saved / "source-assets/DEBUG/diagnostics.json").read_text() == "{}"
+
+
 # Reabrir uma execução não pode duplicar a run nem autorizar sobrescrita quando
 # uma inferência posterior reaproveita o nome com conteúdo diferente.
 def test_repeat_is_idempotent_and_changed_content_cannot_overwrite(tmp_path: Path) -> None:
@@ -83,6 +103,27 @@ def test_geometry_and_missing_previews_are_not_published(tmp_path: Path) -> None
         save_run(public, artifact)
     artifact.write_text(json.dumps({"schema_version": 1, "map_id": "geometry"}))
     with pytest.raises(ValueError, match="contexto"):
+        save_run(public, artifact)
+    assert not public.exists()
+
+
+# Regressão da campanha 10x4fps: o SAM3 não detectou nada, e o mapa sem regiões
+# nem pontos contextuais foi publicado como se fosse uma run válida.
+@pytest.mark.parametrize(
+    ("regions", "contextual_point_count", "message"),
+    [([], 1, "sem regiões"), ([{"region_id": "region-1"}], 0, "sem pontos contextuais")],
+)
+def test_runs_without_context_are_not_published(
+    tmp_path: Path, regions: list, contextual_point_count: int, message: str,
+) -> None:
+    """Recusa mapas que passaram pelo pipeline sem produzir contexto semântico."""
+    artifact = context_artifact(tmp_path / "input")
+    payload = json.loads(artifact.read_text())
+    payload["regions"] = regions
+    payload["context_summary"]["contextual_point_count"] = contextual_point_count
+    artifact.write_text(json.dumps(payload))
+    public = tmp_path / "public"
+    with pytest.raises(ValueError, match=message):
         save_run(public, artifact)
     assert not public.exists()
 

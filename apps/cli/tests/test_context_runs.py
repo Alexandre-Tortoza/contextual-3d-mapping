@@ -33,7 +33,7 @@ def publication_project(tmp_path: Path) -> Project:
 
 # Fornece um mapa contextual mínimo com proveniência de imagens independente
 # para testar persistência, sem carregar a geometria completa do dataset.
-def write_context(artifact: Path, count: int = 0) -> None:
+def write_context(artifact: Path, count: int = 1) -> None:
     """Materializa mapa e previews relativos no destino informado."""
     assets = artifact.parent / "context-assets"
     assets.mkdir(parents=True)
@@ -41,7 +41,7 @@ def write_context(artifact: Path, count: int = 0) -> None:
     (assets / "overlay.png").write_bytes(b"overlay")
     artifact.write_text(json.dumps({
         "schema_version": 2, "artifact_type": "contextual_rgb_lidar_slice",
-        "map_id": "shared-geometry", "map_frame": "map", "points": [], "regions": [],
+        "map_id": "shared-geometry", "map_frame": "map", "points": [], "regions": [{"region_id": "region-1"}],
         "observations": [{"raw_image_uri": "context-assets/raw.png", "overlay_image_uri": "context-assets/overlay.png"}],
         "context_summary": {"contextual_point_count": count},
     }), encoding="utf-8")

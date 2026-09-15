@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -11,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .models import CostEstimate, DatasetProfile, ExtractionRequest, ExtractionResult
+from .campaign import load_campaign
 from .project import Project
 from .workflows import Workflows
 
@@ -133,6 +135,7 @@ def extract_command(
     duration_s: Annotated[float | None, typer.Option(min=0.0, help="Duração do trecho.")] = None,
     whole_bag: Annotated[bool, typer.Option(help="Usa todo o stream RGB.")] = False,
     interval_s: Annotated[float, typer.Option(min=0.001, help="Espaçamento dos keyframes.")] = 2.0,
+    keyframe_offset_s: Annotated[list[float] | None, typer.Option(help="Posição explícita após o início; pode ser repetida.")] = None,
     all_frames: Annotated[bool, typer.Option(help="Extrai todas as imagens da janela.")] = False,
     camera_topic: Annotated[str | None, typer.Option(help="Tópico RGB; detectado quando ausente.")] = None,
     confirm_all_frames: Annotated[
@@ -153,6 +156,7 @@ def extract_command(
             keyframe_interval_s=interval_s,
             all_frames=all_frames,
             camera_topic=camera_topic,
+            keyframe_offsets_s=None if keyframe_offset_s is None else tuple(keyframe_offset_s),
         )
         _extract_request(workflows, request, confirm_all_frames)
     except Exception as error:
@@ -174,6 +178,78 @@ def perception_command(
         _show_estimate("Visual-perception", workflows.estimate_perception(count))
         run = workflows.run_perception(frames_dir, sequence_masks, tuple(frame_id or ()))
         console.print(f"[green]Run publicado:[/green] {run}")
+    except Exception as error:
+        _fail(error)
+
+
+# Executa a campanha declarada como uma única run visual e uma composição por
+# trecho sobre uma geometria já global. A preparação da geometria permanece explícita
+# porque ela exige FAST-LIO e registro, operações caras e dependentes do rig.
+@app.command("campaign")
+def campaign_command(
+    bag: Annotated[Path, typer.Option(exists=True, dir_okay=False, help="Rosbag corridor-02.")],
+    global_segment_id: Annotated[str, typer.Option(help="Segment-id do slice e odometria globais.")],
+    config: Annotated[Path, typer.Option(help="Configuração TOML da campanha.")] = Path("apps/cli/configs/campaigns/corridor-02-context-campaign.toml"),
+    root: Annotated[Path | None, typer.Option(hidden=True)] = None,
+) -> None:
+    """Extrai os keyframes dos trechos, roda percepção e publica um contexto por trecho."""
+    try:
+        workflows = _workflows(root)
+        campaign = load_campaign(config)
+        artifacts = workflows.project.root / "artifacts"
+        global_geometry = artifacts / f"{global_segment_id}.json"
+        global_odometry = artifacts / f"{global_segment_id}-odometry.csv"
+        if not global_geometry.is_file() or not global_odometry.is_file():
+            raise FileNotFoundError(
+                "a campanha exige o slice e a odometria globais: "
+                f"{global_geometry} e {global_odometry}"
+            )
+        combined = artifacts / campaign.campaign_id / "frames"
+        if combined.exists():
+            raise FileExistsError(f"a campanha já possui frames em {combined}")
+        combined.mkdir(parents=True)
+        windows: list[tuple[str, Path]] = []
+        for item in campaign.segments:
+            segment_id = f"{campaign.campaign_id}-{item.segment_id}"
+            result = workflows.extract(ExtractionRequest(
+                bag=bag.resolve(), segment_id=segment_id, start_s=item.start_s,
+                duration_s=campaign.duration_s, keyframe_offsets_s=campaign.keyframe_offsets_s,
+            ))
+            windows.append((item.segment_id, result.window))
+            for frame in result.frames_dir.glob("*.png"):
+                os.symlink(frame.resolve(), combined / frame.name)
+                provenance = frame.with_suffix(".json")
+                if provenance.is_file():
+                    os.symlink(provenance.resolve(), combined / provenance.name)
+        visual_run = workflows.run_perception(
+            combined, _profile(workflows, "corridor-02").sequence_masks, reasoning_backend=campaign.reasoning_backend
+        )
+        workflows.validate_perception_run(visual_run)
+        # O viewer só recebe a campanha depois que todos os trechos compuseram,
+        # para que uma falha no meio não deixe um conjunto parcial publicado.
+        contexts = [
+            workflows.compose(
+                _profile(workflows, "corridor-02"), segment_id=global_segment_id,
+                window=window, visual_run=visual_run, run_name=f"{campaign.campaign_id}-{segment_name}",
+                odometry=global_odometry, publish=False,
+            )
+            for segment_name, window in windows
+        ]
+        # Cada run é publicada só se o publisher a aceitar; uma recusada (sem regiões
+        # ou pontos contextuais) fica em artifacts/runs para diagnóstico e não impede
+        # as demais, que são individualmente completas.
+        refused: list[tuple[str, str]] = []
+        for context in contexts:
+            try:
+                workflows.publish_context(context, run_id=context.parent.name)
+            except Exception as error:
+                refused.append((context.parent.name, str(error).splitlines()[0]))
+        published = len(contexts) - len(refused)
+        console.print(f"[green]Campanha publicada:[/green] {campaign.campaign_id} ({published}/{len(contexts)} runs)")
+        for run_id, reason in refused:
+            console.print(f"[yellow]Run não publicada:[/yellow] {run_id}: {reason}")
+        if not published:
+            raise RuntimeError("nenhuma run da campanha passou na validação do publisher")
     except Exception as error:
         _fail(error)
 

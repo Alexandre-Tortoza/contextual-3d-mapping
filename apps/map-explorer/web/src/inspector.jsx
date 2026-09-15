@@ -214,6 +214,29 @@ function ObservationPreview({ observation, region, pixel, artifactUrl }) {
   );
 }
 
+// Expõe cada camada persistida pelo pipeline sem presumir um conjunto fechado
+// de backends. Assim SAM3, grounding e novos estágios permanecem auditáveis
+// pelo mesmo contract ``debug_assets``.
+function DebugAssets({ observation, artifactUrl }) {
+  const entries = Object.entries(observation?.debug_assets ?? {});
+  const images = entries.filter(([, uri]) => /\.(png|jpe?g|webp)$/i.test(uri));
+  const documents = entries.filter(([, uri]) => /\.json$/i.test(uri));
+  const [selected, setSelected] = useState(images[0]?.[0] ?? null);
+  useEffect(() => setSelected(images[0]?.[0] ?? null), [observation?.observation_id]);
+  if (!entries.length) return null;
+  const selectedUri = images.find(([name]) => name === selected)?.[1];
+  return (
+    <div className="inspector-block">
+      <h3>Debug do pipeline</h3>
+      {images.length > 0 && <select value={selected ?? ""} onChange={(event) => setSelected(event.target.value)} aria-label="Estágio de debug">
+        {images.map(([name]) => <option key={name} value={name}>{name}</option>)}
+      </select>}
+      {selectedUri && <img className="observation-image" src={resolveAsset(selectedUri, artifactUrl)} alt={`Debug: ${selected}`} />}
+      {documents.length > 0 && <p className="technical-line">{documents.map(([name, uri]) => <a key={name} href={resolveAsset(uri, artifactUrl)} target="_blank" rel="noreferrer">{name}</a>)}</p>}
+    </div>
+  );
+}
+
 // Resume os claims do frame para dar contexto global sem confundi-los com a
 // classificação localizada da região selecionada.
 function SceneClaims({ claims }) {
@@ -350,7 +373,10 @@ export function Inspector({
             <SurfaceEvidence evidence={displayedEvidence} />
 
             {evidence && (
-              <ObservationPreview observation={observation} region={region} pixel={displayedEvidence.pixel} artifactUrl={artifactUrl} />
+              <>
+                <ObservationPreview observation={observation} region={region} pixel={displayedEvidence.pixel} artifactUrl={artifactUrl} />
+                <DebugAssets observation={observation} artifactUrl={artifactUrl} />
+              </>
             )}
 
             <FusionSummary evidence={evidence} activeContribution={activeContribution} onSelectContribution={setActiveContribution} />

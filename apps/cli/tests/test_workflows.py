@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from contextual_mapping_cli.models import ExtractionRequest
 from contextual_mapping_cli.processes import ProcessRunner
 from contextual_mapping_cli.project import Project
@@ -83,3 +84,41 @@ def test_run_perception_desabilita_mascara_para_bag_generico(tmp_path: Path) -> 
     assert "--no-sequence-masks" in runner.command
     assert runner.cwd == module
     assert run.name == "run-test"
+    assert "--reasoning-backend" not in runner.command
+
+
+# O backend da campanha chega ao harness como opção explícita.
+def test_run_perception_forwards_the_reasoning_backend(tmp_path: Path) -> None:
+    """Repassa --reasoning-backend quando a campanha declara um backend."""
+    root = _project_root(tmp_path)
+    module = root / "modules" / "visual-perception"
+    python = module / ".venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("", encoding="utf-8")
+    frames = root / "artifacts" / "frames"
+    frames.mkdir()
+    (frames / "corridor-02-00000.png").write_bytes(b"png")
+    runner = _PerceptionRunner()
+    Workflows(Project(root), runner).run_perception(frames, None, reasoning_backend="gemini_robotics_er")
+    index = runner.command.index("--reasoning-backend")
+    assert runner.command[index + 1] == "gemini_robotics_er"
+
+
+# Regressão da campanha 10x4fps: o SAM3 terminou com audit=pass e zero propostas
+# em todos os frames, e a composição seguiu publicando mapas sem contexto.
+def test_validate_perception_run_recusa_frames_sem_propostas(tmp_path: Path) -> None:
+    """Aceita uma run com propostas em todos os frames e recusa a que tem frame vazio."""
+    workflows = Workflows(Project(_project_root(tmp_path)))
+    visual_run = tmp_path / "run"
+    visual_run.mkdir()
+    healthy = {"frame_id": "ok", "failed": False, "audit_passed": True, "proposal_count": 12}
+    manifest = visual_run / "manifest.json"
+    manifest.write_text(json.dumps({"frames": [healthy]}), encoding="utf-8")
+    workflows.validate_perception_run(visual_run)
+    empty = {**healthy, "frame_id": "vazio", "proposal_count": 0}
+    manifest.write_text(json.dumps({"frames": [healthy, empty]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="1/2 frames.*vazio"):
+        workflows.validate_perception_run(visual_run)
+    manifest.write_text(json.dumps({"frames": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="sem frames"):
+        workflows.validate_perception_run(visual_run)

@@ -1,0 +1,57 @@
+# Campanha curta e auditável para comparar SAM3, Qwen e a composição 3D.
+# Cada janela tem um segundo e quatro posições explícitas: início, 1/4, 2/4 e fim.
+campaign_id = "corridor-02-context-10x4fps"
+duration_s = 1.0
+keyframe_offsets_s = [0.0, 0.25, 0.5, 1.0]
+voxel_size_m = 0.05
+max_viewer_points = 150000
+
+[[segments]]
+id = "indoor-01"
+environment = "indoor"
+start_s = 1.0
+
+[[segments]]
+id = "indoor-02"
+environment = "indoor"
+start_s = 60.0
+
+[[segments]]
+id = "indoor-03"
+environment = "indoor"
+start_s = 120.0
+
+[[segments]]
+id = "indoor-04"
+environment = "indoor"
+start_s = 180.0
+
+[[segments]]
+id = "indoor-05"
+environment = "indoor"
+start_s = 225.0
+
+[[segments]]
+id = "outdoor-01"
+environment = "outdoor"
+start_s = 270.0
+
+[[segments]]
+id = "outdoor-02"
+environment = "outdoor"
+start_s = 535.0
+
+[[segments]]
+id = "indoor-06"
+environment = "indoor"
+start_s = 625.0
+
+[[segments]]
+id = "indoor-07"
+environment = "indoor"
+start_s = 715.0
+
+[[segments]]
+id = "indoor-08"
+environment = "indoor"
+start_s = 805.0

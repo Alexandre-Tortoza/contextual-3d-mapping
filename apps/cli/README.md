@@ -77,6 +77,32 @@ apps/cli/.venv/bin/contextual-3d-mapping-cli extract \
   --confirm-all-frames corridor-02-full-all
 ```
 
+## Campanha de cenários
+
+`configs/campaigns/corridor-02-context-campaign.toml` declara dez janelas de um segundo:
+oito indoor e duas outdoor. Cada janela usa exatamente os frames em 0%, 25%,
+50% e 100%, totalizando quarenta imagens. O comando abaixo extrai os frames,
+executa uma única run de `visual-perception` com SAM3 e Qwen e publica as dez
+composições sobre a mesma geometria global:
+
+```bash
+apps/cli/.venv/bin/contextual-3d-mapping-cli campaign \
+  --bag datasets/raw/corridor-02/corridor-02.bag \
+  --global-segment-id corridor-02-global
+```
+
+Antes dele, `artifacts/corridor-02-global.json` e
+`artifacts/corridor-02-global-odometry.csv` devem existir e representar o
+mesmo frame global. O viewer consolida automaticamente as dez runs porque elas
+referenciam a mesma geometria. Cada observação publicada inclui todas as
+camadas de debug disponíveis do pipeline e os diagnósticos JSON.
+
+Gere ambos com:
+
+```bash
+make corridor-02-global-map PYTHON=modules/visual-perception/.venv/bin/python
+```
+
 Os processos longos rodam em foreground, transmitem seus logs e são encerrados
 de forma segura com `Ctrl+C`.
 
