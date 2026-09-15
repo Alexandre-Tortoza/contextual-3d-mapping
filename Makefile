@@ -19,11 +19,14 @@ M1_ODOMETRY ?= artifacts/$(SEGMENT_ID)-odometry.csv
 M1_MAX_POINTS ?= 150000
 M1_VISIBILITY_MODE ?= measured_surfaces
 M1_VISUAL_RUN ?= modules/visual-perception/benchmarks/results/samples/old/20260909T135428Z
+GLOBAL_SEGMENT_ID ?= corridor-02-global
+GLOBAL_PCD_SOURCE ?= artifacts/$(GLOBAL_SEGMENT_ID).pcd
+GLOBAL_PCD_ARTIFACT ?= artifacts/$(GLOBAL_SEGMENT_ID).json
 MAP_EXPLORER_ARTIFACT ?=
 MAP_EXPLORER_RUN_ID ?=
 M1_PYTHONPATH := $(CURDIR)/contracts:$(CURDIR)/modules/state-estimation/src:$(CURDIR)/modules/geometric-map/src:$(CURDIR)/modules/sensor-association/src:$(CURDIR)/modules/semantic-fusion/src:$(CURDIR)/modules/semantic-map/src:$(CURDIR)/modules/visual-perception/src:$(CURDIR)/apps/mapping-runtime/src
 
-.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-map-from-window corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-publish map-explorer-serve
+.PHONY: verify test lint typecheck corridor-02-window corridor-02-map corridor-02-map-from-window corridor-02-global-map corridor-02-context m1-demo m1-pcd-slice m1-test map-explorer-install map-explorer-test map-explorer-build map-explorer-publish map-explorer-serve
 
 verify: test lint typecheck
 
@@ -72,6 +75,23 @@ corridor-02-map-from-window:
 		/workspace/$(M1_PCD_SOURCE) \
 		"$$offset"
 	$(MAKE) m1-pcd-slice PYTHON="$(PYTHON)"
+
+# Processa a rosbag completa uma única vez. A ausência de ``--duration`` no
+# script preserva toda a trajetória e cria o frame global comum à campanha.
+corridor-02-global-map:
+	docker compose --profile ros1 run --rm fastlio-ros1 bash \
+		/workspace/apps/mapping-runtime/scripts/run_fastlio_ros1_segment.sh \
+		/workspace/datasets/raw/corridor-02/corridor-02.bag \
+		/workspace/modules/state-estimation/configs/corridor-02-velodyne.yaml \
+		whole \
+		/workspace/$(GLOBAL_PCD_SOURCE) \
+		0
+	PYTHONPATH="$(M1_PYTHONPATH)" $(RESOLVED_PYTHON) -m mapping_runtime pcd-slice \
+		"$(GLOBAL_PCD_SOURCE)" \
+		--output "$(GLOBAL_PCD_ARTIFACT)" \
+		--map-id "$(GLOBAL_SEGMENT_ID)" \
+		--map-frame map \
+		--max-points $(M1_MAX_POINTS)
 
 corridor-02-context:
 	PYTHONPATH="$(M1_PYTHONPATH)" $(RESOLVED_PYTHON) -m mapping_runtime corridor-02-context \

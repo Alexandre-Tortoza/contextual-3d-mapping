@@ -88,6 +88,13 @@ def _parser() -> argparse.ArgumentParser:
         default=0.0,
         help="início da janela, em segundos após o primeiro frame RGB",
     )
+    window.add_argument(
+        "--keyframe-offset-s",
+        action="append",
+        type=float,
+        default=None,
+        help="posição explícita de keyframe após o início; pode ser repetida",
+    )
     duration = window.add_mutually_exclusive_group(required=True)
     duration.add_argument("--duration-s", type=float, help="duração da janela")
     duration.add_argument(
@@ -191,6 +198,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             lead_s=options.lead_s,
             camera_topic=options.camera_topic,
             all_frames=options.all_frames,
+            keyframe_offsets_s=None if options.keyframe_offset_s is None else tuple(options.keyframe_offset_s),
             recording_id=options.recording_id,
         )
         if options.output is not None:

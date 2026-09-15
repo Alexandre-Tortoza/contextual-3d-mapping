@@ -56,6 +56,30 @@ _REJECTION_PRIORITY = (
 )
 
 
+# Copia o layout auditável produzido por visual-perception para a run
+# contextual. Existe porque o publisher só pode servir arquivos internos à run;
+# manter URI para o diretório de benchmark quebraria a inspeção após limpeza.
+def _copy_frame_debug(source: Path, assets: Path, frame_id: str) -> dict[str, str]:
+    """Copia assets de debug de um frame e retorna URIs relativas à run.
+
+    Argumentos:
+        source: diretório ``frames/<frame-id>`` da percepção.
+        assets: diretório de assets da composição contextual.
+        frame_id: identidade estável do frame auditado.
+    Retorna:
+        mapa de artefatos de debug, indexado pelo path relativo do frame.
+    """
+    debug_source = source / "DEBUG"
+    if not debug_source.is_dir():
+        return {}
+    destination = assets / f"{frame_id}-debug"
+    shutil.copytree(debug_source, destination, dirs_exist_ok=True)
+    return {
+        str(path.relative_to(debug_source)): f"{assets.name}/{destination.name}/{path.relative_to(debug_source)}"
+        for path in sorted(debug_source.rglob("*")) if path.is_file()
+    }
+
+
 # Agrupa os arquivos de um keyframe visual e sua identidade temporal. As três
 # identidades vêm de `mapping-runtime bag-window`, porque o bag preserva dois
 # relógios e nenhuma delas é derivável das outras.
@@ -788,6 +812,12 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             overlay_destination = assets / f"{keyframe.frame_id}-regions.png"
             shutil.copyfile(keyframe.raw_image, raw_destination)
             shutil.copyfile(keyframe.overlay_image, overlay_destination)
+            frame_debug = _copy_frame_debug(keyframe.visual_observation.parent, assets, keyframe.frame_id)
+            diagnostics_source = keyframe.visual_observation.parent / "diagnostics.json"
+            diagnostics_destination = assets / f"{keyframe.frame_id}-diagnostics.json"
+            if diagnostics_source.is_file():
+                shutil.copyfile(diagnostics_source, diagnostics_destination)
+                frame_debug["diagnostics.json"] = f"{assets.name}/{diagnostics_destination.name}"
             observations.append(
                 {
                     "observation_id": observation_id,
@@ -800,6 +830,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "height": rgb.height,
                     "raw_image_uri": f"{assets.name}/{raw_destination.name}",
                     "overlay_image_uri": f"{assets.name}/{overlay_destination.name}",
+                    "debug_assets": frame_debug,
                     "scene_claims": [
                         {
                             "kind": claim.get("kind"),

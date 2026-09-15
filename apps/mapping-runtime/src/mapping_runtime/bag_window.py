@@ -187,6 +187,7 @@ def resolve_bag_window(
     lead_s: float = 3.0,
     camera_topic: str = "/camera_1/image_raw",
     all_frames: bool = False,
+    keyframe_offsets_s: tuple[float, ...] | None = None,
     recording_id: str | None = None,
 ) -> BagWindow:
     """Resolve uma janela temporal e seus keyframes RGB em uma rosbag.
@@ -199,6 +200,8 @@ def resolve_bag_window(
         lead_s: prefixo reproduzido antes da janela para o estimator convergir.
         camera_topic: tópico RGB usado como referência temporal.
         all_frames: seleciona todas as imagens da janela em vez de amostrar.
+        keyframe_offsets_s: posições explícitas, em segundos após o início da
+            janela. Quando informadas, substituem ``keyframe_interval_s``.
         recording_id: identidade estável da gravação; usa o stem do bag quando ausente.
     Retorna:
         janela resolvida com offset de reprodução e keyframes identificados.
@@ -209,6 +212,15 @@ def resolve_bag_window(
 
     if start_s < 0 or (duration_s is not None and duration_s < 0):
         raise ValueError("start_s and duration_s must be non-negative.")
+    if keyframe_offsets_s is not None:
+        if all_frames:
+            raise ValueError("keyframe_offsets_s and all_frames are mutually exclusive.")
+        if duration_s is None:
+            raise ValueError("keyframe_offsets_s requires a finite duration_s.")
+        if not keyframe_offsets_s or any(offset < 0 or offset > duration_s for offset in keyframe_offsets_s):
+            raise ValueError("keyframe_offsets_s must be non-empty and stay inside duration_s.")
+        if tuple(sorted(keyframe_offsets_s)) != keyframe_offsets_s or len(set(keyframe_offsets_s)) != len(keyframe_offsets_s):
+            raise ValueError("keyframe_offsets_s must be strictly increasing.")
     with AnyReader([bag]) as reader:
         connections = [item for item in reader.connections if item.topic == camera_topic]
         if not connections:
@@ -247,8 +259,10 @@ def resolve_bag_window(
                     break
                 keyframes.append(Keyframe(sequence_index, header_timestamp_ns, bag_timestamp_ns))
         else:
-            targets = keyframe_targets_ns(
-                start_header_ns, duration_ns, int(keyframe_interval_s * 1_000_000_000)
+            targets = (
+                tuple(start_header_ns + int(offset * 1_000_000_000) for offset in keyframe_offsets_s)
+                if keyframe_offsets_s is not None
+                else keyframe_targets_ns(start_header_ns, duration_ns, int(keyframe_interval_s * 1_000_000_000))
             )
             keyframes = []
             for target in targets:
