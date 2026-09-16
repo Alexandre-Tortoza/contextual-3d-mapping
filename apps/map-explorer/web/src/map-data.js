@@ -10,6 +10,11 @@ const DIMMED_COLOR = [70, 74, 84];
 const CONTEXT_ARTIFACT_TYPE = "contextual_rgb_lidar_slice";
 const CONSOLIDATED_ARTIFACT_TYPE = "consolidated_contextual_map";
 
+// Única versão de schema que o viewer lê. O backend não gera nem aceita mais
+// versões anteriores, e este projeto não sustenta leitura tolerante de
+// formatos antigos — um artifact fora dessa versão é regerado, não migrado.
+const SUPPORTED_SCHEMA_VERSION = 3;
+
 // Substantivos estruturais genéricos espelhados de
 // modules/visual-perception/src/visual_perception/domain/structural_consistency.py
 // INHERENTLY_STUFF_HEAD_NOUNS + complementos em contextual_evidence.py:89-98.
@@ -64,30 +69,56 @@ const NEUTRAL_LABELS = Object.freeze({
 // Valida a fronteira mínima consumida pelo viewer antes de qualquer estado de
 // câmera ou renderização ser criado.
 export function validateSlice(value) {
-  if (!Number.isInteger(value?.schema_version)) {
-    throw new Error("O artifact precisa declarar schema_version inteiro.");
+  if (value?.schema_version !== SUPPORTED_SCHEMA_VERSION) {
+    throw new Error(`O artifact precisa declarar schema_version ${SUPPORTED_SCHEMA_VERSION}.`);
   }
   if (typeof value.map_id !== "string" || typeof value.map_frame !== "string") {
     throw new Error("O artifact precisa declarar map_id e map_frame.");
   }
-  if (!Array.isArray(value.points)) {
-    throw new Error("O artifact precisa conter uma lista points.");
+  const hasGeometryManifest = Array.isArray(value.geometry_manifest);
+  if (hasGeometryManifest) {
+    value.geometry_manifest.forEach((chunk, index) => {
+      if (typeof chunk?.url !== "string" || !chunk.url) {
+        throw new Error(`O chunk ${index} do geometry_manifest não possui url.`);
+      }
+      if (!Number.isInteger(chunk.point_count) || chunk.point_count < 0) {
+        throw new Error(`O chunk ${index} do geometry_manifest não possui point_count válido.`);
+      }
+    });
+  } else {
+    if (!Array.isArray(value.points)) {
+      throw new Error("O artifact precisa conter uma lista points ou um geometry_manifest.");
+    }
+    value.points.forEach((point, index) => {
+      if (!Array.isArray(point.coordinates_m) || point.coordinates_m.length !== 3) {
+        throw new Error(`O ponto ${index} não possui coordinates_m tridimensional.`);
+      }
+      if (point.coordinates_m.some((coordinate) => !Number.isFinite(coordinate))) {
+        throw new Error(`O ponto ${index} possui coordenadas não finitas.`);
+      }
+    });
   }
-  value.points.forEach((point, index) => {
-    if (!Array.isArray(point.coordinates_m) || point.coordinates_m.length !== 3) {
-      throw new Error(`O ponto ${index} não possui coordinates_m tridimensional.`);
-    }
-    if (point.coordinates_m.some((coordinate) => !Number.isFinite(coordinate))) {
-      throw new Error(`O ponto ${index} possui coordenadas não finitas.`);
-    }
-  });
   if (value.artifact_type == null) return value;
   if (![CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(value.artifact_type)) {
     throw new Error("O artifact precisa ser uma run contextual ou um mapa consolidado.");
   }
+  if (hasGeometryManifest && value.artifact_type !== CONSOLIDATED_ARTIFACT_TYPE) {
+    throw new Error("geometry_manifest só é válido para mapas consolidados.");
+  }
   if (!Array.isArray(value.observations) || !Array.isArray(value.regions)) {
     throw new Error("O artifact contextual precisa declarar observations e regions.");
   }
+  // Checagem leve e não bloqueante: só a forma do envelope importa aqui. As
+  // etapas dentro de debug_manifest não são validadas, para que uma etapa
+  // nova publicada pelo pipeline não quebre a abertura do artifact antes do
+  // frontend aprender seu nome.
+  value.observations.forEach((observation, index) => {
+    const manifest = observation?.debug_manifest;
+    if (manifest === undefined) return;
+    if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+      throw new Error(`observations[${index}].debug_manifest precisa ser um objeto.`);
+    }
+  });
   return value;
 }
 
@@ -344,6 +375,24 @@ export function buildContextPalette(points) {
   return { legend, colorOf, familyOf: (label) => families.get(label) ?? label };
 }
 
+// Resolve um asset relativo ao JSON servido. Upload local não fornece uma URL
+// de diretório confiável, então esse caso permanece explicitamente
+// indisponível. Vive aqui (e não em inspector.jsx) porque o DebugExplorer
+// precisa exatamente da mesma resolução para a galeria de debug.
+export function resolveAssetUrl(uri, artifactUrl) {
+  if (!uri || !artifactUrl) return null;
+  return new URL(uri, artifactUrl).href;
+}
+
+// Lista as etapas de debug publicadas por uma observação, sem presumir quais
+// nomes de etapa existem. Existe porque debug_manifest é estruturado por
+// etapa (visual-perception, sensor-association, ...) e o pipeline pode
+// publicar uma etapa nova sem que o frontend precise ser atualizado antes
+// para exibi-la de forma genérica.
+export function debugStagesOf(observation) {
+  return Object.entries(observation?.debug_manifest ?? {});
+}
+
 // Resolve as chaves de contexto que uma linha da legenda representa. Uma
 // família cobre todos os seus labels brutos; uma categoria neutra cobre a si
 // mesma. Existe para que alternar e isolar funcionem igual nos dois níveis.
@@ -415,7 +464,32 @@ export function mapEntriesFromIndex(payload) {
   return payload.filter(
     (entry) => [CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(entry?.artifact_type)
       && typeof entry.url === "string" && typeof entry.label === "string",
-  ).map((entry) => ({ url: entry.url, label: entry.label, artifactType: entry.artifact_type }));
+  ).map((entry) => {
+    const comparison = comparisonMetadata(entry.comparison);
+    return {
+      url: entry.url,
+      label: entry.label,
+      artifactType: entry.artifact_type,
+      ...(typeof entry.run_id === "string" ? { runId: entry.run_id } : {}),
+      ...(typeof entry.map_id === "string" ? { mapId: entry.map_id } : {}),
+      ...(comparison ? { comparison } : {}),
+    };
+  });
+}
+
+// Normaliza a declaração opcional de uma comparação publicada. Existe para
+// que uma entrada incompleta de catálogo não forme uma matriz enganosa; uma
+// run sem metadata continua utilizável no viewer normal, só não participa da
+// vista Comparar.
+export function comparisonMetadata(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (typeof value.group_id !== "string" || !value.group_id.trim()) return null;
+  if (!value.axes || typeof value.axes !== "object" || Array.isArray(value.axes)) return null;
+  const axes = Object.entries(value.axes);
+  if (!axes.length || axes.some(([name, option]) => (
+    typeof name !== "string" || !name.trim() || typeof option !== "string" || !option.trim()
+  ))) return null;
+  return { groupId: value.group_id, axes: Object.fromEntries(axes) };
 }
 
 // Identifica a geometria compartilhada por runs, para que alternar evidência
@@ -442,6 +516,46 @@ export class StaticArtifactGeometrySource {
       chunks: [{ chunkId: `${this.slice.map_id}:static`, points: this.slice.points }],
       complete: true,
     };
+  }
+}
+
+// Busca a geometria de um mapa consolidado grande em partições espaciais,
+// publicadas pelo publisher como geometry_manifest. Existe para que o viewer
+// pinte o mapa consolidado progressivamente, chunk a chunk, em vez de esperar
+// um único download completo — o mesmo GeometrySource que StaticArtifactGeometrySource
+// oferece para uma run isolada, mas capaz de bounds reais.
+export class ChunkedArtifactGeometrySource {
+  // Retém o manifesto e a URL do artifact de origem, usada para resolver as
+  // URLs relativas de cada chunk publicado.
+  constructor(slice, baseUrl) {
+    this.slice = slice;
+    this.baseUrl = baseUrl;
+    this.capabilities = Object.freeze({ boundedGeometry: true, levelsOfDetail: false });
+  }
+
+  // Busca cada chunk em sequência, emitindo onChunk assim que ele chega para
+  // permitir pintura progressiva; interrompe imediatamente se cancelada.
+  async getGeometry({ signal, onChunk } = {}) {
+    const manifest = this.slice.geometry_manifest ?? [];
+    const chunks = [];
+    for (const entry of manifest) {
+      if (signal?.aborted) throw new DOMException("Operação cancelada.", "AbortError");
+      const url = new URL(entry.url, this.baseUrl).href;
+      // eslint-disable-next-line no-await-in-loop
+      const response = await fetch(url, { signal });
+      if (!response.ok) {
+        throw new Error(`O servidor respondeu HTTP ${response.status} para o chunk ${entry.chunk_id}.`);
+      }
+      // eslint-disable-next-line no-await-in-loop
+      const payload = await response.json();
+      if (!Array.isArray(payload.points)) {
+        throw new Error(`O chunk ${entry.chunk_id} não contém points.`);
+      }
+      const chunk = { chunkId: entry.chunk_id, points: payload.points };
+      chunks.push(chunk);
+      onChunk?.(chunk);
+    }
+    return { chunks, complete: true };
   }
 }
 

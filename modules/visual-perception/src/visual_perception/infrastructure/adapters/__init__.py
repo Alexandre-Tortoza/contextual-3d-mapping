@@ -9,6 +9,9 @@ from visual_perception.infrastructure.adapters.factory import create_perception_
 from visual_perception.infrastructure.adapters.feature_extraction_backend import (
     RealDenseFeatureExtractionAdapter,
 )
+from visual_perception.infrastructure.adapters.florence2_region_discovery_backend import (
+    Florence2RegionDiscoveryAdapter,
+)
 from visual_perception.infrastructure.adapters.language_embedding_backend import (
     RealLanguageAlignedEncoderAdapter,
 )
@@ -19,6 +22,7 @@ from visual_perception.infrastructure.adapters.region_discovery_backend import R
 
 __all__ = [
     "RealDenseFeatureExtractionAdapter",
+    "Florence2RegionDiscoveryAdapter",
     "RealLanguageAlignedEncoderAdapter",
     "RealMultimodalReasoningAdapter",
     "RealRegionDiscoveryAdapter",

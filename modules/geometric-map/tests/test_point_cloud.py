@@ -63,13 +63,17 @@ def test_neighbourhood_keeps_points_near_any_center_and_source_indices():
     from geometric_map import select_neighbourhood
 
     cloud = _line_cloud()
-    selected, stride = select_neighbourhood(cloud, np.array([[10.0, 0, 0], [80.0, 0, 0]]), radius_m=2.0, max_points=100)
+    selected, stride = select_neighbourhood(
+        cloud, np.array([[10.0, 0, 0], [80.0, 0, 0]]), centers_frame=FrameId("map"), radius_m=2.0, max_points=100
+    )
     assert stride == 1
     np.testing.assert_array_equal(selected.coordinates_m[:, 0], [8, 9, 10, 11, 12, 78, 79, 80, 81, 82])
     np.testing.assert_array_equal(selected.source_indices, selected.coordinates_m[:, 0].astype(int) * 3)
     np.testing.assert_array_equal(selected.intensities, selected.coordinates_m[:, 0])
 
-    capped, stride = select_neighbourhood(cloud, np.array([[50.0, 0, 0]]), radius_m=20.0, max_points=10)
+    capped, stride = select_neighbourhood(
+        cloud, np.array([[50.0, 0, 0]]), centers_frame=FrameId("map"), radius_m=20.0, max_points=10
+    )
     assert stride == 5 and len(capped.coordinates_m) <= 10
     assert capped.point_count == cloud.point_count
 
@@ -82,6 +86,22 @@ def test_neighbourhood_rejects_invalid_requests():
     cloud = _line_cloud()
     for centers, radius, cap in ((np.zeros((0, 3)), 1.0, 10), (np.zeros((1, 3)), 0.0, 10), (np.zeros((1, 3)), 1.0, 0)):
         with pytest.raises(ValueError):
-            select_neighbourhood(cloud, centers, radius_m=radius, max_points=cap)
+            select_neighbourhood(cloud, centers, centers_frame=FrameId("map"), radius_m=radius, max_points=cap)
     with pytest.raises(ValueError, match="Nenhum ponto"):
-        select_neighbourhood(cloud, np.array([[0.0, 50.0, 0.0]]), radius_m=1.0, max_points=10)
+        select_neighbourhood(
+            cloud, np.array([[0.0, 50.0, 0.0]]), centers_frame=FrameId("map"), radius_m=1.0, max_points=10
+        )
+
+
+# Centros expressos em outro frame não devem ser aceitos silenciosamente: um recorte
+# de vizinhança calculado sobre um frame diferente do da nuvem selecionaria pontos
+# sem qualquer garantia espacial real.
+def test_neighbourhood_rejects_mismatched_frame():
+    """Recusa centros cujo frame declarado diverge do frame da nuvem."""
+    from geometric_map import select_neighbourhood
+
+    cloud = _line_cloud()
+    with pytest.raises(ValueError, match="frame"):
+        select_neighbourhood(
+            cloud, np.array([[10.0, 0, 0]]), centers_frame=FrameId("odom"), radius_m=2.0, max_points=100
+        )

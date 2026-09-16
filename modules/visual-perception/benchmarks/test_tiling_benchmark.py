@@ -12,9 +12,8 @@ sys.path.insert(0, str(_THIS_DIR))
 sys.path.insert(0, str(_THIS_DIR.parent / "src"))
 sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 
-from tiling_benchmark import count_seam_regions  # noqa: E402
-
 from fixtures import payload_with_blobs  # noqa: E402
+from tiling_benchmark import count_seam_regions  # noqa: E402
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.config import TilingConfig  # noqa: E402
 from visual_perception.domain.geometry import Mask  # noqa: E402

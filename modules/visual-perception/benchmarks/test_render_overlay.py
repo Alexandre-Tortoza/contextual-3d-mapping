@@ -21,8 +21,8 @@ sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 from PIL import Image  # noqa: E402
 
 from fixtures import image_observation  # noqa: E402
-from render_layers import DrawableShape, confidence_caption, label_caption  # noqa: E402
-from render_overlay import (  # noqa: E402
+from visual_perception.rendering.layers import DrawableShape, confidence_caption, label_caption  # noqa: E402
+from visual_perception.rendering.overlay import (  # noqa: E402
     proposal_shapes,
     region_shapes,
     render_overlay,

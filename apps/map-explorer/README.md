@@ -89,6 +89,13 @@ frame espacial, quantidade de frames e pontos com contexto, além dos hashes
 SHA-256 do mapa e das imagens. O instante da publicação não representa o início
 da inferência.
 
+`<run-id>` segue o formato compartilhado `AAAA-MM-DD-run-NNN-<nome>`
+(`contextual_mapping_contracts.RunId`), o mesmo usado por `apps/cli` e por
+toda run gerada no repositório. Quando `--run-id` não é informado, o id é
+gerado automaticamente a partir do `--label` (ou `manual`, sem label); ids
+explícitos continuam aceitando qualquer identidade com charset válido, para
+publicações manuais ou de teste.
+
 O fingerprint inclui o mapa e seus previews. A mesma publicação é idempotente;
 usar uma identidade existente para outro conteúdo produz erro. A pasta só entra
 no catálogo depois que a cópia completa termina. Os resultados ficam ignorados
@@ -105,6 +112,36 @@ O seletor **Run** alterna entre essas entradas. O catálogo é atualizado a cada
 Ao alternar versões com o mesmo frame, origem geométrica e quantidade de pontos,
 a câmera permanece na posição escolhida. Uma geometria diferente é enquadrada
 automaticamente. A comparação ocorre pela alternância no mesmo viewport.
+
+## Matriz de comparação de backends
+
+O botão **Comparar** abre uma matriz de overlays 2D sincronizados pelo mesmo
+`observation_id`. A célula escolhida permanece como run ativa e pode ser aberta
+no único viewport 3D; assim a matriz continua legível e não cria vários canvases
+WebGL para cada combinação. Células sem run deixam explícita uma combinação que
+ainda não foi executada.
+
+Para uma run participar, o artifact contextual declara a comparação de forma
+explícita. `group_id` identifica o mesmo frame e a mesma base de experimento;
+`axes` descreve as duas variações comparadas. O publisher preserva esses campos
+no manifest e em `maps/index.json`; o viewer nunca infere backends pelo nome da
+run.
+
+```json
+{
+  "comparison": {
+    "group_id": "corridor-02-frame-000184",
+    "axes": {
+      "region_discovery": "sam3",
+      "multimodal_reasoner": "qwen"
+    }
+  }
+}
+```
+
+Por exemplo, `sam3`/`florence2` no primeiro eixo e `qwen`/`gemini` no segundo
+produzem uma grade 2×2. A vista exige exatamente dois eixos que variem dentro
+do grupo e só oferece frames presentes em todas as runs.
 
 ## Mapas consolidados
 

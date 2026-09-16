@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
+from math import isfinite
 
 from .models import SpatialNeighbourhood
 
@@ -29,6 +30,18 @@ class LabelledPoint:
     geometry_id: str
     coordinates_m: tuple[float, float, float]
     label: str
+
+    # Valida a identidade, o label e a posição antes de atribuir o ponto a um
+    # voxel, pois NaN/Inf ou uma coordenada incompleta falhariam tardiamente
+    # durante a medição e não identificariam a entrada responsável.
+    def __post_init__(self) -> None:
+        """Valida a entrada mínima usada na medição de suporte espacial."""
+        if not self.geometry_id.strip():
+            raise ValueError("geometry_id must not be empty.")
+        if not self.label.strip():
+            raise ValueError("label must not be empty.")
+        if len(self.coordinates_m) != 3 or not all(isfinite(float(value)) for value in self.coordinates_m):
+            raise ValueError("coordinates_m must contain three finite values.")
 
 
 # Mede quanto a vizinhança geométrica concorda com o label de cada ponto.

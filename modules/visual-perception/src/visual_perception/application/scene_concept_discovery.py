@@ -117,8 +117,9 @@ def _concept_fields(item: Any) -> tuple[str | None, float | None]:
     if not isinstance(item, dict) or not isinstance(item.get("concept"), str):
         return None, None
     raw = item.get("confidence")
-    valid = isinstance(raw, int | float) and not isinstance(raw, bool) and 0.0 <= raw <= 1.0
-    return item["concept"], float(raw) if valid else None
+    if isinstance(raw, int | float) and not isinstance(raw, bool) and 0.0 <= raw <= 1.0:
+        return item["concept"], float(raw)
+    return item["concept"], None
 
 
 # Deixa o conceito comparável: minúsculas, espaços simples, sem pontuação nas pontas.

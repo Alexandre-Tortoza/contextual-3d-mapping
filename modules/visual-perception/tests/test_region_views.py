@@ -18,6 +18,7 @@ import numpy as np
 from visual_perception.application.region_views import build_region_views, crop_payload
 from visual_perception.config import ModuleConfig, MultiContextConfig
 from visual_perception.domain.geometry import BoundingBox, Mask
+from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_evidence import FOREGROUND_SLOTS, EvidenceSlot, SubjectEmphasis
 from visual_perception.domain.regions import ObservedRegion
@@ -119,6 +120,31 @@ def test_contextual_crop_keeps_its_surroundings() -> None:
     # de modo que ele tem de ser exatamente o pixel de origem.
     x_min, y_min = int(view.crop_box.x_min), int(view.crop_box.y_min)
     assert np.array_equal(view.payload.pixels[0, 0], image.pixels[y_min, x_min])
+
+
+# A view global só é usada como contexto do reasoner. Neutralizar a vinheta e
+# o rig nela evita que entrem como evidência sem alterar a imagem crua, que o
+# discovery e os tiles continuam recebendo.
+def test_scene_conditioned_view_neutralizes_fisheye_and_ego_without_mutating_input() -> None:
+    """Protege a separação entre contexto global sanitizado e entrada do discovery."""
+    image = _image()
+    valid = np.ones((_HEIGHT, _WIDTH), dtype=np.bool_)
+    ego = np.zeros((_HEIGHT, _WIDTH), dtype=np.bool_)
+    valid[0, 0] = False
+    ego[20, 20] = True
+    masks = ImageAreaMasks(
+        valid_area=Mask(valid, _WIDTH, _HEIGHT),
+        ego_vehicle=Mask(ego, _WIDTH, _HEIGHT),
+    )
+    config = ModuleConfig(multi_context=MultiContextConfig(scene_conditioned_enabled=True))
+
+    view = _view(build_region_views((_region(),), image, config, area_masks=masks), EvidenceSlot.SCENE_CONDITIONED)
+
+    assert view is not None
+    assert np.array_equal(view.payload.pixels[0, 0], np.full(3, 128, dtype=np.uint8))
+    assert np.array_equal(view.payload.pixels[20, 20], np.full(3, 128, dtype=np.uint8))
+    assert np.array_equal(view.payload.pixels[10, 10], image.pixels[10, 10])
+    assert not np.array_equal(image.pixels[0, 0], np.full(3, 128, dtype=np.uint8))
 
 
 # Mas o sujeito precisa ser localizável dentro do contexto: o contorno da

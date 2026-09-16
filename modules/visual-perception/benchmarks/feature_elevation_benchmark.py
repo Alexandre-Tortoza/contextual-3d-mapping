@@ -17,6 +17,8 @@ for _relative in ("src", "../../contracts", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / _relative).resolve()))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from contextual_mapping_contracts import next_run_id  # noqa: E402
+
 from dense_upsampling_benchmark import (  # noqa: E402
     BASELINE,
     HIGH_RESOLUTION,
@@ -295,7 +297,9 @@ def run_benchmark(frame_paths: tuple[Path, ...], results_dir: Path = RESULTS_DIR
         )
     )
 
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    results_dir.mkdir(parents=True, exist_ok=True)
+    existing_run_ids = (path.stem for path in results_dir.glob("benchmark-208-*.json"))
+    run_id = str(next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name="feature-elevation"))
     document = {
         "schema_version": "feature-elevation-benchmark/1",
         "issue": 208,
@@ -306,8 +310,7 @@ def run_benchmark(frame_paths: tuple[Path, ...], results_dir: Path = RESULTS_DIR
         "ordered_frame_ids": [path.stem for path in frame_paths],
         "candidates": candidates,
     }
-    results_dir.mkdir(parents=True, exist_ok=True)
-    json_path = results_dir / f"benchmark-208-feature-elevation-{run_id}.json"
+    json_path = results_dir / f"benchmark-208-{run_id}.json"
     markdown_path = json_path.with_suffix(".md")
     json_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     markdown_path.write_text(render_summary(document), encoding="utf-8")

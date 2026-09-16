@@ -62,7 +62,9 @@ class Sam3ConceptGroundingAdapter:
             for index, concept in enumerate(concepts):
                 text_inputs = processor(text=concept, return_tensors="pt").to(device)
 
-                def ground() -> Any:
+                # Fecha as entradas textuais desta consulta antes de entregá-la
+                # ao lifecycle, que pode repetir a chamada após eviction por OOM.
+                def ground(text_inputs: Any = text_inputs) -> Any:
                     with torch.inference_mode():
                         outputs = model(
                             vision_embeds=vision_embeds,

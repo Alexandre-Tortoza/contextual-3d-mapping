@@ -18,6 +18,7 @@ latência e VRAM:
 | Capability | Port | Backend real | Checkpoint | Identificador |
 | --- | --- | --- | --- | --- |
 | Region discovery | `RegionDiscoverer` | SAM3 tracker, segment everything | `facebook/sam3` | `sam3` |
+| Region discovery (opt-in) | `RegionDiscoverer` | Florence-2 region proposal | `microsoft/Florence-2-large` | `florence2` |
 | Dense feature extraction | `DenseFeatureExtractor` | DINOv2-base | `facebook/dinov2-base` | `dinov2` |
 | Language-aligned embedding | `LanguageAlignedEncoder` | CLIP ViT-L/14 | `openai/clip-vit-large-patch14` | `clip` |
 | Multimodal reasoning | `MultimodalReasoner` | Qwen2.5-VL-3B-Instruct 4-bit | `Qwen/Qwen2.5-VL-3B-Instruct` | `qwen_vl` |
@@ -34,6 +35,7 @@ retorna a configuração de referência com os quatro backends reais.
 | backend selecionado por capability | [`factory.py`](../src/visual_perception/infrastructure/adapters/factory.py) | `config.py`, testes e docs |
 | checkpoint/configuração de referência | [`application/execution_profile.py`](../src/visual_perception/application/execution_profile.py) | `config.py`, benchmark e fingerprint |
 | implementação de region discovery | [`region_discovery_backend.py`](../src/visual_perception/infrastructure/adapters/region_discovery_backend.py) | `ports/region_discovery.py` e testes GPU |
+| backend Florence-2 de region discovery | [`florence2_region_discovery_backend.py`](../src/visual_perception/infrastructure/adapters/florence2_region_discovery_backend.py) | `config.py`, `factory.py` e testes de adapter |
 | implementação de dense features | [`feature_extraction_backend.py`](../src/visual_perception/infrastructure/adapters/feature_extraction_backend.py) | `ports/feature_extraction.py`, pooling e benchmark |
 | implementação de language embedding | [`language_embedding_backend.py`](../src/visual_perception/infrastructure/adapters/language_embedding_backend.py) | `ports/language_embedding.py` e benchmark |
 | prompt do VLM (compartilhado pelos backends) | [`reasoning_prompts.py`](../src/visual_perception/infrastructure/adapters/reasoning_prompts.py) | `prompt_version`, parser de cena/região, fingerprint e testes |
@@ -95,6 +97,7 @@ prefira manter o mesmo port e trocar somente o adapter/factory/configuração.
 RGB
 ├── RegionDiscoverer
 │      -> SAM3 tracker (segment everything; SAM/SAM2 selecionáveis)
+│      -> Florence-2 `<REGION_PROPOSAL>` (opt-in; caixas retangulares)
 │      -> RegionProposal[]
 │
 ├── SceneConceptDiscoverer + ConceptRegionDiscoverer   (opcionais, #277)
@@ -202,6 +205,33 @@ estáveis, e superfícies repetitivas (placas de forro) ainda são over-segmenta
 IoU/containment e não reconstrói metades quase disjuntas de um objeto em tiles
 adjacentes; a passada global preserva a proposal de cobertura completa quando o modelo a
 produz. `sam`/SAM2 permanece disponível como alternativa class-agnostic explícita.
+
+### Florence-2 (opção por propostas de região)
+
+`region_discovery.backend="florence2"` seleciona
+`microsoft/Florence-2-large` com a tarefa nativa `<REGION_PROPOSAL>`:
+
+```python
+RegionDiscoveryConfig(
+    backend="florence2",
+    checkpoint="microsoft/Florence-2-large",
+    device="cuda",
+)
+```
+
+O checkpoint devolve caixas sem máscara e sem score calibrado. O adapter limita
+as caixas à imagem local e as materializa como máscaras retangulares, para que
+tiling, filtro, merge e proveniência continuem usando o mesmo contract de
+`RegionDiscoverer`. A confiança geométrica `1.0` significa apenas que o decoder
+emitiu a proposta; ela **não** é uma confiança calibrada do Florence-2.
+
+Esta é deliberadamente uma opção de **region discovery**, não de
+`MultimodalReasoner`: o Florence-2 expõe tarefas por tokens, mas não o contract
+de instruções JSON multi-view que a pipeline usa para contexto de cena,
+interpretação de regiões e relações. Qwen e Gemini continuam as opções para
+essa capability. O checkpoint requer `trust_remote_code=True`, pois publica o
+processor e o post-processamento próprios; use somente a revisão do modelo que
+foi aprovada para o ambiente.
 
 ### Tiling e truncamento nas bordas dos tiles
 
@@ -726,8 +756,10 @@ Um resultado que altere a configuração de referência deve registrar pelo meno
 ## Validação end-to-end reproduzível (#190/#212)
 
 [`../benchmarks/validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py)
-executa a configuração real sobre todos os frames, uma seleção explícita por `--frame-id`
-ou um prefixo ordenado por `--limit`. Para o protocolo de três frames:
+executa por padrão uma amostra de dois frames: o início é sorteado com seed fixa `42`
+e o segundo fica 12 posições à frente na lista ordenada. São necessários ao menos 13
+frames extraídos. Uma seleção explícita por `--frame-id` ou um prefixo ordenado por
+`--limit` substitui essa amostra. Para o protocolo de três frames:
 
 ```bash
 python benchmarks/validate_reference_pipeline.py \
@@ -737,7 +769,8 @@ python benchmarks/validate_reference_pipeline.py \
 ```
 
 Por frame, a validação produz a `VisualObservation` canônica, um diagnóstico estatístico e
-as camadas de inspeção separadas por estágio (proposals, masks, boxes, labels, overlay). O
+as camadas completas de DEBUG separadas por estágio (proposals, masks, boxes, labels, overlay,
+discovery, views de região e grounding). O
 layout exato é definido por
 [`validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py),
 que é a fonte única dessa árvore — esses artifacts não são versionados; cada
@@ -753,6 +786,33 @@ Saída:
 
 Esses artifacts servem para inspeção qualitativa e rastreabilidade. Métricas de pesquisa
 mais fortes devem ser definidas em protocolos de avaliação específicos.
+
+### Comparação SAM3 × Florence-2 no mesmo frame
+
+O protocolo dedicado executa os dois backends de `RegionDiscoverer` sobre os
+mesmos pixels, com a mesma geometria de área e todos os stages posteriores
+iguais. Ele persiste cada run, verifica o SHA-256 da entrada e gera um relatório
+estrutural mais um overlay lado a lado:
+
+```bash
+python benchmarks/compare_region_discovery.py \
+  --frame-id corridor-02-000
+```
+
+O relatório fica em
+`benchmarks/results/region-discovery-comparisons/comparisons/<timestamp>/report.md`.
+Ele mostra contagem de proposals e regiões, custo e falhas de cada braço; o PNG
+adjacente permite avaliar visualmente cobertura, fragmentação e o efeito das
+caixas retangulares do Florence-2. Isso não mede acurácia: uma comparação de
+acurácia exige ground truth de regiões revisado por humanos.
+
+Para rodar somente um dos braços dentro do validador geral, use:
+
+```bash
+python benchmarks/validate_reference_pipeline.py \
+  --frame-id corridor-02-000 \
+  --region-discovery-backend florence2
+```
 
 ## Candidatos avaliados nesta rodada
 

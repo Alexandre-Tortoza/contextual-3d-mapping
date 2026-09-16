@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from geometric_map import GeometryPoint, GeometryReference
 from sensor_association import (
@@ -127,6 +129,38 @@ def test_associate_points_rejects_overlapping_regions() -> None:
 
     with pytest.raises(ValueError, match="must not overlap"):
         associate_points((_point("point", (0.0, 0.0, 1.0)),), rgb, _calibration(), regions)
+
+
+# Regressão: coordenadas fracionárias chegavam ao índice NumPy e falhavam com
+# IndexError, em vez de a fronteira rejeitar o footprint inválido.
+@pytest.mark.parametrize(
+    "pixels",
+    [frozenset({(0.5, 0)}), frozenset({(True, 0)}), frozenset({(0, 0, 0)})],
+)
+def test_visual_region_evidence_rejects_non_integer_pixels(
+    pixels: frozenset[tuple[float | bool | int, ...]],
+) -> None:
+    """Recusa footprints que não podem indexar o raster RGB."""
+    with pytest.raises(ValueError, match="integer coordinates"):
+        VisualRegionEvidence("region-1", pixels)
+
+
+# Regressão: a projeção pinhole com z zero dividia por zero quando o domínio
+# traseiro era permitido pela calibração, interrompendo toda a associação.
+def test_associate_points_rejects_pinhole_point_on_optical_plane() -> None:
+    """Marca um ponto pinhole sem profundidade óptica como behind_camera."""
+    calibration = replace(_calibration(), front_hemisphere_only=False)
+    rgb = RgbFrame(
+        _reference("rgb-1", "rgb", "camera"),
+        5,
+        5,
+        tuple((0, 0, 0) for _ in range(25)),
+        frozenset((x, y) for y in range(5) for x in range(5)),
+    )
+
+    (result,) = associate_points((_point("point", (1.0, 0.0, 0.0)),), rgb, calibration)
+
+    assert result.status is AssociationStatus.BEHIND_CAMERA
 
 
 # Impede que a ambiguidade matemática do modelo MEI associe a imagem frontal

@@ -24,6 +24,7 @@ import numpy as np
 
 from visual_perception.config import ModuleConfig
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
+from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_evidence import EvidenceSlot, SubjectEmphasis
 from visual_perception.domain.region_reasoning import RegionView
@@ -53,7 +54,11 @@ _PAIR_CONTOUR_COLOR = np.array([0, 128, 255], dtype=np.uint8)
 # compartilhado entre a evidência de embedding (#194) e o raciocínio semântico
 # (#203). Chamada por application/multi_context.py::extract_region_evidence.
 def build_region_views(
-    regions: tuple[ObservedRegion, ...], image: ImagePayload, config: ModuleConfig
+    regions: tuple[ObservedRegion, ...],
+    image: ImagePayload,
+    config: ModuleConfig,
+    *,
+    area_masks: ImageAreaMasks | None = None,
 ) -> dict[str, tuple[RegionView, ...]]:
     """Produz as views em pixels de cada região, indexadas por ``region_id``.
 
@@ -67,11 +72,13 @@ def build_region_views(
         regions: as regiões canônicas já mescladas.
         image: o payload de pixels da imagem completa.
         config: a configuração do módulo (slots habilitados, margem de contexto).
+        area_masks: áreas válidas e do ego já rasterizadas. Afetam somente a
+            view global condicionada à cena, nunca os crops locais.
     Retorna:
         um mapa de ``region_id`` para as views daquela região, em ordem de slot.
     """
     settings = config.multi_context
-    scene_view = _scene_view(image) if settings.scene_conditioned_enabled else None
+    scene_view = _scene_view(image, area_masks) if settings.scene_conditioned_enabled else None
     views: dict[str, tuple[RegionView, ...]] = {}
 
     for region in regions:
@@ -162,15 +169,31 @@ def _append_crop_view(
     )
 
 
-# Produz a view de cena: a imagem inteira, compartilhada por todas as regiões
-# do frame. Existe separada porque não depende da região, e recomputá-la por
-# região seria custo puro de memória.
-def _scene_view(image: ImagePayload) -> RegionView:
-    """Retorna a view de cena, com a caixa da imagem inteira."""
+# Produz a view global de contexto, neutralizando somente nela a vinheta e o
+# rig. Existe para que o reasoner receba contexto do frame sem transformar o
+# anel do fisheye ou o carrinho em evidência, preservando a imagem crua usada
+# pelo discovery e pelos tiles.
+def _scene_view(image: ImagePayload, area_masks: ImageAreaMasks | None) -> RegionView:
+    """Retorna a view global de cena, neutralizada pelas áreas declaradas.
+
+    Argumentos:
+        image: pixels originais do frame, que não são modificados.
+        area_masks: área válida do sensor e silhueta do ego, quando declaradas.
+    Retorna:
+        view de cena em resolução integral, com pixels excluídos em cinza neutro.
+    """
+    pixels = image.pixels.copy()
+    if area_masks is not None and not area_masks.is_empty:
+        excluded = np.zeros((image.height, image.width), dtype=np.bool_)
+        if area_masks.valid_area is not None:
+            excluded |= ~area_masks.valid_area.data
+        if area_masks.ego_vehicle is not None:
+            excluded |= area_masks.ego_vehicle.data
+        pixels[excluded] = _NEUTRAL_FILL
     box = BoundingBox(0.0, 0.0, float(image.width), float(image.height))
     return RegionView(
         slot=EvidenceSlot.SCENE_CONDITIONED,
-        payload=image,
+        payload=ImagePayload(pixels, width=image.width, height=image.height),
         crop_box=box,
         transform=CoordinateTransform.identity(),
         emphasis=SubjectEmphasis.NONE,

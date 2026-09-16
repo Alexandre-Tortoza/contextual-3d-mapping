@@ -84,6 +84,10 @@ def _parser() -> argparse.ArgumentParser:
     context.add_argument("--visibility-geometry", type=Path, help="PCD completo referenciado pelo slice")
     context.add_argument("--pose-sampling", choices=("interpolated", "nearest"), default="interpolated")
     context.add_argument("--stuff-discovery-fallback", action="store_true", help="permite discovery de stuff apenas como evidência tentativa")
+    context.add_argument(
+        "--with-debug-images", action="store_true",
+        help="promove para a run contextual as imagens ricas de debug (discovery tiles, region views) de cada keyframe",
+    )
     window = commands.add_parser(
         "bag-window",
         help="resolve um trecho da rosbag e seus keyframes RGB nos dois relógios do arquivo",
@@ -191,6 +195,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 stuff_discovery_fallback=options.stuff_discovery_fallback,
                 crop_radius_m=options.crop_radius_m,
                 max_points=options.max_points,
+                with_debug_images=options.with_debug_images,
             )
         )
         print(destination)

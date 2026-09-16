@@ -21,6 +21,7 @@ deve satisfazer esses invariantes.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 import numpy as np
 
@@ -40,8 +41,10 @@ class BoundingBox:
     y_max: float
 
     # Garante que a caixa tenha largura e altura positivas, rejeitando
-    # caixas degeneradas ou invertidas na criação.
+    # caixas degeneradas, invertidas ou com coordenadas não finitas na criação.
     def __post_init__(self) -> None:
+        if not all(isfinite(value) for value in (self.x_min, self.y_min, self.x_max, self.y_max)):
+            raise ValueError("BoundingBox coordinates must be finite.")
         if self.x_max <= self.x_min or self.y_max <= self.y_min:
             raise ValueError(
                 "BoundingBox must have positive width and height: "
@@ -218,9 +221,12 @@ class CoordinateTransform:
     offset_x: float
     offset_y: float
 
-    # Garante que os fatores de escala sejam positivos, rejeitando
-    # transforms degenerados que inverteriam ou colapsariam coordenadas.
+    # Garante que os fatores de escala e offsets sejam finitos, e que a escala
+    # seja positiva, rejeitando transforms degenerados que inverteriam ou
+    # colapsariam coordenadas.
     def __post_init__(self) -> None:
+        if not all(isfinite(value) for value in (self.scale_x, self.scale_y, self.offset_x, self.offset_y)):
+            raise ValueError("CoordinateTransform values must be finite.")
         if self.scale_x <= 0 or self.scale_y <= 0:
             raise ValueError("CoordinateTransform scale factors must be positive.")
 

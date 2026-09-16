@@ -58,6 +58,7 @@ for _relative in ("src", "../../contracts", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / _relative).resolve()))
 
 import numpy as np  # noqa: E402
+from contextual_mapping_contracts import next_run_id  # noqa: E402
 
 from visual_perception.application.dense_evidence import (  # noqa: E402
     DEFAULT_MAX_UPSAMPLED_BYTES,
@@ -665,8 +666,9 @@ def main() -> None:
     print(f"Regions representable by every path: {len(common)}")
     document = _document(config, frames, results, common)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    json_path = RESULTS_DIR / f"benchmark-192-dense-upsampling-{run_id}.json"
+    existing_run_ids = (path.stem for path in RESULTS_DIR.glob("benchmark-192-*.json"))
+    run_id = next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name="dense-upsampling")
+    json_path = RESULTS_DIR / f"benchmark-192-{run_id}.json"
     json_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     summary_path = json_path.with_suffix(".md")
     summary_path.write_text(render_summary(document), encoding="utf-8")

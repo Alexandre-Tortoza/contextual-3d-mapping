@@ -64,6 +64,20 @@ def test_sam3_thresholds_round_trip_and_change_fingerprint() -> None:
     assert first.fingerprint() != second.fingerprint()
 
 
+# Confirma que Florence-2 é uma opção explícita de discovery e que sua seleção
+# participa da configuração reproduzível do run.
+def test_florence2_region_discovery_round_trips() -> None:
+    """Preserva a seleção do Florence-2 no schema e no fingerprint."""
+    config = ModuleConfig(
+        region_discovery=RegionDiscoveryConfig(
+            backend="florence2", checkpoint="microsoft/Florence-2-large"
+        )
+    )
+
+    assert ModuleConfig.from_dict(config.to_dict()) == config
+    assert config.fingerprint() != ModuleConfig().fingerprint()
+
+
 # Confirma que uma configuração com campos explícitos (orçamento de GPU, tiling
 # multi-scale) também valida corretamente.
 def test_complete_config_validates() -> None:

@@ -276,6 +276,7 @@ def compose_command(
     profile_id: Annotated[str, typer.Option(help="Perfil configurado do dataset.")] = "corridor-02",
     visibility_mode: Annotated[str, typer.Option(help="measured_surfaces, dense_cells ou legacy_cells.")] = "measured_surfaces",
     run_name: Annotated[str | None, typer.Option(help="Sufixo legível da run publicada.")] = None,
+    with_debug_images: Annotated[bool, typer.Option(help="Promove as imagens ricas de debug por etapa.")] = False,
     root: Annotated[Path | None, typer.Option(hidden=True)] = None,
 ) -> None:
     """Compõe percepção e geometria em um artifact contextual."""
@@ -288,6 +289,7 @@ def compose_command(
             visual_run=visual_run,
             visibility_mode=visibility_mode,
             run_name=run_name,
+            with_debug_images=with_debug_images,
         )
         console.print(f"[green]Artifact contextual:[/green] {artifact}")
     except Exception as error:
@@ -395,6 +397,7 @@ def process_command(
     camera_topic: Annotated[str | None, typer.Option()] = None,
     confirm_all_frames: Annotated[str | None, typer.Option()] = None,
     serve: Annotated[bool, typer.Option(help="Inicia o viewer ao terminar.")] = False,
+    with_debug_images: Annotated[bool, typer.Option(help="Promove as imagens ricas de debug por etapa.")] = False,
     root: Annotated[Path | None, typer.Option(hidden=True)] = None,
 ) -> None:
     """Executa extração, percepção e, quando possível, o workflow contextual."""
@@ -433,6 +436,7 @@ def process_command(
             segment_id=segment_id,
             window=extracted.window,
             visual_run=visual_run,
+            with_debug_images=with_debug_images,
         )
         console.print(f"[green]Artifact contextual:[/green] {artifact}")
         if serve:

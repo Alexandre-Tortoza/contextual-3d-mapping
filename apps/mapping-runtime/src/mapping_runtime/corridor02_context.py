@@ -35,6 +35,8 @@ from sensor_association import (
 )
 
 from contextual_mapping_contracts import (
+    ASSETS_DIRNAME,
+    DEBUG_DIRNAME,
     FrameId,
     MapId,
     ObservationReference,
@@ -59,28 +61,163 @@ _REJECTION_PRIORITY = (
 )
 
 
-# Copia o layout auditável produzido por visual-perception para a run
-# contextual. Existe porque o publisher só pode servir arquivos internos à run;
-# manter URI para o diretório de benchmark quebraria a inspeção após limpeza.
-def _copy_frame_debug(source: Path, assets: Path, frame_id: str) -> dict[str, str]:
-    """Copia assets de debug de um frame e retorna URIs relativas à run.
+#: Estágios de percepção cuja escolha de backend é relevante para explicar um
+#: resultado — a mesma chave usada em ``config`` no manifest da run de
+#: percepção (``validate_reference_pipeline.py``).
+_PERCEPTION_STAGES = ("region_discovery", "feature_extraction", "language_embedding", "multimodal_reasoning")
+
+
+# Resume os backends configurados na run de percepção de origem, e a
+# alternativa declarada quando existir, para que a explicabilidade responda
+# "qual modelo gerou isso" sem abrir manualmente o manifest.json da run de
+# percepção. Best-effort: um manifest ausente ou sem config não é erro, só
+# significa que a página de debug não tem essa informação para mostrar.
+def _pipeline_backends(visual_observation: Path) -> dict[str, Any]:
+    """Lê os backends configurados na run de percepção que gerou os keyframes.
 
     Argumentos:
-        source: diretório ``frames/<frame-id>`` da percepção.
-        assets: diretório de assets da composição contextual.
-        frame_id: identidade estável do frame auditado.
+        visual_observation: ``observation.json`` de um keyframe qualquer da
+            run; o manifest do run fica três níveis acima
+            (``frames/<frame-id>/observation.json`` -> ``frames/`` -> raiz do run).
     Retorna:
-        mapa de artefatos de debug, indexado pelo path relativo do frame.
+        dicionário por estágio com ``backend``, ``checkpoint`` e, quando a
+        run declarou uma alternativa, ``fallback_backend``/
+        ``fallback_checkpoint``. Vazio se o manifest não existir ou não
+        declarar configuração.
     """
-    debug_source = source / "DEBUG"
-    if not debug_source.is_dir():
+    manifest_path = visual_observation.parent.parent.parent / "manifest.json"
+    if not manifest_path.is_file():
         return {}
-    destination = assets / f"{frame_id}-debug"
-    shutil.copytree(debug_source, destination, dirs_exist_ok=True)
-    return {
-        str(path.relative_to(debug_source)): f"{assets.name}/{destination.name}/{path.relative_to(debug_source)}"
-        for path in sorted(debug_source.rglob("*")) if path.is_file()
-    }
+    config = json.loads(manifest_path.read_text(encoding="utf-8")).get("config") or {}
+    stages: dict[str, Any] = {}
+    for stage in _PERCEPTION_STAGES:
+        stage_config = config.get(stage)
+        if not isinstance(stage_config, dict) or not stage_config.get("backend"):
+            continue
+        summary = {"backend": stage_config["backend"], "checkpoint": stage_config.get("checkpoint")}
+        if stage_config.get("fallback_backend"):
+            summary["fallback_backend"] = stage_config["fallback_backend"]
+            summary["fallback_checkpoint"] = stage_config.get("fallback_checkpoint")
+        stages[stage] = summary
+    return stages
+
+
+#: Nomes lógicos das camadas de imagem principais de um frame, na chave que
+#: ``debug_manifest["visual-perception"]["images"]`` usa — igual ao nome do
+#: arquivo sem a extensão, para casar exatamente com o que
+#: ``write_stage_debug_images`` grava (#schema_version 3).
+_MAIN_DEBUG_IMAGES = (
+    "raw.png", "proposals.png", "regions-masks.png", "regions-boxes.png",
+    "regions-labels.png", "regions-overlay.png", "semantic-overlay.png",
+    "structural-context.png",
+)
+
+
+# Copia um artifact de debug para dentro da run publicável, só quando ele
+# existe. Existe porque o publisher só pode servir arquivos internos à run; um
+# URI para o diretório de benchmark quebraria a inspeção após a limpeza, e
+# todo artifact de debug aqui é best-effort — a ausência de origem nunca é erro.
+def _copy_debug_asset(source: Path, assets: Path, relative_destination: str) -> str | None:
+    """Copia um artifact de debug para a run, se a origem existir.
+
+    Argumentos:
+        source: caminho de origem, possivelmente inexistente.
+        assets: diretório de assets da run contextual, já criado.
+        relative_destination: caminho relativo a ``assets`` do destino.
+    Retorna:
+        URI relativa à run (``"<assets>/<relative_destination>"``), ou
+        ``None`` quando a origem não existe.
+    """
+    if not source.is_file():
+        return None
+    destination = assets / relative_destination
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, destination)
+    return f"{assets.name}/{destination.relative_to(assets).as_posix()}"
+
+
+# Monta o ``debug_manifest["visual-perception"]`` de um keyframe, promovendo
+# para a run contextual apenas o que a run de percepção efetivamente escreveu.
+# ``diagnostics`` e ``grounding`` (quando existem) são sempre promovidos: são
+# leves e já eram publicados antes, embutidos em ``debug_assets``. As imagens
+# ricas (discovery tiles, region views e as camadas intermediárias) ficam
+# atrás de ``with_debug_images`` porque multiplicam o número de arquivos por
+# frame e nem toda run contextual precisa delas.
+def _visual_perception_debug_manifest(
+    frame_source_dir: Path, assets: Path, frame_id: str, *, with_debug_images: bool,
+) -> dict[str, Any]:
+    """Monta a parte ``visual-perception`` do ``debug_manifest`` de um keyframe.
+
+    Argumentos:
+        frame_source_dir: diretório ``frames/<frame-id>`` da percepção visual.
+        assets: diretório de assets da run contextual, já criado.
+        frame_id: identidade estável do frame auditado.
+        with_debug_images: quando ``True``, também promove as imagens ricas de
+            debug (discovery tiles, region views e as camadas intermediárias)
+            já escritas pela run de percepção.
+    Retorna:
+        dicionário parcial, com apenas as chaves cujo artifact de origem existe.
+    """
+    manifest: dict[str, Any] = {}
+    diagnostics_uri = _copy_debug_asset(
+        frame_source_dir / "diagnostics.json", assets, f"{frame_id}-diagnostics.json"
+    )
+    if diagnostics_uri is not None:
+        manifest["diagnostics"] = diagnostics_uri
+    grounding_uri = _copy_debug_asset(
+        frame_source_dir / "DEBUG" / f"{frame_id}-grounding.json", assets, f"{frame_id}-grounding.json"
+    )
+    if grounding_uri is not None:
+        manifest["grounding"] = grounding_uri
+    if not with_debug_images:
+        return manifest
+
+    images: dict[str, str] = {}
+    for filename in _MAIN_DEBUG_IMAGES:
+        uri = _copy_debug_asset(frame_source_dir / filename, assets, f"{frame_id}-debug/{filename}")
+        if uri is not None:
+            images[filename.removesuffix(".png")] = uri
+    if images:
+        manifest["images"] = images
+
+    discovery_source = frame_source_dir / "discovery"
+    if discovery_source.is_dir():
+        tiles: dict[str, dict[str, str]] = {}
+        for path in sorted(discovery_source.glob("*.png")):
+            if path.stem.endswith("-input"):
+                tile_id, kind = path.stem[: -len("-input")], "input"
+            elif path.stem.endswith("-proposals"):
+                tile_id, kind = path.stem[: -len("-proposals")], "proposals"
+            else:
+                continue
+            uri = _copy_debug_asset(path, assets, f"{frame_id}-debug/discovery/{path.name}")
+            if uri is not None:
+                tiles.setdefault(tile_id, {"id": tile_id})[kind] = uri
+        if tiles:
+            manifest["discovery_tiles"] = list(tiles.values())
+
+    regions_source = frame_source_dir / "regions"
+    if regions_source.is_dir():
+        slot_filenames = {
+            "masked-subject.png": "masked_subject",
+            "tight-crop.png": "tight_crop",
+            "contextual-crop.png": "contextual_crop",
+        }
+        region_views: list[dict[str, str]] = []
+        for region_dir in sorted(path for path in regions_source.iterdir() if path.is_dir()):
+            entry: dict[str, str] = {"region_id": region_dir.name}
+            for filename, slot in slot_filenames.items():
+                uri = _copy_debug_asset(
+                    region_dir / filename, assets, f"{frame_id}-debug/regions/{region_dir.name}/{filename}"
+                )
+                if uri is not None:
+                    entry[slot] = uri
+            if len(entry) > 1:
+                region_views.append(entry)
+        if region_views:
+            manifest["region_views"] = region_views
+
+    return manifest
 
 
 # Agrupa os arquivos de um keyframe visual e sua identidade temporal. As três
@@ -148,6 +285,11 @@ class Corridor02ContextRequest:
             o ground-truth à origem do mapa FAST-LIO.
         crop_radius_m: raio da vizinhança do trecho em torno das posições da câmera.
         max_points: teto de pontos da geometria do trecho.
+        with_debug_images: quando ``True``, promove para a run contextual as
+            imagens ricas de debug (discovery tiles, region views e as
+            camadas intermediárias) que a run de percepção visual já escreveu
+            para cada keyframe. Opt-in porque multiplica o número de arquivos
+            por frame.
     """
 
     geometric_slice: Path
@@ -173,6 +315,7 @@ class Corridor02ContextRequest:
     #: consolidado. 15 m cobre o corredor visível e um pouco de contexto.
     crop_radius_m: float = 15.0
     max_points: int = 150_000
+    with_debug_images: bool = False
 
     # Exige uma fonte de pose e ao menos um keyframe antes de qualquer leitura,
     # porque ambos são pré-condições da composição, e não erros de dados.
@@ -672,7 +815,8 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         for keyframe in request.keyframes
     ])
     segment_geometry, crop_stride = select_neighbourhood(
-        full_geometry, camera_centers, radius_m=request.crop_radius_m, max_points=request.max_points
+        full_geometry, camera_centers, centers_frame=map_frame, radius_m=request.crop_radius_m,
+        max_points=request.max_points,
     )
     base["points"] = geometry_point_records(
         str(map_id),
@@ -707,7 +851,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         for point in base["points"]
     )
 
-    assets = request.destination.parent / f"{request.destination.stem}-assets"
+    assets = request.destination.parent / ASSETS_DIRNAME
     assets.mkdir(parents=True, exist_ok=True)
     associated: dict[str, list[dict[str, Any]]] = {}
     rejected: dict[str, Any] = {}
@@ -796,7 +940,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             )
             regions.update(region_metadata)
             from visual_perception import DebugRecorder
-            DebugRecorder(request.destination.parent / (request.destination.stem + "-DEBUG") / "visual-perception").record_grounding(
+            DebugRecorder(request.destination.parent / DEBUG_DIRNAME / "visual-perception").record_grounding(
                 keyframe.frame_id, list(region_metadata.values())
             )
             if surfaces is not None:
@@ -844,6 +988,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                         "lidar_timestamp_ns": lidar_timestamp_ns,
                     }
                 )
+            sensor_association_debug: dict[str, Any] = {}
             if request.audit_geometry_ids:
                 audit = [{
                     "geometry_id": item.geometry.geometry_id, "status": item.status.value,
@@ -851,22 +996,31 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "semantic_status": item.semantic_status.value, "region_id": item.region_id,
                     "surface_evidence": asdict(item.surface_evidence) if item.surface_evidence else None,
                 } for item in results if item.geometry.geometry_id in request.audit_geometry_ids]
-                audit_dir = request.destination.parent / (request.destination.stem + "-DEBUG") / "sensor-association"
+                audit_dir = request.destination.parent / DEBUG_DIRNAME / "sensor-association"
                 audit_dir.mkdir(parents=True, exist_ok=True)
-                (audit_dir / f"{keyframe.frame_id}.json").write_text(json.dumps({
+                audit_source = audit_dir / f"{keyframe.frame_id}.json"
+                audit_source.write_text(json.dumps({
                     "observation_id": observation_id, "visibility_mode": request.visibility_mode,
                     "map_to_camera": asdict(map_to_camera), "points": audit,
                 }, indent=2), encoding="utf-8")
+                audit_uri = _copy_debug_asset(
+                    audit_source, assets, f"{keyframe.frame_id}-sensor-association.json"
+                )
+                if audit_uri is not None:
+                    sensor_association_debug["audit"] = audit_uri
             raw_destination = assets / f"{keyframe.frame_id}-raw.png"
             overlay_destination = assets / f"{keyframe.frame_id}-regions.png"
             shutil.copyfile(keyframe.raw_image, raw_destination)
             shutil.copyfile(keyframe.overlay_image, overlay_destination)
-            frame_debug = _copy_frame_debug(keyframe.visual_observation.parent, assets, keyframe.frame_id)
-            diagnostics_source = keyframe.visual_observation.parent / "diagnostics.json"
-            diagnostics_destination = assets / f"{keyframe.frame_id}-diagnostics.json"
-            if diagnostics_source.is_file():
-                shutil.copyfile(diagnostics_source, diagnostics_destination)
-                frame_debug["diagnostics.json"] = f"{assets.name}/{diagnostics_destination.name}"
+            visual_perception_debug = _visual_perception_debug_manifest(
+                keyframe.visual_observation.parent, assets, keyframe.frame_id,
+                with_debug_images=request.with_debug_images,
+            )
+            debug_manifest: dict[str, Any] = {}
+            if visual_perception_debug:
+                debug_manifest["visual-perception"] = visual_perception_debug
+            if sensor_association_debug:
+                debug_manifest["sensor-association"] = sensor_association_debug
             observations.append(
                 {
                     "observation_id": observation_id,
@@ -879,7 +1033,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     "height": rgb.height,
                     "raw_image_uri": f"{assets.name}/{raw_destination.name}",
                     "overlay_image_uri": f"{assets.name}/{overlay_destination.name}",
-                    "debug_assets": frame_debug,
+                    "debug_manifest": debug_manifest,
                     "scene_claims": [
                         {
                             "kind": claim.get("kind"),
@@ -1001,7 +1155,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
 
     support_counts = _apply_spatial_support(base["points"])
 
-    base["schema_version"] = 2
+    base["schema_version"] = 3
     base["artifact_type"] = "contextual_rgb_lidar_slice"
     base["calibration_id"] = calibration.calibration_id
     base["capabilities"] = {
@@ -1039,7 +1193,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     }
 
     # Grava DEBUG de composição final: distribuição de labels por ponto.
-    debug_dir = request.destination.parent / (request.destination.stem + "-DEBUG")
+    debug_dir = request.destination.parent / DEBUG_DIRNAME
     if debug_dir and debug_dir.parent.exists():
         debug_dir.mkdir(parents=True, exist_ok=True)
         label_counts: dict[str, int] = {}
@@ -1070,6 +1224,13 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         }
         debug_file = debug_dir / "composition.json"
         debug_file.write_text(json.dumps(debug_data, indent=2), encoding="utf-8")
+        composition_uri = _copy_debug_asset(debug_file, assets, "composition.json")
+        if composition_uri is not None:
+            base.setdefault("debug_manifest", {})["composition"] = composition_uri
+
+    pipeline_backends = _pipeline_backends(request.keyframes[0].visual_observation)
+    if pipeline_backends:
+        base.setdefault("debug_manifest", {})["pipeline_backends"] = pipeline_backends
 
     request.destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = request.destination.with_suffix(request.destination.suffix + ".tmp")

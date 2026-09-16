@@ -17,12 +17,15 @@ from visual_perception.domain.region_reasoning import RegionReasoningRequest, Re
 from visual_perception.domain.semantics import ClaimKind, ConfidenceScore, Evidence, SemanticClaim
 from visual_perception.infrastructure.adapters._runtime import require_checkpoint
 from visual_perception.infrastructure.adapters.factory import create_perception_ports
+from visual_perception.infrastructure.adapters.florence2_region_discovery_backend import (
+    _proposals_from_florence_output,
+)
 from visual_perception.infrastructure.adapters.language_embedding_backend import _to_vector
 from visual_perception.infrastructure.adapters.reasoning_prompts import (
     describe_scene_claims,
     describe_views,
-    region_prompt,
     parse_json_object,
+    region_prompt,
 )
 from visual_perception.infrastructure.adapters.region_discovery_backend import (
     _proposal_from_mask,
@@ -97,6 +100,43 @@ def test_sam3_outputs_multiple_local_region_proposals() -> None:
     assert len(proposals) == 2
     assert [proposal.geometric_confidence for proposal in proposals] == [0.9, 0.7]
     assert all(proposal.source == "sam3:facebook/sam3" for proposal in proposals)
+
+
+# Garante que o output de REGION_PROPOSAL seja convertido para a geometria
+# canônica, com clipping nas bordas e uma máscara retangular explícita.
+def test_florence2_region_proposals_become_clipped_rectangular_masks() -> None:
+    """Converte caixas Florence-2 em propostas locais rastreáveis."""
+    image = payload_with_blobs(width=8, height=6)
+    proposals = _proposals_from_florence_output(
+        {
+            "<REGION_PROPOSAL>": {
+                "bboxes": [[1.2, 2.1, 5.0, 5.8], [-3, 0, 2, 3], [4, 4, 4, 5]],
+            }
+        },
+        image,
+        RegionDiscoveryConfig(
+            backend="florence2", checkpoint="microsoft/Florence-2-large", min_mask_area=1
+        ),
+    )
+
+    assert [proposal.local_id for proposal in proposals] == ["florence2-0", "florence2-1"]
+    assert proposals[0].box == BoundingBox(1.0, 2.0, 5.0, 6.0)
+    assert proposals[0].mask.area() == 16
+    assert proposals[1].box == BoundingBox(0.0, 0.0, 2.0, 3.0)
+    assert all(proposal.source == "florence2:microsoft/Florence-2-large" for proposal in proposals)
+
+
+# Protege o contract contra respostas incompletas ou com tipos inesperados do
+# post-processamento remoto do checkpoint.
+def test_florence2_region_proposal_rejects_invalid_top_level_output() -> None:
+    """Recusa um payload Florence-2 que não contém o objeto de tarefa esperado."""
+    image = payload_with_blobs(width=4, height=4)
+    with pytest.raises(BackendExecutionError, match="formato inválido"):
+        _proposals_from_florence_output(
+            [],
+            image,
+            RegionDiscoveryConfig(backend="florence2", checkpoint="microsoft/Florence-2-large"),
+        )
 
 
 # Protege a fronteira contra máscaras devolvidas em resolução diferente da
@@ -208,6 +248,26 @@ def test_port_factory_selects_sam3_region_discoverer_lazily() -> None:
     )
 
     assert isinstance(ports.region_discoverer, RealRegionDiscoveryAdapter)
+
+
+# Confirma que Florence-2 é composto preguiçosamente, sem baixar checkpoint nem
+# importar Torch durante a criação dos ports.
+def test_port_factory_selects_florence2_region_discoverer_lazily() -> None:
+    """Seleciona o adapter Florence-2 sem carregar o runtime opcional."""
+    from visual_perception.config import ModuleConfig
+    from visual_perception.infrastructure.adapters.florence2_region_discovery_backend import (
+        Florence2RegionDiscoveryAdapter,
+    )
+
+    ports = create_perception_ports(
+        ModuleConfig(
+            region_discovery=RegionDiscoveryConfig(
+                backend="florence2", checkpoint="microsoft/Florence-2-large"
+            )
+        )
+    )
+
+    assert isinstance(ports.region_discoverer, Florence2RegionDiscoveryAdapter)
 
 
 # Constrói um RegionReasoningRequest mínimo para os testes de tradução de

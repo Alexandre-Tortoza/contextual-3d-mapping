@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { observationIdOf, visualEvidence } from "./map-data.js";
+import { debugStagesOf, observationIdOf, resolveAssetUrl, visualEvidence } from "./map-data.js";
 
 // Traduz o motivo pelo qual um ponto do mapa ficou sem evidência contextual.
 // Sem isso o viewer só sabe dizer que nada foi publicado, e a pergunta que o
@@ -52,13 +52,6 @@ function SurfaceEvidence({ evidence }) {
       {surface.support_reason && <p className="empty-copy">{SURFACE_REASON_COPY[surface.support_reason] ?? surface.support_reason}</p>}
     </div>
   );
-}
-
-// Resolve um asset relativo ao JSON servido. Upload local não fornece uma URL
-// de diretório confiável, então esse caso permanece explicitamente indisponível.
-function resolveAsset(uri, artifactUrl) {
-  if (!uri || !artifactUrl) return null;
-  return new URL(uri, artifactUrl).href;
 }
 
 // Mantém imagem, box e pixel no mesmo sistema de coordenadas em qualquer
@@ -122,7 +115,7 @@ function keepDialogFocus(event) {
 
 // Exibe a imagem que sustentou o claim e ancora visualmente o pixel e a box da
 // região. O overlay continua sendo evidência 2D, não confirmação geométrica 3D.
-function ObservationPreview({ observation, region, pixel, artifactUrl }) {
+function ObservationPreview({ observation, region, pixel, artifactUrl, onOpenDebug, onOpenCompare }) {
   const [showOverlay, setShowOverlay] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const expandButton = useRef(null);
@@ -138,7 +131,7 @@ function ObservationPreview({ observation, region, pixel, artifactUrl }) {
   }, [expanded]);
   if (!observation) return null;
   const uri = showOverlay ? observation.overlay_image_uri : observation.raw_image_uri;
-  const source = resolveAsset(uri, artifactUrl);
+  const source = resolveAssetUrl(uri, artifactUrl);
   const toggleOverlay = () => setShowOverlay((value) => !value);
   const closeExpanded = () => setExpanded(false);
   return (
@@ -160,6 +153,12 @@ function ObservationPreview({ observation, region, pixel, artifactUrl }) {
               Ampliar
             </button>
           )}
+          <button className="text-action" type="button" onClick={() => onOpenDebug(observation.observation_id)}>
+            Debug
+          </button>
+          <button className="text-action" type="button" onClick={() => onOpenCompare(observation.observation_id)}>
+            Comparar
+          </button>
         </div>
       </div>
       {source ? (
@@ -214,11 +213,31 @@ function ObservationPreview({ observation, region, pixel, artifactUrl }) {
   );
 }
 
+// Achata recursivamente os valores folha (string) de uma etapa de
+// debug_manifest, prefixando cada caminho com o nome da etapa. Existe porque
+// uma etapa mistura URIs soltas ("diagnostics"), sub-objetos ("images") e
+// listas ("discovery_tiles", "region_views") sob a mesma chave, e esta prévia
+// só precisa de uma lista plana nome→uri para reaproveitar a UI existente.
+function flattenDebugManifestValue(node, prefix) {
+  if (typeof node === "string") return [[prefix, node]];
+  if (Array.isArray(node)) {
+    return node.flatMap((item, index) => flattenDebugManifestValue(item, `${prefix}.${index}`));
+  }
+  if (node && typeof node === "object") {
+    return Object.entries(node).flatMap(([key, value]) => flattenDebugManifestValue(value, `${prefix}.${key}`));
+  }
+  return [];
+}
+
 // Expõe cada camada persistida pelo pipeline sem presumir um conjunto fechado
-// de backends. Assim SAM3, grounding e novos estágios permanecem auditáveis
-// pelo mesmo contract ``debug_assets``.
+// de etapas. Assim SAM3, grounding e novos estágios permanecem auditáveis
+// pelo mesmo contract ``debug_manifest``, agnóstico a nomes de etapa. Esta é
+// só uma prévia rápida no dock de inspeção — a auditoria completa, por etapa
+// e por frame, vive no DebugExplorer (main.jsx, ?view=debug).
 function DebugAssets({ observation, artifactUrl }) {
-  const entries = Object.entries(observation?.debug_assets ?? {});
+  const entries = debugStagesOf(observation).flatMap(
+    ([stage, value]) => flattenDebugManifestValue(value, stage),
+  );
   const images = entries.filter(([, uri]) => /\.(png|jpe?g|webp)$/i.test(uri));
   const documents = entries.filter(([, uri]) => /\.json$/i.test(uri));
   const [selected, setSelected] = useState(images[0]?.[0] ?? null);
@@ -228,11 +247,28 @@ function DebugAssets({ observation, artifactUrl }) {
   return (
     <div className="inspector-block">
       <h3>Debug do pipeline</h3>
-      {images.length > 0 && <select value={selected ?? ""} onChange={(event) => setSelected(event.target.value)} aria-label="Estágio de debug">
-        {images.map(([name]) => <option key={name} value={name}>{name}</option>)}
-      </select>}
-      {selectedUri && <img className="observation-image" src={resolveAsset(selectedUri, artifactUrl)} alt={`Debug: ${selected}`} />}
-      {documents.length > 0 && <p className="technical-line">{documents.map(([name, uri]) => <a key={name} href={resolveAsset(uri, artifactUrl)} target="_blank" rel="noreferrer">{name}</a>)}</p>}
+      {selectedUri && (
+        <img className="observation-image debug-preview-image" src={resolveAssetUrl(selectedUri, artifactUrl)} alt={`Debug: ${selected}`} />
+      )}
+      {images.length > 1 && (
+        <select
+          className="debug-stage-select"
+          value={selected ?? ""}
+          onChange={(event) => setSelected(event.target.value)}
+          aria-label="Estágio de debug"
+        >
+          {images.map(([name]) => <option key={name} value={name}>{name}</option>)}
+        </select>
+      )}
+      {documents.length > 0 && (
+        <div className="debug-document-actions">
+          {documents.map(([name, uri]) => (
+            <a key={name} className="text-action" href={resolveAssetUrl(uri, artifactUrl)} target="_blank" rel="noreferrer">
+              {name}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -300,6 +336,8 @@ export function Inspector({
   artifactUrl,
   onClose,
   onFocus,
+  onOpenDebug,
+  onOpenCompare,
   outOfFocus = false,
 }) {
   const evidence = point ? visualEvidence(point) : null;
@@ -347,6 +385,14 @@ export function Inspector({
               <div><small>Z</small><strong>{point.coordinates_m[2].toFixed(2)} m</strong></div>
             </div>
 
+            {evidence && (
+              <>
+                <ObservationPreview observation={observation} region={region} pixel={displayedEvidence.pixel} artifactUrl={artifactUrl}
+                  onOpenDebug={onOpenDebug} onOpenCompare={onOpenCompare} />
+                <DebugAssets observation={observation} artifactUrl={artifactUrl} />
+              </>
+            )}
+
             {!region && (
               <div className="inspector-block warning-block">
                 <strong>Sem evidência contextual publicada</strong>
@@ -370,16 +416,9 @@ export function Inspector({
               </div>
             )}
 
-            <SurfaceEvidence evidence={displayedEvidence} />
-
-            {evidence && (
-              <>
-                <ObservationPreview observation={observation} region={region} pixel={displayedEvidence.pixel} artifactUrl={artifactUrl} />
-                <DebugAssets observation={observation} artifactUrl={artifactUrl} />
-              </>
-            )}
-
             <FusionSummary evidence={evidence} activeContribution={activeContribution} onSelectContribution={setActiveContribution} />
+
+            <SurfaceEvidence evidence={displayedEvidence} />
 
             {region?.claims?.length > 0 && (
               <div className="inspector-block">

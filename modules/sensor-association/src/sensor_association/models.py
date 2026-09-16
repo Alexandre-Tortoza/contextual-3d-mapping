@@ -151,12 +151,18 @@ class VisualRegionEvidence:
     grounding_status: str = "grounding_unavailable"
     grounding_reference: str | None = None
 
-    # Mantém a região identificável e evita coordenadas negativas que nunca
-    # poderiam pertencer ao suporte de uma imagem.
+    # Mantém a região identificável e exige coordenadas inteiras não negativas,
+    # pois o footprint é indexado diretamente no raster RGB.
     def __post_init__(self) -> None:
         """Valida identidade e coordenadas básicas da região visual."""
         if not self.region_id.strip():
             raise ValueError("region_id must not be empty.")
+        if any(
+            len(pixel) != 2
+            or any(isinstance(coordinate, bool) or not isinstance(coordinate, int) for coordinate in pixel)
+            for pixel in self.pixels
+        ):
+            raise ValueError("region pixels must use integer coordinates.")
         if any(x < 0 or y < 0 for x, y in self.pixels):
             raise ValueError("region pixels must be non-negative.")
         if self.grounding_status == "refined" and not self.grounding_reference:

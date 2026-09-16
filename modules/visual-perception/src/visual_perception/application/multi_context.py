@@ -41,6 +41,7 @@ from visual_perception.domain.embeddings import (
 )
 from visual_perception.domain.feature_map import FeatureMap
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
+from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_payload import ImagePayload
 from visual_perception.domain.region_evidence import (
     EvidenceSlot,
@@ -119,6 +120,7 @@ def extract_region_evidence(
     encoder: LanguageAlignedEncoder,
     *,
     feature_map: FeatureMap | None = None,
+    area_masks: ImageAreaMasks | None = None,
 ) -> MultiContextResult:
     """Produz a evidência multi-contexto de cada região, isolando falhas por slot.
 
@@ -128,6 +130,8 @@ def extract_region_evidence(
         config: a configuração do módulo (slots habilitados, backends).
         encoder: o encoder alinhado a linguagem usado pelos slots de crop.
         feature_map: o mapa denso; ``None`` desabilita o slot de foreground.
+        area_masks: áreas declaradas do frame; neutralizam apenas a evidência
+            global de cena, nunca o discovery nem os crops locais.
     Retorna:
         um :class:`MultiContextResult` com regiões, embeddings e falhas.
     """
@@ -138,13 +142,20 @@ def extract_region_evidence(
     updated: list[ObservedRegion] = []
     latency = dict.fromkeys(EvidenceSlot, 0.0)
     model_calls = dict.fromkeys(EvidenceSlot, 0)
-    views = build_region_views(regions, image, config)
+    views = build_region_views(regions, image, config, area_masks=area_masks)
 
     scene_slot_template = None
     if settings.scene_conditioned_enabled and regions:
         started = time.monotonic()
+        scene_view = _view_for(views, regions[0].region_id, EvidenceSlot.SCENE_CONDITIONED)
+        assert scene_view is not None, "scene_conditioned_enabled must produce a global scene view"
         scene_slot_template = _scene_evidence(
-            image, config, encoder, language_embeddings, failures
+            scene_view.payload,
+            config,
+            encoder,
+            language_embeddings,
+            failures,
+            neutralized=area_masks is not None and not area_masks.is_empty,
         )
         latency[EvidenceSlot.SCENE_CONDITIONED] += time.monotonic() - started
         model_calls[EvidenceSlot.SCENE_CONDITIONED] += 1
@@ -344,6 +355,8 @@ def _scene_evidence(
     encoder: LanguageAlignedEncoder,
     language_embeddings: list[LanguageEmbedding],
     failures: list[EvidenceExtractionFailure],
+    *,
+    neutralized: bool,
 ) -> RegionEvidenceSlot | None:
     """Codifica a imagem completa como evidência global compartilhada entre as regiões.
 
@@ -376,7 +389,7 @@ def _scene_evidence(
         # jamais alterar a geometria dela (critério de aceitação da #194).
         crop_box=BoundingBox(0.0, 0.0, float(image.width), float(image.height)),
         transform=CoordinateTransform.identity(),
-        preprocessing="full_image",
+        preprocessing="full_image_area_neutralized" if neutralized else "full_image",
         artifact_ref=SCENE_EVIDENCE_REF,
         space=_language_space(config),
     )

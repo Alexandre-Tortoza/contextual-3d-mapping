@@ -6,10 +6,11 @@ import { PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
 import { CameraRig } from "./camera-rig.jsx";
+import { DebugExplorer } from "./debug-explorer.jsx";
+import { ComparisonExplorer } from "./comparison-explorer.jsx";
 import { Inspector } from "./inspector.jsx";
 import {
   DIMMED_COLOR,
-  StaticArtifactGeometrySource,
   CONSOLIDATED_ARTIFACT_TYPE,
   CONTEXT_ARTIFACT_TYPE,
   allLegendKeys,
@@ -18,19 +19,14 @@ import {
   countSupportStates,
   geometryIdentity,
   legendKeys,
-  mapEntriesFromIndex,
   measureMap,
   partitionByFocus,
   srgbColorToLinear,
-  validateSlice,
 } from "./map-data.js";
 import { isEditableTarget } from "./navigation.js";
 import { nearestIntersection, pickThreshold, pointFromIntersection } from "./picking.js";
+import { useMapCatalog } from "./use-map-catalog.js";
 import "./styles.css";
-
-const DEFAULT_MAP_URL = "/current-map.json";
-const MAP_INDEX_URL = "/maps/index.json";
-const FALLBACK_MAPS = Object.freeze([]);
 
 // Cor única da camada atenuada. Fica fora do componente para que o builder de
 // geometria continue memoizável por identidade da função.
@@ -435,9 +431,26 @@ function MapSelector({ entries, value, onChange }) {
   );
 }
 
+// Substitui um erro solto por uma tela explicativa quando nenhuma run está
+// aberta. Existe porque um erro de fetch/parse (ex.: JSON inválido) não diz
+// por si só o que aconteceu nem o que fazer — esta tela explica a causa
+// provável e, quando há outras runs publicadas, oferece a troca direta.
+function ArtifactErrorScreen({ error, entries, artifactPath, onChange }) {
+  return (
+    <div className="artifact-error-screen" role="alert">
+      <strong>Não foi possível abrir esta run</strong>
+      <p className="artifact-error-message">{error.message}</p>
+      {error.explanation && <p className="artifact-error-explanation">{error.explanation}</p>}
+      {entries.length > 0 && (
+        <MapSelector entries={entries} value={artifactPath} onChange={onChange} />
+      )}
+    </div>
+  );
+}
+
 // Expõe os comandos de câmera no próprio mapa para que navegação não dependa
 // de conhecer atalhos de teclado.
-function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onFocus, onToggleFly, onHelp }) {
+function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onFocus, onToggleFly, onHelp, onOpenDebug, onOpenCompare }) {
   return (
     <div className="map-overlay camera-toolbar" aria-label="Controles da câmera">
       <button type="button" onClick={onReset}><kbd>Home</kbd><span>Mapa inteiro</span></button>
@@ -445,6 +458,8 @@ function CameraToolbar({ flyMode, hasSelection, onReset, onTop, onIsometric, onF
       <button type="button" onClick={onIsometric}><kbd>2</kbd><span>Perspectiva</span></button>
       <button type="button" onClick={onFocus} disabled={!hasSelection}><kbd>F</kbd><span>Focar</span></button>
       <button type="button" className={flyMode ? "active" : ""} aria-pressed={flyMode} onClick={onToggleFly}><kbd>V</kbd><span>{flyMode ? "Voando" : "Modo voo"}</span></button>
+      <button type="button" onClick={onOpenCompare}><span>Comparar</span></button>
+      <button type="button" onClick={onOpenDebug}><span>Explicabilidade</span></button>
       <button type="button" className="help-action" onClick={onHelp} aria-label="Ajuda de navegação">?</button>
     </div>
   );
@@ -469,26 +484,23 @@ function NavigationHelp({ onClose }) {
 }
 
 // Compõe carregamento, navegação, filtros e inspeção sem deixar um desses
-// estados reposicionar ou reconstruir os demais implicitamente.
-function Explorer() {
-  const [artifactPath, setArtifactPath] = useState(
-    () => new URLSearchParams(window.location.search).get("artifact"),
-  );
-  const [availableMaps, setAvailableMaps] = useState(FALLBACK_MAPS);
+// estados reposicionar ou reconstruir os demais implicitamente. O catálogo de
+// runs (qual artifact está aberto, o índice publicado, os pontos carregados)
+// vem de useMapCatalog — compartilhado com DebugExplorer — e este componente
+// só possui o estado de navegação e filtro específico do viewer 3D.
+function Explorer({ catalog, onOpenDebug, onOpenCompare }) {
+  const { artifactPath, availableMaps, catalogLoaded, slice, points, artifactUrl, error, selectMap } = catalog;
+  const catalogEmpty = catalogLoaded && availableMaps.length === 0 && !artifactPath;
   const [supportRules, setSupportRules] = useState({ dimWeak: true, dimUncorroborated: false });
-  const [slice, setSlice] = useState(null);
-  const [points, setPoints] = useState([]);
   const [selected, setSelected] = useState(null);
   const [enabledContextKeys, setEnabledContextKeys] = useState(() => {
     // Inicializa com estrutural oculto quando o primeiro artifact carrega.
-    // Será sobrescrito em openSlice quando temos os pontos/paleta.
+    // Será sobrescrito abaixo quando temos os pontos/paleta.
     return null;
   });
-  const [artifactUrl, setArtifactUrl] = useState(null);
   const [dockOpen, setDockOpen] = useState(true);
   const [flyMode, setFlyMode] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [error, setError] = useState(null);
   const cameraActions = useRef(null);
   const reducedMotion = useMemo(
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
@@ -520,47 +532,15 @@ function Explorer() {
     && !enabledContextKeys.has(contextKey(selected)),
   );
 
-  // Abre um artifact validado através da fronteira de geometria, permitindo
-  // substituir a fonte estática por chunks sem reescrever a interface.
-  const openSlice = async (payload, resolvedUrl = null) => {
-    const validated = validateSlice(payload);
-    if (![CONTEXT_ARTIFACT_TYPE, CONSOLIDATED_ARTIFACT_TYPE].includes(validated.artifact_type)) {
-      throw new Error("Selecione uma run com contexto ou um mapa consolidado.");
-    }
-    const source = new StaticArtifactGeometrySource(validated);
-    const geometry = await source.getGeometry();
-    const loadedPoints = geometry.chunks.flatMap((chunk) => chunk.points);
-    setSlice(validated);
-    setPoints(loadedPoints);
+  // Reseta a navegação e o dock sempre que uma run diferente termina de abrir
+  // (useMapCatalog troca a identidade de `slice`). Filtro de contexto é
+  // tratado à parte, no efeito de defaultEnabledKeys abaixo.
+  useEffect(() => {
     setSelected(null);
     setDockOpen(true);
     setFlyMode(false);
     setHelpOpen(false);
-    setArtifactUrl(resolvedUrl);
-    setError(null);
-  };
-
-  // Carrega a opção inicial ou escolhida e cancela a leitura anterior quando o
-  // usuário troca de mapa antes do término do download. Após abrir, aplica o
-  // default de estrutural oculto.
-  useEffect(() => {
-    if (!artifactPath) return undefined;
-    const resolvedUrl = new URL(artifactPath, window.location.href).href;
-    const controller = new AbortController();
-    setError(null);
-    fetch(resolvedUrl, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`O servidor respondeu HTTP ${response.status}.`);
-        return response.json();
-      })
-      .then((payload) => openSlice(payload, resolvedUrl))
-      .catch((failure) => {
-        if (failure.name !== "AbortError") {
-          setError(failure instanceof Error ? failure.message : "Não foi possível abrir o artifact.");
-        }
-    });
-    return () => controller.abort();
-  }, [artifactPath]);
+  }, [slice]);
 
   // Após paleta ser construída (carregamento bem-sucedido de novo artifact),
   // aplica o default de estrutural oculto.
@@ -569,39 +549,6 @@ function Explorer() {
       setEnabledContextKeys(defaultEnabledKeys);
     }
   }, [defaultEnabledKeys]);
-
-  // Atualiza o catálogo sem tirar o usuário da run escolhida. Na primeira
-  // abertura, seleciona a mais recente; URLs explícitas continuam estáveis.
-  useEffect(() => {
-    const controller = new AbortController();
-    const refresh = () => fetch(MAP_INDEX_URL, { signal: controller.signal, cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((payload) => {
-        const entries = mapEntriesFromIndex(payload);
-        setAvailableMaps(entries);
-        setArtifactPath((current) => current ?? entries[0]?.url ?? DEFAULT_MAP_URL);
-      })
-      .catch((failure) => {
-        if (failure.name !== "AbortError") setArtifactPath((current) => current ?? DEFAULT_MAP_URL);
-      });
-    refresh();
-    const interval = window.setInterval(refresh, 30000);
-    window.addEventListener("focus", refresh);
-    return () => {
-      controller.abort();
-      window.clearInterval(interval);
-      window.removeEventListener("focus", refresh);
-    };
-  }, []);
-
-  // Mantém a URL compartilhável sincronizada sem recarregar a aplicação nem
-  // perder o estado de conexão do viewer.
-  const selectMap = (path) => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("artifact", path);
-    window.history.replaceState(null, "", url);
-    setArtifactPath(path);
-  };
 
   // Centraliza atalhos globais e os desativa quando o usuário interage com
   // elementos HTML, preservando acessibilidade e edição de formulários.
@@ -652,13 +599,36 @@ function Explorer() {
 
   return (
     <main className="app-shell">
-      {error && <p role="alert" className="error-banner">{error}</p>}
-      {!slice && error && availableMaps.length > 0 && (
-        <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
+      {catalogEmpty ? (
+        <div className="empty-catalog" role="status">
+          <strong>Nenhuma run publicada ainda</strong>
+          <p>
+            Publique uma run contextual para começar a explorar o mapa e a
+            página de explicabilidade.
+          </p>
+          <pre>python apps/map-explorer/scripts/publish_map_index.py \{"\n"}  apps/map-explorer/web/public --artifact &lt;context.json&gt;</pre>
+        </div>
+      ) : (
+        <>
+          {!slice && error && (
+            <ArtifactErrorScreen
+              error={error}
+              entries={availableMaps}
+              artifactPath={artifactPath}
+              onChange={selectMap}
+            />
+          )}
+          {!slice && !error && (
+            <div className="loading-stage" role="status">
+              <span className="loading-spinner" aria-hidden="true" />
+              <span>Carregando mapa…</span>
+            </div>
+          )}
+        </>
       )}
-      {!slice && !error && <div className="loading-stage" aria-label="Carregando mapa" />}
       {slice && (
         <div className={`workspace ${dockOpen ? "with-dock" : ""}`}>
+          {error && <p role="alert" className="error-banner">{error.message}</p>}
           <div className="map-column">
             <div className={`viewport ${flyMode ? "fly-active" : ""}`}>
               <Canvas
@@ -679,7 +649,9 @@ function Explorer() {
                 onIsometric={() => cameraActions.current?.preset("isometric")}
                 onFocus={() => cameraActions.current?.focus(selected)}
                 onToggleFly={() => setFlyMode((value) => !value)}
-                onHelp={() => setHelpOpen((value) => !value)} />
+                onHelp={() => setHelpOpen((value) => !value)}
+                onOpenCompare={onOpenCompare}
+                onOpenDebug={onOpenDebug} />
               <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
               <ContextLegend entries={palette.legend} enabledKeys={enabledContextKeys}
                 defaultKeys={defaultEnabledKeys}
@@ -701,6 +673,7 @@ function Explorer() {
           {dockOpen && (
             <Inspector point={selected} slice={slice} artifactUrl={artifactUrl}
               onClose={() => setDockOpen(false)} onFocus={() => cameraActions.current?.focus(selected)}
+              onOpenDebug={onOpenDebug} onOpenCompare={onOpenCompare}
               outOfFocus={selectedOutOfFocus} />
           )}
         </div>
@@ -709,4 +682,58 @@ function Explorer() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<Explorer />);
+// Decide entre a vista de mapa (padrão) e a vista de explicabilidade a partir
+// de ?view=debug, compartilhando um único useMapCatalog() entre as duas —
+// trocar de vista não deve refazer fetch nem perder a run já carregada. Não
+// há router: a troca de vista usa history.pushState e ?view na query string,
+// o mesmo padrão já usado por ?artifact para selecionar a run.
+function App() {
+  const [view, setView] = useState(
+    () => new URLSearchParams(window.location.search).get("view"),
+  );
+  useEffect(() => {
+    const onPopState = () => setView(new URLSearchParams(window.location.search).get("view"));
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const navigateTo = (nextView, observationId = null) => {
+    const url = new URL(window.location.href);
+    if (nextView) url.searchParams.set("view", nextView);
+    else url.searchParams.delete("view");
+    if (observationId) url.searchParams.set("observation", observationId);
+    else url.searchParams.delete("observation");
+    window.history.pushState(null, "", url);
+    setView(nextView);
+  };
+
+  const catalog = useMapCatalog();
+
+  if (view === "debug") {
+    return (
+      <DebugExplorer
+        availableMaps={catalog.availableMaps}
+        slice={catalog.slice}
+        artifactUrl={catalog.artifactUrl}
+        artifactPath={catalog.artifactPath}
+        onSelectArtifact={catalog.selectMap}
+        requestedObservationId={new URLSearchParams(window.location.search).get("observation")}
+        onBack={() => navigateTo(null)}
+      />
+    );
+  }
+  if (view === "compare") {
+    return (
+      <ComparisonExplorer
+        availableMaps={catalog.availableMaps}
+        artifactPath={catalog.artifactPath}
+        onSelectArtifact={catalog.selectMap}
+        requestedObservationId={new URLSearchParams(window.location.search).get("observation")}
+        onBack={() => navigateTo(null)}
+      />
+    );
+  }
+  return <Explorer catalog={catalog} onOpenDebug={(observationId) => navigateTo("debug", observationId)} onOpenCompare={(observationId) => navigateTo("compare", observationId)} />;
+}
+
+createRoot(document.getElementById("root")).render(<App />);

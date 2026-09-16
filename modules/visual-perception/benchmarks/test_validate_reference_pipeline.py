@@ -15,15 +15,18 @@ sys.path.insert(0, str(_THIS_DIR))
 sys.path.insert(0, str(_THIS_DIR.parent / "src"))
 sys.path.insert(0, str(_THIS_DIR.parent / "tests"))
 
+from fixtures import payload_with_blobs  # noqa: E402
 from validate_reference_pipeline import (  # noqa: E402
+    DEFAULT_SAMPLE_FRAME_OFFSET,
+    DEFAULT_SAMPLE_SEED,
     ValidationOptions,
     evidence_state_counts,
     load_dotenv,
     remote_reasoning_summary,
     resolve_config,
     select_frame_paths,
+    selection_record,
 )
-from fixtures import payload_with_blobs  # noqa: E402
 from visual_perception.application.tiling import build_tiles  # noqa: E402
 from visual_perception.domain.geometry import BoundingBox, Mask  # noqa: E402
 from visual_perception.domain.region_evidence import (  # noqa: E402
@@ -80,14 +83,57 @@ def test_explicit_frame_ids_preserve_requested_order(tmp_path: Path) -> None:
     )
 
 
-# Verifica o caminho abreviado de seleção reproduzível por limite.
-def test_default_selection_is_sorted_and_limit_is_applied_afterward(tmp_path: Path) -> None:
+# Verifica que a amostra padrão usa uma seed estável e mantém o segundo frame
+# exatamente no deslocamento do protocolo.
+def test_default_selection_is_seeded_pair_with_fixed_offset(tmp_path: Path) -> None:
+    """Protege a amostra pareada padrão contra mudanças silenciosas de protocolo."""
+    _touch_frames(tmp_path, *(f"frame-{index:02d}" for index in range(14)))
+
+    selected = select_frame_paths(tmp_path)
+
+    assert DEFAULT_SAMPLE_SEED == 42
+    assert tuple(path.stem for path in selected) == ("frame-00", "frame-12")
+    assert int(selected[1].stem.removeprefix("frame-")) - int(
+        selected[0].stem.removeprefix("frame-")
+    ) == DEFAULT_SAMPLE_FRAME_OFFSET
+
+
+# Verifica que --limit continua sendo uma seleção explícita por prefixo
+# ordenado, sem aplicar a amostra padrão.
+def test_limit_selection_is_sorted_and_applied_afterward(tmp_path: Path) -> None:
     """Protege a seleção lexical determinística quando apenas limit é usado."""
     _touch_frames(tmp_path, "frame-c", "frame-a", "frame-b")
 
     selected = select_frame_paths(tmp_path, limit=2)
 
     assert tuple(path.stem for path in selected) == ("frame-a", "frame-b")
+
+
+# Recusa uma execução padrão que não conseguiria formar o par +12; carregar
+# modelos antes desse erro faria uma execução cara terminar sem resultado útil.
+def test_default_selection_requires_pair_offset_capacity(tmp_path: Path) -> None:
+    """Exige ao menos treze frames para a amostra padrão."""
+    _touch_frames(tmp_path, *(f"frame-{index:02d}" for index in range(12)))
+
+    with pytest.raises(ValueError, match="requires at least 13 frames"):
+        select_frame_paths(tmp_path)
+
+
+# O manifest declara a decisão de seleção, em vez de fazer o leitor deduzir
+# seed e deslocamento a partir dos IDs escolhidos.
+def test_default_selection_record_is_reproducible(tmp_path: Path) -> None:
+    """Registra seed, deslocamento e IDs da amostra pareada."""
+    _touch_frames(tmp_path, *(f"frame-{index:02d}" for index in range(13)))
+    frames = select_frame_paths(tmp_path)
+
+    assert selection_record(ValidationOptions(), frames) == {
+        "strategy": "seeded_pair",
+        "requested_frame_ids": [],
+        "limit": None,
+        "seed": 42,
+        "frame_offset": 12,
+        "selected_frame_ids": ["frame-00", "frame-12"],
+    }
 
 
 @pytest.mark.parametrize(
@@ -194,6 +240,101 @@ def test_the_reasoning_backend_override_changes_only_the_backend_identity() -> N
     for field in ("region_discovery", "feature_extraction", "language_embedding",
                   "multi_context", "hypothesis_support", "refinement",
                   "reconciliation", "semantic_relations", "calibration"):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# A comparação de discovery só é interpretável se a troca ficar restrita à
+# geometria de proposals; checkpoint e identidade mudam juntos, pois são uma
+# unidade de proveniência, mas os demais estágios devem permanecer idênticos.
+def test_region_discovery_override_changes_only_its_backend_identity() -> None:
+    """Selecionar Florence-2 preserva todos os demais backends e parâmetros."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, region_discovery_backend="florence2")
+    )
+
+    assert candidate.region_discovery.backend == "florence2"
+    assert candidate.region_discovery.checkpoint == "microsoft/Florence-2-large"
+    assert dataclasses.replace(
+        candidate.region_discovery,
+        backend=baseline.region_discovery.backend,
+        checkpoint=baseline.region_discovery.checkpoint,
+    ) == baseline.region_discovery
+    for field in (
+        "feature_extraction",
+        "language_embedding",
+        "multimodal_reasoning",
+        "multi_context",
+        "hypothesis_support",
+        "refinement",
+        "reconciliation",
+        "semantic_relations",
+        "calibration",
+    ):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# Mesma garantia, para a terceira opção de region discovery: o SAM2.1
+# clássico compartilha o adapter com o SAM3, então só o checkpoint/backend
+# devem mudar — um regressão aqui vazaria threshold ou device do SAM3 (que
+# resolve_config já ajustou) para o braço SAM2.
+def test_region_discovery_sam2_override_changes_only_its_backend_identity() -> None:
+    """Selecionar SAM2.1 preserva todos os demais backends e parâmetros."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, region_discovery_backend="sam")
+    )
+
+    assert candidate.region_discovery.backend == "sam"
+    assert candidate.region_discovery.checkpoint == "facebook/sam2.1-hiera-large"
+    assert dataclasses.replace(
+        candidate.region_discovery,
+        backend=baseline.region_discovery.backend,
+        checkpoint=baseline.region_discovery.checkpoint,
+    ) == baseline.region_discovery
+    for field in (
+        "feature_extraction",
+        "language_embedding",
+        "multimodal_reasoning",
+        "multi_context",
+        "hypothesis_support",
+        "refinement",
+        "reconciliation",
+        "semantic_relations",
+        "calibration",
+    ):
+        assert getattr(candidate, field) == getattr(baseline, field), field
+
+
+# Mesma garantia que test_region_discovery_override_changes_only_its_backend_identity,
+# para o eixo de feature extraction: trocar DINOv2 por FeatUp não pode
+# arrastar nenhum outro estágio junto, ou a comparação deixa de isolar uma
+# variável.
+def test_feature_extraction_override_changes_only_its_backend_identity() -> None:
+    """Selecionar FeatUp preserva todos os demais backends e parâmetros."""
+    baseline = resolve_config(ValidationOptions(sequence_masks=None))
+    candidate = resolve_config(
+        ValidationOptions(sequence_masks=None, feature_extraction_backend="featup")
+    )
+
+    assert candidate.feature_extraction.backend == "featup"
+    assert candidate.feature_extraction.checkpoint == baseline.feature_extraction.upsampler_checkpoint
+    assert dataclasses.replace(
+        candidate.feature_extraction,
+        backend=baseline.feature_extraction.backend,
+        checkpoint=baseline.feature_extraction.checkpoint,
+    ) == baseline.feature_extraction
+    for field in (
+        "region_discovery",
+        "language_embedding",
+        "multimodal_reasoning",
+        "multi_context",
+        "hypothesis_support",
+        "refinement",
+        "reconciliation",
+        "semantic_relations",
+        "calibration",
+    ):
         assert getattr(candidate, field) == getattr(baseline, field), field
 
 

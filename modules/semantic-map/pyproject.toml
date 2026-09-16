@@ -18,4 +18,4 @@ packages = ["src/semantic_map"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../semantic-fusion/src"]
+pythonpath = ["src", "../semantic-fusion/src", "../../contracts"]

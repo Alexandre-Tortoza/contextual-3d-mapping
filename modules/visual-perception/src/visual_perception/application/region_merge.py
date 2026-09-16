@@ -32,6 +32,9 @@ def merge_regions(
 ) -> tuple[ObservedRegion, ...]:
     """Mescla proposals duplicadas entre tiles/escalas em regions canônicas estáveis."""
     ordered = sorted(proposals, key=lambda proposal: proposal.proposal_id)
+    proposal_ids = tuple(proposal.proposal_id for proposal in ordered)
+    if len(set(proposal_ids)) != len(proposal_ids):
+        raise ValueError("RegionProposal.proposal_id values must be unique within one merge.")
     parent = {proposal.proposal_id: proposal.proposal_id for proposal in ordered}
 
     # Busca (find) da raiz do grupo union-find de uma proposal, com path

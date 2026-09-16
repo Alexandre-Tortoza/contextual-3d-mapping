@@ -25,7 +25,10 @@ from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (
     OUTPUT_FORMAT_INSTRUCTION,
     GeminiRoboticsReasoningAdapter,
 )
-from visual_perception.infrastructure.adapters.reasoning_prompts import region_prompt, scene_prompt  # noqa: E402
+from visual_perception.infrastructure.adapters.reasoning_prompts import (  # noqa: E402
+    region_prompt,
+    scene_prompt,
+)
 
 SECRET = "chave-de-teste-que-nao-pode-vazar"
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -12,6 +11,8 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 from urllib.request import urlopen
+
+from contextual_mapping_contracts import next_run_id
 
 from .models import CostEstimate, DatasetProfile, ExtractionRequest, ExtractionResult
 from .processes import ProcessRunner
@@ -50,12 +51,7 @@ class Workflows:
         Retorna:
             identificador único baseado nas runs contextuais já existentes.
         """
-        numbers = []
-        for run_id in self.project.context_run_ids():
-            match = re.match(r"(?:\d{4}-\d{2}-\d{2}-)?run-(\d+)-", run_id)
-            if match:
-                numbers.append(int(match.group(1)))
-        return f"{datetime.now(UTC):%Y-%m-%d}-run-{max(numbers, default=0) + 1:03d}-{name}"
+        return str(next_run_id(self.project.context_run_ids(), today=datetime.now(UTC).date(), name=name))
 
     # Inspeciona a rosbag por meio do adapter dono da integração.
     def inspect_bag(self, bag: Path) -> RosbagRecording:
@@ -231,7 +227,13 @@ class Workflows:
             command.append("--no-sequence-masks")
         else:
             command.extend(("--sequence-masks", str(sequence_masks.resolve())))
-        for frame_id in frame_ids:
+        # Sem seleção explícita, processa exatamente os frames que já foram
+        # extraídos para este trecho — nunca a amostragem default do harness,
+        # que exige um mínimo de frames pensado para navegar um diretório
+        # grande e desconhecido, não para reproduzir uma janela pequena que a
+        # extração já escolheu a dedo.
+        selected_ids = frame_ids or tuple(sorted(frame.stem for frame in frames))
+        for frame_id in selected_ids:
             command.extend(("--frame-id", frame_id))
         if reasoning_backend is not None:
             command.extend(("--reasoning-backend", reasoning_backend))
@@ -308,6 +310,7 @@ class Workflows:
         run_name: str | None = None,
         odometry: Path | None = None,
         publish: bool = True,
+        with_debug_images: bool = False,
     ) -> Path:
         """Compõe o artifact contextual de um segmento conhecido.
 
@@ -323,6 +326,10 @@ class Workflows:
                 geometria compartilhada vem de uma campanha global.
             publish: ``False`` adia a publicação para quem compõe um conjunto
                 e só deve expor ao viewer depois de todas as composições.
+            with_debug_images: promove para a run contextual as imagens ricas
+                de debug por etapa (discovery tiles, region views, camadas
+                intermediárias) que a run de percepção visual já escreveu
+                para cada keyframe.
         Retorna:
             artifact contextual publicado.
         """
@@ -351,6 +358,8 @@ class Workflows:
             if not odometry.is_file():
                 raise FileNotFoundError(f"odometria ausente: {odometry}")
             command.append(f"M1_ODOMETRY={odometry}")
+        if with_debug_images:
+            command.append("M1_WITH_DEBUG_IMAGES=1")
         self.runner.run(command, cwd=self.project.root)
         if not destination.is_file():
             raise FileNotFoundError(f"composição não publicou {destination}")

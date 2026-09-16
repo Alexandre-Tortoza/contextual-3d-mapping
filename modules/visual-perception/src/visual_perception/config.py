@@ -163,8 +163,8 @@ class RegionDiscoveryConfig:
     # falhando cedo com um erro acionável em vez de deixar um threshold
     # inválido se propagar para o pipeline.
     def __post_init__(self) -> None:
-        if self.backend not in {"fake", "sam", "sam3"}:
-            raise ValueError("region_discovery.backend must be fake, sam, or sam3.")
+        if self.backend not in {"fake", "sam", "sam3", "florence2"}:
+            raise ValueError("region_discovery.backend must be fake, sam, sam3, or florence2.")
         if not 0.0 <= self.score_threshold <= 1.0:
             raise ValueError("region_discovery.score_threshold must be in [0, 1].")
         if self.device not in {"auto", "cpu", "cuda"}:

@@ -5,15 +5,22 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 from typing import Any
 
 from semantic_fusion import SemanticContribution, fuse_point_contributions, measure_spatial_support, LabelledPoint
 
+from contextual_mapping_contracts import FrameId, MapId
+
 CONTEXT_ARTIFACT_TYPE = "contextual_rgb_lidar_slice"
 CONSOLIDATED_ARTIFACT_TYPE = "consolidated_contextual_map"
+#: O mapa consolidado reusa a mesma forma de documento das runs de origem
+#: (observations, regions, debug_manifest); não é um schema à parte com
+#: numeração própria, então ele acompanha o schema_version da run contextual
+#: em vez de manter uma versão independente que nunca é bumpada junto.
+CONSOLIDATED_SCHEMA_VERSION = 3
 
 
 # Normaliza um label para a comparação textual entre runs. Existe porque
@@ -74,10 +81,14 @@ def geometry_fingerprint(payload: Mapping[str, Any]) -> str:
     source = payload.get("source")
     if not isinstance(payload.get("map_id"), str) or not isinstance(payload.get("map_frame"), str):
         raise ValueError("context run must declare map_id and map_frame.")
+    try:
+        map_id, map_frame = MapId(payload["map_id"]), FrameId(payload["map_frame"])
+    except ValueError as error:
+        raise ValueError("context run must declare a valid map_id and map_frame.") from error
     if not isinstance(source, Mapping) or not isinstance(source.get("sha256"), str) or not source["sha256"]:
         raise ValueError("context run must declare source.sha256 of its point cloud.")
     canonical = json.dumps(
-        {"map_id": payload["map_id"], "map_frame": payload["map_frame"], "source_sha256": source["sha256"],
+        {"map_id": str(map_id), "map_frame": str(map_frame), "source_sha256": source["sha256"],
          "source_point_count": source.get("point_count")},
         ensure_ascii=False,
         separators=(",", ":"),
@@ -134,15 +145,21 @@ class PublishedContextRun:
     artifact_url: str
     artifact_sha256: str
     payload: Mapping[str, Any]
+    map_id: MapId = field(init=False)
+    map_frame: FrameId = field(init=False)
 
     # Rejeita uma identidade incompleta antes que ela seja namespace de
     # observações e regiões no resultado global.
     def __post_init__(self) -> None:
-        """Valida a identidade pública da run publicada."""
+        """Valida a identidade pública da run publicada e sua origem de mapa/frame."""
         if not self.run_id.strip() or not self.label.strip() or not self.artifact_url.startswith("/"):
             raise ValueError("published context runs require id, label and absolute artifact URL.")
         if self.payload.get("artifact_type") != CONTEXT_ARTIFACT_TYPE:
             raise ValueError("published run must contain a contextual RGB-LiDAR artifact.")
+        if not isinstance(self.payload.get("map_id"), str) or not isinstance(self.payload.get("map_frame"), str):
+            raise ValueError("published run must declare map_id and map_frame.")
+        object.__setattr__(self, "map_id", MapId(self.payload["map_id"]))
+        object.__setattr__(self, "map_frame", FrameId(self.payload["map_frame"]))
 
 
 # Publica a saída do módulo sem expor detalhes do algoritmo ao publisher. O
@@ -181,6 +198,32 @@ def _asset_url(run_id: str, uri: Any) -> Any:
     if not isinstance(uri, str) or not uri:
         return uri
     return uri if uri.startswith("/") else f"/runs/{run_id}/{uri.lstrip('/')}"
+
+
+# Reescreve toda URI relativa dentro de um ``debug_manifest`` para a URL
+# pública da run. Existe porque o manifest é uma árvore de profundidade
+# variável (por etapa, com listas como ``discovery_tiles``/``region_views``),
+# e antes desta função só ``raw_image_uri``/``overlay_image_uri`` eram
+# reescritas: os links de debug do mapa consolidado já quebravam hoje,
+# silenciosamente, porque ``debug_assets``/``debug_manifest`` nunca passava
+# por ``_asset_url``.
+def _rewrite_debug_manifest_urls(run_id: str, value: Any) -> Any:
+    """Reescreve recursivamente as URIs de um nó de ``debug_manifest``.
+
+    Argumentos:
+        run_id: identidade da run de origem, dona das URIs relativas.
+        value: nó do manifest — ``dict``, lista ou string de URI relativa.
+    Retorna:
+        o mesmo formato de ``value``, com toda folha string resolvida por
+        ``_asset_url``.
+    """
+    if isinstance(value, str):
+        return _asset_url(run_id, value)
+    if isinstance(value, Mapping):
+        return {key: _rewrite_debug_manifest_urls(run_id, item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_rewrite_debug_manifest_urls(run_id, item) for item in value]
+    return value
 
 
 # Extrai a única evidência que uma run oferece para um ponto. A fusão interna
@@ -287,8 +330,8 @@ def consolidate_context_runs(
         raise ValueError("context runs must share the same geometry source.")
     fingerprint = fingerprints.pop()
     first = material[0].payload
-    map_id, map_frame = first["map_id"], first["map_frame"]
-    if any(run.payload.get("map_id") != map_id or run.payload.get("map_frame") != map_frame for run in material):
+    map_id, map_frame = material[0].map_id, material[0].map_frame
+    if any(run.map_id != map_id or run.map_frame != map_frame for run in material):
         raise ValueError("context runs must share map_id and map_frame.")
 
     all_labels = [
@@ -313,6 +356,8 @@ def consolidate_context_runs(
             record.update({"observation_id": _namespaced(run.run_id, local_id), "source_run_id": run.run_id, "source_observation_id": local_id})
             record["raw_image_uri"] = _asset_url(run.run_id, record.get("raw_image_uri"))
             record["overlay_image_uri"] = _asset_url(run.run_id, record.get("overlay_image_uri"))
+            if "debug_manifest" in record:
+                record["debug_manifest"] = _rewrite_debug_manifest_urls(run.run_id, record["debug_manifest"])
             observations_out.append(record)
         for local_id, region in regions.items():
             record = deepcopy(dict(region))
@@ -372,11 +417,30 @@ def consolidate_context_runs(
         {"run_id": run.run_id, "label": run.label, "artifact_url": run.artifact_url, "artifact_sha256": run.artifact_sha256}
         for run in material
     ]
+    # Uma run individual carrega uma única string em ``debug_manifest.composition``;
+    # o consolidado funde várias runs, então a mesma chave vira uma entrada por
+    # run de origem que tiver composição, e não uma string só.
+    composition_entries = [
+        {"run_id": run.run_id, "uri": _asset_url(run.run_id, composition_uri)}
+        for run in material
+        if isinstance(run.payload.get("debug_manifest"), Mapping)
+        and isinstance((composition_uri := run.payload["debug_manifest"].get("composition")), str)
+    ]
+    # Mesma lógica de ``composition``: cada run declara os próprios backends
+    # (não é uma URI, então não passa por ``_asset_url``), e o consolidado
+    # precisa preservar de qual run cada configuração veio — uma comparação
+    # entre backends só faz sentido sabendo qual run usou qual.
+    backends_entries = [
+        {"run_id": run.run_id, "backends": run.payload["debug_manifest"]["pipeline_backends"]}
+        for run in material
+        if isinstance(run.payload.get("debug_manifest"), Mapping)
+        and isinstance(run.payload["debug_manifest"].get("pipeline_backends"), Mapping)
+    ]
     payload = {
-        "schema_version": 1,
+        "schema_version": CONSOLIDATED_SCHEMA_VERSION,
         "artifact_type": CONSOLIDATED_ARTIFACT_TYPE,
-        "map_id": map_id,
-        "map_frame": map_frame,
+        "map_id": str(map_id),
+        "map_frame": str(map_frame),
         "source": deepcopy((backdrop or first).get("source")),
         "points": output_points,
         "observations": observations_out,
@@ -393,4 +457,11 @@ def consolidate_context_runs(
             "source_run_count": len(material),
         },
     }
+    if composition_entries or backends_entries:
+        debug_manifest: dict[str, Any] = {}
+        if composition_entries:
+            debug_manifest["composition"] = composition_entries
+        if backends_entries:
+            debug_manifest["pipeline_backends"] = backends_entries
+        payload["debug_manifest"] = debug_manifest
     return ConsolidatedContextMap(fingerprint, payload)

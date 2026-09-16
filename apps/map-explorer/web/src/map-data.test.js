@@ -3,15 +3,19 @@ import test from "node:test";
 
 import {
   StaticArtifactGeometrySource,
+  ChunkedArtifactGeometrySource,
   buildContextPalette,
   buildLabelFamilies,
+  comparisonMetadata,
   contextKey,
   countSupportStates,
+  debugStagesOf,
   geometryIdentity,
   legendKeys,
   mapEntriesFromIndex,
   measureMap,
   partitionByFocus,
+  resolveAssetUrl,
   srgbColorToLinear,
   validateSlice,
 } from "./map-data.js";
@@ -56,21 +60,138 @@ const POINTS = [
   },
 ];
 
-// Protege a compatibilidade dos dois schemas e os diagnósticos de coordenadas
-// inválidas antes da renderização WebGL.
-test("validateSlice aceita v1/v2 e rejeita coordenadas inválidas", () => {
-  assert.equal(validateSlice({ schema_version: 1, map_id: "m", map_frame: "map", points: POINTS }).map_id, "m");
-  assert.equal(validateSlice({ schema_version: 2, map_id: "m", map_frame: "map", points: POINTS, observations: [], regions: [] }).schema_version, 2);
+// Protege a versão única de schema aceita e os diagnósticos de coordenadas
+// inválidas antes da renderização WebGL. O backend não gera nem aceita mais
+// versões anteriores, então uma versão diferente de 3 é rejeitada, não lida
+// de forma tolerante.
+test("validateSlice aceita apenas schema_version 3 e rejeita coordenadas inválidas", () => {
+  assert.equal(validateSlice({ schema_version: 3, map_id: "m", map_frame: "map", points: POINTS }).map_id, "m");
   assert.throws(
-    () => validateSlice({ schema_version: 1, map_id: "m", map_frame: "map", points: [{ coordinates_m: [0, Number.NaN, 0] }] }),
+    () => validateSlice({ schema_version: 2, map_id: "m", map_frame: "map", points: POINTS, observations: [], regions: [] }),
+    /schema_version 3/,
+  );
+  assert.throws(
+    () => validateSlice({ schema_version: 3, map_id: "m", map_frame: "map", points: [{ coordinates_m: [0, Number.NaN, 0] }] }),
     /não finitas/,
   );
   assert.equal(
     validateSlice({
-      schema_version: 1, artifact_type: "consolidated_contextual_map", map_id: "m", map_frame: "map",
+      schema_version: 3, artifact_type: "consolidated_contextual_map", map_id: "m", map_frame: "map",
       points: POINTS, observations: [], regions: [],
     }).artifact_type,
     "consolidated_contextual_map",
+  );
+});
+
+// O mapa consolidado reusa a mesma forma de documento das runs de origem
+// (consolidate_context_runs em modules/semantic-map), então acompanha o
+// mesmo schema_version — uma versão diferente é rejeitada como em qualquer
+// outro artifact, sem uma exceção por artifact_type.
+test("validateSlice rejeita o mapa consolidado fora da versão vigente", () => {
+  assert.throws(
+    () => validateSlice({
+      schema_version: 1, artifact_type: "consolidated_contextual_map", map_id: "m", map_frame: "map",
+      points: POINTS, observations: [], regions: [],
+    }),
+    /schema_version 3/,
+  );
+});
+
+// O catálogo preserva a declaração de comparação apenas quando ela tem grupo
+// e eixos textuais completos; entradas antigas continuam válidas para o mapa.
+test("mapEntriesFromIndex expõe metadata de comparação validada", () => {
+  const entries = mapEntriesFromIndex([{
+    url: "/runs/sam-qwen/context.json", label: "SAM + Qwen", artifact_type: "contextual_rgb_lidar_slice",
+    run_id: "sam-qwen", map_id: "corridor", comparison: {
+      group_id: "frame-184", axes: { region_discovery: "sam", multimodal_reasoner: "qwen" },
+    },
+  }]);
+  assert.deepEqual(entries[0].comparison, {
+    groupId: "frame-184", axes: { region_discovery: "sam", multimodal_reasoner: "qwen" },
+  });
+  assert.equal(comparisonMetadata({ group_id: "", axes: {} }), null);
+});
+
+// Um mapa consolidado grande substitui points por um geometry_manifest; a
+// fronteira precisa aceitar esse formato e ainda recusar chunks malformados.
+test("validateSlice aceita geometry_manifest no lugar de points e recusa chunk malformado", () => {
+  const manifest = [{ chunk_id: "chunk-0000", url: "geometry/chunk-0000.json", point_count: 2 }];
+  assert.deepEqual(
+    validateSlice({
+      schema_version: 3, artifact_type: "consolidated_contextual_map", map_id: "m", map_frame: "map",
+      points: [], geometry_manifest: manifest, observations: [], regions: [],
+    }).geometry_manifest,
+    manifest,
+  );
+  assert.throws(
+    () => validateSlice({
+      schema_version: 3, map_id: "m", map_frame: "map", geometry_manifest: [{ chunk_id: "c", point_count: 1 }],
+    }),
+    /não possui url/,
+  );
+  assert.throws(
+    () => validateSlice({
+      schema_version: 3, artifact_type: "contextual_rgb_lidar_slice", map_id: "m", map_frame: "map",
+      points: [], geometry_manifest: manifest, observations: [], regions: [],
+    }),
+    /só é válido para mapas consolidados/,
+  );
+});
+
+// O debug_manifest é opcional e estruturado por etapa (schema_version 3);
+// etapas desconhecidas não podem quebrar a validação, só uma forma inválida
+// (não-objeto) pode.
+test("validateSlice aceita debug_manifest aninhado e agnóstico a etapas, e recusa forma inválida", () => {
+  const observations = [{
+    observation_id: "obs-0",
+    debug_manifest: {
+      "visual-perception": {
+        diagnostics: "diagnostics.json",
+        images: { raw: "raw.png", proposals: "proposals.png" },
+        discovery_tiles: [{ id: "t0", input: "tile-0.png", proposals: "tile-0-proposals.json" }],
+      },
+      "sensor-association": { audit: "audit.json" },
+      "future-stage": { anything: "future.png" },
+    },
+  }];
+  const validated = validateSlice({
+    schema_version: 3, artifact_type: "contextual_rgb_lidar_slice", map_id: "m", map_frame: "map",
+    points: [], observations, regions: [],
+  });
+  assert.equal(validated.observations[0].debug_manifest["future-stage"].anything, "future.png");
+
+  assert.throws(
+    () => validateSlice({
+      schema_version: 3, artifact_type: "contextual_rgb_lidar_slice", map_id: "m", map_frame: "map",
+      points: [], observations: [{ observation_id: "obs-0", debug_manifest: "not-an-object" }], regions: [],
+    }),
+    /debug_manifest precisa ser um objeto/,
+  );
+});
+
+// debugStagesOf é a fronteira que Inspector e DebugExplorer usam para listar
+// etapas sem presumir nomes fixos de etapa.
+test("debugStagesOf lista as etapas publicadas sem presumir nomes fixos", () => {
+  const observation = {
+    debug_manifest: {
+      "visual-perception": { diagnostics: "d.json" },
+      "sensor-association": { audit: "a.json" },
+    },
+  };
+  assert.deepEqual(debugStagesOf(observation).map(([stage]) => stage), ["visual-perception", "sensor-association"]);
+  assert.deepEqual(debugStagesOf({}), []);
+  assert.deepEqual(debugStagesOf(null), []);
+});
+
+// resolveAssetUrl precisa continuar indisponível quando não há URL de
+// diretório confiável (upload local), e resolver relativa ao JSON servido nos
+// demais casos.
+test("resolveAssetUrl resolve URIs relativas ao artifact e recusa entradas sem base", () => {
+  assert.equal(resolveAssetUrl(null, "http://viewer.test/runs/a/context.json"), null);
+  assert.equal(resolveAssetUrl("raw.png", null), null);
+  assert.equal(
+    resolveAssetUrl("images/raw.png", "http://viewer.test/runs/a/context.json"),
+    "http://viewer.test/runs/a/images/raw.png",
   );
 });
 
@@ -243,6 +364,52 @@ test("fonte estática devolve um chunk e respeita cancelamento", async () => {
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(source.getGeometry({ signal: controller.signal }), { name: "AbortError" });
+});
+
+// A fonte em chunks precisa buscar cada URL do manifesto, na ordem publicada,
+// pintando progressivamente via onChunk, e respeitar cancelamento a qualquer momento.
+test("fonte em chunks busca cada URL do manifesto e pinta progressivamente", async (t) => {
+  const manifest = [
+    { chunk_id: "chunk-0000", url: "geometry/chunk-0000.json", point_count: 1 },
+    { chunk_id: "chunk-0001", url: "geometry/chunk-0001.json", point_count: 1 },
+  ];
+  const byUrl = {
+    "http://viewer.test/maps/consolidated/f/geometry/chunk-0000.json": { points: [POINTS[0]] },
+    "http://viewer.test/maps/consolidated/f/geometry/chunk-0001.json": { points: [POINTS[1]] },
+  };
+  const requested = [];
+  t.mock.method(globalThis, "fetch", async (url) => {
+    requested.push(url);
+    return { ok: true, json: async () => byUrl[url] };
+  });
+
+  const source = new ChunkedArtifactGeometrySource(
+    { map_id: "m", geometry_manifest: manifest },
+    "http://viewer.test/maps/consolidated/f/context.json",
+  );
+  const received = [];
+  const geometry = await source.getGeometry({ onChunk: (chunk) => received.push(chunk) });
+
+  assert.deepEqual(requested, Object.keys(byUrl));
+  assert.equal(received.length, 2);
+  assert.deepEqual(received[0].points, [POINTS[0]]);
+  assert.equal(geometry.chunks.length, 2);
+  assert.equal(geometry.complete, true);
+});
+
+// Cancelar antes do primeiro chunk não deve disparar nenhuma requisição de rede.
+test("fonte em chunks respeita cancelamento antes do primeiro chunk", async (t) => {
+  const fetchSpy = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("não deveria buscar chunk algum");
+  });
+  const source = new ChunkedArtifactGeometrySource(
+    { map_id: "m", geometry_manifest: [{ chunk_id: "c", url: "x.json", point_count: 1 }] },
+    "http://viewer.test/x.json",
+  );
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(source.getGeometry({ signal: controller.signal }), { name: "AbortError" });
+  assert.equal(fetchSpy.mock.calls.length, 0);
 });
 
 // Uma paisagem visível com hipótese de janela não pode ganhar a cor do label.

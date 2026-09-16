@@ -35,7 +35,7 @@ for relative in ("src", "../../contracts", "../../adapters/datasets", "../../dat
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
-from render_layers import DrawableShape, binary_mask_image, draw_boxes  # noqa: E402
+from visual_perception.rendering.layers import DrawableShape, binary_mask_image, draw_boxes  # noqa: E402
 from visual_perception.application.region_views import build_region_views  # noqa: E402
 from visual_perception.config import ModuleConfig  # noqa: E402
 from visual_perception.domain.image_payload import ImagePayload  # noqa: E402

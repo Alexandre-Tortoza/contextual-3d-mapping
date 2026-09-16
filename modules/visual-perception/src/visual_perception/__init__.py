@@ -13,6 +13,7 @@ from visual_perception.application.pipeline import PerceptionPorts, PipelineResu
 from visual_perception.application.semantic_grounding import build_spatial_footprints, ground_regions
 from visual_perception.application.temporal_prior import prior_from
 from visual_perception.config import ModuleConfig, QualityProfile, SemanticGroundingConfig
+from visual_perception.debug_artifacts import FrameInputs, StageDebugImages, write_stage_debug_images
 from visual_perception.domain.audit import AuditResult
 from visual_perception.domain.geometry import BoundingBox, Mask
 from visual_perception.domain.grounding import (
@@ -76,4 +77,7 @@ __all__ = [
     "UnresolvableEmbeddingRefError",
     "resolve_embedding_vector",
     "write_embedding_archive",
+    "FrameInputs",
+    "StageDebugImages",
+    "write_stage_debug_images",
 ]

@@ -91,6 +91,20 @@ def test_identidades_repetidas_falham_na_fronteira() -> None:
         measure_spatial_support(repetido)
 
 
+# Regressão: uma coordenada NaN era aceita pelo value object e só falhava na
+# conversão para voxel, sem indicar qual ponto violou a fronteira.
+@pytest.mark.parametrize(
+    ("geometry_id", "coordinates_m", "label"),
+    [("", (0.0, 0.0, 0.0), "parede"), ("p", (0.0, float("nan"), 0.0), "parede"), ("p", (0.0, 0.0, 0.0), "")],
+)
+def test_labelled_point_rejects_invalid_boundary_values(
+    geometry_id: str, coordinates_m: tuple[float, float, float], label: str
+) -> None:
+    """Recusa ID, label e coordenadas inválidos antes da medição."""
+    with pytest.raises(ValueError):
+        LabelledPoint(geometry_id, coordinates_m, label)
+
+
 # Parâmetros impossíveis precisam falhar antes de qualquer medição.
 def test_vizinhanca_invalida_falha_na_construcao() -> None:
     """Confere a validação da aresta e do mínimo de vizinhos."""
@@ -98,3 +112,5 @@ def test_vizinhanca_invalida_falha_na_construcao() -> None:
         SpatialNeighbourhood(voxel_edge_m=0.0)
     with pytest.raises(ValueError, match="minimum_neighbours"):
         SpatialNeighbourhood(minimum_neighbours=0)
+    with pytest.raises(ValueError, match="minimum_neighbours"):
+        SpatialNeighbourhood(minimum_neighbours=True)

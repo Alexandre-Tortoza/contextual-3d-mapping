@@ -139,7 +139,7 @@ Quando vários keyframes classificam o mesmo ponto, `semantic-fusion` escolhe o
 label primário e registra a concordância, preservando todos os contribuintes.
 Claims de região e de cena continuam sendo predições VLM com estado de suporte e
 proveniência; não são promovidos a ground truth. Os previews de cada keyframe
-ficam no diretório homônimo com sufixo `-assets`.
+ficam em `assets/`, dentro da própria pasta da run.
 
 O alvo Make `corridor-02-context` grava por default em
 `artifacts/runs/<AAAA-MM-DD>-run-<número>-<segment-id>/context.json`, preservando
@@ -214,7 +214,7 @@ e patches; cada observação registra `visibility_counts`; regiões registram
 `surface_support`. Pontos, contribuições e hipóteses tentativas preservam
 `surface_evidence`. Geometria rejeitada continua no mapa com motivo explícito.
 A opção de composição `audit_geometry_ids` grava o resultado por frame dos IDs
-solicitados em `context-DEBUG/sensor-association/`, para regressões auditáveis.
+solicitados em `debug/sensor-association/`, para regressões auditáveis.
 
 Algoritmo e limitações pertencem a
 [`sensor-association`](../../modules/sensor-association/docs/measured-visibility.md).

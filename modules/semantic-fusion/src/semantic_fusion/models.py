@@ -13,6 +13,8 @@ def _unit_interval(value: float | None, name: str) -> float | None:
     """Valida uma medida opcional em [0, 1]."""
     if value is None:
         return None
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite value in [0, 1].")
     number = float(value)
     if not isfinite(number) or not 0.0 <= number <= 1.0:
         raise ValueError(f"{name} must be a finite value in [0, 1].")
@@ -40,9 +42,9 @@ class SpatialNeighbourhood:
     # aceitaria medir suporte a partir de nenhuma evidência.
     def __post_init__(self) -> None:
         """Valida os parâmetros da vizinhança."""
-        if not isfinite(float(self.voxel_edge_m)) or self.voxel_edge_m <= 0.0:
+        if isinstance(self.voxel_edge_m, bool) or not isfinite(float(self.voxel_edge_m)) or self.voxel_edge_m <= 0.0:
             raise ValueError("voxel_edge_m must be a finite positive length.")
-        if self.minimum_neighbours < 1:
+        if isinstance(self.minimum_neighbours, bool) or not isinstance(self.minimum_neighbours, int) or self.minimum_neighbours < 1:
             raise ValueError("minimum_neighbours must be at least one.")
 
 

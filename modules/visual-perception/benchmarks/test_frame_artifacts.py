@@ -27,7 +27,7 @@ from PIL import Image  # noqa: E402
 
 from fixtures import image_observation, payload_with_blobs  # noqa: E402
 from fixtures_ports import default_ports  # noqa: E402
-from frame_artifacts import FrameInputs, write_frame_artifacts  # noqa: E402
+from frame_artifacts import write_frame_artifacts  # noqa: E402
 from inspect_region import load_frame, write_region_inspection  # noqa: E402
 from validate_reference_pipeline import ValidationOptions, run_validation  # noqa: E402
 from visual_perception.application.lifecycle import ModelLifecycleManager  # noqa: E402
@@ -35,6 +35,7 @@ from visual_perception.application.observation_diagnostics import diagnose_obser
 from visual_perception.application.pipeline import PerceptionPorts, run_canonical_pipeline  # noqa: E402
 from visual_perception.application.region_views import build_region_views  # noqa: E402
 from visual_perception.config import ModuleConfig, RegionDiscoveryConfig  # noqa: E402
+from visual_perception.debug_artifacts import FrameInputs  # noqa: E402
 from visual_perception.domain.geometry import Mask  # noqa: E402
 from visual_perception.domain.grounding import (  # noqa: E402
     GroundingPrediction,
@@ -77,7 +78,7 @@ _AREA_ARTIFACTS = ("ego-mask.png", "valid-area-mask.png")
 def test_full_debug_writes_discovery_passes_and_reasoner_views(tmp_path: Path) -> None:
     """Grava imagem/propostas globais e tiled, mais as três views por região."""
     frame_dir = _run(tmp_path)
-    discovery = frame_dir / "DEBUG" / "discovery"
+    discovery = frame_dir / "discovery"
     expected_discovery = {
         f"{scale}-{tile}-{kind}.png"
         for scale, tile in (("full", "whole"), ("tile", "r0c0"), ("tile", "r0c1"),
@@ -86,7 +87,7 @@ def test_full_debug_writes_discovery_passes_and_reasoner_views(tmp_path: Path) -
     }
     assert expected_discovery <= {path.name for path in discovery.iterdir()}
 
-    region_directories = [path for path in (frame_dir / "DEBUG" / "regions").iterdir() if path.is_dir()]
+    region_directories = [path for path in (frame_dir / "regions").iterdir() if path.is_dir()]
     assert region_directories
     assert {
         "masked-subject.png", "tight-crop.png", "contextual-crop.png",
@@ -133,10 +134,14 @@ def _fake_ports(config: ModuleConfig, lifecycle: ModelLifecycleManager) -> Perce
     return default_ports()
 
 
-# Roda a validação sintética e devolve o diretório do frame produzido.
+# Roda a validação sintética e devolve o diretório do frame produzido. Fixa
+# ``limit=1`` por padrão porque só há um frame sintético no diretório: a
+# amostra padrão de dois frames pareados (#seleção reprodutível) exige um
+# mínimo de frames que este fixture não produz.
 def _run(tmp_path: Path, **options: object) -> Path:
     frames_dir = tmp_path / "frames-in"
     _write_frame(frames_dir)
+    options.setdefault("limit", 1)
     out_dir = run_validation(
         ValidationOptions(
             frames_dir=frames_dir,
@@ -170,7 +175,10 @@ def test_raw_pixels_reach_the_pipeline_unmodified(tmp_path: Path) -> None:
     source_pixels = _write_frame(frames_dir)
     out_dir = run_validation(
         ValidationOptions(
-            frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None
+            frames_dir=frames_dir,
+            results_dir=tmp_path / "out",
+            sequence_masks=None,
+            limit=1,
         ),
         ports_factory=_fake_ports,
     )
@@ -207,7 +215,7 @@ def test_declared_geometry_is_applied_without_touching_the_pixels(tmp_path: Path
     )
     out_dir = run_validation(
         ValidationOptions(
-            frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=masks
+            frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=masks, limit=1,
         ),
         ports_factory=_fake_ports,
     )
@@ -245,7 +253,7 @@ def test_geometry_measured_for_another_resolution_fails_loudly(tmp_path: Path) -
     with pytest.raises(SystemExit, match="1280x720"):
         run_validation(
             ValidationOptions(
-                frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=masks
+                frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=masks, limit=1,
             ),
             ports_factory=_fake_ports,
         )
@@ -310,7 +318,11 @@ def test_proposal_and_region_stages_are_separately_observable(tmp_path: Path) ->
 
     out_dir = run_validation(
         ValidationOptions(
-            frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None
+            frames_dir=frames_dir,
+            results_dir=tmp_path / "out",
+            sequence_masks=None,
+            tiling_variant="1x1",
+            limit=1,
         ),
         ports_factory=_merging_ports,
     )
@@ -460,7 +472,7 @@ def test_the_frame_diagnostics_report_the_contextual_stages(tmp_path: Path) -> N
         "abstained_claims",
         "unscored_claims",
     }
-    assert diagnostics["layout_version"] == "frames/3"
+    assert diagnostics["layout_version"] == "frames/4"
     assert set(diagnostics) >= {
         "published_region_count",
         "structural_context_count",
@@ -479,7 +491,7 @@ def test_each_frame_carries_its_own_recorded_provenance(tmp_path: Path) -> None:
     _write_frame(frames_dir, frame_id="synthetic-001", sequence_index=9)
 
     out_dir = run_validation(
-        ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None),
+        ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None, limit=2),
         ports_factory=_fake_ports,
     )
 
@@ -510,7 +522,7 @@ def test_a_frame_without_provenance_stops_the_run_before_loading_models(tmp_path
 
     with pytest.raises(SystemExit, match="Re-extract"):
         run_validation(
-            ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None),
+            ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None, limit=1),
             ports_factory=_forbidden_ports,
         )
 
@@ -557,7 +569,7 @@ def test_a_region_discoverer_cannot_alter_the_pixels_it_receives(tmp_path: Path)
 
     with pytest.raises(ValueError, match="read-only"):
         run_validation(
-            ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None),
+            ValidationOptions(frames_dir=frames_dir, results_dir=tmp_path / "out", sequence_masks=None, limit=1),
             ports_factory=_destructive_ports,
         )
     assert np.array_equal(np.array(Image.open(frames_dir / f"{_FRAME_ID}.png").convert("RGB")), source_pixels)
@@ -579,6 +591,7 @@ def test_a_missing_sequence_masks_path_stops_the_run_before_loading_models(tmp_p
                 frames_dir=frames_dir,
                 results_dir=tmp_path / "out",
                 sequence_masks=tmp_path / "sequence-maks" / "corridor-02.json",
+                limit=1,
             ),
             ports_factory=_forbidden_ports,
         )
@@ -597,7 +610,7 @@ sys.path[:0] = [{str(_THIS_DIR)!r}, {str(_THIS_DIR.parent / "tests")!r}]
 from validate_reference_pipeline import ValidationOptions, run_validation
 from fixtures_ports import default_ports
 run_validation(
-    ValidationOptions(frames_dir=Path({str(frames_dir)!r}), results_dir=Path({str(tmp_path / "out")!r}), sequence_masks=None),
+    ValidationOptions(frames_dir=Path({str(frames_dir)!r}), results_dir=Path({str(tmp_path / "out")!r}), sequence_masks=None, limit=1),
     ports_factory=lambda config, lifecycle: default_ports(),
 )
 """
@@ -669,6 +682,7 @@ def test_failed_grounding_writes_its_trail_but_no_semantic_overlay(tmp_path: Pat
         inputs=FrameInputs(raw=ImagePayload(payload.pixels.copy(), 64, 64), pipeline_input=payload),
         result=dataclasses.replace(result, observation=observation),
         diagnostics=diagnose_observation(observation, discovered_proposals=len(result.proposals)),
+        config=ModuleConfig(),
     )
 
     assert "semantic_overlay" not in written

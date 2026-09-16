@@ -1,11 +1,13 @@
 """Mapeia os tipos de domínio para formas desenháveis e compõe os overlays.
 
-Usado por ``validate_reference_pipeline.py`` (#190) para gerar as amostras que
-acompanham a validação do pipeline real. Não é parte do contract público do
-módulo — é uma ferramenta de inspeção local.
+Usado por ``debug_artifacts.write_stage_debug_images`` e pelo layout completo
+de ``benchmarks/frame_artifacts.py`` (#190) para gerar as camadas de inspeção
+da validação do pipeline real. Vive em ``src/`` porque é dependência da API
+pública de imagens de debug do módulo, mas continua sendo ferramenta de
+renderização, não uma capacidade do domínio.
 
-A separação em relação a ``render_layers.py`` é deliberada: lá ficam as
-primitivas que só entendem geometria; aqui fica o conhecimento de
+A separação em relação a ``visual_perception.rendering.layers`` é deliberada:
+lá ficam as primitivas que só entendem geometria; aqui fica o conhecimento de
 ``ObservedRegion`` e ``RegionProposal``. É o que permite desenhar os dois
 estágios com o mesmo código sem que as primitivas conheçam o domínio.
 """
@@ -16,7 +18,7 @@ from collections.abc import Sequence
 
 from PIL import Image
 
-from render_layers import DrawableShape, blend_masks, draw_boxes, draw_labels
+from visual_perception.rendering.layers import DrawableShape, blend_masks, draw_boxes, draw_labels
 from visual_perception.domain.contextual_evidence import contextual_evidence_claim
 from visual_perception.domain.regions import ObservedRegion, RegionProposal, primary_label_claim
 from visual_perception.domain.visual_observation import VisualObservation

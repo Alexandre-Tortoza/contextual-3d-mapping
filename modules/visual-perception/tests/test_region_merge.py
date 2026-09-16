@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from visual_perception.application.region_merge import merge_regions
 from visual_perception.config import RegionMergeConfig
@@ -28,6 +29,16 @@ def test_duplicate_proposals_merge_into_one_region() -> None:
     regions = merge_regions("obs-1", proposals, RegionMergeConfig())
     assert len(regions) == 1
     assert set(regions[0].contributing_proposal_ids) == {"p1", "p2"}
+
+
+# Regressão: o union-find era indexado por proposal_id e duas propostas de
+# fontes diferentes com o mesmo ID sobrescreviam uma à outra silenciosamente.
+def test_duplicate_proposal_ids_are_rejected_before_merge() -> None:
+    """Recusa IDs repetidos para não perder proveniência no merge."""
+    proposals = (_proposal("same-id", (2, 2, 6, 6)), _proposal("same-id", (2, 2, 6, 6)))
+
+    with pytest.raises(ValueError, match="must be unique"):
+        merge_regions("obs-1", proposals, RegionMergeConfig())
 
 
 # Garante que proposals sem nenhuma sobreposição permanecem como regiões separadas.

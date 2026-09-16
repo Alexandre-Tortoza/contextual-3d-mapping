@@ -18,10 +18,13 @@ from visual_perception.infrastructure.adapters.feature_upsampling_backend import
     FallbackDenseFeatureExtractionAdapter,
     FeatUpDenseFeatureExtractionAdapter,
 )
+from visual_perception.infrastructure.adapters.florence2_region_discovery_backend import (
+    Florence2RegionDiscoveryAdapter,
+)
+from visual_perception.infrastructure.adapters.gemini_reasoning_backend import GeminiRoboticsReasoningAdapter
 from visual_perception.infrastructure.adapters.language_embedding_backend import (
     RealLanguageAlignedEncoderAdapter,
 )
-from visual_perception.infrastructure.adapters.gemini_reasoning_backend import GeminiRoboticsReasoningAdapter
 from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
     RealMultimodalReasoningAdapter,
 )
@@ -64,12 +67,14 @@ def create_perception_ports(
 # Seleciona o backend de geometria sem atribuir semântica a propostas.
 def _region_discoverer_for(
     config: ModuleConfig, lifecycle: ModelLifecycleManager
-) -> FakeRegionDiscoverer | RealRegionDiscoveryAdapter:
+) -> FakeRegionDiscoverer | RealRegionDiscoveryAdapter | Florence2RegionDiscoveryAdapter:
     """Seleciona o port de descoberta de regiões declarado pela configuração."""
     if config.region_discovery.backend == "fake":
         return FakeRegionDiscoverer()
     if config.region_discovery.backend in {"sam", "sam3"}:
         return RealRegionDiscoveryAdapter(lifecycle)
+    if config.region_discovery.backend == "florence2":
+        return Florence2RegionDiscoveryAdapter(lifecycle)
     raise ValueError(f"Backend de region discovery não suportado: {config.region_discovery.backend!r}.")
 
 

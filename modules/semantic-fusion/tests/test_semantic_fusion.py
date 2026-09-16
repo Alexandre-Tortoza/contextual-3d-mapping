@@ -105,3 +105,11 @@ def test_entradas_invalidas_falham_na_fronteira() -> None:
         _contribution("frame-a", "   ")
     with pytest.raises(ValueError, match="confidence"):
         _contribution("frame-a", "porta", confidence=1.5)
+
+
+# Regressão: bool é subtipo de int em Python e era convertido silenciosamente
+# em score 0 ou 1, alterando o ranking de uma contribuição inválida.
+def test_boolean_confidence_is_rejected() -> None:
+    """Recusa booleano onde o contract exige uma medida contínua."""
+    with pytest.raises(ValueError, match="confidence"):
+        _contribution("frame-a", "porta", confidence=True)

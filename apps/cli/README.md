@@ -160,11 +160,14 @@ Repetir apenas `compose` para o mesmo segmento cria outra identidade de run:
 ```text
 artifacts/runs/<run-id>/
 ├── context.json
-├── context-assets/
+├── assets/
+├── debug/
 ├── manifest.json
 ├── window.json
 └── perception-manifest.json
 ```
+
+`<run-id>` segue `AAAA-MM-DD-run-NNN-<segment-id>` (`contextual_mapping_contracts.RunId`), o mesmo esquema usado por toda run gerada no repositório.
 
 O manifest da composição referencia a geometria reutilizada e a run de
 percepção, além de preservar a janela e o manifest de percepção. A cópia

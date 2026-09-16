@@ -8,8 +8,9 @@ desenho.
 
 As primitivas não conhecem ``ObservedRegion`` nem ``RegionProposal`` — só
 ``DrawableShape``. O mapeamento dos tipos de domínio para essa forma comum vive
-em ``render_overlay.py``. Nada aqui é contract público do módulo: é ferramenta
-de inspeção local.
+em ``visual_perception.rendering.overlay``. Nada aqui é contract de capacidade
+do módulo: é ferramenta de renderização, usada por ``debug_artifacts.py`` (API
+pública de imagens de debug) e por ``benchmarks/frame_artifacts.py``.
 """
 
 from __future__ import annotations

@@ -30,6 +30,7 @@ from typing import Any
 
 import numpy as np
 
+from contextual_mapping_contracts import next_run_id
 from contextual_mapping_datasets import ReferenceManifest, SampleAnnotation, load_reference_manifest
 from visual_perception.application.lifecycle import ModelLifecycleManager
 from visual_perception.application.pipeline import PerceptionPorts, run_canonical_pipeline
@@ -173,7 +174,10 @@ def run_configuration(
         _run_sample(sample, ablation, instrumented, counter, frames_dir=frames_dir) for sample in samples
     ]
     return PredictionSet(
-        run_id=run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
+        run_id=run_id or str(next_run_id(
+            (path.name for path in (RESULTS_ROOT / "predictions").glob("*")),
+            today=datetime.now(UTC).date(), name="predictions",
+        )),
         configuration=ablation.name,
         config_fingerprint=ablation.config.fingerprint(),
         code_revision=git_revision(),
@@ -356,6 +360,11 @@ def main() -> None:
     parser.add_argument("--only", nargs="*", default=[])
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--sample-id", action="append", default=[])
+    parser.add_argument(
+        "--name",
+        default="predictions",
+        help="Nome legível embutido no run-id (AAAA-MM-DD-run-NNN-<name>).",
+    )
     arguments = parser.parse_args()
 
     manifest = load_reference_manifest(arguments.manifest)
@@ -364,8 +373,10 @@ def main() -> None:
         calibration_artifact=arguments.calibration_artifact,
         calibration_domain=arguments.calibration_domain,
     )
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    destination = arguments.output_dir or RESULTS_ROOT / "predictions" / run_id
+    predictions_dir = RESULTS_ROOT / "predictions"
+    existing_run_ids = (path.name for path in predictions_dir.glob("*"))
+    run_id = str(next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name=arguments.name))
+    destination = arguments.output_dir or predictions_dir / run_id
     destination.mkdir(parents=True, exist_ok=True)
 
     for ablation in selected_ablations(matrix, tuple(arguments.only)):

@@ -21,6 +21,28 @@ def test_bounding_box_rejects_non_positive_area() -> None:
         BoundingBox(0, 0, 0, 5)
 
 
+# Regressão: NaN passava pelas comparações de área e chegava aos cálculos de
+# overlap, onde contaminava silenciosamente toda a decisão de merge.
+@pytest.mark.parametrize("coordinates", [(float("nan"), 0, 1, 1), (0, 0, float("inf"), 1)])
+def test_bounding_box_rejects_non_finite_coordinates(
+    coordinates: tuple[float, float, float, float],
+) -> None:
+    """Recusa caixas com coordenadas NaN ou infinitas."""
+    with pytest.raises(ValueError, match="finite"):
+        BoundingBox(*coordinates)
+
+
+# Regressão: um transform com NaN era considerado positivo por acidente e
+# propagava coordenadas inválidas para o remapeamento de tiles.
+@pytest.mark.parametrize("values", [(float("nan"), 1.0, 0.0, 0.0), (1.0, 1.0, float("inf"), 0.0)])
+def test_coordinate_transform_rejects_non_finite_values(
+    values: tuple[float, float, float, float],
+) -> None:
+    """Recusa escalas e offsets NaN ou infinitos."""
+    with pytest.raises(ValueError, match="finite"):
+        CoordinateTransform(*values)
+
+
 # Confirma que clipped_to recorta a box corretamente para dentro dos limites da imagem,
 # mesmo quando a box original ultrapassa esses limites.
 def test_bounding_box_clips_to_image_bounds() -> None:

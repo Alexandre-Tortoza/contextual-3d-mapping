@@ -154,20 +154,27 @@ class PointCloudGeometry:
 # inteiro amostrado. Os índices de origem são preservados, então a identidade de
 # cada ponto continua comparável entre trechos e com o mapa global.
 def select_neighbourhood(
-    cloud: PointCloudGeometry, centers_m: np.ndarray, *, radius_m: float, max_points: int
+    cloud: PointCloudGeometry, centers_m: np.ndarray, *, centers_frame: FrameId, radius_m: float, max_points: int
 ) -> tuple[PointCloudGeometry, int]:
     """Retorna os pontos próximos aos centros e o passo de amostragem aplicado.
 
     Argumentos:
         cloud: nuvem medida completa, no frame do mapa.
         centers_m: centros ``(N, 3)`` no mesmo frame, em metros.
+        centers_frame: frame em que ``centers_m`` foi expresso; deve coincidir com ``cloud.frame_id``.
         radius_m: raio máximo até o centro mais próximo.
         max_points: teto de pontos da seleção.
     Retorna:
         ``(nuvem selecionada, passo)``; o passo é 1 quando a seleção cabe no teto.
     Levanta:
-        ValueError: se centros, raio ou teto forem inválidos ou nenhum ponto couber no raio.
+        ValueError: se os frames divergirem, ou se centros, raio ou teto forem inválidos, ou
+            nenhum ponto couber no raio.
     """
+    if centers_frame != cloud.frame_id:
+        raise ValueError(
+            f"camera centers are expressed in frame {centers_frame!r}, "
+            f"but the point cloud is in frame {cloud.frame_id!r}."
+        )
     centers = np.asarray(centers_m, dtype=np.float64)
     if centers.ndim != 2 or centers.shape[1:] != (3,) or not len(centers) or not np.isfinite(centers).all():
         raise ValueError("Os centros devem ser coordenadas XYZ finitas.")

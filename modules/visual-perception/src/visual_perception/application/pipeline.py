@@ -254,7 +254,9 @@ def run_canonical_pipeline(
     )
     regions = merge_regions(image.observation_id, proposals, config.merge)
 
-    evidence, feature_fallback_reason = _extract_evidence(regions, payload, config, ports)
+    evidence, feature_fallback_reason = _extract_evidence(
+        regions, payload, config, ports, area_masks=area_masks
+    )
     regions = evidence.regions
     views = evidence.views
 
@@ -402,6 +404,8 @@ def _extract_evidence(
     payload: ImagePayload,
     config: ModuleConfig,
     ports: PerceptionPorts,
+    *,
+    area_masks: ImageAreaMasks,
 ) -> tuple[MultiContextResult, str | None]:
     """Extrai a evidência de todas as regiões, ou devolve um resultado vazio."""
     if not regions:
@@ -412,7 +416,12 @@ def _extract_evidence(
     # manifest de validação (#190) o registrem, em vez de o run parecer ter
     # usado o backend configurado.
     evidence = extract_region_evidence(
-        regions, payload, config, ports.language_encoder, feature_map=feature_map
+        regions,
+        payload,
+        config,
+        ports.language_encoder,
+        feature_map=feature_map,
+        area_masks=area_masks,
     )
     return evidence, feature_map.fallback_reason
 

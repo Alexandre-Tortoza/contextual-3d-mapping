@@ -18,6 +18,7 @@ M1_SEGMENT_WINDOW ?= artifacts/$(SEGMENT_ID)-window.json
 M1_ODOMETRY ?= artifacts/$(SEGMENT_ID)-odometry.csv
 M1_MAX_POINTS ?= 150000
 M1_VISIBILITY_MODE ?= measured_surfaces
+M1_WITH_DEBUG_IMAGES ?=
 M1_VISUAL_RUN ?= modules/visual-perception/benchmarks/results/samples/old/20260909T135428Z
 GLOBAL_SEGMENT_ID ?= corridor-02-global
 GLOBAL_PCD_SOURCE ?= artifacts/$(GLOBAL_SEGMENT_ID).pcd
@@ -102,6 +103,7 @@ corridor-02-context:
 		--window "$(M1_SEGMENT_WINDOW)" \
 		--visual-run "$(M1_VISUAL_RUN)" \
 		--visibility-mode "$(M1_VISIBILITY_MODE)" \
+		$(if $(M1_WITH_DEBUG_IMAGES),--with-debug-images,) \
 		--odometry "$(M1_ODOMETRY)" \
 		--ground-truth datasets/raw/corridor-02/corridor-02-gt.txt \
 		--output "$(M1_CONTEXT_ARTIFACT)"

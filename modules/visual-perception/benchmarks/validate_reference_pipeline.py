@@ -9,6 +9,10 @@ revisão humana.
 Uso (a partir de ``modules/visual-perception``, com os extras ``ml``
 instalados e os frames já extraídos):
 
+    # Amostra padrão: dois frames reprodutíveis, separados por 12 posições.
+    python benchmarks/validate_reference_pipeline.py
+
+    # Seleção explícita para uma comparação dirigida.
     python benchmarks/validate_reference_pipeline.py \
       --frame-id corridor-02-000 \
       --frame-id corridor-02-008 \
@@ -22,6 +26,7 @@ import dataclasses
 import hashlib
 import json
 import os
+import random
 import subprocess
 import sys
 import time
@@ -48,6 +53,7 @@ from contextual_mapping_contracts import (  # noqa: E402
     ObservationReference,
     SourceArtifactReference,
     Timestamp,
+    next_run_id,
 )
 from PIL import Image  # noqa: E402
 
@@ -103,6 +109,13 @@ TILING_VARIANTS: dict[str, TilingConfig] = {
     "3x3-discard": TilingConfig(multi_scale_enabled=True, tile_grid="3x3", discard_tile_border_truncations=True),
 }
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
+
+# A amostra padrão é deliberadamente pequena, mas precisa representar dois
+# instantes distintos da sequência. A seed e o deslocamento vivem como
+# constantes nomeadas para que o manifest, os testes e o protocolo usem a
+# mesma seleção reproduzível.
+DEFAULT_SAMPLE_SEED = 42
+DEFAULT_SAMPLE_FRAME_OFFSET = 12
 
 #: Como run_validation obtém seus backends. Existe para que um teste injete
 #: fakes e exercite o layout de artifacts de ponta a ponta sem GPU. É uma
@@ -165,6 +178,20 @@ class ValidationOptions:
     #: ``gemini_robotics_er`` envia frames e crops para a API do Gemini; ``None``
     #: mantém o Qwen local da configuração de referência.
     reasoning_backend: str | None = None
+    #: Troca somente o backend que produz propostas de regiões. ``florence2``
+    #: usa caixas retangulares; ``sam3`` mantém a referência de masks densas;
+    #: ``sam`` seleciona o SAM2.1 clássico (mesmo adapter, checkpoint
+    #: ``facebook/sam2.1-hiera-large``, já usado no semantic grounding deste
+    #: módulo), comparável ao SAM3 sob os mesmos thresholds e resto do
+    #: pipeline. ``None`` preserva a configuração de referência.
+    region_discovery_backend: str | None = None
+    #: Troca somente o backend que produz o FeatureMap denso consumido pelo
+    #: pooling. ``featup`` usa o upsampler JBU sobre DINOv2-small (384 canais);
+    #: ``dinov2`` mantém a referência DINOv2-base (768 canais). ``None``
+    #: preserva a configuração de referência. Os dois não são comparáveis
+    #: vetor a vetor (dimensão e backbone diferentes) — a comparação é sobre o
+    #: efeito posterior (pooling, hipóteses, contract), não sobre o embedding cru.
+    feature_extraction_backend: str | None = None
     #: Variante de tiling do benchmark da #277 (``1x1``, ``2x2``, ``2x2-discard``,
     #: ``3x3``, ``3x3-discard``); ``None`` mantém a da configuração de referência.
     tiling_variant: str | None = None
@@ -184,6 +211,10 @@ class ValidationOptions:
     #: mediu que aquilo corrompia a análise de cena e colapsava 45 de 45 regiões
     #: em ``curved wall``. Passar ``None`` roda sem geometria declarada.
     sequence_masks: Path | None = SEQUENCE_MASKS_DIR / f"{_SEQUENCE_ID}.json"
+    #: Nome legível embutido no run-id (``AAAA-MM-DD-run-NNN-<name>``). Sem
+    #: ele, o run-id não teria como distinguir o que está sendo validado por
+    #: um olhar rápido no diretório de resultados.
+    name: str = "frames"
 
     # Rejeita perfis livres para que um typo não produza uma ablation diferente.
     def __post_init__(self) -> None:
@@ -197,6 +228,10 @@ class ValidationOptions:
                 "scene_context_mode must be "
                 f"{sorted(mode.value for mode in SceneContextMode)} or None."
             )
+        if self.region_discovery_backend not in {None, "sam3", "sam", "florence2"}:
+            raise ValueError("region_discovery_backend must be None, 'sam3', 'sam', or 'florence2'.")
+        if self.feature_extraction_backend not in {None, "dinov2", "featup"}:
+            raise ValueError("feature_extraction_backend must be None, 'dinov2', or 'featup'.")
 
 
 # Lê a geometria de área versionada de uma sequência e a converte na
@@ -344,8 +379,8 @@ def _provenance_record(observation: ImageObservation) -> dict[str, object]:
 
 
 # Resolve IDs explícitos contra o diretório de frames e preserva sua ordem;
-# quando não há IDs, usa ordenação lexical estável. Erros de seleção falham
-# antes de carregar qualquer modelo caro.
+# sem seleção explícita, escolhe uma amostra pareada reprodutível. Erros de
+# seleção falham antes de carregar qualquer modelo caro.
 def select_frame_paths(
     frames_dir: Path, frame_ids: tuple[str, ...] = (), limit: int | None = None
 ) -> tuple[Path, ...]:
@@ -354,7 +389,8 @@ def select_frame_paths(
     Argumentos:
         frames_dir: diretório com frames PNG.
         frame_ids: IDs sem extensão, na ordem desejada.
-        limit: quantidade máxima após a seleção; ``None`` mantém todos.
+        limit: quantidade máxima após a seleção ordenada; quando presente,
+            substitui a amostra padrão.
     Retorna:
         caminhos selecionados na ordem reproduzível.
     Levanta:
@@ -369,12 +405,56 @@ def select_frame_paths(
     unknown = tuple(frame_id for frame_id in frame_ids if frame_id not in available)
     if unknown:
         raise ValueError(f"Unknown frame ids in {frames_dir}: {list(unknown)}.")
-    selected = tuple(available[frame_id] for frame_id in frame_ids) if frame_ids else tuple(available.values())
-    if limit is not None:
-        selected = selected[:limit]
+    if frame_ids:
+        selected = tuple(available[frame_id] for frame_id in frame_ids)
+    elif limit is not None:
+        selected = tuple(available.values())[:limit]
+    else:
+        candidates = tuple(available.values())
+        required_count = DEFAULT_SAMPLE_FRAME_OFFSET + 1
+        if len(candidates) < required_count:
+            raise ValueError(
+                f"Default paired sample requires at least {required_count} frames in {frames_dir}; "
+                f"found {len(candidates)}."
+            )
+        start_index = random.Random(DEFAULT_SAMPLE_SEED).randrange(
+            len(candidates) - DEFAULT_SAMPLE_FRAME_OFFSET
+        )
+        selected = (
+            candidates[start_index],
+            candidates[start_index + DEFAULT_SAMPLE_FRAME_OFFSET],
+        )
     if not selected:
         raise ValueError(f"No frames selected from {frames_dir}.")
     return selected
+
+
+# Descreve a seleção efetiva no artifact de execução. Existe para que uma
+# amostra padrão seja auditável sem inferir a decisão a partir dos IDs finais.
+def selection_record(options: ValidationOptions, frames: tuple[Path, ...]) -> dict[str, object]:
+    """Retorna a proveniência serializável da seleção de frames.
+
+    Argumentos:
+        options: opções que determinaram a seleção.
+        frames: caminhos finais processados na ordem efetiva.
+    Retorna:
+        registro suficiente para repetir ou auditar a seleção.
+    """
+    default_sample = not options.frame_ids and options.limit is None
+    return {
+        "strategy": (
+            "seeded_pair"
+            if default_sample
+            else "explicit_frame_ids"
+            if options.frame_ids
+            else "limited_sorted_frames"
+        ),
+        "requested_frame_ids": list(options.frame_ids),
+        "limit": options.limit,
+        "seed": DEFAULT_SAMPLE_SEED if default_sample else None,
+        "frame_offset": DEFAULT_SAMPLE_FRAME_OFFSET if default_sample else None,
+        "selected_frame_ids": [frame.stem for frame in frames],
+    }
 
 
 # Lê a proveniência registrada na extração de cada frame selecionado, antes de
@@ -662,6 +742,34 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 load_in_4bit=False,
             ),
         )
+    if options.region_discovery_backend is not None:
+        checkpoint = {
+            "sam3": "facebook/sam3",
+            "sam": "facebook/sam2.1-hiera-large",
+            "florence2": "microsoft/Florence-2-large",
+        }[options.region_discovery_backend]
+        config = dataclasses.replace(
+            config,
+            region_discovery=dataclasses.replace(
+                config.region_discovery,
+                backend=options.region_discovery_backend,
+                checkpoint=checkpoint,
+            ),
+        )
+    if options.feature_extraction_backend is not None:
+        checkpoint = (
+            "facebook/dinov2-base"
+            if options.feature_extraction_backend == "dinov2"
+            else config.feature_extraction.upsampler_checkpoint
+        )
+        config = dataclasses.replace(
+            config,
+            feature_extraction=dataclasses.replace(
+                config.feature_extraction,
+                backend=options.feature_extraction_backend,
+                checkpoint=checkpoint,
+            ),
+        )
     if options.tiling_variant is not None:
         config = dataclasses.replace(config, tiling=TILING_VARIANTS[options.tiling_variant])
     if options.concept_discovery:
@@ -734,8 +842,10 @@ def run_validation(
     lifecycle = ModelLifecycleManager()
     ports = (ports_factory or create_perception_ports)(config, lifecycle)
 
-    run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    out_dir = options.results_dir / "samples" / run_id
+    samples_dir = options.results_dir / "samples"
+    existing_run_ids = (path.name for path in samples_dir.glob("*")) if samples_dir.is_dir() else ()
+    run_id = str(next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name=options.name))
+    out_dir = samples_dir / run_id
     frames_out_dir = out_dir / "frames"
     frames_out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -982,7 +1092,7 @@ def run_validation(
         "frame_count": len(frames),
         "ordered_frame_ids": [frame.stem for frame in frames],
         "frames_dir": str(options.frames_dir.resolve()),
-        "selection": {"frame_ids": list(options.frame_ids), "limit": options.limit},
+        "selection": selection_record(options, frames),
         "canonical_output": "frames",
         "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
         "context_profile": options.context_profile,
@@ -1019,6 +1129,11 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame-id", action="append", default=[])
     parser.add_argument("--limit", type=int)
     parser.add_argument(
+        "--name",
+        default="frames",
+        help="Nome legível embutido no run-id (AAAA-MM-DD-run-NNN-<name>).",
+    )
+    parser.add_argument(
         "--reasoning-checkpoint",
         default=None,
         help=(
@@ -1034,6 +1149,25 @@ def _argument_parser() -> argparse.ArgumentParser:
         help=(
             "gemini_robotics_er consulta a API do Gemini com os mesmos prompts e views do "
             "Qwen (#276); frames e crops saem da máquina. Lê GEMINI_API_KEY do ambiente ou do .env"
+        ),
+    )
+    parser.add_argument(
+        "--region-discovery-backend",
+        choices=("sam3", "sam", "florence2"),
+        default=None,
+        help=(
+            "troca somente o backend de propostas de região ('sam' é o SAM2.1 clássico); "
+            "use com o mesmo --frame-id para comparar sob os mesmos estágios posteriores"
+        ),
+    )
+    parser.add_argument(
+        "--feature-extraction-backend",
+        choices=("dinov2", "featup"),
+        default=None,
+        help=(
+            "troca somente o backend que produz o FeatureMap denso consumido pelo pooling; "
+            "use com o mesmo --frame-id para comparar DINOv2-base e FeatUp/JBU sob os "
+            "mesmos estágios posteriores"
         ),
     )
     parser.add_argument(
@@ -1109,9 +1243,12 @@ def main(argv: list[str] | None = None) -> None:
             results_dir=arguments.results_dir,
             frame_ids=tuple(arguments.frame_id),
             limit=arguments.limit,
+            name=arguments.name,
             context_profile=arguments.context_profile,
             reasoning_checkpoint=arguments.reasoning_checkpoint,
             reasoning_backend=arguments.reasoning_backend,
+            region_discovery_backend=arguments.region_discovery_backend,
+            feature_extraction_backend=arguments.feature_extraction_backend,
             tiling_variant=arguments.tiling_variant,
             concept_discovery=arguments.concept_discovery,
             region_views=tuple(arguments.region_views) or None,

@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 for relative in ("../../contracts", "../../adapters/datasets", "../../datasets"):
     sys.path.insert(0, str((_MODULE_ROOT / relative).resolve()))
 
+from contextual_mapping_contracts import next_run_id  # noqa: E402
+
 from backend_benchmark import benchmark_candidate  # noqa: E402
 from visual_perception.application.execution_profile import (  # noqa: E402
     select_research_quality_backend,
@@ -148,7 +150,9 @@ def main() -> None:
         print(f"Excluded (failed, not a memory-budget rejection): {[f['name'] for f in failures]}")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = RESULTS_DIR / f"benchmark-174-{args.stage}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json"
+    existing_run_ids = (path.stem for path in RESULTS_DIR.glob("benchmark-174-*.json"))
+    run_id = next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name=args.stage)
+    out_path = RESULTS_DIR / f"benchmark-174-{run_id}.json"
     out_path.write_text(
         json.dumps(
             {

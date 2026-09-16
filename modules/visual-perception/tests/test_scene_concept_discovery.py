@@ -10,7 +10,10 @@ import pytest
 from fixtures import image_observation, payload_with_blobs
 from fixtures_ports import default_ports
 from visual_perception.application.pipeline import run_canonical_pipeline
-from visual_perception.application.scene_concept_discovery import discover_scene_concepts, parse_scene_concepts
+from visual_perception.application.scene_concept_discovery import (
+    discover_scene_concepts,
+    parse_scene_concepts,
+)
 from visual_perception.config import ModuleConfig, MultimodalReasoningConfig, SceneConceptDiscoveryConfig
 from visual_perception.domain.geometry import Mask
 from visual_perception.domain.image_area import ImageAreaMasks
@@ -61,9 +64,16 @@ def test_malformed_or_repeated_items_are_discarded_with_a_reason(response: objec
 # Confiança inválida vira ausência, como no contract de região.
 def test_invalid_confidence_is_treated_as_absent() -> None:
     """Não aceita confiança booleana, negativa ou acima de 1."""
-    response = {"entities": [{"concept": "door", "confidence": True}, {"concept": "pipe", "confidence": 1.4}]}
+    response = {
+        "entities": [
+            {"concept": "door", "confidence": True},
+            {"concept": "pipe", "confidence": 1.4},
+            {"concept": "beam", "confidence": float("nan")},
+            {"concept": "cable", "confidence": float("inf")},
+        ]
+    }
     concepts, _ = parse_scene_concepts(response, SceneConceptDiscoveryConfig())
-    assert [c.confidence for c in concepts] == [None, None]
+    assert [c.confidence for c in concepts] == [None, None, None, None]
 
 
 # A descoberta usa a mesma view da cena ambiental (sem rig) e registra proveniência.

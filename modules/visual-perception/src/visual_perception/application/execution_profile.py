@@ -100,7 +100,15 @@ _REAL_LANGUAGE_EMBEDDING = LanguageEmbeddingConfig(
     backend="clip", checkpoint="openai/clip-vit-large-patch14", dimension=768
 )
 _REAL_MULTIMODAL_REASONING = MultimodalReasoningConfig(
-    backend="qwen_vl", checkpoint="Qwen/Qwen2.5-VL-3B-Instruct", load_in_4bit=True
+    backend="qwen_vl",
+    checkpoint="Qwen/Qwen2.5-VL-3B-Instruct",
+    load_in_4bit=True,
+    region_views=(
+        EvidenceSlot.MASKED_SUBJECT.value,
+        EvidenceSlot.TIGHT_CROP.value,
+        EvidenceSlot.CONTEXTUAL_CROP.value,
+        EvidenceSlot.SCENE_CONDITIONED.value,
+    ),
 )
 _REAL_MULTI_CONTEXT = MultiContextConfig(
     foreground_enabled=True,

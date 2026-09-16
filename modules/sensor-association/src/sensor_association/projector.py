@@ -59,6 +59,8 @@ def _project(
     if calibration.front_hemisphere_only and z <= 0:
         return None
     if calibration.model is CameraModel.PINHOLE:
+        if z == 0.0:
+            return None
         u, v = calibration.fx * x / z + calibration.cx, calibration.fy * y / z + calibration.cy
     elif calibration.model is CameraModel.EQUIDISTANT_FISHEYE:
         radius = hypot(x, y)
