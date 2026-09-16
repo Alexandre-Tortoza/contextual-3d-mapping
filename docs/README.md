@@ -6,6 +6,8 @@ Esta documentação acompanha a informação desde os pixels de um frame RGB at�
 
 A documentação é dividida em dois níveis: este diretório descreve o fluxo entre capacidades; detalhes internos pertencem a `modules/<module>/docs/`.
 
+Para a visão **integral do repositório**, incluindo fontes, adapters, contracts, `mapping-runtime`, todos os módulos implementados, relações entre os payloads, proveniência, armazenamento, aplicações e capacidades planejadas, use [`system-flow.md`](./system-flow.md). O diagrama desta página é apenas a visão resumida da pipeline.
+
 ## Regra de documentação
 
 A documentação separa explicitamente três coisas:
@@ -84,6 +86,8 @@ Uma reference run nunca é ground truth nem garantia de desempenho — é só um
 
 ## Pipeline geral
 
+Esta visão é deliberadamente resumida. A relação completa entre cada módulo e contract está em [`system-flow.md`](./system-flow.md).
+
 ```mermaid
 flowchart TD
     RGB["01 RGB input<br/>ImageObservation + ImagePayload"]
@@ -110,7 +114,7 @@ flowchart TD
     VO --> SA
     SA --> PVA["18 PointVisualAssociation"]
     PVA --> SF["19 Semantic Fusion"]
-    SF --> SM["20 Semantic Map / Memory"]
+    SF --> SM["20 Semantic Map"]
 ```
 
 ## Estado atual
@@ -145,7 +149,7 @@ A documentação local descreve o código e as decisões internas das capacidade
 - [`semantic-map`](../modules/semantic-map/docs/index.md), consolidação de runs contextuais publicadas sobre geometria compartilhada;
 - [`point-representation`](../modules/point-representation/README.md), contracts e transforms para embeddings 3D por ponto (ainda sem backbone concreto).
 
-Use estas páginas para perguntas sobre como um módulo funciona internamente. Use os documentos numerados abaixo para seguir a transformação da informação entre módulos.
+Use estas páginas para perguntas sobre como um módulo funciona internamente. Use [`system-flow.md`](./system-flow.md) para entender todas as relações entre módulos. Use os documentos numerados abaixo para seguir a transformação da informação estágio por estágio.
 
 ## Documentação por estágio
 
@@ -170,6 +174,14 @@ Use estas páginas para perguntas sobre como um módulo funciona internamente. U
 19. [Semantic Fusion](./19-semantic-fusion.md)
 20. [Semantic Map / Memory](./20-semantic-map.md)
 
+## Diagramas canônicos
+
+- [Fluxo completo do repositório e todas as relações](./system-flow.md)
+- [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline-flow.md)
+- [Descoberta de regiões](../modules/visual-perception/docs/region-discovery-flow.md)
+- [Relação entre modelos](../modules/visual-perception/docs/model-flow.md)
+- [Fluxo semântico](../modules/visual-perception/docs/semantic-flow.md)
+
 ## Como cada página deve ser mantida
 
 Cada estágio deve responder, quando aplicável: objetivo, entrada, contract, transformação, tecnologias, exemplo da reference run, artifacts, saída, consumidor, limitações atuais e referências científicas. Quando não houver artifact real, a página deve declarar isso explicitamente.
@@ -180,6 +192,7 @@ A documentação anterior foi preservada em [`.old-docs/`](../.old-docs/) para c
 
 ## Próxima leitura
 
+- [Fluxo completo do repositório](./system-flow.md)
 - [01. Entrada RGB](./01-input-rgb.md)
 - [Pipeline detalhada de `visual-perception`](../modules/visual-perception/docs/pipeline.md)
 - [Documentação dos módulos](../modules/README.md)
