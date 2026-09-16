@@ -154,7 +154,7 @@ condition
 material
 ```
 
-Exemplo real para `region-2c84165423b25fc3`:
+Exemplo conceitual (os artifacts da run que sustentava este exemplo foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run)):
 
 ```json
 {

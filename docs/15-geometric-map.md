@@ -139,15 +139,13 @@ Isso mantém consumidores independentes de a implementação usar dicionário, v
 
 ## Reference run
 
-A reference run visual `20260910T115810Z` não contém um artifact único que ligue `region-2c84165423b25fc3` a um `GeometryReference` concreto.
-
-Portanto esta página não cria coordenadas de exemplo como se fossem medidas.
+Nenhuma run atualmente versionada contém um artifact único que ligue uma região visual a um `GeometryReference` concreto — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`). Portanto esta página não cria coordenadas de exemplo como se fossem medidas.
 
 Existem implementação e workflows reais do `geometric-map`, além de integração com state estimation, mas o fio visual de referência termina em `VisualObservation`.
 
-## Point representation planejada
+## Point representation
 
-A capacidade `point-representation` poderá adicionar embeddings aprendidos por ponto.
+A capacidade `point-representation` já tem um primeiro slice implementado (contracts públicos, transforms determinísticos e o port `PointEncoder`, ainda sem backbone concreto — ver [`modules/point-representation/README.md`](../modules/point-representation/README.md)) e poderá adicionar embeddings aprendidos por ponto.
 
 Essa representação complementa a geometria:
 

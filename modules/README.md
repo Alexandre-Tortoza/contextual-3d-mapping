@@ -13,6 +13,8 @@ A estrutura física do repositório acompanha o código real. Capacidades apenas
 | `geometric-map` | geometria persistente e referências estáveis | [`geometric-map/docs/`](./geometric-map/docs/README.md) |
 | `sensor-association` | projeção e associação entre geometria 3D e evidência visual | [`sensor-association/docs/`](./sensor-association/docs/README.md) |
 | `semantic-fusion` | fusão multi-view e suporte espacial de claims por ponto | [`semantic-fusion/docs/`](./semantic-fusion/docs/README.md) |
+| `semantic-map` | consolidação de runs contextuais publicadas sobre geometria compartilhada | [`semantic-map/docs/`](./semantic-map/docs/index.md) |
+| `point-representation` | contracts e transforms para embeddings 3D por ponto (sem backbone concreto ainda) | [`point-representation/README.md`](./point-representation/README.md) |
 
 A reconstrução geométrica persistente pertence a `geometric-map`. Implementações concretas de odometria pertencem a `state-estimation`. Percepção visual não deve assumir ownership de geometria 3D persistente.
 
@@ -20,8 +22,6 @@ A reconstrução geométrica persistente pertence a `geometric-map`. Implementa�
 
 As capacidades abaixo continuam fazendo parte da arquitetura pretendida, mas não possuem implementação suficiente para justificar um diretório próprio neste momento:
 
-- `point-representation`;
-- `semantic-map`;
 - `semantic-memory`;
 - `scene-graph`;
 - `context-reasoning`;

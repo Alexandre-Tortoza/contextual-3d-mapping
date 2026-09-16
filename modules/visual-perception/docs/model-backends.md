@@ -657,8 +657,8 @@ confidence = 0.0
 ```
 
 O adapter não deve inventar `1.0`, `0.0` ou outro valor para preencher ausência.
-Consumidores usam a política canônica em `most_confident_claim`; consulte
-[api-contracts.md](api-contracts.md#confiança-ausente).
+Consumidores usam a política canônica em `most_confident_claim`, definida em
+[`domain/semantics.py`](../src/visual_perception/domain/semantics.py).
 
 ## Orçamento de VRAM e lifecycle
 
@@ -738,8 +738,10 @@ python benchmarks/validate_reference_pipeline.py \
 
 Por frame, a validação produz a `VisualObservation` canônica, um diagnóstico estatístico e
 as camadas de inspeção separadas por estágio (proposals, masks, boxes, labels, overlay). O
-layout exato está descrito em [artifacts.md](artifacts.md#artifacts-de-benchmark-e-validação),
-que é a fonte única dessa árvore. O manifest guarda IDs ordenados, hashes de entrada, git
+layout exato é definido por
+[`validate_reference_pipeline.py`](../benchmarks/validate_reference_pipeline.py),
+que é a fonte única dessa árvore — esses artifacts não são versionados; cada
+execução os regenera sob demanda. O manifest guarda IDs ordenados, hashes de entrada, git
 revision, configuração, fingerprint, latência, VRAM, falhas, audit e cobertura por estado
 de cada slot. Não há mais variante de pós-processamento: o merge semântico saiu na #202.
 

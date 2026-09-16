@@ -141,7 +141,7 @@ As etapas 1 a 14 da documentação raiz pertencem majoritariamente a este módul
 
 `benchmarks/` não é código de produção da pipeline. Ele contém harnesses, candidatos de pesquisa, probes, ferramentas de inspeção e artifacts versionados usados para comparar mudanças.
 
-A reference run indicada pela documentação raiz é `20260910T115810Z`. Ela serve como evidência observada de uma revisão específica, não como ground truth.
+Os artifacts da run anteriormente indicada pela documentação raiz foram removidos do repositório — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`). Uma nova reference run real deve ser gravada e linkada em [`docs/README.md`](../../../docs/README.md#reference-run) quando existir.
 
 ## Regra de manutenção
 

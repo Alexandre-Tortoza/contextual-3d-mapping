@@ -99,7 +99,9 @@ Isso é feito sobre a geometria das máscaras. O pipeline evita alterar os pixel
 
 ## Reference run
 
-Para `corridor-02-000`:
+NOTE: os artifacts da run `20260910T115810Z` usada como exemplo (incluindo `proposals.png`, `valid-area-mask.png` e `ego-mask.png`) foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run). Os números abaixo ficam como exemplo conceitual da forma do output, não como artifact vivo.
+
+Para `corridor-02-000` (exemplo conceitual, SAM ViT-H, anterior à troca para o SAM3 tracker):
 
 ```text
 proposal_count: 75
@@ -112,14 +114,6 @@ rejected_proposals:
   below_min_relative_area: 9
   outside_valid_area: 6
 ```
-
-Artifacts:
-
-![Proposals](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/proposals.png)
-
-| suporte fisheye válido | ego-veículo |
-| --- | --- |
-| ![valid area](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/valid-area-mask.png) | ![ego mask](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/ego-mask.png) |
 
 `75 proposals` não significam `75 objetos`. Parte é rejeitada e parte representa regiões sobrepostas do mesmo conteúdo visual.
 

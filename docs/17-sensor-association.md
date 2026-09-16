@@ -202,7 +202,7 @@ A associação ancorada diretamente na geometria persistente evita essa duplica�
 
 ## Reference run
 
-A run visual `20260910T115810Z` não persiste uma linha de `PointVisualAssociation` para `region-2c84165423b25fc3`.
+Nenhuma run atualmente versionada persiste uma linha de `PointVisualAssociation` para uma região visual específica — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`).
 
 Os exemplos numéricos desta página são, portanto, conceituais. O diagnóstico de oclusão do corridor-02, porém, vem de comportamento real medido do pipeline 3D.
 

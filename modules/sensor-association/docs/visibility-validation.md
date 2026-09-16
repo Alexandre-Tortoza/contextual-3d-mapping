@@ -8,7 +8,7 @@ com células densas. A retenção próxima continua uma limitação mensurada.
 ## Entradas congeladas
 
 - 25 frames, de `corridor-02-04210` a `corridor-02-04354`, aproximadamente 6 s;
-- percepção em `artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z`;
+- percepção de uma run congelada de `visual-perception` sobre essa janela (artifacts removidos, ver nota abaixo);
 - mapa `corridor-02-176s-30s`, frame `map`, metros;
 - PCD com 1.093.011 registros; viewer com 136.627 pontos (stride 8);
 - SHA-256 do PCD: `50ea48916331e5e5061b0993c353eca7bf90ec5507079637e2d83eef7e923760`;
@@ -99,33 +99,21 @@ sintética. A máscara e o claim 2D são preservados quando falta suporte 3D.
 
 ## Artifacts e reprodução
 
-A run histórica fica em `artifacts/old/visibility-validation-20260912-v2/`:
+NOTE: os artifacts desta run histórica (`artifacts/old/visibility-validation-20260912-v2/` e as runs de percepção/geometria que ela consumia) foram removidos do repositório — resultados de execução são descartáveis e regeneráveis a partir do código e da configuração versionados (ver "Legado" em `AGENTS.md`). Os números e conclusões acima permanecem como registro da decisão que tornou `measured_surfaces` o default; para reproduzir a comparação é preciso gerar novas runs de geometria e percepção e apontar o ponto de entrada abaixo para elas.
 
-```text
-manifest.json                         hashes de entradas/código, política e tempos
-regression-ids.json                   593 IDs próximos + 30 distantes auditados
-metrics.json                         contagens, IDs perdidos e evidências
-comparison.png                       escalas compartilhadas do mapa e do palete
-legacy_cells/context.json            baseline recomposta
-dense_cells/context.json            PCD integral com regra de células
-measured_surfaces/context.json       primeira superfície + vínculo da região
-*/context-assets/                    previews RGB congelados
-*/context-DEBUG/sensor-association/   decisões por ID e frame, com pose
-```
-
-Com os pacotes locais no `PYTHONPATH`, o ponto de entrada é:
+Ponto de entrada (com os pacotes locais no `PYTHONPATH`):
 
 ```bash
 modules/visual-perception/.venv/bin/python -m visual_perception_experiments.visibility_validation \
-  --geometry artifacts/old/corridor-02-176s-30s.json \
+  --geometry <geometry.json> \
   --bag datasets/raw/corridor-02/corridor-02.bag \
   --intrinsics datasets/raw/corridor-02/corridor-02-Intrinsics.yaml \
   --extrinsics datasets/raw/corridor-02/corridor-02-extrinsics.yaml \
-  --odometry artifacts/old/corridor-02-176s-30s-odometry.csv \
-  --window artifacts/old/integrated-grounding-6s-20260912T050652Z/window.json \
-  --visual-run artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
-  --baseline artifacts/old/integrated-grounding-6s-20260912T050652Z/pose.json \
-  --regression-ids artifacts/old/visibility-validation-20260912-v2/regression-ids.json \
+  --odometry <geometry-odometry.csv> \
+  --window <window.json> \
+  --visual-run <visual-run-dir> \
+  --baseline <baseline-pose.json> \
+  --regression-ids <regression-ids.json> \
   --output artifacts/visibility-validation-NOVA-RUN
 ```
 

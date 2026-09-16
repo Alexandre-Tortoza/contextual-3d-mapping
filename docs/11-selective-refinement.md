@@ -187,7 +187,7 @@ O objetivo é concentrar chamadas caras do Qwen nas regiões que realmente apres
 
 ## Reference run
 
-A run `20260910T115810Z` possui sinais de hipóteses concorrentes e regiões com primary não suportada, mas a documentação atual não isola um `RefinementStep` específico para `region-2c84165423b25fc3` como exemplo canônico.
+Runs observadas anteriormente já mostraram sinais de hipóteses concorrentes e regiões com primary não suportada, mas nenhuma run atualmente versionada isola um `RefinementStep` específico como exemplo canônico — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`).
 
 Não inventamos um artifact de refinement para preencher essa lacuna.
 

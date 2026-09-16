@@ -139,7 +139,7 @@ A segunda formulação é deliberadamente mais cautelosa porque ainda pode haver
 
 ## Reference run
 
-Ainda não existe na reference run visual um artifact versionado que associe `region-2c84165423b25fc3` a um `GeometryReference` específico.
+Ainda não existe nenhuma run versionada com um artifact que associe uma região visual específica a um `GeometryReference` — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`).
 
 Esta documentação não cria um identificador ou pixel fictício como se fosse resultado medido.
 

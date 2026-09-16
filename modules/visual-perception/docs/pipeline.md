@@ -11,7 +11,7 @@ A configuração `research_quality` atual usa:
 | espaço imagem-texto | CLIP ViT-L/14, `openai/clip-vit-large-patch14` |
 | raciocínio multimodal | Qwen2.5-VL-3B-Instruct, 4-bit |
 
-O adapter de region discovery usa o pipeline `mask-generation` com o tracker do SAM3 e aceita checkpoints SAM/SAM2 para comparação. Os números de exemplo desta página vêm da reference run `20260910T115810Z`, anterior à troca, que usou SAM ViT-H.
+O adapter de region discovery usa o pipeline `mask-generation` com o tracker do SAM3 e aceita checkpoints SAM/SAM2 para comparação. Os números de exemplo desta página são conceituais: vinham de uma reference run anterior à troca (SAM ViT-H) cujos artifacts foram removidos do repositório (ver nota em [`docs/README.md`](../../../docs/README.md#reference-run)).
 
 ## Visão geral
 
@@ -195,7 +195,7 @@ O contexto de cena chega como claims estruturadas pelo canal textual `scene_cont
 
 O Qwen não recebe diretamente o vetor DINO 768D na implementação atual.
 
-Para `region-2c84165423b25fc3`, a resposta real inclui:
+Exemplo conceitual de resposta:
 
 ```json
 {
@@ -387,7 +387,7 @@ CLIP text encoder
 comparação contra embeddings CLIP das views
 ```
 
-Para a região real `region-2c84165423b25fc3`:
+Exemplo conceitual:
 
 | hipótese | view | score CLIP | margem | interpretação |
 | --- | --- | ---: | ---: | --- |

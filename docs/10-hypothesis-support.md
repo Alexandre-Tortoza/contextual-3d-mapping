@@ -173,9 +173,11 @@ status = indistinguishable
 
 Isso significa que o CLIP não separou as hipóteses com margem suficiente.
 
-## Reference run real
+## Reference run
 
-Para `region-2c84165423b25fc3`:
+NOTE: os artifacts da run que sustentava este exemplo foram removidos do repositório (ver nota em [`docs/README.md`](./README.md#reference-run)). Tabela abaixo preservada como exemplo conceitual.
+
+Para uma região com evidência ambígua entre duas hipóteses (exemplo conceitual):
 
 | hipótese | slot | status | score | margem |
 | --- | --- | --- | ---: | ---: |

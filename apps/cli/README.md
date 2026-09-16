@@ -188,9 +188,9 @@ dependências, não baixa datasets e não sobrescreve artifacts.
 
 ```bash
 apps/cli/.venv/bin/contextual-3d-mapping-cli compose \
-  --segment-id corridor-02-176s-30s \
-  --window artifacts/old/integrated-grounding-6s-20260912T050652Z/window.json \
-  --visual-run artifacts/old/integrated-grounding-6s-20260912T050652Z/perception/samples/20260912T050915Z \
+  --segment-id <segment-id> \
+  --window artifacts/<run-id>/window.json \
+  --visual-run modules/visual-perception/benchmarks/results/samples/<run-id> \
   --visibility-mode measured_surfaces
 ```
 

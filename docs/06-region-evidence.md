@@ -104,9 +104,11 @@ Mesmo quando ambos têm dimensão `768`, isso **não significa que os vetores se
 
 A identidade do `EmbeddingSpace` inclui modelo, checkpoint, modalidade, dimensão e normalização justamente para evitar comparações silenciosas entre espaços incompatíveis.
 
-## Exemplo real
+## Exemplo conceitual
 
-A região `region-2c84165423b25fc3` possui:
+NOTE: os artifacts da run que sustentava este exemplo foram removidos do repositório (ver nota em [`docs/README.md`](./README.md#reference-run)).
+
+Uma região com evidência completa possui:
 
 ```text
 foreground_dense

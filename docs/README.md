@@ -55,38 +55,32 @@ O objetivo é permitir que alguém leia as docs e consiga reconstruir mentalment
 
 ## Reference run
 
-A referência visual atual é uma execução real e auditável:
+NOTE: os artifacts da run que ilustrava esta seção (`20260910T115810Z`) foram removidos do repositório — resultados de execução são descartáveis e regeneráveis a partir do código e da configuração versionados (ver "Legado" em `AGENTS.md`), não um contract a manter vivo. Os blocos de exemplo abaixo, e nas páginas numeradas de `01` a `20`, ficam marcados como **conceituais** até que uma nova reference run real seja gravada e linkada aqui.
+
+Estrutura esperada de uma reference run (exemplo conceitual, sem artifact real associado):
 
 ```text
-run_id: 20260910T115810Z
-git_revision: 7001803
+run_id: <run-id>
+git_revision: <commit>
 quality_profile: research_quality
-frames: 3
-reference_frame: corridor-02-000
-resolution: 640 x 480
-reference_region: region-2c84165423b25fc3
-GPU budget: 8.0 GB
-observed peak: 4.57 GB
+frames: <n>
+reference_frame: <observation_id>
+resolution: <largura> x <altura>
+reference_region: <region_id>
+GPU budget: <budget>
+observed peak: <peak>
 ```
 
-Modelos usados nesse run:
+Modelos usados na última run real observada antes da limpeza (para contexto histórico, não como configuração atual — ver [backends de modelos](../modules/visual-perception/docs/model-backends.md) para a configuração vigente):
 
 | Capacidade | Modelo |
 | --- | --- |
-| Region discovery | SAM ViT-H |
+| Region discovery | SAM ViT-H (backend atual é o SAM3 tracker) |
 | Dense visual features | DINOv2-base |
 | Language-aligned evidence | CLIP ViT-L/14 |
 | Scene/region semantics | Qwen2.5-VL-3B-Instruct, 4-bit |
 
-Esta run é um exemplo do comportamento de uma revisão específica. Ela não é ground truth e não representa garantia de desempenho.
-
-Artifacts principais:
-
-- [`summary.md`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/summary.md)
-- [`manifest.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/manifest.json)
-- [`diagnostics.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/diagnostics.json)
-- [`observation.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/observation.json)
-- [`embeddings.npz`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/embeddings.npz)
+Uma reference run nunca é ground truth nem garantia de desempenho — é só um exemplo observado de uma revisão específica.
 
 ## Pipeline geral
 
@@ -123,13 +117,13 @@ flowchart TD
 
 | Capacidade | Estado | Evidência atual |
 | --- | --- | --- |
-| `visual-perception` | implementado | run `20260910T115810Z`, artifacts por frame |
+| `visual-perception` | implementado | pipeline completo até `VisualObservation`; artifacts de run são gerados sob demanda e não versionados |
 | `state-estimation` | primeiro slice implementado | contracts e integração FAST-LIO |
 | `geometric-map` | primeiro slice implementado | geometria persistente e referências estáveis |
 | `sensor-association` | implementado | projeção, suporte válido e oclusão |
 | `semantic-fusion` | implementado no nível de ponto | fusão multi-keyframe e suporte espacial |
-| `point-representation` | planejado | capacidade ainda não materializada em módulo |
-| `semantic-map` | planejado | sem schema público concreto e sem módulo materializado |
+| `point-representation` | primeiro slice implementado | contracts públicos, transforms determinísticos e port `PointEncoder` com fake; nenhum backbone concreto ainda |
+| `semantic-map` | primeiro slice implementado | consolidação de runs contextuais publicadas sobre geometria compartilhada (`consolidate_context_runs`) |
 | `semantic-memory` | planejado | capacidade ainda não materializada em módulo |
 | `scene-graph` | planejado | capacidade ainda não materializada em módulo |
 | `context-reasoning` | planejado | capacidade ainda não materializada em módulo |
@@ -137,7 +131,7 @@ flowchart TD
 
 Capacidades apenas planejadas não mantêm diretórios vazios em `modules/`. Elas passam a existir fisicamente quando houver contract, implementação, teste ou documentação concreta que justifique o módulo.
 
-A reference run visual possui artifacts reais até `VisualObservation`. Para a parte 3D existem implementação e diagnósticos reais, mas ainda não há um único artifact versionado que acompanhe `region-2c84165423b25fc3` até um `GeometryReference` e depois até uma entidade persistente. A documentação não inventa essa continuidade.
+A cadeia de tipos até `VisualObservation` está implementada e testada. Para a parte 3D existem implementação e diagnósticos reais, mas nenhuma run atual mantém um artifact versionado que acompanhe uma região específica até um `GeometryReference` e depois até uma entidade persistente — isso é regenerável a qualquer momento, não algo que a documentação preserve como artifact fixo.
 
 ## Documentação especializada por módulo
 
@@ -147,7 +141,9 @@ A documentação local descreve o código e as decisões internas das capacidade
 - [`state-estimation`](../modules/state-estimation/docs/README.md), contracts de movimento e integração FAST-LIO;
 - [`geometric-map`](../modules/geometric-map/docs/README.md), geometria persistente e referências estáveis;
 - [`sensor-association`](../modules/sensor-association/docs/README.md), projeção, visibilidade e oclusão;
-- [`semantic-fusion`](../modules/semantic-fusion/docs/README.md), fusão multi-view e suporte espacial.
+- [`semantic-fusion`](../modules/semantic-fusion/docs/README.md), fusão multi-view e suporte espacial;
+- [`semantic-map`](../modules/semantic-map/docs/index.md), consolidação de runs contextuais publicadas sobre geometria compartilhada;
+- [`point-representation`](../modules/point-representation/README.md), contracts e transforms para embeddings 3D por ponto (ainda sem backbone concreto).
 
 Use estas páginas para perguntas sobre como um módulo funciona internamente. Use os documentos numerados abaixo para seguir a transformação da informação entre módulos.
 

@@ -81,7 +81,7 @@ Esses embeddings ficam armazenados em memória e podem ser persistidos por refer
 
 ## Depois Qwen produz as hipóteses textuais
 
-O Qwen analisa as views da região e o contexto da cena. Para a região real `region-2c84165423b25fc3`, ele produziu:
+O Qwen analisa as views da região e o contexto da cena. Em um exemplo conceitual, para uma região com evidência ambígua, ele produziu:
 
 ```text
 primary: wooden panel
@@ -141,9 +141,11 @@ margin(door)
 
 Nesse slot, `wooden door` tem suporte maior que `wooden panel`.
 
-## Exemplo real da reference run
+## Exemplo conceitual da reference run
 
-Para `region-2c84165423b25fc3`:
+NOTE: os artifacts da run que sustentava este exemplo foram removidos do repositório (ver nota em [`docs/README.md`](./README.md#reference-run)).
+
+Exemplo conceitual:
 
 | hipótese | slot | score | margem | resultado |
 | --- | --- | ---: | ---: | --- |

@@ -138,11 +138,7 @@ distinct_values: 34
 degenerate: false
 ```
 
-Artifacts:
-
-| máscaras | boxes | overlay |
-| --- | --- | --- |
-| ![masks](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-masks.png) | ![boxes](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-boxes.png) | ![overlay](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-overlay.png) |
+NOTE: os artifacts visuais desta run (`regions-masks.png`, `regions-boxes.png`, `regions-overlay.png`) foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run).
 
 ## O que acontece depois
 

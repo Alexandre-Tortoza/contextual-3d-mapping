@@ -46,6 +46,8 @@ ImagePayload
 
 ## Reference run
 
+NOTE: os artifacts da run que ilustrava esta página (`20260910T115810Z`, incluindo `raw.png`) foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run). O bloco abaixo é um exemplo conceitual da forma de `ObservationReference`, não um artifact vivo.
+
 ```text
 observation_id: corridor-02-000
 dataset_id: corridor02
@@ -58,10 +60,6 @@ frame_id: camera_1_optical_frame
 image_width: 640
 image_height: 480
 ```
-
-Imagem real:
-
-![Frame RGB corridor-02-000](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/raw.png)
 
 Neste ponto não existe label, entidade ou posição XYZ. Existe apenas uma observação visual identificada e seus pixels.
 

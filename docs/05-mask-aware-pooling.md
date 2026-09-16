@@ -101,7 +101,9 @@ O vetor pesado é persistido em artifact. O JSON mantém a referência e os meta
 
 ## Reference run
 
-Para `region-2c84165423b25fc3`:
+NOTE: os artifacts da run que sustentava este exemplo (`20260910T115810Z`, incluindo `embeddings.npz`) foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run). Os valores abaixo são um exemplo conceitual da forma do output.
+
+Para `region-2c84165423b25fc3` (exemplo conceitual):
 
 ```text
 slot: foreground_dense
@@ -118,7 +120,7 @@ EmbeddingSpace.normalized: true
 
 `mask_fill_ratio ~= 0.448` significa que menos da metade do retângulo da bounding box pertence efetivamente à máscara. Isso mostra por que usar apenas o crop retangular seria uma representação diferente da região real.
 
-O vetor está em [`embeddings.npz`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/embeddings.npz), não inline em `observation.json`.
+O vetor é persistido em um `embeddings.npz` por run, não inline em `observation.json`.
 
 ## O que esse vetor representa
 

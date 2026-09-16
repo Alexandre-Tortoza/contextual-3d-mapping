@@ -59,9 +59,11 @@ ObservedRegion
 
 Isso mostra por que `VisualObservation` é mais rico que uma lista simples de boxes e labels.
 
-## Exemplo real da região de referência
+## Exemplo conceitual da região de referência
 
-De forma resumida, `region-2c84165423b25fc3` possui:
+NOTE: este exemplo vinha da run `20260910T115810Z`, cujos artifacts foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run). Fica preservado como ilustração conceitual da forma do output.
+
+De forma resumida, `region-2c84165423b25fc3` possuía:
 
 ```text
 Qwen primary:
@@ -87,7 +89,9 @@ Essas evidências coexistem. `VisualObservation` não precisa apagar a ambiguida
 
 ## Reference run
 
-Para `corridor-02-000`:
+NOTE: os artifacts desta run (`observation.json`, `regions-labels.png`) foram removidos do repositório — ver nota em [`docs/README.md`](./README.md#reference-run).
+
+Para `corridor-02-000` (exemplo conceitual):
 
 ```text
 schema_version: 3
@@ -100,13 +104,7 @@ interpretation_failures: 0
 audit: pass, com 42 warnings
 ```
 
-Artifact:
-
-[`observation.json`](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/observation.json)
-
-![labels produzidos](../modules/visual-perception/benchmarks/results/samples/20260910T115810Z/frames/corridor-02-000/regions-labels.png)
-
-O overlay mostra o que o pipeline afirmou naquele run, inclusive possíveis erros. Não é ground truth.
+O overlay de labels mostra o que o pipeline afirma em uma run, inclusive possíveis erros. Não é ground truth.
 
 ## O que não está inline no JSON
 

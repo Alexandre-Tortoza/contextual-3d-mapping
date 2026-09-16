@@ -149,6 +149,8 @@ Mais tarde essas evidências podem ser usadas para coerência, reconciliação e
 
 ## Reference run
 
+NOTE: exemplo conceitual — os artifacts da run que originalmente acompanhava esta configuração foram removidos do repositório (ver nota em [`docs/README.md`](./README.md#reference-run)).
+
 ```text
 backend: dinov2
 checkpoint: facebook/dinov2-base
@@ -158,8 +160,6 @@ dimension: 768
 modality: visual_dense
 normalized: true
 ```
-
-A região acompanhada é `region-2c84165423b25fc3`.
 
 ## O que high-resolution significa hoje
 

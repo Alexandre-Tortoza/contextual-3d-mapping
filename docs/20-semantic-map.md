@@ -15,9 +15,11 @@ flowchart LR
 
 ## Estado atual
 
-`semantic-map`, `semantic-memory`, `scene-graph`, `context-reasoning` e `query-engine` são capacidades planejadas. Não existe ainda um schema público concreto que possa ser documentado como implementação atual.
+`semantic-map` tem um primeiro slice implementado: consolida evidência semântica de múltiplas runs contextuais publicadas sobre a mesma geometria persistente, produzindo um `ConsolidatedContextMap` versionado e rastreável. Ver [`modules/semantic-map/README.md`](../modules/semantic-map/README.md) e [`modules/semantic-map/docs/index.md`](../modules/semantic-map/docs/index.md) para o contract público e a regra de consolidação.
 
-Os diretórios vazios dessas capacidades foram removidos de `modules/`. Eles voltarão a existir quando houver contract, código, testes ou documentação concreta que justifique materializá-los.
+`semantic-memory`, `scene-graph`, `context-reasoning` e `query-engine` continuam planejados. Não existe ainda um schema público concreto para essas capacidades.
+
+Os diretórios vazios dessas capacidades planejadas não existem em `modules/`. Eles passam a existir quando houver contract, código, testes ou documentação concreta que justifique materializá-los — como já aconteceu com `semantic-map`.
 
 ## Objetivo
 
@@ -157,15 +159,11 @@ Isso depende de muito mais que uma label isolada: geometria, relações, navegab
 
 ## Reference run
 
-A run `20260910T115810Z` termina, para fins de artifact visual canônico, em `VisualObservation`.
+Nenhuma reference run atual mantém um artifact versionado do fio completo — de uma observação visual até uma entidade persistida em `ConsolidatedContextMap`. Resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`), então esta página não fixa um exemplo real desse fio; a consolidação em si é testada em `modules/semantic-map/tests/test_consolidation.py`.
 
-Diagnósticos 3D existem para associação e fusão, mas ainda não há uma entidade persistida de `semantic-map` que possa ser usada como exemplo real.
+## Critério para materializar as capacidades restantes
 
-Quando esse artifact existir, esta página deve ser atualizada acompanhando uma entidade real do primeiro frame até o estado persistente.
-
-## Critério para materializar o módulo
-
-`semantic-map` deve voltar a existir fisicamente em `modules/semantic-map/` quando houver, no mínimo:
+`semantic-memory`, `scene-graph`, `context-reasoning` e `query-engine` devem passar a existir fisicamente em `modules/` quando houver, no mínimo:
 
 ```text
 contract público concreto
@@ -177,7 +175,7 @@ testes do contract
 documentação local
 ```
 
-Não apenas porque a capacidade aparece no diagrama arquitetural.
+Não apenas porque a capacidade aparece no diagrama arquitetural — foi exatamente esse critério que materializou `semantic-map`.
 
 ## Próxima leitura
 

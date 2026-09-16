@@ -1,6 +1,6 @@
 # Grounding semântico e geometria de discovery
 
-Resultado medido: [validação de 6 segundos e limites de aceitação](semantic-grounding-validation.md).
+NOTE: as duas validações anteriores desta mudança (replay curto com reconhecimento congelado e validação integrada de 12/09) foram comparações fechadas; seus artifacts em `artifacts/old/` foram removidos junto com a limpeza de runs descartáveis (ver "Legado" em `AGENTS.md`), e as páginas correspondentes foram removidas.
 
 ## Diagnóstico anterior à implementação
 
