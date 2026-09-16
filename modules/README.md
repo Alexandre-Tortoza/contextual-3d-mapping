@@ -18,6 +18,8 @@ A estrutura física do repositório acompanha o código real. Capacidades apenas
 
 A reconstrução geométrica persistente pertence a `geometric-map`. Implementações concretas de odometria pertencem a `state-estimation`. Percepção visual não deve assumir ownership de geometria 3D persistente.
 
+A relação completa entre todos esses módulos, seus contracts, `mapping-runtime`, adapters, armazenamento e aplicações está documentada em [`../docs/system-flow.md`](../docs/system-flow.md).
+
 ## Capacidades planejadas
 
 As capacidades abaixo continuam fazendo parte da arquitetura pretendida, mas não possuem implementação suficiente para justificar um diretório próprio neste momento:
@@ -74,7 +76,7 @@ modules/<module>/docs/
 
 A documentação principal deve apontar para a documentação especializada em vez de duplicar detalhes internos. A documentação local, por sua vez, deve apontar para o estágio correspondente da pipeline quando o assunto atravessar módulos.
 
-Comece por [`../docs/README.md`](../docs/README.md).
+Para reconstruir a pipeline inteira do repositório e todas as relações entre módulos, comece por [`../docs/system-flow.md`](../docs/system-flow.md). Para a leitura estágio por estágio, use [`../docs/README.md`](../docs/README.md).
 
 A documentação histórica anterior à reorganização está preservada em [`../.old-docs/`](../.old-docs/) e não deve ser tratada automaticamente como descrição do código atual.
 
@@ -89,6 +91,6 @@ Ao materializar ou ampliar um módulo:
 5. teste contracts e comportamento local;
 6. adicione benchmarks quando performance ou qualidade precisarem ser comparadas;
 7. documente decisões não óbvias em `docs/`;
-8. atualize [`../docs/README.md`](../docs/README.md) quando a mudança afetar a pipeline global.
+8. atualize [`../docs/README.md`](../docs/README.md) e [`../docs/system-flow.md`](../docs/system-flow.md) quando a mudança afetar a pipeline global.
 
 Antes de alterar fronteiras de módulo ou arquitetura do repositório, leia [`../AGENTS.md`](../AGENTS.md) e a documentação ativa em [`../docs/`](../docs/README.md).
