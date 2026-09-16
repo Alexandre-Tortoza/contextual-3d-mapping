@@ -2,28 +2,49 @@
 
 Esta é a documentação local de `visual-perception`. O diretório raiz [`docs/`](../../../docs/README.md) descreve a pipeline completa entre módulos; aqui ficam arquitetura interna, backends, política semântica, pontos de extensão e evidências específicas deste módulo.
 
+A visão completa do repositório, incluindo todas as relações de `visual-perception` com `state-estimation`, `geometric-map`, `sensor-association`, `semantic-fusion`, `semantic-map`, adapters e aplicações, está em [`docs/system-flow.md`](../../../docs/system-flow.md).
+
 ## Papel no sistema
 
 `visual-perception` transforma um frame RGB canônico em `VisualObservation`, preservando regiões, evidências densas, evidência alinhada à linguagem, hipóteses semânticas, contexto de cena, relações e proveniência.
 
 ```text
 ImageObservation + ImagePayload
-    -> region discovery
-    -> region merge
-    -> dense features
-    -> mask-aware pooling
-    -> region evidence
-    -> language-aligned evidence
+    -> image-area masks
+    -> scene concept discovery
+    -> concept grounding
+    -> generic region discovery
+    -> proposal filtering
+    -> cross-scale merge
+    -> geometry freeze
+    -> multi-context evidence
     -> scene context
+    -> optional temporal prior
     -> region semantics
+    -> language embeddings
     -> hypothesis support
+    -> calibration
     -> selective refinement
+    -> geometric relations
     -> reconciliation
-    -> relations
+    -> semantic relations
+    -> contextual publication
+    -> final audit
     -> VisualObservation
 ```
 
 A saída ainda é 2D. Projeção para LiDAR e geometria persistente pertence a `sensor-association`.
+
+## Diagramas canônicos do módulo
+
+Use estes documentos em conjunto:
+
+- [Pipeline canônica completa](./pipeline-flow.md), ordem de execução, bifurcações, `geometry freeze`, entradas, saídas e falhas;
+- [Region discovery flow](./region-discovery-flow.md), relação entre discovery genérico, tiling, scene concept discovery e SAM3 PCS;
+- [Model flow](./model-flow.md), relação entre SAM3, DINOv2, Qwen/Gemini e CLIP;
+- [Semantic flow](./semantic-flow.md), SceneContext, claims, suporte, calibração, refinamento, reconciliação e relações;
+- [Pipeline detalhada em prosa](./pipeline.md), explicação dos dados e modelos estágio por estágio;
+- [Fluxo completo do repositório](../../../docs/system-flow.md), relação deste módulo com toda a cadeia 3D.
 
 ## Como os modelos se relacionam
 
@@ -36,7 +57,7 @@ SAM
 DINOv2
     transforma a imagem em uma grade de patches com embeddings visuais
 
-Qwen2.5-VL
+Qwen2.5-VL / Gemini
     interpreta cena e regiões e produz hipóteses textuais
 
 CLIP
@@ -48,12 +69,12 @@ O fluxo mais importante é:
 ```text
 SAM mask
    |
-   +--> views em pixels --> Qwen --> primary + alternatives
+   +--> views em pixels --> Qwen/Gemini --> primary + alternatives
    |
    +--> views em pixels --> CLIP image embeddings
                                   ^
                                   |
-Qwen labels --> CLIP text embeddings
+VLM labels --> CLIP text embeddings
                                   |
                                   v
                          hypothesis support
@@ -69,7 +90,9 @@ SAM mask ---------> mask-aware pooling
                  dense visual evidence
 ```
 
-A explicação completa, com shapes reais, exemplos de vetores e uma região da reference run, está em [Pipeline detalhada de Visual Perception](./pipeline.md).
+O vetor DINO não é enviado diretamente ao VLM no pipeline atual. DINO e CLIP são canais independentes de evidência, e CLIP é o canal usado para medir compatibilidade imagem-texto das hipóteses propostas pelo reasoner.
+
+A explicação completa, com shapes, exemplos de vetores e contratos, está em [Pipeline detalhada de Visual Perception](./pipeline.md).
 
 ## Organização do código
 
@@ -94,13 +117,15 @@ src/visual_perception/
 
 `application/` contém o comportamento da pipeline. Os principais grupos são:
 
-- descoberta, merge, views e tiling de regiões;
-- extração e pooling de evidência densa;
-- embeddings alinhados à linguagem;
+- descoberta de conceitos de cena e grounding dirigido por conceito;
+- discovery genérico, tiling, filtragem e merge de regiões;
+- views multi-contexto, features densas e embeddings visuais;
 - contexto e semântica de cena/região;
-- suporte de hipóteses e calibração;
+- prior temporal opcional;
+- suporte independente de hipóteses e calibração;
 - refinement e reconciliation;
-- relações semânticas e geométricas;
+- relações geométricas e semânticas;
+- publicação contextual;
 - auditoria, diagnósticos, cache e lifecycle.
 
 [`pipeline.py`](../src/visual_perception/application/pipeline.py) é o ponto central para entender a composição do caminho canônico.
@@ -111,10 +136,16 @@ src/visual_perception/
 
 ## Documentos especializados
 
+- [Pipeline canônica completa](./pipeline-flow.md)
 - [Pipeline detalhada](./pipeline.md)
+- [Region discovery flow](./region-discovery-flow.md)
+- [Model flow](./model-flow.md)
+- [Semantic flow](./semantic-flow.md)
 - [Backends de modelos](./model-backends.md)
+- [Semantic grounding](./semantic-grounding.md)
 - [Política de semântica contextual](./contextual-semantics.md)
-- [Pipeline end-to-end do repositório](../../../docs/README.md)
+- [Pipeline completa do repositório](../../../docs/system-flow.md)
+- [Índice end-to-end do repositório](../../../docs/README.md)
 
 A documentação histórica mais extensa continua preservada em [`.old-docs/modules/visual-perception/docs/`](../../../.old-docs/modules/visual-perception/docs/) e não deve ser tratada automaticamente como descrição do código atual.
 
@@ -139,16 +170,20 @@ As etapas 1 a 14 da documentação raiz pertencem majoritariamente a este módul
 
 ## Benchmarks e artifacts
 
-`benchmarks/` não é código de produção da pipeline. Ele contém harnesses, candidatos de pesquisa, probes, ferramentas de inspeção e artifacts versionados usados para comparar mudanças.
+`benchmarks/` não é código de produção da pipeline. Ele contém harnesses, candidatos de pesquisa, probes, ferramentas de inspeção e artifacts usados para comparar mudanças.
 
-Os artifacts da run anteriormente indicada pela documentação raiz foram removidos do repositório — resultados de execução são regenerados sob demanda e não versionados (ver "Legado" em `AGENTS.md`). Uma nova reference run real deve ser gravada e linkada em [`docs/README.md`](../../../docs/README.md#reference-run) quando existir.
+Resultados de execução são regenerados sob demanda e não são contracts permanentes. Uma nova reference run real deve ser linkada em [`docs/README.md`](../../../docs/README.md#reference-run) quando houver artifacts que devam servir de exemplo documentado.
 
 ## Regra de manutenção
 
 Documentação local deve acompanhar comportamento implementado e contracts públicos. Resultados medidos devem apontar para artifacts versionados. Arquitetura pretendida, implementação atual e comportamento observado devem permanecer explicitamente separados.
 
+Mudanças que alterem uma relação entre módulos devem atualizar também [`docs/system-flow.md`](../../../docs/system-flow.md).
+
 ## Próxima leitura
 
+- [Pipeline canônica completa](./pipeline-flow.md)
+- [Fluxo completo do repositório](../../../docs/system-flow.md)
 - [Pipeline detalhada de Visual Perception](./pipeline.md)
 - [02. Region Discovery](../../../docs/02-region-discovery.md)
 - [Backends de modelos](./model-backends.md)
