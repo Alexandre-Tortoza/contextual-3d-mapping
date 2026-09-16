@@ -25,7 +25,9 @@ RGB + LiDAR + IMU
         -> applications
 ```
 
-A documentação ativa agora é organizada pela pipeline em [`docs/README.md`](./docs/README.md). Ela usa artifacts de runs reais sempre que existe evidência versionada e separa explicitamente arquitetura pretendida, implementação atual e comportamento observado.
+A visão **completa** do repositório, incluindo adapters, contracts, `mapping-runtime`, todos os módulos implementados, relações entre payloads, proveniência, persistência, aplicações e capacidades planejadas, está em [`docs/system-flow.md`](./docs/system-flow.md).
+
+A documentação estágio por estágio está organizada em [`docs/README.md`](./docs/README.md). Ela separa explicitamente arquitetura pretendida, implementação atual e comportamento observado.
 
 A documentação anterior foi preservada em [`.old-docs/`](./.old-docs/).
 
@@ -57,6 +59,6 @@ cd apps/map-explorer/web && npm run dev
 
 ## Documentação
 
-Comece por [`docs/README.md`](./docs/README.md). A documentação detalhada segue a informação estágio por estágio, de `ImageObservation` e `ImagePayload` até `Semantic Fusion` e o `Semantic Map` planejado.
+Comece por [`docs/system-flow.md`](./docs/system-flow.md) para entender a arquitetura completa e todas as relações entre capacidades. Depois use [`docs/README.md`](./docs/README.md) para seguir a informação estágio por estágio e a documentação local em `modules/<module>/docs/` para detalhes internos.
 
-A reference run visual atual é `20260910T115810Z`, com o frame `corridor-02-000`. Ela é usada para substituir exemplos fictícios por artifacts e valores efetivamente produzidos pelo sistema sempre que possível.
+Artifacts de execução são regeneráveis e não são tratados como contracts permanentes. Quando uma página usa valores históricos, ela deve identificá-los explicitamente como contexto ou exemplo conceitual, e não como comportamento garantido da revisão atual.
