@@ -1,0 +1,865 @@
+{
+  "frame_id": "corridor-02-04235",
+  "regions": [
+    {
+      "region_id": "region-038cacf5853376ac",
+      "label": "floor tile",
+      "region_kind": "part",
+      "discovery_area": 1128,
+      "box_before": {
+        "x_min": 483.0,
+        "y_min": 323.0,
+        "x_max": 555.0,
+        "y_max": 347.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9514064788818359,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 8.077351787011139,
+      "model_mask_area": 70506,
+      "clipped_pixel_count": 69378,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1128,
+          "box": {
+            "x_min": 483.0,
+            "y_min": 323.0,
+            "x_max": 555.0,
+            "y_max": 347.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1128,
+          "refined_overlap": 1128,
+          "detector_box_overlap": 1128,
+          "distance_to_box_center_px": 160.98573088006574
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-06aafe923d84b6cd",
+      "label": "ceiling light fixture",
+      "region_kind": "part",
+      "discovery_area": 1761,
+      "box_before": {
+        "x_min": 245.0,
+        "y_min": 51.0,
+        "x_max": 312.0,
+        "y_max": 106.0
+      },
+      "component_count_before": 7,
+      "geometric_confidence": 0.9609200358390808,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.46320998697774485,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-122c307e8192bd1a",
+      "label": "door edge",
+      "region_kind": "part",
+      "discovery_area": 2876,
+      "box_before": {
+        "x_min": 169.0,
+        "y_min": 162.0,
+        "x_max": 205.0,
+        "y_max": 257.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9332420825958252,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4571848339983262,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-13245e5e00146a4b",
+      "label": "wall",
+      "region_kind": "stuff",
+      "discovery_area": 44741,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 3.0,
+        "x_max": 307.0,
+        "y_max": 299.0
+      },
+      "component_count_before": 13,
+      "geometric_confidence": 0.9691812992095947,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4589416259841528,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-1741a6173925428e",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 3264,
+      "box_before": {
+        "x_min": 202.0,
+        "y_min": 192.0,
+        "x_max": 247.0,
+        "y_max": 269.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9855668544769287,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.47285036303219385,
+      "model_mask_area": 4975,
+      "clipped_pixel_count": 1713,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 3262,
+          "box": {
+            "x_min": 202.0,
+            "y_min": 192.0,
+            "x_max": 247.0,
+            "y_max": 268.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 3262,
+          "refined_overlap": 3262,
+          "detector_box_overlap": 3262,
+          "distance_to_box_center_px": 0.4929792731325881
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 3262,
+      "area_ratio": 0.9993872549019608,
+      "area_reduction_ratio": 0.0006127450980392135,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 202.0,
+        "y_min": 192.0,
+        "x_max": 247.0,
+        "y_max": 268.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-22b5fee4ef67e655",
+      "label": "double doors",
+      "region_kind": "thing",
+      "discovery_area": 1334,
+      "box_before": {
+        "x_min": 323.0,
+        "y_min": 219.0,
+        "x_max": 363.0,
+        "y_max": 254.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9376839995384216,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45759497801191173,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-3039ad2ead8f5853",
+      "label": "door frame",
+      "region_kind": "part",
+      "discovery_area": 4070,
+      "box_before": {
+        "x_min": 203.0,
+        "y_min": 192.0,
+        "x_max": 313.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.8100537657737732,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.45642195898108184,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-3b765e0bc18e144a",
+      "label": "shadow",
+      "region_kind": "stuff",
+      "discovery_area": 763,
+      "box_before": {
+        "x_min": 317.0,
+        "y_min": 106.0,
+        "x_max": 361.0,
+        "y_max": 137.0
+      },
+      "component_count_before": 6,
+      "geometric_confidence": 0.9538237452507019,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.45627117398544215,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4c34aafd38faa26e",
+      "label": "ceiling light fixture",
+      "region_kind": "part",
+      "discovery_area": 1189,
+      "box_before": {
+        "x_min": 277.0,
+        "y_min": 82.0,
+        "x_max": 364.0,
+        "y_max": 146.0
+      },
+      "component_count_before": 9,
+      "geometric_confidence": 0.9597961902618408,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-54c0ff215525b3db",
+      "label": "wooden pallet",
+      "region_kind": "thing",
+      "discovery_area": 780,
+      "box_before": {
+        "x_min": 381.0,
+        "y_min": 207.0,
+        "x_max": 406.0,
+        "y_max": 266.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9799322485923767,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.47229870900628157,
+      "model_mask_area": 776,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 773,
+          "box": {
+            "x_min": 381.0,
+            "y_min": 207.0,
+            "x_max": 406.0,
+            "y_max": 266.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 773,
+          "refined_overlap": 773,
+          "detector_box_overlap": 773,
+          "distance_to_box_center_px": 0.46228065250210953
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 773,
+      "area_ratio": 0.9910256410256411,
+      "area_reduction_ratio": 0.008974358974358942,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 381.0,
+        "y_min": 207.0,
+        "x_max": 406.0,
+        "y_max": 266.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-6a99de906003a440",
+      "label": "sign",
+      "region_kind": "thing",
+      "discovery_area": 616,
+      "box_before": {
+        "x_min": 324.0,
+        "y_min": 224.0,
+        "x_max": 350.0,
+        "y_max": 252.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8079656362533569,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45807049502036534,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-6ad35153612ddfe7",
+      "label": "ceiling tile",
+      "region_kind": "part",
+      "discovery_area": 741,
+      "box_before": {
+        "x_min": 421.0,
+        "y_min": 54.0,
+        "x_max": 457.0,
+        "y_max": 102.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9336992502212524,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.47295702301198617,
+      "model_mask_area": 36387,
+      "clipped_pixel_count": 35646,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 738,
+          "box": {
+            "x_min": 421.0,
+            "y_min": 54.0,
+            "x_max": 457.0,
+            "y_max": 87.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 738,
+          "refined_overlap": 738,
+          "detector_box_overlap": 738,
+          "distance_to_box_center_px": 89.81251291936545
+        },
+        {
+          "component_id": 2,
+          "area": 3,
+          "box": {
+            "x_min": 431.0,
+            "y_min": 99.0,
+            "x_max": 432.0,
+            "y_max": 102.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 98.01877592392637
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-81232ebff81e5a9e",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 3348,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 192.0,
+        "x_max": 313.0,
+        "y_max": 261.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9717095494270325,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8ba95e9b316b6fbd",
+      "label": "shadow",
+      "region_kind": "stuff",
+      "discovery_area": 768,
+      "box_before": {
+        "x_min": 361.0,
+        "y_min": 85.0,
+        "x_max": 407.0,
+        "y_max": 136.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9441388845443726,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-982d04ad867e6d3a",
+      "label": "ceiling tile",
+      "region_kind": "part",
+      "discovery_area": 710,
+      "box_before": {
+        "x_min": 272.0,
+        "y_min": 106.0,
+        "x_max": 319.0,
+        "y_max": 136.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9506362080574036,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.014955076010664925,
+      "model_mask_area": 36387,
+      "clipped_pixel_count": 35677,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 709,
+          "box": {
+            "x_min": 272.0,
+            "y_min": 106.0,
+            "x_max": 317.0,
+            "y_max": 124.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 709,
+          "refined_overlap": 709,
+          "detector_box_overlap": 709,
+          "distance_to_box_center_px": 20.279597372159127
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 318.0,
+            "y_min": 135.0,
+            "x_max": 319.0,
+            "y_max": 136.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 37.28190735471515
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-9d93bd37d07030e4",
+      "label": "wooden pallet",
+      "region_kind": "thing",
+      "discovery_area": 618,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 146.0,
+        "x_max": 264.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9185352921485901,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a6828ce8c69f1c78",
+      "label": "wooden pallet",
+      "region_kind": "thing",
+      "discovery_area": 816,
+      "box_before": {
+        "x_min": 326.0,
+        "y_min": 155.0,
+        "x_max": 355.0,
+        "y_max": 190.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.90835040807724,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ae3b64b8b01230c7",
+      "label": "door frame",
+      "region_kind": "part",
+      "discovery_area": 1153,
+      "box_before": {
+        "x_min": 250.0,
+        "y_min": 146.0,
+        "x_max": 264.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9474776387214661,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b2f0cef5e87f8073",
+      "label": "door frame",
+      "region_kind": "part",
+      "discovery_area": 1444,
+      "box_before": {
+        "x_min": 246.0,
+        "y_min": 146.0,
+        "x_max": 264.0,
+        "y_max": 269.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9203858971595764,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-bc1c527e2bc05e9b",
+      "label": "access panel",
+      "region_kind": "part",
+      "discovery_area": 780,
+      "box_before": {
+        "x_min": 354.0,
+        "y_min": 156.0,
+        "x_max": 383.0,
+        "y_max": 193.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9004126191139221,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4565481239988003,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c36163731c60e9d7",
+      "label": "floor tile",
+      "region_kind": "part",
+      "discovery_area": 1350,
+      "box_before": {
+        "x_min": 547.0,
+        "y_min": 338.0,
+        "x_max": 618.0,
+        "y_max": 380.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8796275854110718,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.015028124005766585,
+      "model_mask_area": 70506,
+      "clipped_pixel_count": 69156,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1350,
+          "box": {
+            "x_min": 547.0,
+            "y_min": 338.0,
+            "x_max": 618.0,
+            "y_max": 380.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1350,
+          "refined_overlap": 1350,
+          "detector_box_overlap": 1350,
+          "distance_to_box_center_px": 222.41785215477918
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-cfdd2955f81fe1b4",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1934,
+      "box_before": {
+        "x_min": 171.0,
+        "y_min": 192.0,
+        "x_max": 203.0,
+        "y_max": 256.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9663859605789185,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.014391795004485175,
+      "model_mask_area": 4975,
+      "clipped_pixel_count": 4972,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2,
+          "box": {
+            "x_min": 201.0,
+            "y_min": 239.0,
+            "x_max": 202.0,
+            "y_max": 241.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 39.76703247600363
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 201.0,
+            "y_min": 246.0,
+            "x_max": 202.0,
+            "y_max": 247.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 45.475886588230615
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-d6f39b046e5fc13f",
+      "label": "door frame",
+      "region_kind": "part",
+      "discovery_area": 749,
+      "box_before": {
+        "x_min": 248.0,
+        "y_min": 192.0,
+        "x_max": 261.0,
+        "y_max": 269.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9433437585830688,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-d7cbba6b6dbed3e5",
+      "label": "ceiling light fixture",
+      "region_kind": "thing",
+      "discovery_area": 1049,
+      "box_before": {
+        "x_min": 306.0,
+        "y_min": 192.0,
+        "x_max": 379.0,
+        "y_max": 210.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9620276689529419,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-eda8260e431351c0",
+      "label": "ceiling light fixture",
+      "region_kind": "part",
+      "discovery_area": 1129,
+      "box_before": {
+        "x_min": 260.0,
+        "y_min": 82.0,
+        "x_max": 351.0,
+        "y_max": 123.0
+      },
+      "component_count_before": 8,
+      "geometric_confidence": 0.9540203213691711,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-f1d7bd1382041f97",
+      "label": "ceiling light fixture",
+      "region_kind": "part",
+      "discovery_area": 1113,
+      "box_before": {
+        "x_min": 364.0,
+        "y_min": 82.0,
+        "x_max": 417.0,
+        "y_max": 121.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9471921920776367,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-f898840801a9e879",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 4924,
+      "box_before": {
+        "x_min": 201.0,
+        "y_min": 148.0,
+        "x_max": 250.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9883258938789368,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.014029466023202986,
+      "model_mask_area": 4975,
+      "clipped_pixel_count": 56,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4919,
+          "box": {
+            "x_min": 201.0,
+            "y_min": 148.0,
+            "x_max": 250.0,
+            "y_max": 268.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 4919,
+          "refined_overlap": 4919,
+          "detector_box_overlap": 4919,
+          "distance_to_box_center_px": 0.4929792731325881
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 4919,
+      "area_ratio": 0.9989845653939886,
+      "area_reduction_ratio": 0.0010154346060113895,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 201.0,
+        "y_min": 148.0,
+        "x_max": 250.0,
+        "y_max": 268.0
+      },
+      "reason": null
+    }
+  ]
+}
