@@ -25,6 +25,7 @@ import {
 } from "./map-data.js";
 import { isEditableTarget } from "./navigation.js";
 import { nearestIntersection, pickThreshold, pointFromIntersection } from "./picking.js";
+import { SemanticSearchPanel } from "./semantic-search.jsx";
 import { useMapCatalog } from "./use-map-catalog.js";
 import "./styles.css";
 
@@ -431,6 +432,20 @@ function MapSelector({ entries, value, onChange }) {
   );
 }
 
+// Mostra o avanço de uma run publicada em lotes (ver
+// publish_map_index.py::save_run, `in_progress`) — sem isso, o mapa parece
+// simplesmente incompleto em vez de "ainda processando os frames restantes".
+function ProgressBadge({ progress }) {
+  if (!progress) return null;
+  const { frameCount, frameCountExpected } = progress;
+  return (
+    <div className="map-overlay progress-badge" role="status">
+      Processando: {frameCount}
+      {typeof frameCountExpected === "number" ? ` de ${frameCountExpected}` : ""} frames
+    </div>
+  );
+}
+
 // Substitui um erro solto por uma tela explicativa quando nenhuma run está
 // aberta. Existe porque um erro de fetch/parse (ex.: JSON inválido) não diz
 // por si só o que aconteceu nem o que fazer — esta tela explica a causa
@@ -489,7 +504,7 @@ function NavigationHelp({ onClose }) {
 // vem de useMapCatalog — compartilhado com DebugExplorer — e este componente
 // só possui o estado de navegação e filtro específico do viewer 3D.
 function Explorer({ catalog, onOpenDebug, onOpenCompare }) {
-  const { artifactPath, availableMaps, catalogLoaded, slice, points, artifactUrl, error, selectMap } = catalog;
+  const { artifactPath, availableMaps, catalogLoaded, slice, points, artifactUrl, error, selectMap, progress } = catalog;
   const catalogEmpty = catalogLoaded && availableMaps.length === 0 && !artifactPath;
   const [supportRules, setSupportRules] = useState({ dimWeak: true, dimUncorroborated: false });
   const [selected, setSelected] = useState(null);
@@ -584,6 +599,17 @@ function Explorer({ catalog, onOpenDebug, onOpenCompare }) {
     setSelected(point);
     setDockOpen(Boolean(point));
   };
+  // Ponte entre um resultado de busca textual (que só conhece geometry_id) e
+  // a seleção/foco do viewer 3D, que trabalham com o ponto carregado. Um
+  // geometry_id fora do recorte atual (ex.: fora do crop_radius_m da run
+  // aberta) não tem ponto para focar, e a busca permanece silenciosa nesse
+  // caso em vez de quebrar a interação.
+  const selectGeometry = (geometryId) => {
+    const point = points.find((candidate) => candidate.geometry_id === geometryId);
+    if (!point) return;
+    selectPoint(point);
+    cameraActions.current?.focus(point);
+  };
   // Materializa o conjunto completo somente no primeiro filtro. Alternar
   // uma família alterna todos os labels que ela agrupa, de uma vez.
   const toggleContextKeys = (keys) => {
@@ -653,6 +679,10 @@ function Explorer({ catalog, onOpenDebug, onOpenCompare }) {
                 onOpenCompare={onOpenCompare}
                 onOpenDebug={onOpenDebug} />
               <MapSelector entries={availableMaps} value={artifactPath} onChange={selectMap} />
+              <ProgressBadge progress={progress} />
+              {slice.map_id && (
+                <SemanticSearchPanel mapId={slice.map_id} onSelectGeometry={selectGeometry} />
+              )}
               <ContextLegend entries={palette.legend} enabledKeys={enabledContextKeys}
                 defaultKeys={defaultEnabledKeys}
                 focusedPointCount={focused.length} totalPointCount={points.length}

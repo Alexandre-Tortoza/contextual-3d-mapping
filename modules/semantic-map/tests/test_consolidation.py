@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from semantic_map import PublishedContextRun, consolidate_context_runs, geometry_fingerprint
 
 

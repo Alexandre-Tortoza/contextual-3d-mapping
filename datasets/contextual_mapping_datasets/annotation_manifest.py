@@ -129,6 +129,29 @@ class MaskAnnotation:
         return sum(run for index, run in enumerate(self.runs) if index % 2 == 1)
 
 
+# Liga uma região 2D ao suporte geométrico revisado. Existe para que o
+# benchmark separe erro de label de uma projeção que caiu na superfície errada.
+@dataclass(frozen=True)
+class GeometricSupportAnnotation:
+    """Suporte geométrico verificável de uma região anotada."""
+
+    geometry_artifact: str
+    geometry_ids: tuple[str, ...]
+    visibility: str
+    uncertainty: str | None = None
+
+    # Exige proveniência e suporte concreto; uma anotação 3D vazia não prova
+    # nem refuta uma associação de ponto.
+    def __post_init__(self) -> None:
+        """Valida artifact, identidades geométricas e condição de visibilidade."""
+        if not self.geometry_artifact.strip() or not self.visibility.strip():
+            raise ValueError("GeometricSupportAnnotation requires artifact and visibility.")
+        if not self.geometry_ids or any(not item.strip() for item in self.geometry_ids):
+            raise ValueError("GeometricSupportAnnotation.geometry_ids must be non-empty.")
+        if len(set(self.geometry_ids)) != len(self.geometry_ids):
+            raise ValueError("GeometricSupportAnnotation.geometry_ids must be unique.")
+
+
 # Representa uma região anotada com semântica de vocabulário aberto. Existe
 # como a unidade de referência contra a qual as predições de região do módulo
 # são comparadas.
@@ -147,6 +170,7 @@ class RegionAnnotation:
     visibility: str | None = None
     ignored: bool = False
     notes: str | None = None
+    geometric_support: GeometricSupportAnnotation | None = None
 
     # Impõe a regra que mantém o vocabulário aberto sem abrir espaço para
     # label inventado: só uma anotação ``unknown`` (ou ignorada) pode não ter

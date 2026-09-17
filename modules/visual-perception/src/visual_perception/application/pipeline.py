@@ -53,6 +53,7 @@ from visual_perception.application.contextual_publication import (
     SuppressedRegion,
     partition_observation,
 )
+from visual_perception.application.dense_evidence import upsample_feature_map
 from visual_perception.application.hypothesis_support import (
     HypothesisSupportResult,
     SignalExtractionFailure,
@@ -95,6 +96,7 @@ from visual_perception.domain.embeddings import (
     VisualEmbedding,
 )
 from visual_perception.domain.errors import RegionInterpretationFailure
+from visual_perception.domain.feature_map import FeatureMap, FeatureRepresentation
 from visual_perception.domain.geometry import CoordinateTransform
 from visual_perception.domain.image_area import ImageAreaMasks
 from visual_perception.domain.image_observation import ImageObservation
@@ -147,6 +149,9 @@ class PipelineResult:
     #: Preenchido apenas quando o extractor denso caiu para um backend de
     #: fallback; ``None`` significa que o backend configurado executou.
     feature_fallback_reason: str | None = None
+    #: Mapa denso retido somente quando a configuração pede persistência para
+    #: supervisão 2D->3D; ``None`` evita manter centenas de MB entre frames.
+    dense_feature_map: FeatureMap | None = None
     #: As proposals cruas de discovery, antes do merge geométrico. Existem
     #: aqui porque discovery não é determinística: recomputá-las depois
     #: produziria proposals diferentes das que geraram estas regiões, e a
@@ -254,7 +259,7 @@ def run_canonical_pipeline(
     )
     regions = merge_regions(image.observation_id, proposals, config.merge)
 
-    evidence, feature_fallback_reason = _extract_evidence(
+    evidence, feature_fallback_reason, dense_feature_map = _extract_evidence(
         regions, payload, config, ports, area_masks=area_masks
     )
     regions = evidence.regions
@@ -373,6 +378,7 @@ def run_canonical_pipeline(
         calibration_failures=calibration_failures,
         evidence_metrics=evidence.metrics,
         feature_fallback_reason=feature_fallback_reason,
+        dense_feature_map=dense_feature_map,
         proposals=proposals,
         discovered_proposals=discovered,
         rejected_proposals=rejected_proposals,
@@ -406,10 +412,10 @@ def _extract_evidence(
     ports: PerceptionPorts,
     *,
     area_masks: ImageAreaMasks,
-) -> tuple[MultiContextResult, str | None]:
+) -> tuple[MultiContextResult, str | None, FeatureMap | None]:
     """Extrai a evidência de todas as regiões, ou devolve um resultado vazio."""
     if not regions:
-        return MultiContextResult(regions=regions, visual_embeddings=(), language_embeddings=(), failures=()), None
+        return MultiContextResult(regions=regions, visual_embeddings=(), language_embeddings=(), failures=()), None, None
     feature_map = ports.feature_extractor.extract(payload, config.feature_extraction)
     # Um fallback de backend denso é uma execução legítima, mas não é a
     # execução pedida. O motivo sobe até o resultado para que o consumidor e o
@@ -423,7 +429,22 @@ def _extract_evidence(
         feature_map=feature_map,
         area_masks=area_masks,
     )
-    return evidence, feature_map.fallback_reason
+    persisted_map = None
+    if config.feature_extraction.persist_pixel_aligned_features:
+        if config.feature_extraction.upsampling == "patch_grid":
+            raise ValueError("persist_pixel_aligned_features requires nearest or bilinear upsampling.")
+        persisted_map = (
+            feature_map
+            if feature_map.representation is FeatureRepresentation.PIXEL_ALIGNED
+            else upsample_feature_map(
+                feature_map,
+                method=config.feature_extraction.upsampling,
+                width=payload.width,
+                height=payload.height,
+                max_bytes=config.feature_extraction.max_feature_map_mb * 1024 * 1024,
+            )
+        )
+    return evidence, feature_map.fallback_reason, persisted_map
 
 
 # Monta a observação intermediária que o refinamento inspeciona. Existe porque

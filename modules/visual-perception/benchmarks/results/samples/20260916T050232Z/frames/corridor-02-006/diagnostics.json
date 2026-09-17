@@ -1,0 +1,988 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-006",
+  "input_sha256": "65f8bd2c64b4cb00adfe52a2f53bf68de6288b40d2ce03387b2c157e4f962b16",
+  "latency_s": 223.3780418630049,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 16,
+  "proposal_count": 33,
+  "merged_proposal_count": 24,
+  "regions_with_multiple_proposals": 6,
+  "label_counts": [
+    [
+      "cracked asphalt",
+      15
+    ],
+    [
+      "asphalt road",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "road surface",
+      9
+    ],
+    [
+      "ground surface",
+      7
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      16
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.8504585027694702,
+    "maximum": 0.9917296767234802,
+    "mean": 0.9367324002087116,
+    "median": 0.9510457217693329,
+    "distinct_values": 16,
+    "stddev": 0.04627623543678274,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "cracked asphalt",
+    "dominant_fraction": 0.9375,
+    "distinct_labels": 2,
+    "dominant_category": "road surface",
+    "dominant_category_fraction": 0.5625,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 1,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 5,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "outside_valid_area",
+      5
+    ],
+    [
+      "below_min_relative_area",
+      3
+    ],
+    [
+      "ego_vehicle_overlap",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "indistinguishable",
+        27
+      ],
+      [
+        "contradicts",
+        19
+      ],
+      [
+        "supports",
+        2
+      ]
+    ],
+    "regions_with_unsupported_primary": 4,
+    "regions_with_ambiguous_identity": 4,
+    "region_kind_contradictions": 16,
+    "reconciled_regions": 16,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 7,
+    "entity_groups": 2,
+    "regions_in_entity_groups": 8,
+    "supported_entity_groups": 1,
+    "semantic_relations": [
+      [
+        "part_of",
+        3
+      ]
+    ],
+    "geometric_relations": 83,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 16
+  },
+  "published_region_count": 15,
+  "structural_context_count": 1,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      1
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-1a043e4265c814fc",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 15228,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 192.0,
+        "x_max": 640.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9764012694358826,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 3.7845450620079646,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-1f76cb40867ac052",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 14042,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 104.0,
+        "x_max": 217.0,
+        "y_max": 262.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.8946073651313782,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2d3a5f0fbe461f98",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 81478,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 2.0,
+        "x_max": 640.0,
+        "y_max": 266.0
+      },
+      "component_count_before": 6,
+      "geometric_confidence": 0.9917296767234802,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 2.4655349630047567,
+      "model_mask_area": 84038,
+      "clipped_pixel_count": 84038,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-33f8c69e986899d6",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 753,
+      "box_before": {
+        "x_min": 604.0,
+        "y_min": 198.0,
+        "x_max": 640.0,
+        "y_max": 231.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9134005904197693,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-346206c6b72c130c",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 11163,
+      "box_before": {
+        "x_min": 4.0,
+        "y_min": 104.0,
+        "x_max": 124.0,
+        "y_max": 261.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9504831433296204,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-409aecc510d1ef00",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 900,
+      "box_before": {
+        "x_min": 259.0,
+        "y_min": 224.0,
+        "x_max": 293.0,
+        "y_max": 263.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8855536580085754,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4111e182c1445e49",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 8002,
+      "box_before": {
+        "x_min": 112.0,
+        "y_min": 192.0,
+        "x_max": 384.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 5,
+      "geometric_confidence": 0.9672536849975586,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4fa5503c8220732b",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 624,
+      "box_before": {
+        "x_min": 335.0,
+        "y_min": 227.0,
+        "x_max": 366.0,
+        "y_max": 262.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8710137605667114,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-719ac3fedfd6ad63",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 86963,
+      "box_before": {
+        "x_min": 1.0,
+        "y_min": 204.0,
+        "x_max": 640.0,
+        "y_max": 479.0
+      },
+      "component_count_before": 23,
+      "geometric_confidence": 0.9720712304115295,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.013800747008644976,
+      "model_mask_area": 84038,
+      "clipped_pixel_count": 8560,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 75394,
+          "box": {
+            "x_min": 3.0,
+            "y_min": 264.0,
+            "x_max": 638.0,
+            "y_max": 434.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 75394,
+          "refined_overlap": 75394,
+          "detector_box_overlap": 75394,
+          "distance_to_box_center_px": 6.523413487125194
+        },
+        {
+          "component_id": 2,
+          "area": 3,
+          "box": {
+            "x_min": 520.0,
+            "y_min": 264.0,
+            "x_max": 523.0,
+            "y_max": 265.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 226.26301446121235
+        },
+        {
+          "component_id": 3,
+          "area": 3,
+          "box": {
+            "x_min": 524.0,
+            "y_min": 264.0,
+            "x_max": 527.0,
+            "y_max": 265.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 229.80895062033233
+        },
+        {
+          "component_id": 4,
+          "area": 12,
+          "box": {
+            "x_min": 533.0,
+            "y_min": 264.0,
+            "x_max": 541.0,
+            "y_max": 266.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 12,
+          "refined_overlap": 12,
+          "detector_box_overlap": 12,
+          "distance_to_box_center_px": 237.83998496371743
+        },
+        {
+          "component_id": 5,
+          "area": 2,
+          "box": {
+            "x_min": 555.0,
+            "y_min": 264.0,
+            "x_max": 557.0,
+            "y_max": 265.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 257.74109071766355
+        },
+        {
+          "component_id": 6,
+          "area": 9,
+          "box": {
+            "x_min": 456.0,
+            "y_min": 266.0,
+            "x_max": 462.0,
+            "y_max": 268.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 9,
+          "refined_overlap": 9,
+          "detector_box_overlap": 9,
+          "distance_to_box_center_px": 170.43353092141925
+        },
+        {
+          "component_id": 7,
+          "area": 2,
+          "box": {
+            "x_min": 521.0,
+            "y_min": 266.0,
+            "x_max": 522.0,
+            "y_max": 268.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 225.7700647443658
+        },
+        {
+          "component_id": 8,
+          "area": 8,
+          "box": {
+            "x_min": 540.0,
+            "y_min": 266.0,
+            "x_max": 544.0,
+            "y_max": 270.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 8,
+          "refined_overlap": 8,
+          "detector_box_overlap": 8,
+          "distance_to_box_center_px": 242.8514607272458
+        },
+        {
+          "component_id": 9,
+          "area": 3,
+          "box": {
+            "x_min": 551.0,
+            "y_min": 266.0,
+            "x_max": 553.0,
+            "y_max": 268.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 252.86584916858936
+        },
+        {
+          "component_id": 10,
+          "area": 6,
+          "box": {
+            "x_min": 421.0,
+            "y_min": 267.0,
+            "x_max": 424.0,
+            "y_max": 270.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 6,
+          "refined_overlap": 6,
+          "detector_box_overlap": 6,
+          "distance_to_box_center_px": 143.31094503075383
+        },
+        {
+          "component_id": 11,
+          "area": 13,
+          "box": {
+            "x_min": 531.0,
+            "y_min": 267.0,
+            "x_max": 537.0,
+            "y_max": 270.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 13,
+          "refined_overlap": 13,
+          "detector_box_overlap": 13,
+          "distance_to_box_center_px": 234.2884631166364
+        },
+        {
+          "component_id": 12,
+          "area": 1,
+          "box": {
+            "x_min": 561.0,
+            "y_min": 267.0,
+            "x_max": 562.0,
+            "y_max": 268.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 262.03843774551603
+        },
+        {
+          "component_id": 13,
+          "area": 2,
+          "box": {
+            "x_min": 109.0,
+            "y_min": 270.0,
+            "x_max": 111.0,
+            "y_max": 271.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 232.25304976574438
+        },
+        {
+          "component_id": 14,
+          "area": 2,
+          "box": {
+            "x_min": 126.0,
+            "y_min": 270.0,
+            "x_max": 128.0,
+            "y_max": 271.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 217.0151790361666
+        },
+        {
+          "component_id": 15,
+          "area": 12,
+          "box": {
+            "x_min": 335.0,
+            "y_min": 270.0,
+            "x_max": 342.0,
+            "y_max": 273.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 12,
+          "refined_overlap": 12,
+          "detector_box_overlap": 12,
+          "distance_to_box_center_px": 98.69148368834698
+        },
+        {
+          "component_id": 16,
+          "area": 2,
+          "box": {
+            "x_min": 461.0,
+            "y_min": 270.0,
+            "x_max": 462.0,
+            "y_max": 272.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 172.13342961379624
+        },
+        {
+          "component_id": 17,
+          "area": 2,
+          "box": {
+            "x_min": 471.0,
+            "y_min": 270.0,
+            "x_max": 472.0,
+            "y_max": 272.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 180.4242854245698
+        },
+        {
+          "component_id": 18,
+          "area": 1,
+          "box": {
+            "x_min": 130.0,
+            "y_min": 271.0,
+            "x_max": 131.0,
+            "y_max": 272.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 213.89120159728074
+        },
+        {
+          "component_id": 19,
+          "area": 1,
+          "box": {
+            "x_min": 246.0,
+            "y_min": 271.0,
+            "x_max": 247.0,
+            "y_max": 272.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 123.12719526120817
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-734a1ae1e2c6aa7a",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 918,
+      "box_before": {
+        "x_min": 126.0,
+        "y_min": 214.0,
+        "x_max": 154.0,
+        "y_max": 262.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.877994954586029,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-92205add8361ded0",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 114350,
+      "box_before": {
+        "x_min": 2.0,
+        "y_min": 2.0,
+        "x_max": 640.0,
+        "y_max": 427.0
+      },
+      "component_count_before": 24,
+      "geometric_confidence": 0.9907287359237671,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.013931224995758384,
+      "model_mask_area": 84038,
+      "clipped_pixel_count": 83990,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2,
+          "box": {
+            "x_min": 516.0,
+            "y_min": 314.0,
+            "x_max": 518.0,
+            "y_max": 315.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 203.85676679228837
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 356.0,
+            "y_min": 315.0,
+            "x_max": 357.0,
+            "y_max": 316.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 65.41754440350654
+        },
+        {
+          "component_id": 3,
+          "area": 2,
+          "box": {
+            "x_min": 518.0,
+            "y_min": 317.0,
+            "x_max": 520.0,
+            "y_max": 318.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 204.9928103779293
+        },
+        {
+          "component_id": 4,
+          "area": 1,
+          "box": {
+            "x_min": 472.0,
+            "y_min": 318.0,
+            "x_max": 473.0,
+            "y_max": 319.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 160.6368111969118
+        },
+        {
+          "component_id": 5,
+          "area": 16,
+          "box": {
+            "x_min": 462.0,
+            "y_min": 320.0,
+            "x_max": 466.0,
+            "y_max": 326.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 16,
+          "refined_overlap": 16,
+          "detector_box_overlap": 16,
+          "distance_to_box_center_px": 149.91389825776554
+        },
+        {
+          "component_id": 6,
+          "area": 8,
+          "box": {
+            "x_min": 525.0,
+            "y_min": 384.0,
+            "x_max": 530.0,
+            "y_max": 386.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 8,
+          "refined_overlap": 8,
+          "detector_box_overlap": 8,
+          "distance_to_box_center_px": 205.66052233190587
+        },
+        {
+          "component_id": 7,
+          "area": 2,
+          "box": {
+            "x_min": 81.0,
+            "y_min": 411.0,
+            "x_max": 82.0,
+            "y_max": 413.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 242.42452345003767
+        },
+        {
+          "component_id": 8,
+          "area": 1,
+          "box": {
+            "x_min": 85.0,
+            "y_min": 412.0,
+            "x_max": 86.0,
+            "y_max": 413.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 238.6604455636562
+        },
+        {
+          "component_id": 9,
+          "area": 4,
+          "box": {
+            "x_min": 490.0,
+            "y_min": 417.0,
+            "x_max": 493.0,
+            "y_max": 419.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 4,
+          "refined_overlap": 4,
+          "detector_box_overlap": 4,
+          "distance_to_box_center_px": 176.65022290895993
+        },
+        {
+          "component_id": 10,
+          "area": 3,
+          "box": {
+            "x_min": 495.0,
+            "y_min": 417.0,
+            "x_max": 497.0,
+            "y_max": 419.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 3,
+          "refined_overlap": 3,
+          "detector_box_overlap": 3,
+          "distance_to_box_center_px": 181.4712204289283
+        },
+        {
+          "component_id": 11,
+          "area": 8,
+          "box": {
+            "x_min": 507.0,
+            "y_min": 417.0,
+            "x_max": 511.0,
+            "y_max": 419.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 8,
+          "refined_overlap": 8,
+          "detector_box_overlap": 8,
+          "distance_to_box_center_px": 193.0787664669405
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-932267a15c0b0ee5",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 889,
+      "box_before": {
+        "x_min": 619.0,
+        "y_min": 213.0,
+        "x_max": 640.0,
+        "y_max": 260.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9516083002090454,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a0bdcf6696c752e2",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 62112,
+      "box_before": {
+        "x_min": 43.0,
+        "y_min": 2.0,
+        "x_max": 384.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 7,
+      "geometric_confidence": 0.9908275008201599,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b8acb56fbb0b6f21",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 2938,
+      "box_before": {
+        "x_min": 151.0,
+        "y_min": 191.0,
+        "x_max": 222.0,
+        "y_max": 263.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9340607523918152,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ef5dce8280dc6f40",
+      "label": "cracked asphalt",
+      "region_kind": "thing",
+      "discovery_area": 1030,
+      "box_before": {
+        "x_min": 603.0,
+        "y_min": 198.0,
+        "x_max": 640.0,
+        "y_max": 256.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8504585027694702,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-da929578dae3c3b8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "asphalt road"
+    }
+  ]
+}

@@ -70,7 +70,7 @@ def test_florence2_region_discovery_round_trips() -> None:
     """Preserva a seleção do Florence-2 no schema e no fingerprint."""
     config = ModuleConfig(
         region_discovery=RegionDiscoveryConfig(
-            backend="florence2", checkpoint="microsoft/Florence-2-large"
+            backend="florence2", checkpoint="florence-community/Florence-2-large"
         )
     )
 
@@ -150,6 +150,54 @@ def test_region_views_rejects_a_repeated_slot() -> None:
     """Um slot repetido na seleção de views é rejeitado."""
     with pytest.raises(ValueError, match="must not repeat"):
         MultimodalReasoningConfig(region_views=("foreground_dense", "foreground_dense"))
+
+
+# O fallback só existe para dois backends reais (#292); "fake" nunca esgota
+# cota nem precisa de um plano B.
+def test_fallback_backend_rejects_unknown_value() -> None:
+    """Um `fallback_backend` fora do vocabulário fechado é rejeitado."""
+    with pytest.raises(ValueError, match="fallback_backend"):
+        MultimodalReasoningConfig(
+            backend="gemini_robotics_er", fallback_backend="fake", fallback_checkpoint="x",
+        )
+
+
+# Um fallback igual ao primário não é um plano B: é o mesmo backend falhando
+# duas vezes.
+def test_fallback_backend_rejects_same_value_as_backend() -> None:
+    """`fallback_backend` igual a `backend` é rejeitado."""
+    with pytest.raises(ValueError, match="must differ from backend"):
+        MultimodalReasoningConfig(
+            backend="qwen_vl", fallback_backend="qwen_vl", fallback_checkpoint="Qwen/Qwen2.5-VL-3B-Instruct",
+        )
+
+
+# Sem checkpoint explícito, o fallback falharia ao carregar exatamente como
+# o primário falharia sem `checkpoint` — a config recusa cedo, não em runtime.
+def test_fallback_backend_requires_fallback_checkpoint() -> None:
+    """`fallback_backend` sem `fallback_checkpoint` é rejeitado."""
+    with pytest.raises(ValueError, match="requires fallback_checkpoint"):
+        MultimodalReasoningConfig(backend="gemini_robotics_er", fallback_backend="qwen_vl")
+
+
+# `fallback_region_views` sem um `fallback_backend` não tem o que qualificar.
+def test_fallback_region_views_requires_fallback_backend() -> None:
+    """`fallback_region_views` sem `fallback_backend` é rejeitado."""
+    with pytest.raises(ValueError, match="requires fallback_backend"):
+        MultimodalReasoningConfig(fallback_region_views=("masked_subject",))
+
+
+# Mesmas regras de `region_views` também valem para o teto do fallback:
+# vocabulário fechado e ao menos um slot de foreground.
+def test_fallback_region_views_requires_at_least_one_foreground_slot() -> None:
+    """`fallback_region_views` só de contexto é rejeitado."""
+    with pytest.raises(ValueError, match="at least one foreground slot"):
+        MultimodalReasoningConfig(
+            backend="gemini_robotics_er",
+            fallback_backend="qwen_vl",
+            fallback_checkpoint="Qwen/Qwen2.5-VL-3B-Instruct",
+            fallback_region_views=("scene_conditioned",),
+        )
 
 
 # O default cobre foreground e contexto. A #212 chegou a removê-lo por hipótese

@@ -1,0 +1,1649 @@
+{
+  "run_id": "2026-09-16-run-003-frames",
+  "region_views_override": null,
+  "git_revision": "6c6a1b44",
+  "gpu_memory_budget_gb": 8.0,
+  "config": {
+    "quality_profile": "research_quality",
+    "gpu_memory_budget_gb": 8.0,
+    "region_discovery": {
+      "backend": "sam",
+      "checkpoint": "facebook/sam2.1-hiera-large",
+      "score_threshold": 0.5,
+      "device": "auto",
+      "max_regions": 100,
+      "min_mask_area": 500,
+      "pred_iou_threshold": 0.8,
+      "stability_score_threshold": 0.9
+    },
+    "tiling": {
+      "multi_scale_enabled": true,
+      "tile_grid": "2x2",
+      "overlap_ratio": 0.2,
+      "discard_tile_border_truncations": false
+    },
+    "merge": {
+      "iou_merge_threshold": 0.85,
+      "containment_merge_threshold": 0.9
+    },
+    "feature_extraction": {
+      "backend": "dinov2",
+      "checkpoint": "facebook/dinov2-base",
+      "feature_resolution": 16,
+      "device": "auto",
+      "upsampling": "nearest",
+      "input_resolution": 448,
+      "max_feature_map_mb": 384,
+      "upsampler_repository": "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d",
+      "upsampler_checkpoint": "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/pretrained/dinov2_jbu_stack_cocostuff.ckpt",
+      "upsampler_checkpoint_digest": "438dad4dedb3c3ba4b7fa13d1c8eb465dafd323dadc039afd04b15178ea7b38c",
+      "fallback_backend": null,
+      "fallback_checkpoint": null
+    },
+    "language_embedding": {
+      "backend": "clip",
+      "checkpoint": "openai/clip-vit-large-patch14",
+      "dimension": 768,
+      "device": "auto",
+      "model_name": "ViT-B-32",
+      "normalize": true
+    },
+    "multimodal_reasoning": {
+      "backend": "qwen_vl",
+      "checkpoint": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "prompt_version": "v8",
+      "device": "auto",
+      "max_new_tokens": 256,
+      "temperature": 0.0,
+      "load_in_4bit": true,
+      "region_views": [
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop",
+        "scene_conditioned"
+      ],
+      "scene_context_mode": "context_assisted",
+      "temporal_prior_mode": "disabled",
+      "temporal_prior_min_overlap": 0.3,
+      "timeout_s": 60.0,
+      "max_retries": 3,
+      "thinking_budget": 0
+    },
+    "multi_context": {
+      "foreground_enabled": true,
+      "masked_subject_enabled": true,
+      "tight_crop_enabled": true,
+      "contextual_crop_enabled": true,
+      "scene_conditioned_enabled": true,
+      "context_expansion": 0.25,
+      "masked_tight_crop": false
+    },
+    "hypothesis_support": {
+      "enabled": true,
+      "source": "clip_alignment",
+      "slots": [
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "indistinguishable_margin": 0.01,
+      "prompt_template": "a photo of {concept}",
+      "template_version": "align/v1"
+    },
+    "refinement": {
+      "enabled": true,
+      "max_refined_regions": 24,
+      "escalation_views": [
+        "foreground_dense",
+        "masked_subject",
+        "tight_crop",
+        "contextual_crop"
+      ],
+      "small_region_area_px": 1024,
+      "min_mask_fill_ratio": 0.15
+    },
+    "reconciliation": {
+      "enabled": true,
+      "adjacency_margin_px": 5.0,
+      "min_group_coherence": 0.6,
+      "canonicalize_labels": true
+    },
+    "semantic_relations": {
+      "enabled": true,
+      "max_pairs": 16,
+      "max_pairs_per_region": 2,
+      "min_containment": 0.6,
+      "include_adjacent": true,
+      "require_distinct_concepts": true
+    },
+    "contextual_publication": {
+      "enabled": true,
+      "extra_structural_head_nouns": []
+    },
+    "calibration": {
+      "enabled": false,
+      "method": "reliability_table",
+      "version": "calibration/1",
+      "artifact_path": null,
+      "min_visual_support": 0.2,
+      "min_region_quality": 0.0,
+      "domain": "unspecified",
+      "artifact_digest": null
+    },
+    "image_area": {
+      "valid_area": {
+        "circle": {
+          "center_x": 326.0,
+          "center_y": 244.0,
+          "radius": 324.0
+        },
+        "polygons": []
+      },
+      "ego_vehicle": {
+        "circle": null,
+        "polygons": [
+          [
+            [
+              58.0,
+              480.0
+            ],
+            [
+              58.0,
+              455.0
+            ],
+            [
+              92.0,
+              428.0
+            ],
+            [
+              148.0,
+              414.0
+            ],
+            [
+              210.0,
+              409.0
+            ],
+            [
+              218.0,
+              391.0
+            ],
+            [
+              252.0,
+              387.0
+            ],
+            [
+              286.0,
+              364.0
+            ],
+            [
+              452.0,
+              364.0
+            ],
+            [
+              458.0,
+              396.0
+            ],
+            [
+              474.0,
+              414.0
+            ],
+            [
+              496.0,
+              424.0
+            ],
+            [
+              536.0,
+              416.0
+            ],
+            [
+              578.0,
+              420.0
+            ],
+            [
+              606.0,
+              446.0
+            ],
+            [
+              606.0,
+              480.0
+            ]
+          ]
+        ]
+      }
+    },
+    "proposal_filter": {
+      "min_relative_area": 0.002,
+      "max_relative_area": 0.6,
+      "min_valid_overlap": 0.5,
+      "max_ego_overlap": 0.3
+    },
+    "semantic_grounding": {
+      "backend": "grounded_sam",
+      "detector_checkpoint": "IDEA-Research/grounding-dino-base",
+      "segmenter_checkpoint": "facebook/sam2.1-hiera-large",
+      "device": "auto",
+      "detection_threshold": 0.4,
+      "text_threshold": 0.3,
+      "duplicate_box_iou": 0.85,
+      "min_mask_area": 1
+    },
+    "scene_concept_discovery": {
+      "enabled": false,
+      "max_concepts": 12,
+      "structural_exclusions": [
+        "wall",
+        "walls",
+        "floor",
+        "floors",
+        "ceiling",
+        "ceilings"
+      ],
+      "prompt_version": "concepts/v1"
+    },
+    "concept_grounding": {
+      "backend": "unavailable",
+      "checkpoint": "facebook/sam3",
+      "device": "auto",
+      "score_threshold": 0.5,
+      "mask_threshold": 0.5,
+      "min_mask_area": 500,
+      "max_regions_per_concept": 8
+    }
+  },
+  "config_fingerprint": "fc0a0b65501037d60c94b943de5d115dee492ae821a20fab4a66a3a5fd70b5b8",
+  "frame_count": 3,
+  "ordered_frame_ids": [
+    "corridor-02-000",
+    "corridor-02-001",
+    "corridor-02-002"
+  ],
+  "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames",
+  "selection": {
+    "strategy": "limited_sorted_frames",
+    "requested_frame_ids": [],
+    "limit": 3,
+    "seed": null,
+    "frame_offset": null,
+    "selected_frame_ids": [
+      "corridor-02-000",
+      "corridor-02-001",
+      "corridor-02-002"
+    ]
+  },
+  "canonical_output": "frames",
+  "frame_artifact_layout": "frames/4",
+  "context_profile": "full",
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "sequence_masks": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/sequence-masks/corridor-02.json",
+  "lifecycle_metrics": [
+    {
+      "stage_name": "region_discovery:sam:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 15.80016658999375,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 5826483712,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 5826483712,
+      "peak_cpu_rss_bytes": 9834532864
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 3.28838046900637,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 5826483712,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 5826483712,
+      "peak_cpu_rss_bytes": 9834532864
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 16.640756994005642,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 5826483712,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 5826483712,
+      "peak_cpu_rss_bytes": 9834532864
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 26.55739479100157,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 5826483712,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 5826483712,
+      "peak_cpu_rss_bytes": 9834532864
+    },
+    {
+      "stage_name": "semantic_localization:IDEA-Research/grounding-dino-base:cuda",
+      "load_time_s": 10.345568061995436,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "semantic_segmentation:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 4.338965831004316,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "region_discovery:sam:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 6.374818291995325,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 7.244588853005553,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 23.04319716700411,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 23.12761798100837,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7474750976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7474750976,
+      "peak_cpu_rss_bytes": 11150675968
+    },
+    {
+      "stage_name": "semantic_localization:IDEA-Research/grounding-dino-base:cuda",
+      "load_time_s": 8.716353335010353,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "semantic_segmentation:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 4.9072658010118175,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "region_discovery:sam:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 7.453508151011192,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 2.4514063499955228,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 15.413224513002206,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "multimodal_reasoning:Qwen/Qwen2.5-VL-3B-Instruct:cuda:True",
+      "load_time_s": 23.224825295998016,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 7453843968,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 7453843968,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "semantic_localization:IDEA-Research/grounding-dino-base:cuda",
+      "load_time_s": 13.274081224997644,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2353751552,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 2353751552,
+      "peak_cpu_rss_bytes": 11236556800
+    },
+    {
+      "stage_name": "semantic_segmentation:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 6.8804931880004006,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 2353751552,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 2353751552,
+      "peak_cpu_rss_bytes": 11236556800
+    }
+  ],
+  "remote_reasoning": null,
+  "frames": [
+    {
+      "frame_id": "corridor-02-000",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-000.png",
+        "sha256": "4a69f4d01bed3534b7581aa6199a45fb3be7b91a405a58bc44af29261f3cf1e6",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-000",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 0,
+          "timestamp_ns": 1724621089020473770,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-000.png"
+        }
+      },
+      "failed": false,
+      "canonical_region_count": 58,
+      "published_region_count": 21,
+      "structural_context_count": 37,
+      "relation_count": 312,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "masked_subject": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.1410950319841504
+        },
+        {
+          "slot": "masked_subject",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.820564591049333
+        },
+        {
+          "slot": "tight_crop",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.796441016937024
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.7955457949865377
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 16.69385545300611
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 5,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 175,
+        "scene_reasoning": 1,
+        "region_reasoning": 58,
+        "hypothesis_support_text": 25,
+        "region_refinement": 24,
+        "semantic_relations": 16,
+        "scene_concept_discovery": 0,
+        "concept_grounding": 0,
+        "total": 305
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 63,
+      "latency_s": 450.8418758560001,
+      "model_lifecycle_events": 6,
+      "peak_vram_bytes": 5826483712,
+      "peak_host_rss_bytes": 9834532864,
+      "proposal_count": 157,
+      "discovery_telemetry": {
+        "raw_proposal_count": 157,
+        "kept_proposal_count": 125,
+        "merged_region_count": 58,
+        "area_fraction_min": 0.002190755208333333,
+        "area_fraction_median": 0.0057194010416666665,
+        "area_fraction_max": 0.21801432291666667,
+        "mean_pairwise_iou": 0.018336467552063154,
+        "fragmentation_ratio": 2.1551724137931036
+      },
+      "concept_discovery": null,
+      "dominant_label": "ceiling",
+      "dominant_label_fraction": 0.4827586206896552,
+      "distinct_labels": 8,
+      "scene_echo_label_count": 0,
+      "contextual": {
+        "signal_statuses": [
+          [
+            "contradicts",
+            66
+          ],
+          [
+            "indistinguishable",
+            66
+          ],
+          [
+            "supports",
+            42
+          ]
+        ],
+        "regions_with_unsupported_primary": 4,
+        "regions_with_ambiguous_identity": 5,
+        "region_kind_contradictions": 37,
+        "reconciled_regions": 39,
+        "distinct_raw_labels": 8,
+        "distinct_canonical_concepts": 8,
+        "entity_groups": 6,
+        "regions_in_entity_groups": 31,
+        "supported_entity_groups": 6,
+        "semantic_relations": [
+          [
+            "part_of",
+            2
+          ],
+          [
+            "covers",
+            1
+          ]
+        ],
+        "geometric_relations": 309,
+        "abstained_claims": 0,
+        "unscored_claims": 0,
+        "scene_echo_any_assertion": 0,
+        "competing_assertions": 24
+      },
+      "prior": {
+        "regions_with_prior": 0,
+        "echoed": 0,
+        "contradicted": 0,
+        "mean_overlap": null,
+        "applied": false
+      },
+      "signal_failure_count": 0,
+      "relation_failure_count": 0,
+      "refinement": [
+        {
+          "previous_evidence": [
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop",
+            "scene_conditioned"
+          ],
+          "new_evidence": [
+            "foreground_dense",
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop"
+          ],
+          "producer": "qwen_vl",
+          "config_fingerprint": "6646f3c25965a7e1",
+          "targets": [
+            {
+              "region_id": "region-16c3d6a99475a3a5",
+              "reasons": [
+                "unsupported_primary",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-373b7643d21734d3",
+              "reasons": [
+                "unsupported_primary",
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-9fd4482644b8cd0e",
+              "reasons": [
+                "unsupported_primary",
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-ef9c7eafdc1ab8f0",
+              "reasons": [
+                "unsupported_primary",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-133ea72ad28c18c2",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-17fe9bebc9f1ea08",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-18b9c8f02308ac4c",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-1c333fc8852eb0c4",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-258c90aaed4dad61",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-2edded45187abecd",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-3115a17ba3eb22d6",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-3a1cf571b76c6146",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-51fb4d818f766918",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-6c5af0cc3f9b18f9",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-6d36406f82804308",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-6d529e8d54ec287f",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-6fc381c83def4758",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-7ee49566d541492b",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-870c38c553afc7f7",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-8772f4e64facbb66",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-968b8e7897b28766",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-a0b00e23943dbdea",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-a64b3eb0b6972eca",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-a80afa6b14a5dad3",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            }
+          ],
+          "refined_region_ids": [
+            "region-133ea72ad28c18c2",
+            "region-16c3d6a99475a3a5",
+            "region-17fe9bebc9f1ea08",
+            "region-18b9c8f02308ac4c",
+            "region-1c333fc8852eb0c4",
+            "region-258c90aaed4dad61",
+            "region-2edded45187abecd",
+            "region-3115a17ba3eb22d6",
+            "region-373b7643d21734d3",
+            "region-3a1cf571b76c6146",
+            "region-51fb4d818f766918",
+            "region-6c5af0cc3f9b18f9",
+            "region-6d36406f82804308",
+            "region-6d529e8d54ec287f",
+            "region-6fc381c83def4758",
+            "region-7ee49566d541492b",
+            "region-870c38c553afc7f7",
+            "region-8772f4e64facbb66",
+            "region-968b8e7897b28766",
+            "region-9fd4482644b8cd0e",
+            "region-a0b00e23943dbdea",
+            "region-a64b3eb0b6972eca",
+            "region-a80afa6b14a5dad3",
+            "region-ef9c7eafdc1ab8f0"
+          ],
+          "failures": []
+        }
+      ],
+      "artifacts": {
+        "observation": "frames/corridor-02-000/observation.json",
+        "embeddings": "frames/corridor-02-000/embeddings.npz",
+        "raw": "frames/corridor-02-000/raw.png",
+        "proposals": "frames/corridor-02-000/proposals.png",
+        "regions_masks": "frames/corridor-02-000/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-000/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-000/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-000/regions-overlay.png",
+        "semantic_overlay": "frames/corridor-02-000/semantic-overlay.png",
+        "structural_context": "frames/corridor-02-000/structural-context.png",
+        "valid_area_mask": "frames/corridor-02-000/valid-area-mask.png",
+        "ego_mask": "frames/corridor-02-000/ego-mask.png",
+        "diagnostics": "frames/corridor-02-000/diagnostics.json"
+      }
+    },
+    {
+      "frame_id": "corridor-02-001",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-001.png",
+        "sha256": "e5be0232fb4566b1a935a5eade9ff43486a65925240be865eae8589de14ed7b2",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-001",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 1185,
+          "timestamp_ns": 1724621138327050352,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-001.png"
+        }
+      },
+      "failed": false,
+      "canonical_region_count": 62,
+      "published_region_count": 42,
+      "structural_context_count": 20,
+      "relation_count": 372,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 62,
+          "missing": 0,
+          "failed": 0
+        },
+        "masked_subject": {
+          "available": 62,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 62,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 62,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 62,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 62,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.4462746390490793
+        },
+        {
+          "slot": "masked_subject",
+          "available": 62,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 62,
+          "latency_s": 3.007481801963877
+        },
+        {
+          "slot": "tight_crop",
+          "available": 62,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 62,
+          "latency_s": 2.9859811100177467
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 62,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 62,
+          "latency_s": 2.9844774649245664
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 62,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 23.093298052001046
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 5,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 187,
+        "scene_reasoning": 1,
+        "region_reasoning": 62,
+        "hypothesis_support_text": 28,
+        "region_refinement": 24,
+        "semantic_relations": 16,
+        "scene_concept_discovery": 0,
+        "concept_grounding": 0,
+        "total": 324
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 57,
+      "latency_s": 473.91440321100526,
+      "model_lifecycle_events": 6,
+      "peak_vram_bytes": 7474750976,
+      "peak_host_rss_bytes": 11150675968,
+      "proposal_count": 157,
+      "discovery_telemetry": {
+        "raw_proposal_count": 157,
+        "kept_proposal_count": 130,
+        "merged_region_count": 62,
+        "area_fraction_min": 0.0020768229166666665,
+        "area_fraction_median": 0.006031901041666667,
+        "area_fraction_max": 0.218876953125,
+        "mean_pairwise_iou": 0.01738802153181677,
+        "fragmentation_ratio": 2.096774193548387
+      },
+      "concept_discovery": null,
+      "dominant_label": "ceiling light",
+      "dominant_label_fraction": 0.5806451612903226,
+      "distinct_labels": 9,
+      "scene_echo_label_count": 0,
+      "contextual": {
+        "signal_statuses": [
+          [
+            "indistinguishable",
+            96
+          ],
+          [
+            "supports",
+            52
+          ],
+          [
+            "contradicts",
+            38
+          ]
+        ],
+        "regions_with_unsupported_primary": 3,
+        "regions_with_ambiguous_identity": 15,
+        "region_kind_contradictions": 21,
+        "reconciled_regions": 23,
+        "distinct_raw_labels": 9,
+        "distinct_canonical_concepts": 9,
+        "entity_groups": 5,
+        "regions_in_entity_groups": 14,
+        "supported_entity_groups": 4,
+        "semantic_relations": [
+          [
+            "part_of",
+            2
+          ]
+        ],
+        "geometric_relations": 370,
+        "abstained_claims": 0,
+        "unscored_claims": 0,
+        "scene_echo_any_assertion": 0,
+        "competing_assertions": 24
+      },
+      "prior": {
+        "regions_with_prior": 0,
+        "echoed": 0,
+        "contradicted": 0,
+        "mean_overlap": null,
+        "applied": false
+      },
+      "signal_failure_count": 0,
+      "relation_failure_count": 0,
+      "refinement": [
+        {
+          "previous_evidence": [
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop",
+            "scene_conditioned"
+          ],
+          "new_evidence": [
+            "foreground_dense",
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop"
+          ],
+          "producer": "qwen_vl",
+          "config_fingerprint": "6646f3c25965a7e1",
+          "targets": [
+            {
+              "region_id": "region-3d0774b490effa37",
+              "reasons": [
+                "unsupported_primary",
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-40c8e0fb6c79a250",
+              "reasons": [
+                "unsupported_primary",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-c6725f2699981cc9",
+              "reasons": [
+                "unsupported_primary",
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-08fe53f0b7afb370",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-0bc945b2f9ff5465",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-107fb37e78fc1000",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-142e662effd0e695",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-1f7839f4cf8f2f62",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-253ad30388cf8821",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-30b6ee2fc162d076",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-337f14d4048ba091",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-79f12a48de58305f",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-8fc0c8bb4545cfa8",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-a96b685c08de2e35",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-aad1d953d5d80553",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-b7d528e0fdd00414",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-b834bba41ae0231f",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-bcbed32c893cd484",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-d45781fa9c476daa",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-de4eac42c7c6e376",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-e36d0f0169431c3c",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-f8d02757eee4d7b6",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-03859225bd3bddce",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-1a29c67a1759d00a",
+              "reasons": [
+                "competing_hypotheses",
+                "small_region"
+              ]
+            }
+          ],
+          "refined_region_ids": [
+            "region-03859225bd3bddce",
+            "region-08fe53f0b7afb370",
+            "region-0bc945b2f9ff5465",
+            "region-107fb37e78fc1000",
+            "region-142e662effd0e695",
+            "region-1a29c67a1759d00a",
+            "region-1f7839f4cf8f2f62",
+            "region-253ad30388cf8821",
+            "region-30b6ee2fc162d076",
+            "region-337f14d4048ba091",
+            "region-3d0774b490effa37",
+            "region-40c8e0fb6c79a250",
+            "region-79f12a48de58305f",
+            "region-8fc0c8bb4545cfa8",
+            "region-a96b685c08de2e35",
+            "region-aad1d953d5d80553",
+            "region-b7d528e0fdd00414",
+            "region-b834bba41ae0231f",
+            "region-bcbed32c893cd484",
+            "region-c6725f2699981cc9",
+            "region-d45781fa9c476daa",
+            "region-de4eac42c7c6e376",
+            "region-e36d0f0169431c3c",
+            "region-f8d02757eee4d7b6"
+          ],
+          "failures": []
+        }
+      ],
+      "artifacts": {
+        "observation": "frames/corridor-02-001/observation.json",
+        "embeddings": "frames/corridor-02-001/embeddings.npz",
+        "raw": "frames/corridor-02-001/raw.png",
+        "proposals": "frames/corridor-02-001/proposals.png",
+        "regions_masks": "frames/corridor-02-001/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-001/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-001/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-001/regions-overlay.png",
+        "semantic_overlay": "frames/corridor-02-001/semantic-overlay.png",
+        "structural_context": "frames/corridor-02-001/structural-context.png",
+        "valid_area_mask": "frames/corridor-02-001/valid-area-mask.png",
+        "ego_mask": "frames/corridor-02-001/ego-mask.png",
+        "diagnostics": "frames/corridor-02-001/diagnostics.json"
+      }
+    },
+    {
+      "frame_id": "corridor-02-002",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-002.png",
+        "sha256": "301520971c9b2b59c83df42d8e2d2a4846f8a121b670ee7690b7c18c2f6c8498",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-002",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 2370,
+          "timestamp_ns": 1724621187712119690,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames/corridor-02-002.png"
+        }
+      },
+      "failed": false,
+      "canonical_region_count": 56,
+      "published_region_count": 22,
+      "structural_context_count": 34,
+      "relation_count": 390,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 56,
+          "missing": 0,
+          "failed": 0
+        },
+        "masked_subject": {
+          "available": 56,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 56,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 56,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 56,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 56,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.8392373029637383
+        },
+        {
+          "slot": "masked_subject",
+          "available": 56,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 56,
+          "latency_s": 2.7106012950243894
+        },
+        {
+          "slot": "tight_crop",
+          "available": 56,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 56,
+          "latency_s": 2.690650971082505
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 56,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 56,
+          "latency_s": 2.686846292039263
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 56,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 15.463095953004085
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 5,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 169,
+        "scene_reasoning": 1,
+        "region_reasoning": 56,
+        "hypothesis_support_text": 35,
+        "region_refinement": 24,
+        "semantic_relations": 16,
+        "scene_concept_discovery": 0,
+        "concept_grounding": 0,
+        "total": 307
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 51,
+      "latency_s": 444.7356447600032,
+      "model_lifecycle_events": 6,
+      "peak_vram_bytes": 7453843968,
+      "peak_host_rss_bytes": 11236556800,
+      "proposal_count": 133,
+      "discovery_telemetry": {
+        "raw_proposal_count": 133,
+        "kept_proposal_count": 104,
+        "merged_region_count": 56,
+        "area_fraction_min": 0.0020052083333333332,
+        "area_fraction_median": 0.0060546875,
+        "area_fraction_max": 0.28224283854166665,
+        "mean_pairwise_iou": 0.02005363399506644,
+        "fragmentation_ratio": 1.8571428571428572
+      },
+      "concept_discovery": null,
+      "dominant_label": "wall",
+      "dominant_label_fraction": 0.4642857142857143,
+      "distinct_labels": 12,
+      "scene_echo_label_count": 0,
+      "contextual": {
+        "signal_statuses": [
+          [
+            "supports",
+            91
+          ],
+          [
+            "indistinguishable",
+            44
+          ],
+          [
+            "contradicts",
+            24
+          ],
+          [
+            "unavailable",
+            9
+          ]
+        ],
+        "regions_with_unsupported_primary": 2,
+        "regions_with_ambiguous_identity": 4,
+        "region_kind_contradictions": 35,
+        "reconciled_regions": 36,
+        "distinct_raw_labels": 12,
+        "distinct_canonical_concepts": 12,
+        "entity_groups": 5,
+        "regions_in_entity_groups": 30,
+        "supported_entity_groups": 1,
+        "semantic_relations": [
+          [
+            "part_of",
+            2
+          ]
+        ],
+        "geometric_relations": 388,
+        "abstained_claims": 0,
+        "unscored_claims": 0,
+        "scene_echo_any_assertion": 0,
+        "competing_assertions": 24
+      },
+      "prior": {
+        "regions_with_prior": 0,
+        "echoed": 0,
+        "contradicted": 0,
+        "mean_overlap": null,
+        "applied": false
+      },
+      "signal_failure_count": 0,
+      "relation_failure_count": 0,
+      "refinement": [
+        {
+          "previous_evidence": [
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop",
+            "scene_conditioned"
+          ],
+          "new_evidence": [
+            "foreground_dense",
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop"
+          ],
+          "producer": "qwen_vl",
+          "config_fingerprint": "6646f3c25965a7e1",
+          "targets": [
+            {
+              "region_id": "region-157f56b95e207011",
+              "reasons": [
+                "unsupported_primary",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-a27f7bc8162fd47a",
+              "reasons": [
+                "unsupported_primary"
+              ]
+            },
+            {
+              "region_id": "region-07d4dbb5935b2bac",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-095d0e2c0009d3be",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-0e3fcd61f203f201",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-0f75e2a2e5bd3fb0",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-12396714d014703f",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-136bbfa8645825ad",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-2eac679503b16e69",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-39b51583bb3bbc8e",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-3c3576e5546102c2",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-3c53955784ec4439",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-42ea25ca7dc23e25",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-49163a1aa8fe2277",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-637565b4203e30bb",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-63e2191b497e3680",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-786e7ac71e0cc284",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-79e1bf78b047e68b",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-7b9114b80c411ed9",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-7f4ac3783cf72c05",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-8280dbf5ffaa9940",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-95e79d516afc4349",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-98acac9e248cc0a1",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-a432ca20b9018273",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            }
+          ],
+          "refined_region_ids": [
+            "region-07d4dbb5935b2bac",
+            "region-095d0e2c0009d3be",
+            "region-0e3fcd61f203f201",
+            "region-0f75e2a2e5bd3fb0",
+            "region-12396714d014703f",
+            "region-136bbfa8645825ad",
+            "region-157f56b95e207011",
+            "region-2eac679503b16e69",
+            "region-39b51583bb3bbc8e",
+            "region-3c3576e5546102c2",
+            "region-3c53955784ec4439",
+            "region-42ea25ca7dc23e25",
+            "region-49163a1aa8fe2277",
+            "region-637565b4203e30bb",
+            "region-63e2191b497e3680",
+            "region-786e7ac71e0cc284",
+            "region-79e1bf78b047e68b",
+            "region-7b9114b80c411ed9",
+            "region-7f4ac3783cf72c05",
+            "region-8280dbf5ffaa9940",
+            "region-95e79d516afc4349",
+            "region-98acac9e248cc0a1",
+            "region-a27f7bc8162fd47a",
+            "region-a432ca20b9018273"
+          ],
+          "failures": []
+        }
+      ],
+      "artifacts": {
+        "observation": "frames/corridor-02-002/observation.json",
+        "embeddings": "frames/corridor-02-002/embeddings.npz",
+        "raw": "frames/corridor-02-002/raw.png",
+        "proposals": "frames/corridor-02-002/proposals.png",
+        "regions_masks": "frames/corridor-02-002/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-002/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-002/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-002/regions-overlay.png",
+        "structural_context": "frames/corridor-02-002/structural-context.png",
+        "valid_area_mask": "frames/corridor-02-002/valid-area-mask.png",
+        "ego_mask": "frames/corridor-02-002/ego-mask.png",
+        "diagnostics": "frames/corridor-02-002/diagnostics.json"
+      }
+    }
+  ]
+}

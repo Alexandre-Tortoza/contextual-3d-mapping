@@ -7,6 +7,7 @@ from .consolidation import (
     consolidate_context_runs,
     geometry_fingerprint,
 )
+from .embeddings import read_semantic_embedding, write_semantic_embedding_archive
 
 __all__ = [
     "CONSOLIDATED_ARTIFACT_TYPE",
@@ -14,4 +15,6 @@ __all__ = [
     "PublishedContextRun",
     "consolidate_context_runs",
     "geometry_fingerprint",
+    "read_semantic_embedding",
+    "write_semantic_embedding_archive",
 ]

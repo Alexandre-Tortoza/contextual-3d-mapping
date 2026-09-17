@@ -362,3 +362,73 @@ def extract_uniform_rosbag_frames(
             )
             written.append(destination)
     return written
+
+
+# Extrai um lote resumível do stream inteiro: passo fixo e faixa de índices
+# explícita, nomeando cada PNG pelo índice real no stream (não por um
+# contador de frames escritos). Existe para processar um bag grande em
+# lotes sucessivos sem reprocessar do zero: duas chamadas com o mesmo
+# ``stride`` sobre o mesmo bag produzem os mesmos nomes de arquivo para os
+# mesmos frames, então um consumidor pode checar o que já existe em disco e
+# só extrair a faixa seguinte.
+def extract_strided_rosbag_frames(
+    bag_path: Path,
+    output_dir: Path,
+    *,
+    stride: int,
+    start_index: int = 0,
+    end_index: int | None = None,
+    topic: str | None = None,
+    frame_id_prefix: str | None = None,
+) -> list[Path]:
+    """Extrai frames em passo fixo dentro de uma faixa de índices do stream.
+
+    Argumentos:
+        bag_path: rosbag de origem.
+        output_dir: diretório dos PNGs.
+        stride: intervalo entre frames extraídos (1 a cada ``stride``).
+        start_index: primeiro índice elegível, inclusive.
+        end_index: índice-limite, exclusivo; ``None`` para o fim do stream.
+        topic: tópico explícito ou ``None`` para detecção.
+        frame_id_prefix: prefixo de saída; usa o stem do bag quando ausente.
+    Retorna:
+        arquivos PNG escritos, nomeados pelo índice real no stream.
+    Levanta:
+        ValueError: se ``stride`` não for positivo ou a faixa for inválida.
+    """
+    from rosbags.highlevel import AnyReader
+
+    if stride <= 0:
+        raise ValueError("stride deve ser positivo")
+    if start_index < 0 or (end_index is not None and end_index <= start_index):
+        raise ValueError("faixa de índices inválida: start_index deve ser >= 0 e menor que end_index")
+    recording = inspect_rosbag(bag_path)
+    selected = select_rgb_topic(recording, topic)
+    limit = selected.message_count if end_index is None else end_index
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    with AnyReader([bag_path]) as reader:
+        connections = [item for item in reader.connections if item.topic == selected.name]
+        for index, (connection, timestamp, rawdata) in enumerate(reader.messages(connections=connections)):
+            if index < start_index:
+                continue
+            if index >= limit:
+                break
+            if index % stride != 0:
+                continue
+            message = reader.deserialize(rawdata, connection.msgtype)
+            pixels = decode_image_message(message, connection.msgtype)
+            destination = output_dir / f"{frame_id_prefix or bag_path.stem}-{index:05d}.png"
+            Image.fromarray(pixels).save(destination)
+            write_frame_provenance(
+                destination,
+                ExtractedFrameProvenance(
+                    recording_id=bag_path.stem,
+                    topic=selected.name,
+                    frame_id=_header_frame_id(message),
+                    timestamp_ns=timestamp,
+                    sequence_index=index,
+                ),
+            )
+            written.append(destination)
+    return written

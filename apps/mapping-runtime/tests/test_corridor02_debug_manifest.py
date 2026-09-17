@@ -8,9 +8,8 @@ são puras o bastante para testar isoladamente com fixtures de diretório.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import json
+from pathlib import Path
 
 from mapping_runtime.corridor02_context import (
     _copy_debug_asset,

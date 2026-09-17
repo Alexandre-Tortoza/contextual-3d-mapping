@@ -98,7 +98,9 @@ class RealMultimodalReasoningAdapter:
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do VLM para uma região da imagem."""
         return self._generate_json(
-            tuple(view.payload for view in request.views), region_prompt(request), config
+            tuple(view.payload for view in request.views),
+            region_prompt(request, config.prompt_version),
+            config,
         )
 
     # Julga a relação entre duas regiões a partir da view de par (#206). O

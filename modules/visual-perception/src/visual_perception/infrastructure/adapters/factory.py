@@ -28,6 +28,9 @@ from visual_perception.infrastructure.adapters.language_embedding_backend import
 from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
     RealMultimodalReasoningAdapter,
 )
+from visual_perception.infrastructure.adapters.multimodal_reasoning_fallback import (
+    FallbackMultimodalReasoningAdapter,
+)
 from visual_perception.infrastructure.adapters.region_discovery_backend import RealRegionDiscoveryAdapter
 from visual_perception.infrastructure.adapters.semantic_grounding_backend import RealSemanticGroundingAdapter
 from visual_perception.infrastructure.fakes.fake_feature_extractor import FakeDenseFeatureExtractor
@@ -115,18 +118,35 @@ def _language_encoder_for(
     raise ValueError(f"Backend de language embedding não suportado: {config.language_embedding.backend!r}.")
 
 
-# Seleciona o VLM responsável pelos prompts estruturados de cena e região.
+# Seleciona o VLM responsável pelos prompts estruturados de cena e região, e
+# o envolve num fallback permanente (#292) quando a config declarar um.
 def _multimodal_reasoner_for(
     config: ModuleConfig, lifecycle: ModelLifecycleManager
-) -> FakeMultimodalReasoner | RealMultimodalReasoningAdapter | GeminiRoboticsReasoningAdapter:
+) -> (
+    FakeMultimodalReasoner
+    | RealMultimodalReasoningAdapter
+    | GeminiRoboticsReasoningAdapter
+    | FallbackMultimodalReasoningAdapter
+):
     """Seleciona o port de raciocínio multimodal declarado pela configuração."""
-    if config.multimodal_reasoning.backend == "fake":
+    primary = _multimodal_reasoner_backend_for(config.multimodal_reasoning.backend, lifecycle)
+    if config.multimodal_reasoning.fallback_backend is None:
+        return primary
+    fallback = _multimodal_reasoner_backend_for(config.multimodal_reasoning.fallback_backend, lifecycle)
+    return FallbackMultimodalReasoningAdapter(primary, fallback)
+
+
+# Constrói o adapter concreto de um nome de backend de multimodal reasoning;
+# usado tanto para o primário quanto para o fallback, que compartilham o
+# mesmo vocabulário fechado.
+def _multimodal_reasoner_backend_for(
+    backend: str, lifecycle: ModelLifecycleManager
+) -> FakeMultimodalReasoner | RealMultimodalReasoningAdapter | GeminiRoboticsReasoningAdapter:
+    """Retorna o adapter concreto para `backend`, sem envolver fallback."""
+    if backend == "fake":
         return FakeMultimodalReasoner()
-    if config.multimodal_reasoning.backend == "qwen_vl":
+    if backend == "qwen_vl":
         return RealMultimodalReasoningAdapter(lifecycle)
-    if config.multimodal_reasoning.backend == "gemini_robotics_er":
+    if backend == "gemini_robotics_er":
         return GeminiRoboticsReasoningAdapter()
-    raise ValueError(
-        "Backend de multimodal reasoning não suportado: "
-        f"{config.multimodal_reasoning.backend!r}."
-    )
+    raise ValueError(f"Backend de multimodal reasoning não suportado: {backend!r}.")

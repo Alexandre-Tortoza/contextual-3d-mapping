@@ -12,6 +12,7 @@ from contextual_mapping_contracts import ObservationReference, RigidTransform
 
 from .boundary import BoundaryPolicy, distance_to_mask_boundary
 from .camera_geometry import project_coordinates, transform_coordinates
+from .dense_features import DenseFeatureMap, sample_dense_feature
 from .models import (
     AssociationStatus,
     CameraLidarCalibration,
@@ -279,7 +280,7 @@ def _result(
     status: AssociationStatus | None,
     pixel: tuple[int, int] | None,
     indexed_region: tuple[VisualRegionEvidence, float] | None,
-    boundary_policy: BoundaryPolicy,
+    boundary_policy: BoundaryPolicy, feature_map: DenseFeatureMap | None = None,
 ) -> PointVisualAssociation:
     """Converte o estado resolvido de um ponto no contract público."""
     if status is not None:
@@ -305,6 +306,9 @@ def _result(
             label = region.label
         else:
             tentative_label = region.label
+    dense_feature = None if feature_map is None else sample_dense_feature(
+        feature_map, pixel, image_size=(rgb.width, rgb.height)
+    )
     return PointVisualAssociation(
         geometry,
         lidar_observation,
@@ -316,11 +320,17 @@ def _result(
         region.region_id if region else None,
         label,
         region.feature_reference if region else None,
+        language_embedding_reference=region.language_embedding_reference if region else None,
         semantic_status=semantic_status,
         tentative_label=tentative_label,
         distance_to_boundary_px=distance,
         boundary_margin_px=boundary_policy.margin_px if region else None,
         grounding_reference=region.grounding_reference if region else None,
+        dense_feature=dense_feature,
+        embedding_space=feature_map.embedding_space if dense_feature is not None else None,
+        feature_dimension=feature_map.dimension if dense_feature is not None else None,
+        feature_producer=feature_map.producer if dense_feature is not None else None,
+        dense_feature_reference=feature_map.artifact_reference if dense_feature is not None else None,
     )
 
 
@@ -334,6 +344,7 @@ def associate_points(
     *,
     max_time_delta_ns: int = 50_000_000,
     boundary_policy: BoundaryPolicy | None = None,
+    dense_feature_map: DenseFeatureMap | None = None,
 ) -> tuple[PointVisualAssociation, ...]:
     """Projeta, filtra visibilidade e associa RGB/região a pontos persistidos.
 
@@ -380,6 +391,7 @@ def associate_points(
                 pixel,
                 region_by_pixel.get(pixel) if pixel is not None else None,
                 boundary_policy or BoundaryPolicy(),
+                dense_feature_map,
             )
         )
     return tuple(results)
@@ -403,6 +415,7 @@ def associate_map_points(
     occlusion_absolute_margin_m: float = 0.10,
     boundary_policy: BoundaryPolicy | None = None,
     visibility_geometry: PointCloudGeometry | None = None,
+    dense_feature_map: DenseFeatureMap | None = None,
 ) -> tuple[PointVisualAssociation, ...]:
     """Projeta o mapa persistente em um frame RGB e associa cor e região.
 
@@ -474,6 +487,7 @@ def associate_map_points(
                 pixel,
                 region_by_pixel.get(pixel) if pixel is not None else None,
                 boundary_policy or BoundaryPolicy(),
+                dense_feature_map,
             )
         )
     return tuple(results)

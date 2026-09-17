@@ -261,3 +261,24 @@ Um ponto RGB com `tentative_label` aparece como **Hipótese 2D · sem rótulo 3D
 no inspector. A preview preserva a máscara e o claim original, inclusive para
 uma janela sem suporte 3D. `visibility_unconfirmed` explica a ausência de
 superfície compatível; `occluded` identifica uma superfície anterior no raio.
+
+## Busca semântica por texto
+
+O painel **Busca**, no canto superior direito do viewport, consulta
+`apps/map-explorer/api` — o serviço HTTP local que expõe `query-engine` sobre
+o mapa aberto (#224). Nenhum vetor de embedding chega ao browser: o serviço
+devolve só `geometry_id`, coordenadas, label e score por resultado, e o
+frontend usa o `geometry_id` para selecionar e focar o ponto correspondente,
+reaproveitando a mesma seleção/foco do clique no mapa.
+
+Suba o serviço apontando para o mesmo `map_id` do mapa aberto:
+
+```bash
+python -m map_explorer_api.app <map_id> <caminho/para/context.json>
+```
+
+A URL do serviço (default `http://127.0.0.1:8765`) é configurável pelo ícone
+de engrenagem ao lado do campo de busca, e persiste no navegador entre
+sessões. Um mapa sem embeddings CLIP publicados (a fusão de linguagem é
+opt-in — ver `--language-embedding-fusion` em `apps/mapping-runtime`) responde
+"busca semântica indisponível", não um erro.

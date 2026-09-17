@@ -1,0 +1,935 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-013",
+  "input_sha256": "33082b6314162ae4727a09ca2219348e6ad1e415e2004af8faf5364e193f9eb2",
+  "latency_s": 331.42324529499456,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 33,
+  "proposal_count": 90,
+  "merged_proposal_count": 73,
+  "regions_with_multiple_proposals": 23,
+  "label_counts": [
+    [
+      "broken tile",
+      17
+    ],
+    [
+      "broken window",
+      5
+    ],
+    [
+      "broken door",
+      3
+    ],
+    [
+      "floor",
+      3
+    ],
+    [
+      "wall",
+      3
+    ],
+    [
+      "broken wall",
+      1
+    ],
+    [
+      "engine cover",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "flooring",
+      20
+    ],
+    [
+      "abandoned building",
+      3
+    ],
+    [
+      "building interior",
+      3
+    ],
+    [
+      "door",
+      3
+    ],
+    [
+      "window",
+      2
+    ],
+    [
+      "building structure",
+      1
+    ],
+    [
+      "car part",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      33
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 33,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 33,
+    "missing": 0,
+    "minimum": 0.8226044774055481,
+    "maximum": 0.9855648875236511,
+    "mean": 0.9405345320701599,
+    "median": 0.9454824924468994,
+    "distinct_values": 33,
+    "stddev": 0.03054055359187774,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 6,
+  "mode_collapse": {
+    "dominant_label": "broken tile",
+    "dominant_fraction": 0.5151515151515151,
+    "distinct_labels": 7,
+    "dominant_category": "flooring",
+    "dominant_category_fraction": 0.6060606060606061,
+    "distinct_categories": 7
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 4,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      13
+    ],
+    [
+      "outside_valid_area",
+      4
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "indistinguishable",
+        52
+      ],
+      [
+        "supports",
+        29
+      ],
+      [
+        "contradicts",
+        18
+      ]
+    ],
+    "regions_with_unsupported_primary": 2,
+    "regions_with_ambiguous_identity": 10,
+    "region_kind_contradictions": 24,
+    "reconciled_regions": 24,
+    "distinct_raw_labels": 7,
+    "distinct_canonical_concepts": 8,
+    "entity_groups": 4,
+    "regions_in_entity_groups": 16,
+    "supported_entity_groups": 3,
+    "semantic_relations": [
+      [
+        "covers",
+        1
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 166,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 24
+  },
+  "published_region_count": 27,
+  "structural_context_count": 6,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      6
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-0e374a2b71aa4199",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 3805,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 267.0,
+        "x_max": 171.0,
+        "y_max": 322.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9467437863349915,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.171162319980795,
+      "model_mask_area": 87938,
+      "clipped_pixel_count": 87938,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-25f764953f4a7bce",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1032,
+      "box_before": {
+        "x_min": 346.0,
+        "y_min": 97.0,
+        "x_max": 431.0,
+        "y_max": 118.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9454824924468994,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2ad693a4f04179da",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1130,
+      "box_before": {
+        "x_min": 310.0,
+        "y_min": 66.0,
+        "x_max": 373.0,
+        "y_max": 95.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9567922353744507,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-321133b590dfb176",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 974,
+      "box_before": {
+        "x_min": 102.0,
+        "y_min": 25.0,
+        "x_max": 155.0,
+        "y_max": 78.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.951043426990509,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-407e620ba9901ffb",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 6149,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 2.0,
+        "x_max": 515.0,
+        "y_max": 55.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8226044774055481,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-466fee10e11f88bc",
+      "label": "broken window",
+      "region_kind": "thing",
+      "discovery_area": 36764,
+      "box_before": {
+        "x_min": 223.0,
+        "y_min": 4.0,
+        "x_max": 640.0,
+        "y_max": 478.0
+      },
+      "component_count_before": 50,
+      "geometric_confidence": 0.9805522561073303,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45014399000501726,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-46d387409c7cefaf",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 2137,
+      "box_before": {
+        "x_min": 400.0,
+        "y_min": 14.0,
+        "x_max": 484.0,
+        "y_max": 55.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9591714143753052,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4d336f85f9eeb906",
+      "label": "broken door",
+      "region_kind": "thing",
+      "discovery_area": 702,
+      "box_before": {
+        "x_min": 427.0,
+        "y_min": 192.0,
+        "x_max": 472.0,
+        "y_max": 217.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9236558079719543,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.44943887800036464,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-53582c25ca0c625d",
+      "label": "broken window",
+      "region_kind": "thing",
+      "discovery_area": 1209,
+      "box_before": {
+        "x_min": 414.0,
+        "y_min": 51.0,
+        "x_max": 466.0,
+        "y_max": 82.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9374542832374573,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5ad454ac1f41664b",
+      "label": "broken window",
+      "region_kind": "thing",
+      "discovery_area": 656,
+      "box_before": {
+        "x_min": 287.0,
+        "y_min": 138.0,
+        "x_max": 320.0,
+        "y_max": 176.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9303924441337585,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5cf4554fd6aed0a6",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 2874,
+      "box_before": {
+        "x_min": 278.0,
+        "y_min": 23.0,
+        "x_max": 405.0,
+        "y_max": 99.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9635840058326721,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5d802d74451626a3",
+      "label": "broken door",
+      "region_kind": "thing",
+      "discovery_area": 2333,
+      "box_before": {
+        "x_min": 285.0,
+        "y_min": 192.0,
+        "x_max": 328.0,
+        "y_max": 252.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9384275674819946,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.012920763998408802,
+      "model_mask_area": 4645,
+      "clipped_pixel_count": 2334,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2311,
+          "box": {
+            "x_min": 287.0,
+            "y_min": 192.0,
+            "x_max": 328.0,
+            "y_max": 252.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2311,
+          "refined_overlap": 2311,
+          "detector_box_overlap": 2311,
+          "distance_to_box_center_px": 2.6661517308062526
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-61db552c5408b08c",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 3759,
+      "box_before": {
+        "x_min": 360.0,
+        "y_min": 240.0,
+        "x_max": 640.0,
+        "y_max": 318.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9591591954231262,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.013768598000751808,
+      "model_mask_area": 87938,
+      "clipped_pixel_count": 87938,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-6d1b9ef146eb2b95",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1483,
+      "box_before": {
+        "x_min": 316.0,
+        "y_min": 55.0,
+        "x_max": 426.0,
+        "y_max": 100.0
+      },
+      "component_count_before": 10,
+      "geometric_confidence": 0.9531522393226624,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-73e7f28ffcc4485c",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1338,
+      "box_before": {
+        "x_min": 330.0,
+        "y_min": 3.0,
+        "x_max": 384.0,
+        "y_max": 34.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.905500590801239,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-747fb5669b46c877",
+      "label": "broken door",
+      "region_kind": "thing",
+      "discovery_area": 4607,
+      "box_before": {
+        "x_min": 284.0,
+        "y_min": 127.0,
+        "x_max": 329.0,
+        "y_max": 253.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9198259115219116,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.01327683099952992,
+      "model_mask_area": 4645,
+      "clipped_pixel_count": 110,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4535,
+          "box": {
+            "x_min": 287.0,
+            "y_min": 127.0,
+            "x_max": 329.0,
+            "y_max": 252.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 4535,
+          "refined_overlap": 4535,
+          "detector_box_overlap": 4535,
+          "distance_to_box_center_px": 0.349512513357785
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 4535,
+      "area_ratio": 0.9843716084219666,
+      "area_reduction_ratio": 0.015628391578033418,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 287.0,
+        "y_min": 127.0,
+        "x_max": 329.0,
+        "y_max": 252.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-7f51579162c61a24",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1427,
+      "box_before": {
+        "x_min": 184.0,
+        "y_min": 45.0,
+        "x_max": 257.0,
+        "y_max": 76.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9496657252311707,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-86ec4bee1bc03bc6",
+      "label": "broken wall",
+      "region_kind": "thing",
+      "discovery_area": 794,
+      "box_before": {
+        "x_min": 425.0,
+        "y_min": 78.0,
+        "x_max": 471.0,
+        "y_max": 115.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9480066299438477,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.4501411750097759,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-86faa8dc16461533",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 2456,
+      "box_before": {
+        "x_min": 277.0,
+        "y_min": 25.0,
+        "x_max": 384.0,
+        "y_max": 69.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9290609955787659,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8c060b7b57182902",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1301,
+      "box_before": {
+        "x_min": 171.0,
+        "y_min": 130.0,
+        "x_max": 212.0,
+        "y_max": 175.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9269722700119019,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-9280a7a4730680e4",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 692,
+      "box_before": {
+        "x_min": 377.0,
+        "y_min": 81.0,
+        "x_max": 428.0,
+        "y_max": 101.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9537618160247803,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a43ef0dab109e69e",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 3077,
+      "box_before": {
+        "x_min": 244.0,
+        "y_min": 2.0,
+        "x_max": 373.0,
+        "y_max": 55.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9372658133506775,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a581f642ecab999d",
+      "label": "engine cover",
+      "region_kind": "thing",
+      "discovery_area": 47738,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 230.0,
+        "x_max": 640.0,
+        "y_max": 459.0
+      },
+      "component_count_before": 19,
+      "geometric_confidence": 0.9855648875236511,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.461658065993106,
+      "model_mask_area": 23856,
+      "clipped_pixel_count": 23856,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-bd80a9a2f30f52f2",
+      "label": "broken window",
+      "region_kind": "thing",
+      "discovery_area": 2091,
+      "box_before": {
+        "x_min": 236.0,
+        "y_min": 55.0,
+        "x_max": 324.0,
+        "y_max": 102.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9325155019760132,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-cf041363b8a726a7",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1813,
+      "box_before": {
+        "x_min": 330.0,
+        "y_min": 2.0,
+        "x_max": 414.0,
+        "y_max": 33.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9354829788208008,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e6aa41c1a03f0723",
+      "label": "broken window",
+      "region_kind": "thing",
+      "discovery_area": 2033,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 192.0,
+        "x_max": 318.0,
+        "y_max": 260.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9398254156112671,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ec13be0744e5f4d3",
+      "label": "broken tile",
+      "region_kind": "thing",
+      "discovery_area": 1597,
+      "box_before": {
+        "x_min": 248.0,
+        "y_min": 86.0,
+        "x_max": 263.0,
+        "y_max": 259.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9283828139305115,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.013809144002152607,
+      "model_mask_area": 87938,
+      "clipped_pixel_count": 87938,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-1940d3cb6a204b0e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-76546af84d002edf",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    },
+    {
+      "region_id": "region-841ff8ccaaa86bce",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-884f7dc932230cd6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-df75af88bd06dcfc",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-e75e2c2b7aff9510",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "wall"
+    }
+  ]
+}

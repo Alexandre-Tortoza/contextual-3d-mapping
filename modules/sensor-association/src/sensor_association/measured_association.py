@@ -12,6 +12,7 @@ from contextual_mapping_contracts import ObservationReference, RigidTransform
 
 from .boundary import BoundaryPolicy
 from .camera_geometry import pixel_rays, project_coordinates, transform_coordinates
+from .dense_features import DenseFeatureMap
 from .models import (
     AssociationStatus,
     CameraLidarCalibration,
@@ -46,6 +47,7 @@ def associate_measured_map_points(
     surfaces: MeasuredSurfaceModel, regions: tuple[VisualRegionEvidence, ...] = (),
     *, lidar_observation: ObservationReference, max_time_delta_ns: int = 50_000_000,
     boundary_policy: BoundaryPolicy | None = None,
+    dense_feature_map: DenseFeatureMap | None = None,
 ) -> SurfaceAssociationResult:
     """Associa RGB à superfície visível e labels somente ao suporte ancorado.
 
@@ -133,7 +135,8 @@ def associate_measured_map_points(
             evidence = SurfaceAssociationEvidence(float(depth[number]), first, tolerance,
                 int(surfaces.source_indices[patch]) if patch >= 0 else None, reason)
         result = _result(point.geometry, lidar_observation, rgb, calibration, status,
-                         pixel if status is None else None, indexed.get(pixel) if status is None else None, policy)
+                         pixel if status is None else None, indexed.get(pixel) if status is None else None, policy,
+                         dense_feature_map)
         if result.region_id is not None and evidence is not None:
             binding = bindings[result.region_id]
             x, y = pixel

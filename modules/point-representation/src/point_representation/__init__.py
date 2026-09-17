@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from point_representation.application.collate import collate_point_clouds
 from point_representation.application.crop import crop_points
+from point_representation.application.distillation import encode_point_clouds, fit_ridge_distilled_encoder
 from point_representation.application.encoder_batch import collate_encoder_inputs
 from point_representation.application.feature_selection import EncoderInput, select_features
 from point_representation.application.normalization import denormalize_coordinates, normalize_coordinates
@@ -16,6 +17,7 @@ from point_representation.config import (
     CropConfig,
     FeatureSelectionConfig,
     NormalizationConfig,
+    RidgeDistillationConfig,
     VoxelDownsampleConfig,
 )
 from point_representation.domain.batch import PointBatch
@@ -28,6 +30,7 @@ from point_representation.domain.point_cloud import PointCloud
 from point_representation.domain.spatial_bounds import AxisAlignedBounds
 from point_representation.domain.training_sample import PointTrainingSample
 from point_representation.domain.validation import validate_point_cloud
+from point_representation.infrastructure.numpy.ridge_distilled_point_encoder import RidgeDistilledPointEncoder
 from point_representation.ports.point_encoder import PointEncoder
 
 __all__ = [
@@ -48,12 +51,16 @@ __all__ = [
     "PointEncoder",
     "PointLineage",
     "PointTrainingSample",
+    "RidgeDistillationConfig",
+    "RidgeDistilledPointEncoder",
     "VoxelDownsampleConfig",
     "collate_encoder_inputs",
     "collate_point_clouds",
     "compose_lineage",
     "crop_points",
     "denormalize_coordinates",
+    "encode_point_clouds",
+    "fit_ridge_distilled_encoder",
     "normalize_coordinates",
     "select_features",
     "validate_point_cloud",

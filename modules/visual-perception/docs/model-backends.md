@@ -696,15 +696,38 @@ Os picos observados na configuração de referência são aproximadamente:
 
 | Backend | Pico de referência |
 | --- | ---: |
-| SAM ViT-H | 4.6 GB |
+| SAM3 (region discovery) | ~2-3 GB |
 | DINOv2-base | 0.3 GB |
 | CLIP ViT-L/14 | 1.6 GB |
 | Qwen2.5-VL-3B 4-bit | 2.5 GB |
+| Grounding DINO base | ~1 GB |
+| SAM2.1-hiera-large (promptado) | ~1.5 GB |
 
-A soma aproximada excede 8GB por uma margem pequena (~1GB), e o padrão de uso real do
-pipeline intercala principalmente CLIP e Qwen-VL (juntos, ~4,1GB — folga confortável),
-com SAM e GroundingDINO usados em pontos isolados do frame. Por isso, os adapters reais
-compartilham um
+A soma dos 4 backends canônicos (region discovery, feature extraction, language
+embedding, multimodal reasoning) já mede ~7,34GB residentes simultaneamente na
+referência (RTX 3060, ~7,65GiB efetivos) — sem folga para o scratch de inferência
+(ex: mask generation do SAM3) de um frame seguinte. Somando os 2 backends de
+`semantic_grounding` (Grounding DINO + SAM2 promptado), os 6 não cabem juntos.
+
+Por isso `RealSemanticGroundingAdapter._ground_frame` chama `lifecycle.release_all()`
+antes de carregar detector+segmenter: sem isso, a eviction reativa por LRU trocaria um
+modelo canônico a cada estágio dentro do mesmo frame (visto na prática: ~4 reloads
+completos por frame). O `release_all()` troca esse thrashing por um reload total, mas
+previsível, uma vez por frame — custa ~27-33s/frame de `load_time_s` puro, mas é a
+única opção validada nesta VRAM de referência.
+
+**Tentativa revertida (#292):** um mecanismo de `get_or_load(..., protected=True)`
+mantinha os 4 modelos canônicos permanentemente residentes (nunca candidatos a
+eviction reativa), deixando só o par de grounding competir por LRU entre si — a
+intenção era eliminar o reload dos 4 modelos mais caros. Validado ao vivo contra o
+corridor-02 (não só em smoke test de 1 frame), a 2ª chamada de qualquer stage
+canônico já estourava OOM de forma determinística, porque os ~7,34GB residentes não
+deixam margem para o scratch transitório de inferência. Revertido; documentado aqui
+para não ser tentado de novo sem antes resolver o orçamento de VRAM (GPU maior,
+quantização mais agressiva, ou redução do conjunto de modelos residentes ao mesmo
+tempo).
+
+Por isso os adapters reais compartilham um
 [`ModelLifecycleManager`](../src/visual_perception/application/lifecycle.py) que mantém
 tudo residente que couber, e libera por LRU apenas quando um load novo esgota a VRAM de
 fato — não há uma tabela estática decidindo antecipadamente quem fica de fora.

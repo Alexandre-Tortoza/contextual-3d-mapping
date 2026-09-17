@@ -11,6 +11,7 @@ módulo precise mudar.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from point_representation.domain.spatial_bounds import AxisAlignedBounds
@@ -96,3 +97,25 @@ class NormalizationConfig:
 
     center: bool = True
     scale: bool = True
+
+
+# Configura o baseline supervisionado que destila features de um professor
+# visual em uma representação 3D por ponto. Existe para validar o caminho de
+# supervisão 2D->3D antes de introduzir um backbone de maior custo ou runtime.
+@dataclass(frozen=True)
+class RidgeDistillationConfig:
+    """Parâmetros reproduzíveis para a destilação linear por ponto.
+
+    Argumentos:
+        ridge_regularization: penalidade L2 aplicada aos pesos, exceto ao
+            bias. Zero seleciona mínimos quadrados sem regularização.
+    """
+
+    ridge_regularization: float = 1e-6
+
+    # Rejeita uma penalidade negativa, que não corresponde a uma regressão
+    # ridge e pode tornar o sistema normal mal condicionado.
+    def __post_init__(self) -> None:
+        """Valida que a regularização ridge não seja negativa."""
+        if not math.isfinite(self.ridge_regularization) or self.ridge_regularization < 0.0:
+            raise ValueError("RidgeDistillationConfig.ridge_regularization must be finite and non-negative.")

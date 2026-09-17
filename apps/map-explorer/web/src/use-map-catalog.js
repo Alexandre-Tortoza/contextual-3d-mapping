@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ChunkedArtifactGeometrySource,
@@ -28,6 +28,14 @@ export function useMapCatalog() {
   const [points, setPoints] = useState([]);
   const [artifactUrl, setArtifactUrl] = useState(null);
   const [error, setError] = useState(null);
+
+  // O polling do índice (30s, abaixo) precisa saber qual run está aberta
+  // agora para decidir se reconsulta o artifact dela; um ref evita capturar
+  // `artifactPath` obsoleto no closure de `refresh`, que só é criado uma vez.
+  const artifactPathRef = useRef(artifactPath);
+  useEffect(() => {
+    artifactPathRef.current = artifactPath;
+  }, [artifactPath]);
 
   // Abre um artifact validado através da fronteira de geometria. Um mapa
   // consolidado com geometry_manifest é buscado em partições, pintando a cena
@@ -115,6 +123,18 @@ export function useMapCatalog() {
         setAvailableMaps(entries);
         setCatalogLoaded(true);
         setArtifactPath((current) => current ?? entries[0]?.url ?? null);
+        // A run aberta ainda está sendo processada em lotes: o `context.json`
+        // dela cresce sob a mesma URL sem gerar uma entrada nova no índice,
+        // então só reabrir o artifact (não só o índice) mostra o progresso.
+        const open = entries.find((entry) => entry.url === artifactPathRef.current);
+        if (open?.inProgress) {
+          fetch(new URL(open.url, window.location.href).href, { signal: controller.signal, cache: "no-store" })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((refreshed) => {
+              if (refreshed) openSlice(refreshed, artifactPathRef.current, controller.signal);
+            })
+            .catch(() => {});
+        }
       })
       .catch((failure) => {
         if (failure.name !== "AbortError") setCatalogLoaded(true);
@@ -138,5 +158,13 @@ export function useMapCatalog() {
     setArtifactPath(path);
   };
 
-  return { artifactPath, availableMaps, catalogLoaded, slice, points, artifactUrl, error, selectMap };
+  // Progresso da run aberta, quando ela ainda está sendo processada em lotes
+  // (ver publish_map_index.py::save_run, `in_progress`/`frame_count_expected`).
+  // `null` para qualquer run fechada — é o caso comum, sem indicador nenhum.
+  const openMapEntry = availableMaps.find((entry) => entry.url === artifactPath);
+  const progress = openMapEntry?.inProgress
+    ? { frameCount: openMapEntry.frameCount, frameCountExpected: openMapEntry.frameCountExpected }
+    : null;
+
+  return { artifactPath, availableMaps, catalogLoaded, slice, points, artifactUrl, error, selectMap, progress };
 }

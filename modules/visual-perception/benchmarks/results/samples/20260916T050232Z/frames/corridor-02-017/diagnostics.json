@@ -1,0 +1,1522 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-017",
+  "input_sha256": "f7ea622db269c79244af5dfc5ae66bd5d1fbe2b5babee60cb51d71acccd5a20a",
+  "latency_s": 389.48799684598634,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 47,
+  "proposal_count": 128,
+  "merged_proposal_count": 104,
+  "regions_with_multiple_proposals": 29,
+  "label_counts": [
+    [
+      "ceiling light",
+      34
+    ],
+    [
+      "floor",
+      7
+    ],
+    [
+      "door",
+      3
+    ],
+    [
+      "car bumper",
+      1
+    ],
+    [
+      "ceiling",
+      1
+    ],
+    [
+      "floor tiles",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "lighting fixture",
+      34
+    ],
+    [
+      "flooring",
+      8
+    ],
+    [
+      "building element",
+      3
+    ],
+    [
+      "automobile part",
+      1
+    ],
+    [
+      "building interior",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      47
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 47,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9000000000000001,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 47,
+    "missing": 0,
+    "minimum": 0.8085702061653137,
+    "maximum": 0.9785951972007751,
+    "mean": 0.9332579704041176,
+    "median": 0.9466179013252258,
+    "distinct_values": 47,
+    "stddev": 0.04078478511267008,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 3,
+  "mode_collapse": {
+    "dominant_label": "ceiling light",
+    "dominant_fraction": 0.723404255319149,
+    "distinct_labels": 6,
+    "dominant_category": "lighting fixture",
+    "dominant_category_fraction": 0.723404255319149,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 1,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      17
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "ego_vehicle_overlap",
+      1
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "indistinguishable",
+        70
+      ],
+      [
+        "supports",
+        42
+      ],
+      [
+        "contradicts",
+        29
+      ]
+    ],
+    "regions_with_unsupported_primary": 3,
+    "regions_with_ambiguous_identity": 9,
+    "region_kind_contradictions": 9,
+    "reconciled_regions": 17,
+    "distinct_raw_labels": 6,
+    "distinct_canonical_concepts": 7,
+    "entity_groups": 4,
+    "regions_in_entity_groups": 12,
+    "supported_entity_groups": 2,
+    "semantic_relations": [
+      [
+        "covers",
+        1
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 267,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 24
+  },
+  "published_region_count": 38,
+  "structural_context_count": 9,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      9
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-05ab646f6c4f1a69",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 2412,
+      "box_before": {
+        "x_min": 252.0,
+        "y_min": 72.0,
+        "x_max": 402.0,
+        "y_max": 116.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9013141989707947,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.717915165994782,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-06bc50c5f8bbaac2",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 888,
+      "box_before": {
+        "x_min": 275.0,
+        "y_min": 133.0,
+        "x_max": 383.0,
+        "y_max": 153.0
+      },
+      "component_count_before": 6,
+      "geometric_confidence": 0.9174355864524841,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-08bee3ca25afd901",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 6225,
+      "box_before": {
+        "x_min": 168.0,
+        "y_min": 85.0,
+        "x_max": 214.0,
+        "y_max": 278.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9785951972007751,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 2.917662350999308,
+      "model_mask_area": 6293,
+      "clipped_pixel_count": 94,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 6199,
+          "box": {
+            "x_min": 168.0,
+            "y_min": 86.0,
+            "x_max": 214.0,
+            "y_max": 277.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 6199,
+          "refined_overlap": 6199,
+          "detector_box_overlap": 6199,
+          "distance_to_box_center_px": 0.3294573675035595
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 6199,
+      "area_ratio": 0.9958232931726908,
+      "area_reduction_ratio": 0.004176706827309196,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 168.0,
+        "y_min": 86.0,
+        "x_max": 214.0,
+        "y_max": 277.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-0abf16992d10484a",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 721,
+      "box_before": {
+        "x_min": 262.0,
+        "y_min": 192.0,
+        "x_max": 275.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8691498041152954,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-19e3ca52d20ecefe",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 2218,
+      "box_before": {
+        "x_min": 505.0,
+        "y_min": 169.0,
+        "x_max": 536.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9198110699653625,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-21103090777b2a19",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 730,
+      "box_before": {
+        "x_min": 219.0,
+        "y_min": 100.0,
+        "x_max": 266.0,
+        "y_max": 133.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9538151621818542,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2525330ec7fc4e87",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 5101,
+      "box_before": {
+        "x_min": 225.0,
+        "y_min": 2.0,
+        "x_max": 385.0,
+        "y_max": 38.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9715055823326111,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.013010516995564103,
+      "model_mask_area": 5284,
+      "clipped_pixel_count": 210,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 5074,
+          "box": {
+            "x_min": 226.0,
+            "y_min": 2.0,
+            "x_max": 385.0,
+            "y_max": 38.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 5074,
+          "refined_overlap": 5074,
+          "detector_box_overlap": 5074,
+          "distance_to_box_center_px": 0.5726778304897824
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 5074,
+      "area_ratio": 0.9947069202117232,
+      "area_reduction_ratio": 0.0052930797882767555,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 226.0,
+        "y_min": 2.0,
+        "x_max": 385.0,
+        "y_max": 38.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-2e5530280c5ceabb",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1093,
+      "box_before": {
+        "x_min": 232.0,
+        "y_min": 146.0,
+        "x_max": 246.0,
+        "y_max": 254.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.953208863735199,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-414d1c81279eb3c3",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 4460,
+      "box_before": {
+        "x_min": 239.0,
+        "y_min": 36.0,
+        "x_max": 375.0,
+        "y_max": 98.0
+      },
+      "component_count_before": 9,
+      "geometric_confidence": 0.9616273641586304,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 1,
+      "latency_s": 0.013079238997306675,
+      "model_mask_area": 5284,
+      "clipped_pixel_count": 5282,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2,
+          "box": {
+            "x_min": 294.0,
+            "y_min": 36.0,
+            "x_max": 296.0,
+            "y_max": 37.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 18.84659725402688
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-46d26891fc8e8cce",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1157,
+      "box_before": {
+        "x_min": 200.0,
+        "y_min": 74.0,
+        "x_max": 257.0,
+        "y_max": 102.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9529558420181274,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4910569679bf1651",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1315,
+      "box_before": {
+        "x_min": 281.0,
+        "y_min": 192.0,
+        "x_max": 350.0,
+        "y_max": 219.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.8085702061653137,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4d110f37195226e0",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1795,
+      "box_before": {
+        "x_min": 178.0,
+        "y_min": 41.0,
+        "x_max": 247.0,
+        "y_max": 98.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9610002636909485,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5ea8585aaaaf3381",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 717,
+      "box_before": {
+        "x_min": 506.0,
+        "y_min": 4.0,
+        "x_max": 549.0,
+        "y_max": 33.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9094434380531311,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5eb78031cbe8c19e",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 23951,
+      "box_before": {
+        "x_min": 366.0,
+        "y_min": 3.0,
+        "x_max": 517.0,
+        "y_max": 295.0
+      },
+      "component_count_before": 10,
+      "geometric_confidence": 0.9155557155609131,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-66e5bc141398e7a4",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 905,
+      "box_before": {
+        "x_min": 490.0,
+        "y_min": 62.0,
+        "x_max": 541.0,
+        "y_max": 91.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9444801211357117,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-6eca8c32a76c3814",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 891,
+      "box_before": {
+        "x_min": 548.0,
+        "y_min": 50.0,
+        "x_max": 594.0,
+        "y_max": 84.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.909570038318634,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-709072c0bd028357",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 811,
+      "box_before": {
+        "x_min": 532.0,
+        "y_min": 165.0,
+        "x_max": 546.0,
+        "y_max": 256.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8197462558746338,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-83333c4fe1dcad43",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 748,
+      "box_before": {
+        "x_min": 236.0,
+        "y_min": 192.0,
+        "x_max": 256.0,
+        "y_max": 254.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9232276678085327,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8f8df0b2a7828349",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 889,
+      "box_before": {
+        "x_min": 623.0,
+        "y_min": 122.0,
+        "x_max": 640.0,
+        "y_max": 215.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.8806889653205872,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-97aea456d392ed96",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 4141,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 2.0,
+        "x_max": 384.0,
+        "y_max": 37.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9692408442497253,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.013849622002453543,
+      "model_mask_area": 5284,
+      "clipped_pixel_count": 1158,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4126,
+          "box": {
+            "x_min": 256.0,
+            "y_min": 2.0,
+            "x_max": 384.0,
+            "y_max": 37.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 4126,
+          "refined_overlap": 4126,
+          "detector_box_overlap": 4126,
+          "distance_to_box_center_px": 0.5726778304897824
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 4126,
+      "area_ratio": 0.9963776865491427,
+      "area_reduction_ratio": 0.003622313450857284,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 256.0,
+        "y_min": 2.0,
+        "x_max": 384.0,
+        "y_max": 37.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-9ab43de8f1596d8b",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 7316,
+      "box_before": {
+        "x_min": 458.0,
+        "y_min": 3.0,
+        "x_max": 519.0,
+        "y_max": 295.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9550542235374451,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a13784f624246bfc",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1968,
+      "box_before": {
+        "x_min": 370.0,
+        "y_min": 40.0,
+        "x_max": 441.0,
+        "y_max": 93.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9629260301589966,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-aa9452b2d56fe93c",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1235,
+      "box_before": {
+        "x_min": 362.0,
+        "y_min": 45.0,
+        "x_max": 421.0,
+        "y_max": 117.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9638552069664001,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-aef87a5846e218a0",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1622,
+      "box_before": {
+        "x_min": 207.0,
+        "y_min": 192.0,
+        "x_max": 253.0,
+        "y_max": 269.0
+      },
+      "component_count_before": 5,
+      "geometric_confidence": 0.9290977716445923,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b02dee253e58aa59",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 675,
+      "box_before": {
+        "x_min": 232.0,
+        "y_min": 192.0,
+        "x_max": 252.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9466179013252258,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b56b7430a1c8442c",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1595,
+      "box_before": {
+        "x_min": 262.0,
+        "y_min": 98.0,
+        "x_max": 351.0,
+        "y_max": 133.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9689248204231262,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b6754272e8baaa0c",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1218,
+      "box_before": {
+        "x_min": 270.0,
+        "y_min": 118.0,
+        "x_max": 353.0,
+        "y_max": 145.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9419305920600891,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-bb28bf65cf542d8f",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 810,
+      "box_before": {
+        "x_min": 356.0,
+        "y_min": 78.0,
+        "x_max": 405.0,
+        "y_max": 133.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9457841515541077,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c1304f69360d5986",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 641,
+      "box_before": {
+        "x_min": 371.0,
+        "y_min": 192.0,
+        "x_max": 384.0,
+        "y_max": 247.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9175539016723633,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-d0d2e6b9c9e9bf54",
+      "label": "car bumper",
+      "region_kind": "thing",
+      "discovery_area": 41061,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 198.0,
+        "x_max": 635.0,
+        "y_max": 479.0
+      },
+      "component_count_before": 26,
+      "geometric_confidence": 0.9648972153663635,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 2,
+      "latency_s": 0.46159928299312014,
+      "model_mask_area": 23579,
+      "clipped_pixel_count": 23579,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-d1af5b2edef56953",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 759,
+      "box_before": {
+        "x_min": 522.0,
+        "y_min": 73.0,
+        "x_max": 573.0,
+        "y_max": 100.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9113438129425049,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-d3d60e2b9ff83f08",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1389,
+      "box_before": {
+        "x_min": 372.0,
+        "y_min": 254.0,
+        "x_max": 481.0,
+        "y_max": 292.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9256682991981506,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-dbb6f54d24b398c5",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1978,
+      "box_before": {
+        "x_min": 372.0,
+        "y_min": 244.0,
+        "x_max": 481.0,
+        "y_max": 287.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9559859037399292,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e1e6c52fcfe1448b",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1317,
+      "box_before": {
+        "x_min": 510.0,
+        "y_min": 34.0,
+        "x_max": 570.0,
+        "y_max": 71.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9498779773712158,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e9cf83333a2d5828",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 1039,
+      "box_before": {
+        "x_min": 482.0,
+        "y_min": 12.0,
+        "x_max": 530.0,
+        "y_max": 61.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.8419068455696106,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-eb345daad5d745bb",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 38134,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 5.0,
+        "x_max": 418.0,
+        "y_max": 428.0
+      },
+      "component_count_before": 45,
+      "geometric_confidence": 0.9547504186630249,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.01297136300127022,
+      "model_mask_area": 6293,
+      "clipped_pixel_count": 6046,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 14,
+          "box": {
+            "x_min": 208.0,
+            "y_min": 128.0,
+            "x_max": 211.0,
+            "y_max": 134.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 14,
+          "refined_overlap": 14,
+          "detector_box_overlap": 14,
+          "distance_to_box_center_px": 51.31912875089319
+        },
+        {
+          "component_id": 2,
+          "area": 5,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 146.0,
+            "x_max": 198.0,
+            "y_max": 150.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 5,
+          "refined_overlap": 5,
+          "detector_box_overlap": 5,
+          "distance_to_box_center_px": 32.5084474398574
+        },
+        {
+          "component_id": 3,
+          "area": 6,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 153.0,
+            "x_max": 197.0,
+            "y_max": 159.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 6,
+          "refined_overlap": 6,
+          "detector_box_overlap": 6,
+          "distance_to_box_center_px": 23.639664527978844
+        },
+        {
+          "component_id": 4,
+          "area": 29,
+          "box": {
+            "x_min": 204.0,
+            "y_min": 156.0,
+            "x_max": 209.0,
+            "y_max": 165.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 29,
+          "refined_overlap": 29,
+          "detector_box_overlap": 29,
+          "distance_to_box_center_px": 21.970917958602083
+        },
+        {
+          "component_id": 5,
+          "area": 2,
+          "box": {
+            "x_min": 176.0,
+            "y_min": 168.0,
+            "x_max": 177.0,
+            "y_max": 170.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 19.535140010585394
+        },
+        {
+          "component_id": 6,
+          "area": 2,
+          "box": {
+            "x_min": 178.0,
+            "y_min": 172.0,
+            "x_max": 179.0,
+            "y_max": 174.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 15.593668498308132
+        },
+        {
+          "component_id": 7,
+          "area": 9,
+          "box": {
+            "x_min": 175.0,
+            "y_min": 175.0,
+            "x_max": 178.0,
+            "y_max": 180.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 9,
+          "refined_overlap": 9,
+          "detector_box_overlap": 9,
+          "distance_to_box_center_px": 15.190281199702833
+        },
+        {
+          "component_id": 8,
+          "area": 2,
+          "box": {
+            "x_min": 171.0,
+            "y_min": 177.0,
+            "x_max": 172.0,
+            "y_max": 179.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 20.53069330679046
+        },
+        {
+          "component_id": 9,
+          "area": 6,
+          "box": {
+            "x_min": 199.0,
+            "y_min": 177.0,
+            "x_max": 202.0,
+            "y_max": 180.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 6,
+          "refined_overlap": 6,
+          "detector_box_overlap": 6,
+          "distance_to_box_center_px": 8.767072681188218
+        },
+        {
+          "component_id": 10,
+          "area": 2,
+          "box": {
+            "x_min": 200.0,
+            "y_min": 184.0,
+            "x_max": 202.0,
+            "y_max": 185.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 9.164306361646137
+        },
+        {
+          "component_id": 11,
+          "area": 1,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 185.0,
+            "x_max": 197.0,
+            "y_max": 186.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 6.077622160978071
+        },
+        {
+          "component_id": 12,
+          "area": 1,
+          "box": {
+            "x_min": 170.0,
+            "y_min": 187.0,
+            "x_max": 171.0,
+            "y_max": 188.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 22.07067215511757
+        },
+        {
+          "component_id": 13,
+          "area": 35,
+          "box": {
+            "x_min": 200.0,
+            "y_min": 187.0,
+            "x_max": 206.0,
+            "y_max": 199.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 35,
+          "refined_overlap": 35,
+          "detector_box_overlap": 35,
+          "distance_to_box_center_px": 11.075493146746265
+        },
+        {
+          "component_id": 14,
+          "area": 1,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 192.0,
+            "x_max": 197.0,
+            "y_max": 193.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 11.816558572624437
+        },
+        {
+          "component_id": 15,
+          "area": 42,
+          "box": {
+            "x_min": 198.0,
+            "y_min": 211.0,
+            "x_max": 205.0,
+            "y_max": 221.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 42,
+          "refined_overlap": 42,
+          "detector_box_overlap": 42,
+          "distance_to_box_center_px": 32.05271299280288
+        },
+        {
+          "component_id": 16,
+          "area": 59,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 227.0,
+            "x_max": 204.0,
+            "y_max": 241.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 59,
+          "refined_overlap": 59,
+          "detector_box_overlap": 59,
+          "distance_to_box_center_px": 46.853450192751225
+        },
+        {
+          "component_id": 17,
+          "area": 30,
+          "box": {
+            "x_min": 196.0,
+            "y_min": 247.0,
+            "x_max": 204.0,
+            "y_max": 254.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 30,
+          "refined_overlap": 30,
+          "detector_box_overlap": 30,
+          "distance_to_box_center_px": 66.70146448209677
+        },
+        {
+          "component_id": 18,
+          "area": 1,
+          "box": {
+            "x_min": 203.0,
+            "y_min": 264.0,
+            "x_max": 204.0,
+            "y_max": 265.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 83.65950875503081
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-f64c06b0f4e6ac8e",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 3045,
+      "box_before": {
+        "x_min": 380.0,
+        "y_min": 2.0,
+        "x_max": 470.0,
+        "y_max": 76.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9726238250732422,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.01344897600938566,
+      "model_mask_area": 5284,
+      "clipped_pixel_count": 5284,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-fa795788c31aa4ee",
+      "label": "ceiling light",
+      "region_kind": "thing",
+      "discovery_area": 2984,
+      "box_before": {
+        "x_min": 168.0,
+        "y_min": 192.0,
+        "x_max": 232.0,
+        "y_max": 276.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9648502469062805,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-01a5648e5a4c4f70",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-2ce2f27edcf62e97",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-366aa5edcda77e4a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-5eb76719354c0a8a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-68000a81ad2bcbd6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-75741487b9923f0f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor tiles"
+    },
+    {
+      "region_id": "region-a9a3d3bd10f0e2d7",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-b4ab90831346ad41",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-ca22f77277e593e1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    }
+  ]
+}

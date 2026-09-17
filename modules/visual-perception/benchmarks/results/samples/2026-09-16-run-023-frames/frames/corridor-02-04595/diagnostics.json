@@ -1,0 +1,188 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-04595",
+  "input_sha256": "1faa7b8fe447782d3ea7faa6bfec868ed5d26f866a93aa577ab38dede66f3425",
+  "latency_s": 96.08165835999534,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 8,
+  "proposal_count": 18,
+  "merged_proposal_count": 10,
+  "regions_with_multiple_proposals": 2,
+  "label_counts": [
+    [
+      "ceiling",
+      7
+    ],
+    [
+      "flooring",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "ceilings",
+      7
+    ],
+    [
+      "flooring",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      8
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 8,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 8,
+    "missing": 0,
+    "minimum": 1.0,
+    "maximum": 1.0,
+    "mean": 1.0,
+    "median": 1.0,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "duplicate_label_hypotheses": 5,
+  "mode_collapse": {
+    "dominant_label": "ceiling",
+    "dominant_fraction": 0.875,
+    "distinct_labels": 2,
+    "dominant_category": "ceilings",
+    "dominant_category_fraction": 0.875,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 8,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      8
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "indistinguishable",
+        13
+      ],
+      [
+        "supports",
+        7
+      ],
+      [
+        "contradicts",
+        4
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 2,
+    "region_kind_contradictions": 8,
+    "reconciled_regions": 8,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 3,
+    "entity_groups": 1,
+    "regions_in_entity_groups": 2,
+    "supported_entity_groups": 0,
+    "semantic_relations": [],
+    "geometric_relations": 7,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 8
+  },
+  "published_region_count": 0,
+  "structural_context_count": 8,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      8
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-0198109a5dad80a8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "flooring"
+    },
+    {
+      "region_id": "region-032d2af2f9c47dde",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-172c22c90ba7abb6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-61fcaf38e5898686",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-6efb23903fab2fe6",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-b785df8ffc19b5f8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-dd88344b41e405b5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-fba2208db78be029",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    }
+  ]
+}

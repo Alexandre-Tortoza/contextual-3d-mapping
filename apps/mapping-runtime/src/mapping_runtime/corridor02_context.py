@@ -14,16 +14,28 @@ from typing import Any
 
 from geometric_map import GeometryReference, read_pcd_geometry, select_neighbourhood
 from semantic_fusion import (
+    FusedLanguageEmbedding,
+    GeometricSemanticPoint,
+    GeometryConsistencyConfig,
+    GeometryConsistencyPolicy,
     LabelledPoint,
+    LanguageEmbeddingReference,
+    PointVisualFeature,
     SemanticContribution,
+    SemanticNature,
+    VisualCoherencePolicy,
+    fuse_language_embeddings,
     fuse_point_contributions,
+    measure_geometric_support,
     measure_spatial_support,
 )
+from semantic_map import write_semantic_embedding_archive
 from sensor_association import (
     AssociationStatus,
     BoundaryPolicy,
     CameraLidarCalibration,
     CameraModel,
+    DenseFeatureMap,
     MapAnchoredPoint,
     MeasuredSurfaceModel,
     RgbFrame,
@@ -100,6 +112,134 @@ def _pipeline_backends(visual_observation: Path) -> dict[str, Any]:
             summary["fallback_checkpoint"] = stage_config.get("fallback_checkpoint")
         stages[stage] = summary
     return stages
+
+
+# Lê a configuração CLIP declarada pela run de percepção de origem. É a
+# fronteira que dá identidade estável (espaço, dimensão, produtor) a um
+# language_embedding_ref antes de a fusão de linguagem poder comparar vetores
+# de frames diferentes. Ausência de manifest ou de config não é erro aqui:
+# quem decide se isso é fatal é o chamador, conforme a capability estar ligada.
+def _language_embedding_config(visual_observation: Path) -> dict[str, Any] | None:
+    """Lê ``config.language_embedding`` do manifest da run de percepção.
+
+    Argumentos:
+        visual_observation: ``observation.json`` de um keyframe da run.
+    Retorna:
+        dicionário com ``backend``, ``checkpoint``, ``dimension`` e
+        ``normalize``, ou ``None`` se o manifest não existir ou não declarar
+        a configuração.
+    """
+    manifest_path = visual_observation.parent.parent.parent / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    config = json.loads(manifest_path.read_text(encoding="utf-8")).get("config") or {}
+    stage_config = config.get("language_embedding")
+    if not isinstance(stage_config, dict) or not stage_config.get("backend"):
+        return None
+    return {
+        "backend": stage_config["backend"],
+        "checkpoint": stage_config.get("checkpoint", "none"),
+        "dimension": stage_config.get("dimension", 512),
+        "normalize": stage_config.get("normalize", True),
+    }
+
+
+# Constrói a referência rastreável de um embedding CLIP a partir de um
+# language_embedding_ref publicado por uma região forte. Existe porque a
+# fusão de linguagem (#140) precisa de identidade completa por referência, e
+# nem o archive nem a config do backend chegam prontos no record de
+# associação — só o embedding_id chega.
+def _language_embedding_reference(
+    embedding_id: str, frame_dir: Path, config: dict[str, Any],
+) -> LanguageEmbeddingReference:
+    """Cria a referência de fusão para um embedding CLIP publicado por um frame.
+
+    Argumentos:
+        embedding_id: chave do vetor no archive ``embeddings.npz`` do frame.
+        frame_dir: diretório do frame que deveria conter ``embeddings.npz``.
+        config: configuração CLIP lida do manifest da run (``backend``,
+            ``checkpoint``, ``dimension``, ``normalize``).
+    Retorna:
+        referência completa, pronta para ser resolvida na fusão.
+    Levanta:
+        ValueError: se o archive do frame não existir.
+    """
+    archive_path = frame_dir / "embeddings.npz"
+    if not archive_path.is_file():
+        raise ValueError(
+            f"language_embedding_fusion requires {archive_path} for region {embedding_id!r}, but it does not exist."
+        )
+    return LanguageEmbeddingReference(
+        embedding_id=embedding_id,
+        archive_uri=archive_path.resolve().as_uri(),
+        embedding_space=f"{config['backend']}:{config['checkpoint']}:language_aligned",
+        dimension=int(config["dimension"]),
+        producer=f"language_embedding:{config['backend']}:{config['checkpoint']}",
+        normalized=bool(config["normalize"]),
+    )
+
+
+# Resolve uma referência de embedding CLIP de volta ao vetor bruto, lendo o
+# archive apontado por ``archive_uri``. É o único ponto onde a fusão de
+# linguagem cruza de volta para o formato de arquivo do produtor.
+def _resolve_language_embedding(reference: LanguageEmbeddingReference) -> tuple[float, ...]:
+    """Resolve o vetor referenciado por ``reference.archive_uri``."""
+    from urllib.parse import unquote, urlparse
+
+    from visual_perception import resolve_embedding_vector
+
+    archive_path = Path(unquote(urlparse(reference.archive_uri).path))
+    return resolve_embedding_vector(archive_path, reference.embedding_id)
+
+
+# Reabre a feature densa pixel-aligned persistida pela run de percepção. Esta
+# fronteira pertence à aplicação: ela adapta artifacts entre módulos, enquanto
+# sensor-association continua recebendo apenas seu contract DenseFeatureMap.
+def _load_dense_feature_map(visual_observation: Path, *, width: int, height: int) -> DenseFeatureMap | None:
+    """Carrega o artifact denso de um frame quando a run o publicou.
+
+    Argumentos:
+        visual_observation: arquivo ``observation.json`` do frame de origem.
+        width: largura RGB esperada pelo runtime.
+        height: altura RGB esperada pelo runtime.
+    Retorna:
+        mapa denso pixel-aligned, ou ``None`` quando a run não o persistiu.
+    Levanta:
+        ValueError: se valores, metadata ou resolução forem incompatíveis.
+    """
+    import numpy as np
+
+    frame_dir = visual_observation.parent
+    values_path = frame_dir / "dense-features.npz"
+    metadata_path = frame_dir / "dense-features.json"
+    if not values_path.is_file() and not metadata_path.is_file():
+        return None
+    if not values_path.is_file() or not metadata_path.is_file():
+        raise ValueError("Dense feature artifact requires both values and metadata files.")
+    with np.load(values_path) as archive:
+        if "values" not in archive or "valid_support" not in archive:
+            raise ValueError("Dense feature artifact is missing values or valid_support.")
+        values = np.asarray(archive["values"])
+        valid_support = np.asarray(archive["valid_support"])
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if values.shape[:2] != (height, width):
+        raise ValueError("Dense feature artifact resolution must match the RGB frame.")
+    if metadata.get("representation") != "pixel_aligned":
+        raise ValueError("Dense feature artifact must declare pixel_aligned representation.")
+    if metadata.get("grid_width") != width or metadata.get("grid_height") != height:
+        raise ValueError("Dense feature metadata grid must match the RGB frame.")
+    model_id = metadata.get("model_id")
+    if not isinstance(model_id, str) or not model_id:
+        raise ValueError("Dense feature metadata must declare model_id.")
+    checkpoint = metadata.get("checkpoint") or "none"
+    producer = f"feature_extraction:{model_id}:{metadata.get('generation', 'unknown')}"
+    return DenseFeatureMap(
+        values=values,
+        embedding_space=f"{model_id}:{checkpoint}:pixel_aligned",
+        producer=producer,
+        artifact_reference=values_path.resolve().as_uri(),
+        valid_support=valid_support,
+    )
 
 
 #: Nomes lógicos das camadas de imagem principais de um frame, na chave que
@@ -307,6 +447,9 @@ class Corridor02ContextRequest:
     pose_sampling: str = "interpolated"
     max_pose_gap_ns: int = 200_000_000
     visibility_mode: str = "measured_surfaces"
+    visual_coherence_policy: VisualCoherencePolicy = VisualCoherencePolicy.DIAGNOSTIC
+    geometry_consistency_policy: GeometryConsistencyPolicy = GeometryConsistencyPolicy.DIAGNOSTIC
+    geometry_consistency_config: GeometryConsistencyConfig = field(default_factory=GeometryConsistencyConfig)
     visibility_geometry: Path | None = None
     surface_config: SurfaceVisibilityConfig = field(default_factory=SurfaceVisibilityConfig)
     audit_geometry_ids: frozenset[str] = frozenset()
@@ -316,6 +459,12 @@ class Corridor02ContextRequest:
     crop_radius_m: float = 15.0
     max_points: int = 150_000
     with_debug_images: bool = False
+    #: Quando ``True``, funde os embeddings CLIP referenciados pelas regiões
+    #: fortes de cada ponto e publica ``semantic-embeddings.npz`` ao lado do
+    #: artifact contextual. Opt-in porque exige que a run de percepção tenha
+    #: publicado ``embeddings.npz`` por frame e a configuração de
+    #: ``language_embedding`` no manifest.
+    language_embedding_fusion: bool = False
 
     # Exige uma fonte de pose e ao menos um keyframe antes de qualquer leitura,
     # porque ambos são pré-condições da composição, e não erros de dados.
@@ -325,6 +474,17 @@ class Corridor02ContextRequest:
             raise ValueError("visibility_mode must be legacy_cells, dense_cells or measured_surfaces.")
         if self.footprint_mode not in {"semantic_grounding", "legacy_discovery"}:
             raise ValueError("footprint_mode must be semantic_grounding or legacy_discovery.")
+        if not isinstance(self.visual_coherence_policy, VisualCoherencePolicy):
+            raise ValueError("visual_coherence_policy must be a VisualCoherencePolicy.")
+        if not isinstance(self.geometry_consistency_policy, GeometryConsistencyPolicy):
+            raise ValueError("geometry_consistency_policy must be a GeometryConsistencyPolicy.")
+        if self.geometry_consistency_policy in {
+            GeometryConsistencyPolicy.ABSTAIN,
+            GeometryConsistencyPolicy.DOWNRANK_CONTRADICTIONS,
+        }:
+            raise ValueError(
+                "Active geometry consistency policies require a reviewed annotated reference evaluation."
+            )
         if self.pose_sampling not in {"interpolated", "nearest"}:
             raise ValueError("pose_sampling must be interpolated or nearest.")
         if type(self.max_pose_gap_ns) is not int or self.max_pose_gap_ns <= 0:
@@ -662,6 +822,7 @@ def _region_evidence(
             evidence.append(VisualRegionEvidence(
                 region_id, frozenset(zip(x.tolist(), y.tolist(), strict=True)),
                 label=footprint.concept, feature_reference=region.get("visual_embedding_ref"),
+                language_embedding_reference=region.get("language_embedding_ref"),
                 grounding_status=status, grounding_reference=reference if footprint.strong and not legacy_discovery else None,
             ))
         metadata[region_id] = {
@@ -757,6 +918,58 @@ def _apply_spatial_support(points: list[dict[str, Any]]) -> dict[str, int]:
             state = "corroborated"
         context["support_state"] = state
         counts[state] += 1
+    return counts
+
+
+# Normaliza o vocabulário de natureza publicado pelo produtor antes de cruzar a
+# fronteira de fusão. Nomes desconhecidos permanecem unknown e nunca acionam
+# uma conclusão geométrica forte.
+def _semantic_nature(value: object) -> SemanticNature:
+    """Converte a natureza textual do claim no enum conservador da fusão."""
+    if not isinstance(value, str):
+        return SemanticNature.UNKNOWN
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {"surface", "structural_surface", "stuff"}:
+        return SemanticNature.SURFACE
+    if normalized in {"object", "thing"}:
+        return SemanticNature.OBJECT
+    if normalized == "part":
+        return SemanticNature.PART
+    return SemanticNature.UNKNOWN
+
+
+# Anexa o diagnóstico pós-2D aos pontos já fundidos. Existe depois da fusão
+# porque mede a plausibilidade da decisão publicada, sem alterar seu claim.
+def _apply_geometric_support(
+    points: list[dict[str, Any]], config: GeometryConsistencyConfig,
+) -> dict[str, int]:
+    """Mede e publica suporte geométrico para os contexts rotulados.
+
+    Argumentos:
+        points: pontos do artifact contextual, no frame estável do mapa.
+        config: limiares reproduzíveis da medição de continuidade local.
+    Retorna:
+        contagem por estado de suporte geométrico.
+    """
+    candidates = tuple(
+        GeometricSemanticPoint(
+            str(point["geometry_id"]),
+            tuple(float(value) for value in point["coordinates_m"]),
+            _semantic_nature((point.get("context") or {}).get("semantic_nature")),
+            is_boundary=(point.get("context") or {}).get("semantic_status") == "boundary",
+        )
+        for point in points
+        if (point.get("context") or {}).get("label")
+    )
+    diagnostics = measure_geometric_support(candidates, config)
+    counts = {"coherent": 0, "contradictory": 0, "unresolved": 0}
+    for point in points:
+        context = point.get("context") or {}
+        diagnostic = diagnostics.get(str(point["geometry_id"]))
+        if diagnostic is None:
+            continue
+        context["geometric_support"] = asdict(diagnostic)
+        counts[diagnostic.state] += 1
     return counts
 
 
@@ -857,6 +1070,8 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
     rejected: dict[str, Any] = {}
     observations: list[dict[str, Any]] = []
     regions: dict[str, dict[str, Any]] = {}
+    observation_frame_dirs: dict[str, Path] = {}
+    language_embedding_config: dict[str, Any] | None = None
 
     with AnyReader([request.bag]) as reader:
         camera_connections = [item for item in reader.connections if item.topic == "/camera_1/image_raw"]
@@ -912,6 +1127,14 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             if raw_rgb.shape[:2] != valid_mask.shape:
                 raise ValueError("valid-area mask dimensions must match the RGB image.")
             observation_id = f"corridor-02:camera_1:{keyframe.camera_sequence_index}"
+            observation_frame_dirs[observation_id] = keyframe.visual_observation.resolve().parent
+            if request.language_embedding_fusion and language_embedding_config is None:
+                language_embedding_config = _language_embedding_config(keyframe.visual_observation)
+                if language_embedding_config is None:
+                    raise ValueError(
+                        "language_embedding_fusion requires the perception run manifest to declare "
+                        "config.language_embedding (backend, checkpoint, dimension, normalize)."
+                    )
             rgb_reference = ObservationReference(
                 observation_id=observation_id,
                 dataset_id="corridor-02",
@@ -932,6 +1155,9 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 frame_id=FrameId("cmu_rc1_velodyne"),
             )
             rgb = _rgb_frame(rgb_reference, raw_rgb, valid_mask)
+            dense_feature_map = _load_dense_feature_map(
+                keyframe.visual_observation.resolve(), width=rgb.width, height=rgb.height
+            )
             evidence, region_metadata = _region_evidence(
                 visual_payload, valid_mask, keyframe.frame_id, boundary_policy=request.boundary_policy,
                 legacy_discovery=request.footprint_mode == "legacy_discovery",
@@ -948,6 +1174,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     map_points, rgb, calibration, map_to_camera, surfaces, evidence,
                     lidar_observation=lidar_reference, max_time_delta_ns=100_000_000,
                     boundary_policy=request.boundary_policy,
+                    dense_feature_map=dense_feature_map,
                 )
                 results = batch.associations
                 for region_id, metadata in region_metadata.items():
@@ -960,6 +1187,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                     lidar_observation=lidar_reference, max_time_delta_ns=100_000_000,
                     boundary_policy=request.boundary_policy,
                     visibility_geometry=None if request.visibility_mode == "legacy_cells" else full_geometry,
+                    dense_feature_map=dense_feature_map,
                 )
             for association in results:
                 geometry_id = association.geometry.geometry_id
@@ -977,6 +1205,10 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                         "pixel": association.pixel,
                         "color_rgb": association.color_rgb,
                         "region_id": association.region_id,
+                        "semantic_nature": (
+                            regions[association.region_id].get("region_kind")
+                            if association.region_id is not None else None
+                        ),
                         "label": association.label,
                         "tentative_label": association.tentative_label,
                         "semantic_status": association.semantic_status.value,
@@ -984,6 +1216,13 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                         "boundary_margin_px": association.boundary_margin_px,
                         "grounding_reference": association.grounding_reference,
                         "surface_evidence": asdict(association.surface_evidence) if association.surface_evidence else None,
+                        "dense_feature": association.dense_feature,
+                        "embedding_space": association.embedding_space,
+                        "feature_dimension": association.feature_dimension,
+                        "feature_producer": association.feature_producer,
+                        "dense_feature_reference": association.dense_feature_reference,
+                        "feature_reference": association.feature_reference,
+                        "language_embedding_reference": association.language_embedding_reference,
                         "lidar_observation_id": lidar_reference.observation_id,
                         "lidar_timestamp_ns": lidar_timestamp_ns,
                     }
@@ -1066,6 +1305,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
 
     contextual_point_count = 0
     multi_observation_point_count = 0
+    fused_language_embeddings: dict[str, FusedLanguageEmbedding] = {}
     for point in base["points"]:
         geometry_id = str(point["geometry_id"])
         records = associated.get(geometry_id)
@@ -1092,12 +1332,31 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 support_state=(regions[record["region_id"]].get("support") or {}).get("state"),
                 visual_support=regions[record["region_id"]].get("visual_support"),
                 region_quality=regions[record["region_id"]].get("region_quality"),
+                point_feature=(
+                    PointVisualFeature(
+                        values=tuple(record["dense_feature"]),
+                        embedding_space=str(record["embedding_space"]),
+                        producer=str(record["feature_producer"]),
+                        artifact_reference=str(record["dense_feature_reference"]),
+                    )
+                    if record.get("dense_feature") is not None and record.get("embedding_space")
+                    and record.get("feature_producer") and record.get("dense_feature_reference") else None
+                ),
+                language_embedding=(
+                    _language_embedding_reference(
+                        str(record["language_embedding_reference"]),
+                        observation_frame_dirs[record["observation_id"]],
+                        language_embedding_config,
+                    )
+                    if request.language_embedding_fusion and record.get("language_embedding_reference")
+                    else None
+                ),
             )
             for record in records
             if record["label"] and record["region_id"]
         ]
         if contributions:
-            fused = fuse_point_contributions(contributions)
+            fused = fuse_point_contributions(contributions, visual_coherence_policy=request.visual_coherence_policy)
             primary = next(
                 record
                 for record in records
@@ -1105,6 +1364,12 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
                 and record["region_id"] == fused.region_id
             )
             contextual_point_count += 1
+            if request.language_embedding_fusion:
+                with_language = [item for item in contributions if item.language_embedding is not None]
+                if with_language:
+                    fused_language_embeddings[geometry_id] = fuse_language_embeddings(
+                        with_language, _resolve_language_embedding
+                    )
         else:
             fused = None
             primary = next((record for record in records if record["tentative_label"]), records[0])
@@ -1118,6 +1383,7 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             "pixel": primary["pixel"],
             "color_rgb": primary["color_rgb"],
             "region_id": primary["region_id"],
+            "semantic_nature": primary["semantic_nature"],
             "label": primary["label"],
             "tentative_label": primary["tentative_label"],
             "semantic_status": primary["semantic_status"],
@@ -1134,6 +1400,8 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
             ]
         if fused is not None:
             context["confidence"] = fused.confidence
+            if fused.visual_coherence is not None:
+                context["visual_coherence"] = asdict(fused.visual_coherence)
         if fused is not None and fused.contribution_count > 1:
             context["observation_count"] = fused.contribution_count
             context["agreement"] = fused.agreement
@@ -1154,6 +1422,9 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         point["context"] = context
 
     support_counts = _apply_spatial_support(base["points"])
+    geometric_support_counts = _apply_geometric_support(
+        base["points"], request.geometry_consistency_config,
+    ) if request.geometry_consistency_policy is not GeometryConsistencyPolicy.DISABLED else {}
 
     base["schema_version"] = 3
     base["artifact_type"] = "contextual_rgb_lidar_slice"
@@ -1164,6 +1435,11 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         "semantic_overlay": "partial_unverified",
         "evidence_inspection": "available",
         "temporal_fusion": "available" if len(request.keyframes) > 1 else "single_observation",
+        "visual_coherence": request.visual_coherence_policy.value,
+        "geometric_consistency": request.geometry_consistency_policy.value,
+        "language_embedding_fusion": "available" if fused_language_embeddings else (
+            "disabled" if not request.language_embedding_fusion else "no_evidence"
+        ),
     }
     base["observations"] = observations
     base["regions"] = list(regions.values())
@@ -1184,12 +1460,16 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         "unobserved_geometric_point_count": len(base["points"]) - len(associated),
         "multi_observation_point_count": multi_observation_point_count,
         "support_state_counts": support_counts,
+        "geometric_support_counts": geometric_support_counts,
         "pose_source": pose_source,
         "claim_status": "predição VLM não verificada",
         "footprint_mode": request.footprint_mode,
         "boundary_policy": asdict(request.boundary_policy),
         "pose_sampling": request.pose_sampling,
         "visibility_mode": request.visibility_mode,
+        "visual_coherence_policy": request.visual_coherence_policy.value,
+        "geometry_consistency_policy": request.geometry_consistency_policy.value,
+        "geometry_consistency_config": asdict(request.geometry_consistency_config),
     }
 
     # Grava DEBUG de composição final: distribuição de labels por ponto.
@@ -1233,6 +1513,10 @@ def export_corridor02_context(request: Corridor02ContextRequest) -> Path:
         base.setdefault("debug_manifest", {})["pipeline_backends"] = pipeline_backends
 
     request.destination.parent.mkdir(parents=True, exist_ok=True)
+    if fused_language_embeddings:
+        embeddings_archive = request.destination.parent / f"{request.destination.stem}-semantic-embeddings.npz"
+        base["semantic_embeddings"] = write_semantic_embedding_archive(embeddings_archive, fused_language_embeddings)
+
     temporary = request.destination.with_suffix(request.destination.suffix + ".tmp")
     temporary.write_text(json.dumps(base, separators=(",", ":")), encoding="utf-8")
     temporary.replace(request.destination)

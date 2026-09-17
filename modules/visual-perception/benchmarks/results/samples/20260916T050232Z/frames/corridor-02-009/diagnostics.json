@@ -1,0 +1,428 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-009",
+  "input_sha256": "154a57b973ac8bcb044e11a5742bf2d677a3e05079490200c51adfd8c635f53a",
+  "latency_s": 199.56215342400537,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 15,
+  "proposal_count": 32,
+  "merged_proposal_count": 22,
+  "regions_with_multiple_proposals": 7,
+  "label_counts": [
+    [
+      "grass",
+      14
+    ],
+    [
+      "grass field",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "landscape",
+      7
+    ],
+    [
+      "ground cover",
+      5
+    ],
+    [
+      "landscaping",
+      2
+    ],
+    [
+      "park",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      13
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 15,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 15,
+    "missing": 0,
+    "minimum": 0.830396294593811,
+    "maximum": 0.9921240210533142,
+    "mean": 0.932620088259379,
+    "median": 0.9295051097869873,
+    "distinct_values": 15,
+    "stddev": 0.04601736071652569,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 2,
+  "mode_collapse": {
+    "dominant_label": "grass",
+    "dominant_fraction": 0.9333333333333333,
+    "distinct_labels": 2,
+    "dominant_category": "landscape",
+    "dominant_category_fraction": 0.4666666666666667,
+    "distinct_categories": 4
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "below_min_relative_area",
+      4
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        31
+      ],
+      [
+        "indistinguishable",
+        11
+      ],
+      [
+        "contradicts",
+        3
+      ]
+    ],
+    "regions_with_unsupported_primary": 1,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 12,
+    "reconciled_regions": 13,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 1,
+    "regions_in_entity_groups": 10,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 49,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 13
+  },
+  "published_region_count": 6,
+  "structural_context_count": 9,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      9
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-2a3757ff22972ece",
+      "label": "grass",
+      "region_kind": "thing",
+      "discovery_area": 1045,
+      "box_before": {
+        "x_min": 531.0,
+        "y_min": 170.0,
+        "x_max": 572.0,
+        "y_max": 211.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9045785069465637,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 3.7145561590004945,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2f7339e6b7c48c4d",
+      "label": "grass field",
+      "region_kind": "thing",
+      "discovery_area": 102256,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 226.0,
+        "x_max": 640.0,
+        "y_max": 478.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9817507863044739,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 3.0178514089930104,
+      "model_mask_area": 100012,
+      "clipped_pixel_count": 5081,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 94927,
+          "box": {
+            "x_min": 3.0,
+            "y_min": 233.0,
+            "x_max": 639.0,
+            "y_max": 424.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 94927,
+          "refined_overlap": 94927,
+          "detector_box_overlap": 94927,
+          "distance_to_box_center_px": 0.4905064360943458
+        },
+        {
+          "component_id": 2,
+          "area": 2,
+          "box": {
+            "x_min": 260.0,
+            "y_min": 237.0,
+            "x_max": 262.0,
+            "y_max": 238.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 128.7713377216213
+        },
+        {
+          "component_id": 3,
+          "area": 1,
+          "box": {
+            "x_min": 610.0,
+            "y_min": 383.0,
+            "x_max": 611.0,
+            "y_max": 384.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 291.8331634332983
+        },
+        {
+          "component_id": 4,
+          "area": 1,
+          "box": {
+            "x_min": 71.0,
+            "y_min": 417.0,
+            "x_max": 72.0,
+            "y_max": 418.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 257.3371092740921
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 94927,
+      "area_ratio": 0.9283269441401971,
+      "area_reduction_ratio": 0.07167305585980288,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 3.0,
+        "y_min": 233.0,
+        "x_max": 639.0,
+        "y_max": 424.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-5cf06e3615ce1d7c",
+      "label": "grass",
+      "region_kind": "thing",
+      "discovery_area": 1110,
+      "box_before": {
+        "x_min": 602.0,
+        "y_min": 154.0,
+        "x_max": 640.0,
+        "y_max": 191.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9228959083557129,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c0e3e3d6336e576c",
+      "label": "grass",
+      "region_kind": "thing",
+      "discovery_area": 1152,
+      "box_before": {
+        "x_min": 451.0,
+        "y_min": 169.0,
+        "x_max": 493.0,
+        "y_max": 215.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9273940324783325,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c652ac870fea64f5",
+      "label": "grass",
+      "region_kind": "thing",
+      "discovery_area": 61641,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 1.0,
+        "x_max": 384.0,
+        "y_max": 218.0
+      },
+      "component_count_before": 14,
+      "geometric_confidence": 0.9882587194442749,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-daafc317a24d1879",
+      "label": "grass",
+      "region_kind": "thing",
+      "discovery_area": 58956,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 1.0,
+        "x_max": 640.0,
+        "y_max": 210.0
+      },
+      "component_count_before": 32,
+      "geometric_confidence": 0.9921240210533142,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-20c77561a5d99403",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-26e07bb944a8ebce",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-3aae375a707157eb",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-540ad3f6f8e34d7b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-6f73bdc3914a6faa",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-7970460af6edc42c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-bfd60aec47022971",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-eb0dc2ae85dd50f5",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    },
+    {
+      "region_id": "region-f407ea6ebf47a877",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "grass"
+    }
+  ]
+}

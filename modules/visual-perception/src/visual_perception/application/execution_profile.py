@@ -103,6 +103,12 @@ _REAL_MULTIMODAL_REASONING = MultimodalReasoningConfig(
     backend="qwen_vl",
     checkpoint="Qwen/Qwen2.5-VL-3B-Instruct",
     load_in_4bit=True,
+    # v10: schema de prompt de região reduzido (2 campos), só para este
+    # backend — ver o histórico de prompt_version em
+    # MultimodalReasoningConfig e reasoning_prompts._MINIMAL_SCHEMA_BODY.
+    # Generalizar isso para outros backends (era o default v9) quebrou o
+    # grounding textual do gemini_robotics_er.
+    prompt_version="v10",
     region_views=(
         EvidenceSlot.MASKED_SUBJECT.value,
         EvidenceSlot.TIGHT_CROP.value,

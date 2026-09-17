@@ -342,6 +342,7 @@ class FeatureExtractionConfig:
     upsampling: str = "nearest"
     input_resolution: int | None = None
     max_feature_map_mb: int = 384
+    persist_pixel_aligned_features: bool = False
     upsampler_repository: str = "mhamilton723/FeatUp:6b5a6c0e91f75e69194807128dcbc39c3084a30d"
     upsampler_checkpoint: str = (
         "https://marhamilresearch4.blob.core.windows.net/feature-upsampling-public/"
@@ -796,6 +797,22 @@ class MultimodalReasoningConfig:
     #: em 2026-09-15 no prompt de cena, 2,4 s contra 22,6 s com o default do modelo,
     #: e a resposta segue no mesmo contract. Muda a saída, então entra no fingerprint.
     thinking_budget: int = 0
+    #: Backend para o qual `FallbackMultimodalReasoningAdapter` troca, de forma
+    #: permanente pelo resto do run, quando o backend primário esgota os
+    #: próprios retries (#292: runs de dias contra um backend remoto de cota
+    #: limitada não podem travar quando a cota acaba). Mesmo padrão de
+    #: `FeatureExtractionConfig.fallback_backend`.
+    fallback_backend: str | None = None
+    #: Checkpoint do backend de fallback; obrigatório quando `fallback_backend`
+    #: está setado, pelo mesmo motivo de `checkpoint` para o backend primário.
+    fallback_checkpoint: str | None = None
+    #: `region_views` usado quando o fallback está ativo. Quando omitido e o
+    #: fallback é o Qwen local, cai para um teto de 2 views em vez do
+    #: `region_views` do primário: o Qwen2.5-VL-3B, ao contrário de um modelo
+    #: remoto maior, mede pior (rótulo errado, "colapso") com os até 4 views
+    #: simultâneas usadas pela referência de qualidade — relatado
+    #: empiricamente pelo usuário para este papel específico.
+    fallback_region_views: tuple[str, ...] | None = None
 
     # Garante que a versão do prompt está definida, já que ela identifica
     # qual template estruturado o backend deve usar. ``v8`` des-arredonda os dois
@@ -806,7 +823,18 @@ class MultimodalReasoningConfig:
     # 0,71) e aplicada ao de relação (``v7``, 0,42); estes dois escaparam — o de
     # cena por ser consultado uma vez por frame, e o de alternativa por não
     # aparecer em nenhuma distribuição que o diagnóstico resume. Fora esses dois
-    # números, os três prompts são byte-idênticos aos do ``v7``. ``v7`` acrescentou o prompt
+    # números, os três prompts são byte-idênticos aos do ``v7``.
+    #
+    # ``v10``/``v11`` (2026-09-17) reduzem o schema do prompt de região de 8
+    # campos para 2, mas só para o backend Qwen local. Generalizado como
+    # ``v9``, o schema reduzido fez o Gemini ecoar os exemplos do prompt
+    # (``"pallet"`` em vez de ``"wooden pallet"``) e perder confidence e
+    # alternatives. O Grounding-DINO não localiza ``"pallet"`` no palete do
+    # corridor-02, então a região perdeu a geometria no mapa publicado. A
+    # medição está em ``reasoning_prompts._MINIMAL_SCHEMA_BODY``. ``v9`` continua reservado ao
+    # schema de 8 campos + prior temporal (ver ``temporal_prior_mode``); só
+    # ``execution_profile._REAL_MULTIMODAL_REASONING`` (a config de referência
+    # do Qwen) seleciona ``v10``/``v11`` por default. ``v7`` acrescentou o prompt
     # de **relação** (#206); os prompts de cena e de região são idênticos aos do
     # ``v6``, byte a byte, de modo que labels e claims continuam comparáveis
     # entre os dois — o que muda é que a versão passa a identificar três
@@ -845,6 +873,31 @@ class MultimodalReasoningConfig:
                 "multimodal_reasoning.region_views must include at least one foreground slot: "
                 "interpreting a region from context alone would describe its surroundings."
             )
+        if self.fallback_backend not in {None, "qwen_vl", "gemini_robotics_er"}:
+            raise ValueError(
+                "multimodal_reasoning.fallback_backend must be None, 'qwen_vl', or 'gemini_robotics_er'."
+            )
+        if self.fallback_backend == self.backend:
+            raise ValueError("multimodal_reasoning.fallback_backend must differ from backend.")
+        if self.fallback_backend is not None and not self.fallback_checkpoint:
+            raise ValueError("multimodal_reasoning.fallback_backend requires fallback_checkpoint.")
+        if self.fallback_region_views is not None:
+            if self.fallback_backend is None:
+                raise ValueError("multimodal_reasoning.fallback_region_views requires fallback_backend.")
+            unknown_fallback = [name for name in self.fallback_region_views if name not in known]
+            if unknown_fallback:
+                raise ValueError(
+                    "multimodal_reasoning.fallback_region_views has unknown evidence slots: "
+                    f"{unknown_fallback}."
+                )
+            if len(set(self.fallback_region_views)) != len(self.fallback_region_views):
+                raise ValueError(
+                    "multimodal_reasoning.fallback_region_views must not repeat an evidence slot."
+                )
+            if not any(EvidenceSlot(name) in FOREGROUND_SLOTS for name in self.fallback_region_views):
+                raise ValueError(
+                    "multimodal_reasoning.fallback_region_views must include at least one foreground slot."
+                )
         if self.scene_context_mode not in {mode.value for mode in SceneContextMode}:
             raise ValueError(
                 "multimodal_reasoning.scene_context_mode must be "

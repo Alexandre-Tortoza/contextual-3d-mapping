@@ -81,12 +81,18 @@ def _parser() -> argparse.ArgumentParser:
     context.add_argument("--disable-boundary-policy", action="store_true", help="ablação explícita da incerteza de boundary")
     context.add_argument("--registration-sigma-px", type=float, default=0.0)
     context.add_argument("--visibility-mode", choices=("measured_surfaces", "dense_cells", "legacy_cells"), default="measured_surfaces")
+    context.add_argument("--visual-coherence-policy", choices=("disabled", "diagnostic", "downrank_contradictions"), default="diagnostic")
+    context.add_argument("--geometry-consistency-policy", choices=("disabled", "diagnostic", "abstain", "downrank_contradictions"), default="diagnostic")
     context.add_argument("--visibility-geometry", type=Path, help="PCD completo referenciado pelo slice")
     context.add_argument("--pose-sampling", choices=("interpolated", "nearest"), default="interpolated")
     context.add_argument("--stuff-discovery-fallback", action="store_true", help="permite discovery de stuff apenas como evidência tentativa")
     context.add_argument(
         "--with-debug-images", action="store_true",
         help="promove para a run contextual as imagens ricas de debug (discovery tiles, region views) de cada keyframe",
+    )
+    context.add_argument(
+        "--language-embedding-fusion", action="store_true",
+        help="funde embeddings CLIP referenciados pelas regiões fortes e publica semantic-embeddings.npz",
     )
     window = commands.add_parser(
         "bag-window",
@@ -162,6 +168,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     elif options.command == "corridor-02-context":
         # Importa dependências opcionais apenas no workflow real, mantendo o
         # demo e os testes mínimos executáveis sem rosbags/Pillow/PyYAML.
+        from semantic_fusion import GeometryConsistencyPolicy, VisualCoherencePolicy
         from sensor_association import BoundaryPolicy
 
         from .corridor02_context import Corridor02ContextRequest, export_corridor02_context
@@ -191,11 +198,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
                     allow_legacy_discovery=options.footprint_mode == "legacy_discovery"),
                 pose_sampling=options.pose_sampling,
                 visibility_mode=options.visibility_mode,
+                visual_coherence_policy=VisualCoherencePolicy(options.visual_coherence_policy),
+                geometry_consistency_policy=GeometryConsistencyPolicy(options.geometry_consistency_policy),
                 visibility_geometry=options.visibility_geometry,
                 stuff_discovery_fallback=options.stuff_discovery_fallback,
                 crop_radius_m=options.crop_radius_m,
                 max_points=options.max_points,
                 with_debug_images=options.with_debug_images,
+                language_embedding_fusion=options.language_embedding_fusion,
             )
         )
         print(destination)

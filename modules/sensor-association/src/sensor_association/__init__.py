@@ -1,6 +1,7 @@
 """Fronteira pública do módulo sensor-association."""
 
 from .boundary import BoundaryPolicy, boundary_diagnostics, distance_to_mask_boundary
+from .dense_features import DenseFeatureMap, sample_dense_feature
 from .measured_association import SurfaceAssociationResult, associate_measured_map_points
 from .models import (
     AssociationStatus,
@@ -35,4 +36,6 @@ __all__ = [
     "MeasuredSurfaceModel",
     "SurfaceVisibilityConfig",
     "associate_measured_map_points",
+    "DenseFeatureMap",
+    "sample_dense_feature",
 ]

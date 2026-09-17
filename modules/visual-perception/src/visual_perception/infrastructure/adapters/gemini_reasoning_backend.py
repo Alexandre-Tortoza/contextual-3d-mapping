@@ -113,7 +113,10 @@ class GeminiRoboticsReasoningAdapter:
     ) -> dict[str, Any]:
         """Retorna a resposta JSON bruta do Gemini para uma região."""
         return self._generate_json(
-            "region", tuple(view.payload for view in request.views), region_prompt(request), config
+            "region",
+            tuple(view.payload for view in request.views),
+            region_prompt(request, config.prompt_version),
+            config,
         )
 
     # Julga a relação entre duas regiões com a view de par compartilhada.

@@ -218,3 +218,35 @@ solicitados em `debug/sensor-association/`, para regressões auditáveis.
 
 Algoritmo e limitações pertencem a
 [`sensor-association`](../../modules/sensor-association/docs/measured-visibility.md).
+
+## Ablação de coerência visual
+
+`--visual-coherence-policy diagnostic` é o default do slice 2D→3D: mede a
+similaridade entre features densas de observações compatíveis e persiste só o
+diagnóstico compacto. Não copia vetores no JSON renderizado. Use
+`disabled` para o baseline e `downrank_contradictions` para a candidata que
+rebaixa evidência sem feature quando há contradição visual. Espaços de
+embedding, dimensões ou produtores incompatíveis permanecem indisponíveis e
+nunca são comparados.
+
+`--geometry-consistency-policy diagnostic` mede continuidade planar, extensão,
+normal e protrusão depois da associação/fusão, sem reescrever o label 2D. O
+artifact e o inspector mostram `coherent`, `contradictory` ou `unresolved` com
+o motivo. Políticas ativas ficam bloqueadas: o runtime as recusa até a
+avaliação anotada ser revisada.
+
+## Fusão de embeddings CLIP (busca por texto)
+
+`--language-embedding-fusion` é opt-in: funde, por geometria persistente, os
+embeddings CLIP referenciados pelas regiões fortes (`language_embedding_ref`)
+usando `semantic_fusion.fuse_language_embeddings`, e publica
+`<destino>-semantic-embeddings.npz` ao lado do artifact contextual, com
+metadata compacta em `semantic_embeddings` (sem nenhum vetor no JSON).
+
+Exige que a run de percepção de origem tenha publicado `embeddings.npz` por
+frame e declarado `config.language_embedding` no `manifest.json` — sem isso,
+o runtime falha com um erro acionável em vez de publicar um mapa sem a
+capability anunciada. Uma região sem `language_embedding_ref` continua
+contribuindo normalmente para o label categórico; ela só fica de fora da
+fusão CLIP daquele ponto. Consumida por `apps/map-explorer/api` para busca
+textual sobre o mapa (#224).

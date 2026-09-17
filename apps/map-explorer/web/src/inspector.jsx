@@ -33,6 +33,18 @@ const SURFACE_REASON_COPY = Object.freeze({
   no_matching_raster_surface: "O pixel da máscara não confirma a mesma superfície do ponto.",
 });
 
+const VISUAL_COHERENCE_COPY = Object.freeze({
+  coherent: "As features densas dos frames são visualmente coerentes.",
+  contradictory: "As features densas dos frames divergem; a evidência visual está contraditória.",
+  unavailable: "Não há cobertura densa compatível suficiente para comparar os frames.",
+});
+
+const GEOMETRIC_SUPPORT_COPY = Object.freeze({
+  coherent: "A geometria local é compatível com a natureza declarada pelo produtor.",
+  contradictory: "A geometria local contradiz esta natureza; o claim 2D bruto foi preservado.",
+  unresolved: "A geometria disponível não permite validar nem contestar este claim.",
+});
+
 // Explica separadamente o alcance do raio e o vínculo semântico. Uma paisagem
 // através da janela pode ter RGB válido e continuar sem o label da janela.
 function SurfaceEvidence({ evidence }) {
@@ -297,7 +309,7 @@ function SceneClaims({ claims }) {
 function FusionSummary({ evidence, activeContribution, onSelectContribution }) {
   const contributions = evidence?.contributions ?? [];
   const state = evidence?.support_state;
-  if (contributions.length < 2 && !state && !evidence?.consolidation) return null;
+  if (contributions.length < 2 && !state && !evidence?.consolidation && !evidence?.geometric_support) return null;
   return (
     <div className="inspector-block">
       <h3>Sustentação do label</h3>
@@ -310,7 +322,11 @@ function FusionSummary({ evidence, activeContribution, onSelectContribution }) {
         <strong>{evidence.agreement == null ? "Sem corroboração" : `${(evidence.agreement * 100).toFixed(0)}%`}</strong>
         <span>Suporte da vizinhança 3D</span>
         <strong>{evidence.spatial_support == null ? "Indefinido" : `${(evidence.spatial_support * 100).toFixed(0)}%`}</strong>
+        {evidence.visual_coherence && <><span>Coerência visual</span><strong>{evidence.visual_coherence.state === "unavailable" ? "Indisponível" : `${(evidence.visual_coherence.mean_cosine_similarity * 100).toFixed(0)}%`}</strong></>}
+        {evidence.geometric_support && <><span>Validação geométrica</span><strong>{evidence.geometric_support.state}</strong></>}
       </div>
+      {evidence.visual_coherence && <p className="empty-copy">{VISUAL_COHERENCE_COPY[evidence.visual_coherence.state]}{evidence.visual_coherence.reason ? ` (${evidence.visual_coherence.reason})` : ""}</p>}
+      {evidence.geometric_support && <p className="empty-copy">{GEOMETRIC_SUPPORT_COPY[evidence.geometric_support.state]} ({evidence.geometric_support.reason})</p>}
       {state && <p className="empty-copy">{SUPPORT_STATE_COPY[state]}</p>}
       <ul className="claim-list">
         {contributions.length > 1 && contributions.map((item) => (

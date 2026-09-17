@@ -22,6 +22,7 @@ from .annotation_manifest import (
     REFERENCE_SCHEMA_VERSION,
     AnnotationCertainty,
     AnnotationProvenance,
+    GeometricSupportAnnotation,
     MaskAnnotation,
     ReferenceManifest,
     RegionAnnotation,
@@ -187,6 +188,21 @@ def _region(value: object, source: str) -> RegionAnnotation:
         visibility=optional_string(document, "visibility", source),
         ignored=boolean(document, "ignored", source, default=False),
         notes=optional_string(document, "notes", source),
+        geometric_support=_geometric_support(document.get("geometric_support"), f"{source}.geometric_support"),
+    )
+
+
+# Converte o vínculo 2D→3D opcional, mantendo referências ausentes explícitas.
+def _geometric_support(value: object, source: str) -> GeometricSupportAnnotation | None:
+    """Converte suporte geométrico opcional de uma região anotada."""
+    if value is None:
+        return None
+    document = mapping(value, source)
+    return GeometricSupportAnnotation(
+        geometry_artifact=json_string(document, "geometry_artifact", source),
+        geometry_ids=_strings(document, "geometry_ids", source),
+        visibility=json_string(document, "visibility", source),
+        uncertainty=optional_string(document, "uncertainty", source),
     )
 
 
@@ -273,6 +289,13 @@ def _sample_to_mapping(sample: SampleAnnotation) -> dict[str, Any]:
                 "visibility": region.visibility,
                 "ignored": region.ignored,
                 "notes": region.notes,
+                "geometric_support": None if region.geometric_support is None else {
+                    "geometry_artifact": region.geometric_support.geometry_artifact,
+                    "geometry_ids": list(region.geometric_support.geometry_ids,
+                    ),
+                    "visibility": region.geometric_support.visibility,
+                    "uncertainty": region.geometric_support.uncertainty,
+                },
             }
             for region in sample.regions
         ],

@@ -70,6 +70,73 @@ class MetricValue:
         return self.support > 0 and self.value is not None
 
 
+# Representa um ponto anotado sem misturar a referência 3D com a política de
+# associação. Existe para avaliar pixels/regiões e labels no mesmo protocolo.
+@dataclass(frozen=True)
+class PointAssociationOutcome:
+    """Resultado auditável da associação e do label de um ponto anotado.
+
+    Argumentos:
+        point_id: identidade estável do suporte geométrico avaliado.
+        expected_region_id: região anotada que deve cobrir o ponto, ou ``None``.
+        associated_region_id: região efetivamente associada, ou ``None``.
+        expected_labels: labels aceitos para o ponto/região anotados.
+        predicted_label: label fundido, ``None`` quando o pipeline se abstém.
+    """
+
+    point_id: str
+    expected_region_id: str | None
+    associated_region_id: str | None
+    expected_labels: tuple[str, ...] = ()
+    predicted_label: str | None = None
+
+    # Garante que a avaliação nunca perde a identidade que permite reabrir o
+    # frame, a região e a geometria de um erro publicado.
+    def __post_init__(self) -> None:
+        """Valida identidade e labels de um resultado pontual."""
+        if not self.point_id.strip():
+            raise ValueError("PointAssociationOutcome.point_id must not be empty.")
+        if any(not value.strip() for value in self.expected_labels):
+            raise ValueError("PointAssociationOutcome.expected_labels must not contain empty labels.")
+
+
+# Calcula métricas pontuais da nova referência 2D→3D. A associação é medida
+# separadamente do label para não esconder uma projeção errada sob um acerto lexical.
+def point_association_metrics(outcomes: Sequence[PointAssociationOutcome]) -> dict[str, MetricValue]:
+    """Mede precisão/recall de associação, labels, cobertura e abstenção.
+
+    Argumentos:
+        outcomes: resultados por ponto do mesmo baseline ou candidato.
+    Retorna:
+        métricas com suporte explícito e nomes estáveis para o report comparativo.
+    """
+    expected = [item for item in outcomes if item.expected_region_id is not None]
+    associated = [item for item in outcomes if item.associated_region_id is not None]
+    correct_associations = sum(
+        item.expected_region_id == item.associated_region_id
+        for item in outcomes if item.expected_region_id is not None and item.associated_region_id is not None
+    )
+    association_precision = _ratio("point_association_precision", correct_associations, len(associated))
+    association_recall = _ratio("point_association_recall", correct_associations, len(expected))
+    labelled = [item for item in expected if item.expected_labels]
+    predicted = [item for item in labelled if item.predicted_label is not None]
+    correct_labels = sum(item.predicted_label.strip().lower() in {label.strip().lower() for label in item.expected_labels}
+                         for item in predicted)
+    label_accuracy = _ratio("point_label_accuracy", correct_labels, len(predicted))
+    coverage = _ratio("point_feature_coverage", len(associated), len(outcomes))
+    abstention = _ratio("point_abstention_rate", len(labelled) - len(predicted), len(labelled))
+    return {
+        "point_association_precision": association_precision,
+        "point_association_recall": association_recall,
+        "point_association_f1": _harmonic("point_association_f1", association_precision, association_recall,
+                                             support=len(expected) + len(associated)),
+        "point_label_accuracy": label_accuracy,
+        "point_label_error": MetricValue("point_label_error", None if not predicted else 1.0 - (label_accuracy.value or 0.0), len(predicted)),
+        "point_feature_coverage": coverage,
+        "point_abstention_rate": abstention,
+    }
+
+
 # Agrupa um par referência/predição casado e a qualidade do casamento.
 # Existe para que as métricas de semântica saibam exatamente qual região
 # prevista responde por qual região anotada.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from math import isfinite
 
 
@@ -19,6 +20,151 @@ def _unit_interval(value: float | None, name: str) -> float | None:
     if not isfinite(number) or not 0.0 <= number <= 1.0:
         raise ValueError(f"{name} must be a finite value in [0, 1].")
     return number
+
+
+# Separa o diagnóstico da política que pode agir sobre ele. Existe para que a
+# primeira ablação exponha contradição visual sem inventar uma soma de scores.
+class VisualCoherencePolicy(StrEnum):
+    """Política de uso da coerência visual multi-view."""
+
+    DISABLED = "disabled"
+    DIAGNOSTIC = "diagnostic"
+    DOWNRANK_CONTRADICTIONS = "downrank_contradictions"
+
+
+# Transporta uma feature pontual com identidade suficiente para comparação
+# segura. O vetor fica no artifact de execução, não no payload do viewer.
+@dataclass(frozen=True)
+class PointVisualFeature:
+    """Feature visual amostrada no pixel associado a um ponto.
+
+    Argumentos:
+        values: vetor denso finito, normalizado pelo produtor quando declarado.
+        embedding_space: espaço comparável somente a features de mesmo valor.
+        producer: estágio produtor e configuração efetiva.
+        artifact_reference: artifact que permite reabrir a evidência bruta.
+    """
+
+    values: tuple[float, ...]
+    embedding_space: str
+    producer: str
+    artifact_reference: str
+
+    # Recusa vetores e proveniência incompletos antes da fusão multi-view.
+    def __post_init__(self) -> None:
+        """Valida vetor, espaço de embedding e proveniência da feature."""
+        if not self.values or not all(isfinite(float(value)) for value in self.values):
+            raise ValueError("PointVisualFeature.values must be a non-empty finite vector.")
+        for name in ("embedding_space", "producer", "artifact_reference"):
+            if not getattr(self, name).strip():
+                raise ValueError(f"PointVisualFeature.{name} must not be empty.")
+
+
+# Referencia a evidência CLIP sem carregar o vetor no contract de fusão. Existe
+# porque a representação alinhada à linguagem pode ser grande e pertence ao
+# archive do produtor, enquanto a fusão só precisa resolvê-la no momento exato.
+@dataclass(frozen=True)
+class LanguageEmbeddingReference:
+    """Referência rastreável a um embedding alinhado à linguagem.
+
+    Argumentos:
+        embedding_id: chave do vetor no archive imutável do produtor.
+        archive_uri: localização auditável do archive que contém a chave.
+        embedding_space: identidade completa e estável do espaço CLIP.
+        dimension: dimensão declarada do vetor.
+        producer: modelo e configuração que produziram a evidência.
+        normalized: se o vetor declarado usa norma L2 unitária.
+    """
+
+    embedding_id: str
+    archive_uri: str
+    embedding_space: str
+    dimension: int
+    producer: str
+    normalized: bool = True
+
+    # Rejeita referências incompletas antes que um consumidor tente abrir um
+    # archive arbitrário ou compare espaços semanticamente incompatíveis.
+    def __post_init__(self) -> None:
+        """Valida identidade, espaço, dimensão e proveniência da referência."""
+        if any(not getattr(self, name).strip() for name in ("embedding_id", "archive_uri", "embedding_space", "producer")):
+            raise ValueError("LanguageEmbeddingReference requires complete identity and provenance.")
+        if type(self.dimension) is not int or self.dimension < 1:
+            raise ValueError("LanguageEmbeddingReference.dimension must be positive.")
+        if not isinstance(self.normalized, bool):
+            raise ValueError("LanguageEmbeddingReference.normalized must be boolean.")
+
+
+# Expõe a medição sem a confundir com confiança, agreement ou suporte espacial.
+@dataclass(frozen=True)
+class VisualCoherence:
+    """Diagnóstico de similaridade visual entre contribuições do mesmo ponto."""
+
+    state: str
+    compared_count: int
+    mean_cosine_similarity: float | None
+    reason: str | None = None
+
+    # Mantém o payload pequeno e não permite publicar uma métrica sem pares.
+    def __post_init__(self) -> None:
+        """Valida o diagnóstico de coerência visual."""
+        if self.state not in {"unavailable", "coherent", "contradictory"}:
+            raise ValueError("VisualCoherence.state is invalid.")
+        if self.compared_count < 0:
+            raise ValueError("VisualCoherence.compared_count must be non-negative.")
+        if self.mean_cosine_similarity is not None and not -1.0 <= self.mean_cosine_similarity <= 1.0:
+            raise ValueError("VisualCoherence.mean_cosine_similarity must be in [-1, 1].")
+
+
+# Materializa a agregação de embeddings compatíveis fora dos payloads do viewer.
+# Existe para que a representação vetorial estável da #222 não se confunda com
+# o diagnóstico de coerência visual usado na política categórica.
+@dataclass(frozen=True)
+class FusedVisualEmbedding:
+    """Embedding normalizado e rastreável fundido de múltiplas observações."""
+
+    values: tuple[float, ...]
+    embedding_space: str
+    producer: str
+    contributor_artifacts: tuple[str, ...]
+    effective_weights: tuple[float, ...]
+
+    # Impede agregar espaços ou vetores inválidos e preserva peso por fonte.
+    def __post_init__(self) -> None:
+        """Valida vetor normalizado, referências e pesos da fusão."""
+        if not self.values or not all(isfinite(float(value)) for value in self.values):
+            raise ValueError("FusedVisualEmbedding.values must be a non-empty finite vector.")
+        if not self.embedding_space.strip() or not self.producer.strip():
+            raise ValueError("FusedVisualEmbedding requires embedding space and producer.")
+        if len(self.contributor_artifacts) != len(self.effective_weights) or not self.contributor_artifacts:
+            raise ValueError("FusedVisualEmbedding contributors and weights must agree.")
+        if any(weight < 0.0 or not isfinite(weight) for weight in self.effective_weights):
+            raise ValueError("FusedVisualEmbedding weights must be finite and non-negative.")
+
+
+# Publica a agregação CLIP sem confundi-la com features DINO densas. O payload
+# com vetor é persistido em archive pelo semantic-map, não no JSON contextual.
+@dataclass(frozen=True)
+class FusedLanguageEmbedding:
+    """Embedding alinhado à linguagem fundido para uma geometria persistente."""
+
+    values: tuple[float, ...]
+    embedding_space: str
+    dimension: int
+    producer: str
+    normalized: bool
+    contributor_references: tuple[LanguageEmbeddingReference, ...]
+    effective_weights: tuple[float, ...]
+
+    # Impede publicar vetor sem provenance suficiente para futura reabertura.
+    def __post_init__(self) -> None:
+        """Valida vetor, espaço e contribuição da fusão de linguagem."""
+        if len(self.values) != self.dimension or not self.values or not all(isfinite(float(value)) for value in self.values):
+            raise ValueError("FusedLanguageEmbedding values must be finite and match dimension.")
+        if not self.embedding_space.strip() or not self.producer.strip():
+            raise ValueError("FusedLanguageEmbedding requires space and producer.")
+        if len(self.contributor_references) != len(self.effective_weights) or not self.contributor_references:
+            raise ValueError("FusedLanguageEmbedding contributors and weights must agree.")
 
 
 # Descreve a vizinhança usada para medir suporte espacial. A aresta é um
@@ -77,6 +223,8 @@ class SemanticContribution:
     support_state: str | None = None
     visual_support: float | None = None
     region_quality: float | None = None
+    point_feature: PointVisualFeature | None = None
+    language_embedding: LanguageEmbeddingReference | None = None
 
     # Rejeita contribuições sem identidade ou com medidas impossíveis antes que
     # elas influenciem a escolha do label primário.
@@ -132,6 +280,7 @@ class FusedPointContext:
     confidence: float | None
     agreement: float
     contributions: tuple[SemanticContribution, ...]
+    visual_coherence: VisualCoherence | None = None
 
     # Expõe a quantidade de observações que enxergaram o ponto sem obrigar o
     # consumidor a contar a tupla, que é a pergunta feita pelo viewer.

@@ -49,6 +49,7 @@ from visual_perception.application.observation_diagnostics import ObservationDia
 from visual_perception.application.pipeline import PipelineResult
 from visual_perception.config import ModuleConfig
 from visual_perception.debug_artifacts import FrameInputs, write_stage_debug_images
+from visual_perception.domain.feature_map import feature_map_spec_to_dict
 from visual_perception.infrastructure.debug_recorder import DebugRecorder
 from visual_perception.infrastructure.embedding_archive import write_embedding_archive
 from visual_perception.infrastructure.serialization import serialize_observation
@@ -126,6 +127,27 @@ def write_frame_artifacts(
         embeddings_path = frame_dir / "embeddings.npz"
         write_embedding_archive(embeddings_path, all_embeddings)
         _record("embeddings", embeddings_path)
+
+    # Persiste o mapa pixel-aligned somente quando o profile o pediu para
+    # supervisão 2D->3D. Valores e metadata ficam separados para que o
+    # consumidor valide espaço, transform e provenance sem inferir defaults.
+    if result.dense_feature_map is not None:
+        dense_values_path = frame_dir / "dense-features.npz"
+        np.savez_compressed(
+            dense_values_path,
+            values=result.dense_feature_map.data,
+            valid_support=(
+                result.dense_feature_map.valid_support
+                if result.dense_feature_map.valid_support is not None
+                else np.ones(result.dense_feature_map.data.shape[:2], dtype=np.bool_)
+            ),
+        )
+        _record("dense_features", dense_values_path)
+        dense_metadata_path = frame_dir / "dense-features.json"
+        dense_metadata_path.write_text(
+            json.dumps(feature_map_spec_to_dict(result.dense_feature_map), indent=2), encoding="utf-8"
+        )
+        _record("dense_features_metadata", dense_metadata_path)
 
     # Delega a escrita de todas as camadas de imagem (raw, proposals,
     # regions-*, semantic-overlay, structural-context, discovery/ e regions/)

@@ -10,6 +10,8 @@
 - filtrar visibilidade, hemisfério frontal, limites da imagem e suporte óptico válido;
 - resolver oclusão de forma determinística quando vários pontos disputam suporte visual;
 - atribuir cor e região visual ao ponto visível;
+- amostrar a feature densa no mesmo pixel visível, preservando espaço,
+  dimensão, produtor e referência do artifact;
 - declarar explicitamente o motivo de cada rejeição.
 
 ## Não-responsabilidades
@@ -72,6 +74,7 @@ para portas abertas e outras aberturas, independentemente do nome do claim.
 - transform de câmera, `clock_id`, calibração e tolerância RGB/LiDAR validados;
 - ausência de suporte gera abstenção; não há associação forte de fallback;
 - cor visível, suporte semântico e corroboração temporal são estados distintos.
+- falta de cobertura densa é `None`, nunca um vetor de zeros.
 
 A leitura integral e a validação de SHA-256 pertencem a
 [`geometric-map`](../geometric-map/README.md). Algoritmo, parâmetros, resultados

@@ -270,10 +270,14 @@ def publish_backdrop(public_directory: Path, payload: dict) -> str | None:
     return digest
 
 
-# Publica mapa e previews juntos, sem sobrescrever a identidade de uma run.
-# O fingerprint inclui as imagens: mudar um preview também cria outro resultado.
+# Publica mapa e previews juntos. Por padrão a identidade de uma run nunca é
+# sobrescrita (o fingerprint inclui as imagens: mudar um preview também cria
+# outro resultado) — a exceção é uma run explicitamente marcada `in_progress`
+# (ex.: o processamento em lotes do corridor-02), cujo conteúdo é substituído
+# a cada lote sob o mesmo run_id até a publicação final fechá-la.
 def save_run(
     public_directory: Path, artifact: Path, *, run_id: str | None = None, label: str | None = None,
+    overwrite: bool = False, in_progress: bool = False, frame_count_expected: int | None = None,
 ) -> Path:
     """Salva uma run em runs/<run-id>/ com mapa, imagens e manifest.
 
@@ -282,10 +286,21 @@ def save_run(
         artifact: mapa contextual completo de origem.
         run_id: identidade opcional; por default, data UTC e fingerprint.
         label: nome legível opcional para distinguir execução ou ablação.
+        overwrite: quando ``True``, substitui o conteúdo já publicado em
+            ``run_id`` em vez de levantar ``FileExistsError`` — usado para
+            republicar repetidamente uma run ainda em andamento sob a mesma
+            identidade, conforme o processamento avança.
+        in_progress: grava no manifest que esta run ainda está sendo
+            processada (o viewer usa isso para reconsultar e mostrar
+            progresso). A publicação final de uma run deve omitir isso.
+        frame_count_expected: total de frames que a run pretende alcançar
+            quando completa, para o viewer calcular "X de Y processados".
+            Sem efeito quando ``in_progress`` é ``False``.
     Retorna:
         pasta publicada, reutilizada se o mesmo conteúdo já estiver salvo.
     Levanta:
-        FileExistsError: se a identidade solicitada já contiver outro resultado.
+        FileExistsError: se a identidade solicitada já contiver outro
+            resultado e ``overwrite`` for ``False``.
     """
     payload = read_context(artifact)
     previews = preview_files(artifact, payload)
@@ -320,7 +335,13 @@ def save_run(
         previous = destination / "manifest.json"
         if previous.is_file() and json.loads(previous.read_text(encoding="utf-8")).get("fingerprint") == fingerprint:
             return destination
-        raise FileExistsError(f"A run {run_id!r} já existe com outro conteúdo; escolha outro run-id.")
+        if not overwrite:
+            raise FileExistsError(f"A run {run_id!r} já existe com outro conteúdo; escolha outro run-id.")
+        # rename() não substitui um diretório não vazio; a run fica ausente por
+        # um instante entre a remoção e a promoção do staging abaixo. Aceitável
+        # para uma run `in_progress`: o pior caso é o poller do viewer não achar
+        # a run numa consulta e achar de novo 30s depois.
+        shutil.rmtree(destination)
     staging = Path(tempfile.mkdtemp(prefix=f".{run_id}-", dir=runs_directory))
     try:
         (staging / "context.json").write_bytes(artifact_bytes)
@@ -339,6 +360,9 @@ def save_run(
             "assets_sha256": asset_hashes, "fingerprint": fingerprint,
             "geometry_backdrop_sha256": backdrop_sha256,
         }
+        if in_progress:
+            manifest["in_progress"] = True
+            manifest["frame_count_expected"] = frame_count_expected
         comparison = _comparison_metadata(payload, artifact)
         if comparison is not None:
             manifest["comparison"] = comparison
@@ -504,6 +528,8 @@ def publish(public_directory: Path) -> Path:
             "created_at": metadata["created_at"], "map_id": metadata["map_id"],
             "frame_count": frames, "contextual_point_count": metadata.get("contextual_point_count"),
             **({"comparison": metadata["comparison"]} if metadata.get("comparison") is not None else {}),
+            **({"in_progress": True, "frame_count_expected": metadata.get("frame_count_expected")}
+               if metadata.get("in_progress") else {}),
         })
     entries.sort(key=lambda item: (item["created_at"], item["run_id"]), reverse=True)
     entries.extend(publish_consolidated_maps(public_directory))
@@ -523,12 +549,28 @@ def main() -> None:
     parser.add_argument("--run-id", help="identidade da run; nunca sobrescreve outro resultado")
     parser.add_argument("--label", help="nome legível da execução ou ablação")
     parser.add_argument("--result-file", type=Path, help="arquivo de resposta JSON para a CLI")
+    parser.add_argument(
+        "--overwrite", action="store_true",
+        help="substitui o conteúdo já publicado em --run-id em vez de recusar (runs em andamento)",
+    )
+    parser.add_argument(
+        "--in-progress", action="store_true",
+        help="marca a run como ainda em processamento; o viewer reconsulta e mostra progresso",
+    )
+    parser.add_argument(
+        "--frame-count-expected", type=int,
+        help="total de frames esperado quando a run em andamento estiver completa",
+    )
     arguments = parser.parse_args()
     if arguments.result_file is not None and arguments.artifact is None:
         parser.error("--result-file exige --artifact")
     arguments.public_directory.mkdir(parents=True, exist_ok=True)
     if arguments.artifact is not None:
-        saved = save_run(arguments.public_directory, arguments.artifact, run_id=arguments.run_id, label=arguments.label)
+        saved = save_run(
+            arguments.public_directory, arguments.artifact, run_id=arguments.run_id, label=arguments.label,
+            overwrite=arguments.overwrite, in_progress=arguments.in_progress,
+            frame_count_expected=arguments.frame_count_expected,
+        )
         print(saved)
     print(publish(arguments.public_directory))
     if arguments.result_file is not None:

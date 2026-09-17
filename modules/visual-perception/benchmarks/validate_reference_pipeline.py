@@ -27,6 +27,7 @@ import hashlib
 import json
 import os
 import random
+import signal
 import subprocess
 import sys
 import time
@@ -34,6 +35,7 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from types import FrameType, SimpleNamespace
 from typing import Any
 
 _MODULE_ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +94,7 @@ from visual_perception.domain.region_reasoning import (  # noqa: E402
 )
 from visual_perception.domain.visual_observation import VisualObservation  # noqa: E402
 from visual_perception.infrastructure.adapters.factory import create_perception_ports  # noqa: E402
+from visual_perception.infrastructure.serialization import deserialize_observation  # noqa: E402
 from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (  # noqa: E402
     DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
     RemoteReasoningCall,
@@ -134,6 +137,13 @@ SEQUENCE_MASKS_DIR = Path(__file__).resolve().parent / "sequence-masks"
 
 #: Sequência cuja geometria é carregada para os frames de referência.
 _SEQUENCE_ID = "corridor-02"
+
+#: Versão do prompt de região com o bloco de prior temporal acrescentado,
+#: indexada pela versão sem prior. Cada schema de prompt de região
+#: (``MultimodalReasoningConfig.prompt_version``) tem seu próprio par
+#: sem-prior/com-prior para que dois braços com textos diferentes nunca
+#: declarem a mesma versão — ver reasoning_prompts._REGION_PROMPT_BODY_BY_VERSION.
+_PRIOR_PROMPT_VERSION = {"v8": "v9", "v10": "v11"}
 
 
 # Representa a seleção determinística e as opções de persistência de uma
@@ -178,6 +188,12 @@ class ValidationOptions:
     #: ``gemini_robotics_er`` envia frames e crops para a API do Gemini; ``None``
     #: mantém o Qwen local da configuração de referência.
     reasoning_backend: str | None = None
+    #: Sobrescreve a temperatura de decodificação do reasoner, mantendo tudo
+    #: o resto da config de referência. Existe para isolar decodificação
+    #: gulosa (``0.0``, o default) de amostragem como variável experimental,
+    #: separada de qual backend/prompt está em uso. ``None`` preserva a
+    #: temperatura da configuração de referência.
+    reasoning_temperature: float | None = None
     #: Troca somente o backend que produz propostas de regiões. ``florence2``
     #: usa caixas retangulares; ``sam3`` mantém a referência de masks densas;
     #: ``sam`` seleciona o SAM2.1 clássico (mesmo adapter, checkpoint
@@ -215,6 +231,13 @@ class ValidationOptions:
     #: ele, o run-id não teria como distinguir o que está sendo validado por
     #: um olhar rápido no diretório de resultados.
     name: str = "frames"
+    #: Diretório de run explícito, reaberto entre invocações. Existe para
+    #: processar um dataset grande em lotes sucessivos (ex.: um bag inteiro
+    #: percorrido aos poucos): frames cujo ``diagnostics.json`` já existe são
+    #: pulados, e o manifest acumula os relatórios das invocações anteriores
+    #: em vez de recomeçar do zero. ``None`` preserva o comportamento
+    #: histórico de sempre criar um ``run_id`` novo via ``next_run_id``.
+    run_dir: Path | None = None
 
     # Rejeita perfis livres para que um typo não produza uma ablation diferente.
     def __post_init__(self) -> None:
@@ -732,6 +755,13 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 config.multimodal_reasoning, region_views=options.region_views
             ),
         )
+    if options.reasoning_temperature is not None:
+        config = dataclasses.replace(
+            config,
+            multimodal_reasoning=dataclasses.replace(
+                config.multimodal_reasoning, temperature=options.reasoning_temperature
+            ),
+        )
     if options.reasoning_backend == "gemini_robotics_er":
         config = dataclasses.replace(
             config,
@@ -740,13 +770,17 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
                 backend="gemini_robotics_er",
                 checkpoint=DEFAULT_GEMINI_ROBOTICS_ER_MODEL,
                 load_in_4bit=False,
+                # A config de referência parte do Qwen (v10, schema reduzido só
+                # para aquele backend — ver MultimodalReasoningConfig.prompt_version).
+                # Trocar de backend sem repor a versão herdaria o schema errado.
+                prompt_version="v8",
             ),
         )
     if options.region_discovery_backend is not None:
         checkpoint = {
             "sam3": "facebook/sam3",
             "sam": "facebook/sam2.1-hiera-large",
-            "florence2": "microsoft/Florence-2-large",
+            "florence2": "florence-community/Florence-2-large",
         }[options.region_discovery_backend]
         config = dataclasses.replace(
             config,
@@ -789,14 +823,22 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
         # A versão do prompt é bumpada **junto** com o modo, e não em separado,
         # porque o texto dos prompts é um literal no adapter e nada bumpa a
         # versão sozinho: dois braços com prompts diferentes declarando a mesma
-        # versão seriam indistinguíveis na proveniência de cada claim.
+        # versão seriam indistinguíveis na proveniência de cada claim. O bump
+        # depende do schema de base (v8 ou v10, ver _PRIOR_PROMPT_VERSION):
+        # backends diferentes usam schemas diferentes, então "ligar o prior"
+        # não pode saltar sempre para a mesma versão fixa.
         enabled = options.temporal_prior_mode != TemporalPriorMode.DISABLED.value
+        base_version = config.multimodal_reasoning.prompt_version
+        if enabled and base_version not in _PRIOR_PROMPT_VERSION:
+            raise ValueError(
+                f"temporal_prior_mode has no prior-variant registered for prompt_version {base_version!r}."
+            )
         config = dataclasses.replace(
             config,
             multimodal_reasoning=dataclasses.replace(
                 config.multimodal_reasoning,
                 temporal_prior_mode=options.temporal_prior_mode,
-                prompt_version="v9" if enabled else config.multimodal_reasoning.prompt_version,
+                prompt_version=_PRIOR_PROMPT_VERSION[base_version] if enabled else base_version,
             ),
         )
     if options.scene_context_mode is not None:
@@ -807,6 +849,209 @@ def resolve_config(options: ValidationOptions) -> ModuleConfig:
             ),
         )
     return config
+
+
+# Lê o manifest de um run existente, se houver, para reabri-lo entre
+# invocações (processamento em lotes de um dataset grande). Existe porque
+# ``--run-dir`` pode apontar tanto para um diretório novo quanto para um já
+# parcialmente processado, e os dois casos precisam de tratamento diferente.
+def _read_manifest(out_dir: Path) -> dict[str, Any] | None:
+    """Lê ``manifest.json`` de ``out_dir``, ou ``None`` se ainda não existir.
+
+    Argumentos:
+        out_dir: diretório do run.
+    Retorna:
+        o manifest desserializado, ou ``None`` quando ausente ou corrompido.
+    """
+    manifest_path = out_dir / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        # Um manifest anterior a esta mudança nunca foi escrito de forma
+        # atômica; um run interrompido no meio da escrita antiga pode ter
+        # deixado um arquivo truncado. Tratar como "sem manifest" é seguro:
+        # os frames com ``diagnostics.json`` em disco continuam detectáveis
+        # frame a frame por quem chamar ``run_validation`` de novo.
+        return None
+
+
+# Substitui, em vez de duplicar, o relatório de um frame já presente na lista
+# — necessário porque um resume pode reprocessar um frame que falhou antes.
+def _replace_frame_report(frame_reports: list[dict[str, object]], report: dict[str, object]) -> None:
+    """Remove qualquer entrada anterior com o mesmo ``frame_id`` e acrescenta ``report``.
+
+    Argumentos:
+        frame_reports: lista mutável acumulada do run, alterada no lugar.
+        report: o novo relatório do frame.
+    """
+    frame_id = report["frame_id"]
+    frame_reports[:] = [existing for existing in frame_reports if existing["frame_id"] != frame_id]
+    frame_reports.append(report)
+
+
+# Reconstrói os embeddings persistidos por write_frame_artifacts como objetos
+# com só os dois atributos que prior_from de fato lê (embedding_id, vector) —
+# não um VisualEmbedding completo, cujos demais campos (dimension, backbone,
+# etc.) não são persistidos no archive por design (ver embedding_archive.py).
+def _load_archived_embeddings(path: Path) -> tuple[SimpleNamespace, ...]:
+    """Carrega ``embedding_id``/``vector`` de todo vetor persistido em ``path``.
+
+    Argumentos:
+        path: artifact ``.npz`` escrito por ``write_embedding_archive``.
+    Retorna:
+        um objeto leve por vetor, compatível com o que ``prior_from`` lê.
+    """
+    with np.load(path) as archive:
+        return tuple(
+            SimpleNamespace(embedding_id=key, vector=tuple(float(component) for component in archive[key]))
+            for key in archive.files
+        )
+
+
+# Reconstrói o ScenePrior que existiria em memória se o run nunca tivesse
+# sido interrompido, a partir do último frame concluído imediatamente antes
+# do primeiro frame pendente desta invocação. prior_from é pura por frame
+# (ver application/temporal_prior.py), então basta achar o observation.json
+# certo e chamá-la — sem isso, um resume no meio de uma sequência perderia a
+# herança temporal e cada lote recomeçaria como se fosse o primeiro frame.
+def _resume_prior(
+    frames_out_dir: Path, frames: tuple[Path, ...], done_frame_ids: set[str]
+) -> ScenePrior | None:
+    """Deriva o prior do frame concluído imediatamente anterior ao próximo pendente.
+
+    Argumentos:
+        frames_out_dir: diretório ``frames/`` do run.
+        frames: seleção de frames desta invocação, na ordem a processar.
+        done_frame_ids: frame_ids já concluídos com sucesso em qualquer invocação.
+    Retorna:
+        o prior correspondente, ou ``None`` se não houver frame concluído
+        imediatamente antes do próximo pendente, ou seus artifacts faltarem.
+    """
+    ordered_ids = sorted(done_frame_ids | {frame.stem for frame in frames})
+    predecessor: str | None = None
+    for frame_id in ordered_ids:
+        if frame_id not in done_frame_ids:
+            break
+        predecessor = frame_id
+    if predecessor is None:
+        return None
+    observation_path = frames_out_dir / predecessor / "observation.json"
+    if not observation_path.is_file():
+        return None
+    observation = deserialize_observation(json.loads(observation_path.read_text(encoding="utf-8")))
+    embeddings_path = frames_out_dir / predecessor / "embeddings.npz"
+    embeddings = _load_archived_embeddings(embeddings_path) if embeddings_path.is_file() else ()
+    return prior_from(observation, embeddings)  # type: ignore[arg-type]
+
+
+# Registra SIGINT/SIGTERM sem interromper o frame em processamento — o laço
+# principal só consulta ``requested`` entre frames, nunca no meio de um.
+# Existe para que matar o processo (ex: fim de uma sessão do harness que
+# invocou este script, ou um orquestrador de lotes) deixe o manifest e os
+# frames em disco num estado consistente, retomável na próxima invocação.
+class _InterruptFlag:
+    """Sinaliza um pedido de encerramento gracioso vindo de SIGINT/SIGTERM."""
+
+    def __init__(self) -> None:
+        """Começa sem nenhum pedido de encerramento registrado."""
+        self.requested = False
+        self._previous: dict[int, Any] = {}
+
+    # Instala os handlers e guarda os anteriores, para não vazar o handler
+    # global de um teste que chama run_validation mais de uma vez.
+    def install(self) -> None:
+        """Substitui os handlers de SIGINT/SIGTERM pelo sinalizador."""
+        def _handle(signum: int, frame: FrameType | None) -> None:
+            self.requested = True
+            print(f"\nSinal {signal.Signals(signum).name} recebido — encerrando após o frame atual.")
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self._previous[sig] = signal.signal(sig, _handle)
+
+    # Devolve os handlers anteriores; chamado depois do laço principal, antes
+    # de qualquer outro código que não deva mais reagir a este sinalizador.
+    def restore(self) -> None:
+        """Restaura os handlers de sinal anteriores à instalação."""
+        for sig, previous in self._previous.items():
+            signal.signal(sig, previous)
+
+
+# Monta o manifest do estado atual do run, cumulativo sobre todas as
+# invocações que já escreveram neste ``out_dir`` — não só os frames desta
+# chamada. Compartilhada entre a escrita incremental (a cada frame) e a
+# escrita final, para que as duas nunca divirjam em formato.
+def _build_manifest(
+    out_dir: Path,
+    run_id: str,
+    options: "ValidationOptions",
+    config: ModuleConfig,
+    frames: tuple[Path, ...],
+    lifecycle: ModelLifecycleManager,
+    frame_reports: list[dict[str, object]],
+    ports: PerceptionPorts,
+) -> dict[str, object]:
+    """Constrói o dicionário do manifest a partir do estado acumulado do run.
+
+    Argumentos:
+        out_dir: diretório do run.
+        run_id: identidade do run.
+        options: opções desta invocação (refletem a seleção mais recente).
+        config: configuração resolvida desta invocação.
+        frames: seleção de frames desta invocação.
+        lifecycle: gerenciador de modelos desta invocação.
+        frame_reports: relatórios acumulados de todas as invocações do run.
+        ports: backends desta invocação, para telemetria de raciocínio remoto.
+    Retorna:
+        o manifest pronto para serialização.
+    """
+    return {
+        "run_id": run_id,
+        "region_views_override": list(options.region_views) if options.region_views else None,
+        "git_revision": _git_revision(),
+        "gpu_memory_budget_gb": config.gpu_memory_budget_gb,
+        "config": config.to_dict(),
+        "config_fingerprint": config.fingerprint(),
+        # Cumulativo sobre frame_reports, não só os frames desta invocação:
+        # um resume precisa que o manifest descreva o run inteiro até aqui.
+        "frame_count": len(frame_reports),
+        "ordered_frame_ids": sorted(str(report["frame_id"]) for report in frame_reports),
+        "frames_dir": str(options.frames_dir.resolve()),
+        "selection": selection_record(options, frames),
+        "canonical_output": "frames",
+        "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
+        "context_profile": options.context_profile,
+        "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
+        "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
+        "prompt_version": config.multimodal_reasoning.prompt_version,
+        "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
+        "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
+        "remote_reasoning": remote_reasoning_summary(getattr(ports.multimodal_reasoner, "calls", None)),
+        "frames": frame_reports,
+    }
+
+
+# Escreve o manifest atomicamente (arquivo temporário no mesmo diretório +
+# rename) para que uma interrupção no meio da escrita nunca deixe um
+# manifest.json truncado — é essa garantia que permite reabrir o run com
+# --run-dir depois de o processo ser morto a qualquer momento entre frames.
+def _write_manifest_atomic(
+    out_dir: Path,
+    run_id: str,
+    options: "ValidationOptions",
+    config: ModuleConfig,
+    frames: tuple[Path, ...],
+    lifecycle: ModelLifecycleManager,
+    frame_reports: list[dict[str, object]],
+    ports: PerceptionPorts,
+) -> None:
+    """Grava o manifest atual de forma atômica em ``out_dir/manifest.json``."""
+    manifest = _build_manifest(out_dir, run_id, options, config, frames, lifecycle, frame_reports, ports)
+    manifest_path = out_dir / "manifest.json"
+    temporary = manifest_path.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    temporary.replace(manifest_path)
 
 
 # Executa a validação real e persiste artifacts canônicos e opcionais em
@@ -842,25 +1087,53 @@ def run_validation(
     lifecycle = ModelLifecycleManager()
     ports = (ports_factory or create_perception_ports)(config, lifecycle)
 
-    samples_dir = options.results_dir / "samples"
-    existing_run_ids = (path.name for path in samples_dir.glob("*")) if samples_dir.is_dir() else ()
-    run_id = str(next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name=options.name))
-    out_dir = samples_dir / run_id
+    # ``run_dir`` explícito reabre um run entre invocações (processamento em
+    # lotes de um dataset grande); sem ele, todo run é novo, como sempre foi.
+    if options.run_dir is not None:
+        out_dir = options.run_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        existing_manifest = _read_manifest(out_dir)
+        run_id = str(existing_manifest.get("run_id", out_dir.name)) if existing_manifest else out_dir.name
+        frame_reports: list[dict[str, object]] = (
+            list(existing_manifest.get("frames", ())) if existing_manifest else []
+        )
+        # summary.md não é reconstruído a partir do manifest ao reabrir um run:
+        # ele é um resumo legível, não a fonte de verdade do resume (que é
+        # manifest.json + frames/<id>/diagnostics.json). Cada invocação passa
+        # a escrever seu próprio summary.md com só os frames que processou.
+        summary_rows: list[str] = []
+    else:
+        samples_dir = options.results_dir / "samples"
+        existing_run_ids = (path.name for path in samples_dir.glob("*")) if samples_dir.is_dir() else ()
+        run_id = str(next_run_id(existing_run_ids, today=datetime.now(UTC).date(), name=options.name))
+        out_dir = samples_dir / run_id
+        frame_reports = []
+        summary_rows = []
     frames_out_dir = out_dir / "frames"
     frames_out_dir.mkdir(parents=True, exist_ok=True)
+    done_frame_ids = {str(report["frame_id"]) for report in frame_reports if not report.get("failed")}
 
-    summary_rows: list[str] = []
-    frame_reports: list[dict[str, object]] = []
     # O prior do próximo frame é derivado do resultado deste. Este laço é o
     # único lugar do sistema que sabe que um frame precede outro: o módulo
     # recebe um ScenePrior sem nenhum metadado de tempo ou pose.
     prior_enabled = (
         config.multimodal_reasoning.temporal_prior_mode != TemporalPriorMode.DISABLED.value
     )
-    prior: ScenePrior | None = None
+    prior: ScenePrior | None = (
+        _resume_prior(frames_out_dir, frames, done_frame_ids) if prior_enabled and done_frame_ids else None
+    )
+
+    interrupted = _InterruptFlag()
+    interrupted.install()
 
     for frame_path in frames:
+        if interrupted.requested:
+            print("\nInterrompido: encerrando após o último frame concluído.")
+            break
         name = frame_path.stem
+        if name in done_frame_ids:
+            print(f"\n=== {name} === (já concluído, pulando)")
+            continue
         print(f"\n=== {name} ===")
         frame_start = time.monotonic()
         metric_start = len(lifecycle.metrics)
@@ -893,7 +1166,8 @@ def run_validation(
             result = run_canonical_pipeline(observation_input, payload, config, ports, prior)
         except VisualPerceptionError as error:
             print(f"  FAILED: {error!r}")
-            frame_reports.append(
+            _replace_frame_report(
+                frame_reports,
                 {
                     "frame_id": name,
                     "input": {
@@ -906,13 +1180,14 @@ def run_validation(
                     "failed": True,
                     "reason": repr(error),
                     "latency_s": time.monotonic() - frame_start,
-                }
+                },
             )
             summary_rows.append(f"## {name}\n\n**FALHOU:** `{error!r}`\n")
             # Um frame que falhou não deixa herança: manter o prior do frame
             # anterior faria uma afirmação atravessar um buraco da sequência e
             # alcançar um viewpoint que ninguém observou.
             prior = None
+            _write_manifest_atomic(out_dir, run_id, options, config, frames, lifecycle, frame_reports, ports)
             continue
 
         canonical_observation = result.observation
@@ -977,7 +1252,8 @@ def run_validation(
             f"scene_echo={diagnostics.scene_echo_label_count}"
         )
         frame_metrics = lifecycle.metrics[metric_start:]
-        frame_reports.append(
+        _replace_frame_report(
+            frame_reports,
             {
                 "frame_id": name,
                 "input": {
@@ -1065,7 +1341,7 @@ def run_validation(
                 }
                 | {
                 },
-            }
+            },
         )
         summary_rows.append(
             f"## {name}\n\n"
@@ -1079,32 +1355,13 @@ def run_validation(
             f"**audit:** {'✅ pass' if result.audit.passed else '❌ FAIL'} "
             f"({len(result.audit.warnings)} warnings)\n"
         )
+        _write_manifest_atomic(out_dir, run_id, options, config, frames, lifecycle, frame_reports, ports)
 
+    interrupted.restore()
     lifecycle.release_all()
 
-    manifest = {
-        "run_id": run_id,
-        "region_views_override": list(options.region_views) if options.region_views else None,
-        "git_revision": _git_revision(),
-        "gpu_memory_budget_gb": config.gpu_memory_budget_gb,
-        "config": config.to_dict(),
-        "config_fingerprint": config.fingerprint(),
-        "frame_count": len(frames),
-        "ordered_frame_ids": [frame.stem for frame in frames],
-        "frames_dir": str(options.frames_dir.resolve()),
-        "selection": selection_record(options, frames),
-        "canonical_output": "frames",
-        "frame_artifact_layout": FRAME_ARTIFACT_LAYOUT_VERSION,
-        "context_profile": options.context_profile,
-        "scene_context_mode": config.multimodal_reasoning.scene_context_mode,
-        "temporal_prior_mode": config.multimodal_reasoning.temporal_prior_mode,
-        "prompt_version": config.multimodal_reasoning.prompt_version,
-        "sequence_masks": None if options.sequence_masks is None else str(options.sequence_masks),
-        "lifecycle_metrics": [asdict(m) for m in lifecycle.metrics],
-        "remote_reasoning": remote_reasoning_summary(getattr(ports.multimodal_reasoner, "calls", None)),
-        "frames": frame_reports,
-    }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    manifest = _build_manifest(out_dir, run_id, options, config, frames, lifecycle, frame_reports, ports)
+    _write_manifest_atomic(out_dir, run_id, options, config, frames, lifecycle, frame_reports, ports)
 
     memory_line = _memory_summary(lifecycle.metrics, config.gpu_memory_budget_gb)
     summary_header = (
@@ -1129,6 +1386,15 @@ def _argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame-id", action="append", default=[])
     parser.add_argument("--limit", type=int)
     parser.add_argument(
+        "--run-dir",
+        type=Path,
+        help=(
+            "Reabre um run existente em vez de criar um novo (processamento em lotes): "
+            "frames com diagnostics.json já presente são pulados, e o manifest acumula "
+            "os relatórios de todas as invocações."
+        ),
+    )
+    parser.add_argument(
         "--name",
         default="frames",
         help="Nome legível embutido no run-id (AAAA-MM-DD-run-NNN-<name>).",
@@ -1149,6 +1415,16 @@ def _argument_parser() -> argparse.ArgumentParser:
         help=(
             "gemini_robotics_er consulta a API do Gemini com os mesmos prompts e views do "
             "Qwen (#276); frames e crops saem da máquina. Lê GEMINI_API_KEY do ambiente ou do .env"
+        ),
+    )
+    parser.add_argument(
+        "--reasoning-temperature",
+        type=float,
+        default=None,
+        help=(
+            "sobrescreve a temperatura de decodificação do reasoner (default da config de "
+            "referência é 0.0, gulosa); isola amostragem como variável experimental separada "
+            "de backend/prompt"
         ),
     )
     parser.add_argument(
@@ -1243,10 +1519,12 @@ def main(argv: list[str] | None = None) -> None:
             results_dir=arguments.results_dir,
             frame_ids=tuple(arguments.frame_id),
             limit=arguments.limit,
+            run_dir=arguments.run_dir,
             name=arguments.name,
             context_profile=arguments.context_profile,
             reasoning_checkpoint=arguments.reasoning_checkpoint,
             reasoning_backend=arguments.reasoning_backend,
+            reasoning_temperature=arguments.reasoning_temperature,
             region_discovery_backend=arguments.region_discovery_backend,
             feature_extraction_backend=arguments.feature_extraction_backend,
             tiling_variant=arguments.tiling_variant,

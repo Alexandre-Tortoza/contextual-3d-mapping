@@ -15,40 +15,113 @@ from visual_perception.domain.region_reasoning import RegionReasoningRequest, Re
 from visual_perception.domain.relations import NO_RELATION_PREDICATE, SEMANTIC_RELATION_PREDICATES
 
 
+#: Schema completo de 8 campos (rótulo, tipo, categoria, confiança,
+#: alternativas, descrição, atributos, condição, material). Usado por
+#: ``v8``/``v9`` — a única diferença entre os dois é o bloco de prior temporal
+#: que ``describe_prior`` acrescenta por fora deste corpo.
+_RICH_SCHEMA_BODY = (
+    "Describe ONLY what is actually visible in the subject region shown above, "
+    "even if it is small or blurry — a plain surface (wall, floor, ceiling) is a "
+    "valid, specific answer. Do not restate the whole-scene description, and do "
+    "NOT name an object merely because this kind of scene usually contains one: "
+    "if the pixels show a blank wall, the answer is a wall. Use the context "
+    "image(s) only to disambiguate the subject, never to describe the surroundings "
+    "instead. Respond with EXACTLY ONE JSON object (never a list/array, "
+    "never markdown fences) with exactly these keys: "
+    '"label" (non-empty short string, singular — the single best description), '
+    '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
+    'uncountable surface or material, "part" for a component of a larger object, or '
+    '"unknown"), "category" (short coarse category string, optional), "confidence" '
+    "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
+    'cannot estimate it, never guess 1.0), "alternatives" (list of '
+    '{"label", "confidence"} objects for competing hypotheses, may be empty), '
+    '"description" (string, optional), "attributes" (list of strings, optional), '
+    '"condition" (string, optional), "material" (string, optional). '
+    "The SHAPE below is the required format. Every value in it is a placeholder "
+    "describing what to write there — never copy a placeholder or the example "
+    "values into your answer:\n"
+    '{"label": "<one noun naming the subject>", "kind": "thing", '
+    '"category": "<coarse category>", "confidence": 0.71, '
+    '"alternatives": [{"label": "<competing noun>", "confidence": 0.18}], '
+    '"description": "<one short sentence>", "attributes": ["<adjective>"], '
+    '"condition": "<state>", "material": "<material>"}'
+)
+
+#: Schema reduzido de 2 campos (rótulo, tipo). Usado só por ``v10``/``v11``,
+#: que hoje só o backend Qwen local seleciona (ver
+#: ``execution_profile._REAL_MULTIMODAL_REASONING``) — nunca o default
+#: compartilhado. Existe por causa de um colapso medido só no Qwen2.5-VL-3B
+#: (issue de comparação sam/sam3 x qwen_vl, 2026-09-16): no frame
+#: corridor-02-04234, 100% das regiões (46/46 com sam, 35/35 com sam3) saíram
+#: rotuladas "door" com o schema de 8 campos, incluindo uma caixa cobrindo
+#: mais da metade da imagem. O mesmo region_discovery rotulado por
+#: gemini_robotics_er com o schema de 8 campos produziu labels variados e
+#: corretos ("wooden pallet" entre eles), então a suspeita recai sobre a
+#: complexidade do schema de resposta para esse modelo especificamente, não
+#: sobre o region_discovery nem sobre o schema em si.
+#:
+#: Tornar esse schema o default global (v9, 2026-09-16→17) degradou o
+#: gemini_robotics_er, medido em corridor-02-04235/04247/04259/04282 contra
+#: o mesmo discovery com o schema de 8 campos (run-016, frame 04234, a um
+#: frame de distância). A única diferença de config entre as duas runs era
+#: a versão do prompt:
+#:
+#: - os exemplos do texto viraram a resposta: "light fixture" (29 regiões),
+#:   "door" (20) e "pallet" (13, a maioria no teto) substituíram labels
+#:   específicos como "ceiling light fixture" e "wooden pallet";
+#: - sem "confidence" e "alternatives", o suporte ficou ``unknown`` e o CLIP
+#:   ficou sem hipótese concorrente para arbitrar;
+#: - o grounding textual quebrou. Com os limiares de SemanticGroundingConfig
+#:   (0,4/0,3), Grounding-DINO não dá nenhuma box de "pallet" sobre o palete
+#:   real (a melhor, 0,42, cai no chassi do robô), mas dá "wooden pallet" a
+#:   0,49 e "wood pallet" a 0,52 na box exata. As 77/93 regiões sem grounding
+#:   (contra 35/61 com o schema de 8 campos) perderam toda geometria no mapa.
+#:
+#: Por isso o schema reduzido fica isolado atrás de uma versão própria
+#: (v10/v11), que só a config de referência do Qwen seleciona, em vez de ser
+#: o corpo de v9 para todo backend. O exemplo "a pallet" continua no texto
+#: porque o Qwen não mostrou eco dele; se mostrar, é o primeiro suspeito.
+_MINIMAL_SCHEMA_BODY = (
+    "Look at the subject region shown above. If it is a distinct, countable "
+    "object (e.g. a door, a pallet, a light fixture, a box), name that object. "
+    "If it is instead a plain structural surface of the room (wall, floor, "
+    "ceiling, baseboard), name that surface — do not force an object label onto "
+    "structure just because objects are more common in this scene. "
+    "Respond with EXACTLY ONE JSON object (never a list/array, never markdown "
+    'fences) with exactly these keys: "label" (one short noun naming what you '
+    'see), "kind" (exactly one of "thing" for a countable object or "stuff" for '
+    "a structural surface/material). Example shape — the values are "
+    "placeholders, never copy them:\n"
+    '{"label": "<one noun>", "kind": "thing"}'
+)
+
+#: v8/v9 preservam o schema de 8 campos (a única diferença entre os dois é o
+#: bloco de prior temporal, acrescentado por fora deste corpo); v10/v11
+#: usam o schema reduzido de 2 campos. Ver ``_MINIMAL_SCHEMA_BODY`` para por
+#: que os dois corpos não podem compartilhar uma versão.
+_REGION_PROMPT_BODY_BY_VERSION = {
+    "v8": _RICH_SCHEMA_BODY,
+    "v9": _RICH_SCHEMA_BODY,
+    "v10": _MINIMAL_SCHEMA_BODY,
+    "v11": _MINIMAL_SCHEMA_BODY,
+}
+
+
 # Monta o prompt de região a partir do request. É uma função pura: não toca
 # em modelo, device nem checkpoint, o que permite testar o contrato textual do
 # prompt sem GPU — o mesmo motivo pelo qual describe_views e
 # describe_scene_claims vivem separados. Chamada por
-# RealMultimodalReasoningAdapter.analyze_region.
-def region_prompt(request: RegionReasoningRequest) -> str:
-    """Retorna o prompt de região correspondente a ``request``."""
+# RealMultimodalReasoningAdapter.analyze_region e
+# GeminiRoboticsReasoningAdapter.analyze_region.
+def region_prompt(request: RegionReasoningRequest, prompt_version: str) -> str:
+    """Retorna o prompt de região correspondente a ``request`` e ``prompt_version``."""
+    try:
+        body = _REGION_PROMPT_BODY_BY_VERSION[prompt_version]
+    except KeyError:
+        raise ValueError(f"reasoning_prompts.region_prompt: unknown prompt_version {prompt_version!r}.") from None
     return (
         f"{describe_views(request)}"
-        "Describe ONLY what is actually visible in the subject region shown above, "
-        "even if it is small or blurry — a plain surface (wall, floor, ceiling) is a "
-        "valid, specific answer. Do not restate the whole-scene description, and do "
-        "NOT name an object merely because this kind of scene usually contains one: "
-        "if the pixels show a blank wall, the answer is a wall. Use the context "
-        "image(s) only to disambiguate the subject, never to describe the surroundings "
-        "instead. Respond with EXACTLY ONE JSON object (never a list/array, "
-        "never markdown fences) with exactly these keys: "
-        '"label" (non-empty short string, singular — the single best description), '
-        '"kind" (exactly one of "thing" for a countable object, "stuff" for an '
-        'uncountable surface or material, "part" for a component of a larger object, or '
-        '"unknown"), "category" (short coarse category string, optional), "confidence" '
-        "(number between 0 and 1 — YOUR ACTUAL CERTAINTY; omit the key entirely if you "
-        'cannot estimate it, never guess 1.0), "alternatives" (list of '
-        '{"label", "confidence"} objects for competing hypotheses, may be empty), '
-        '"description" (string, optional), "attributes" (list of strings, optional), '
-        '"condition" (string, optional), "material" (string, optional). '
-        "The SHAPE below is the required format. Every value in it is a placeholder "
-        "describing what to write there — never copy a placeholder or the example "
-        "values into your answer:\n"
-        '{"label": "<one noun naming the subject>", "kind": "thing", '
-        '"category": "<coarse category>", "confidence": 0.71, '
-        '"alternatives": [{"label": "<competing noun>", "confidence": 0.18}], '
-        '"description": "<one short sentence>", "attributes": ["<adjective>"], '
-        '"condition": "<state>", "material": "<material>"}'
+        f"{body}"
         f"{describe_scene_claims(request)}"
         f"{describe_prior(request)}"
     )

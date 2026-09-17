@@ -1,0 +1,231 @@
+{
+  "frame_id": "corridor-02-04234",
+  "regions": [
+    {
+      "region_id": "region-03c2ebe269e3433f",
+      "label": "doorway",
+      "region_kind": "part",
+      "discovery_area": 840,
+      "box_before": {
+        "x_min": 305.0,
+        "y_min": 173.0,
+        "x_max": 329.0,
+        "y_max": 208.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.763668524014065,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-327187f079d88b26",
+      "label": "door",
+      "region_kind": "part",
+      "discovery_area": 1540,
+      "box_before": {
+        "x_min": 181.0,
+        "y_min": 230.0,
+        "x_max": 258.0,
+        "y_max": 250.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 3,
+      "latency_s": 3.0200065259996336,
+      "model_mask_area": 4871,
+      "clipped_pixel_count": 3993,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 878,
+          "box": {
+            "x_min": 204.0,
+            "y_min": 230.0,
+            "x_max": 248.0,
+            "y_max": 250.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 878,
+          "refined_overlap": 878,
+          "detector_box_overlap": 878,
+          "distance_to_box_center_px": 20.905960150945187
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-61dc03956c0cdcd1",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 6534,
+      "box_before": {
+        "x_min": 201.0,
+        "y_min": 148.0,
+        "x_max": 255.0,
+        "y_max": 269.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.017319222999503836,
+      "model_mask_area": 4871,
+      "clipped_pixel_count": 0,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 4871,
+          "box": {
+            "x_min": 204.0,
+            "y_min": 150.0,
+            "x_max": 252.0,
+            "y_max": 269.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 4871,
+          "refined_overlap": 4871,
+          "detector_box_overlap": 4871,
+          "distance_to_box_center_px": 0.4711001335573683
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 4871,
+      "area_ratio": 0.7454851545760637,
+      "area_reduction_ratio": 0.2545148454239363,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 204.0,
+        "y_min": 150.0,
+        "x_max": 252.0,
+        "y_max": 269.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-69760326c1684d1a",
+      "label": "doorway",
+      "region_kind": "part",
+      "discovery_area": 19482,
+      "box_before": {
+        "x_min": 164.0,
+        "y_min": 82.0,
+        "x_max": 266.0,
+        "y_max": 273.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.013750234007602558,
+      "model_mask_area": 11907,
+      "clipped_pixel_count": 11,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 11895,
+          "box": {
+            "x_min": 169.0,
+            "y_min": 82.0,
+            "x_max": 255.0,
+            "y_max": 269.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 11895,
+          "refined_overlap": 11895,
+          "detector_box_overlap": 11895,
+          "distance_to_box_center_px": 0.3164196663025787
+        },
+        {
+          "component_id": 2,
+          "area": 1,
+          "box": {
+            "x_min": 173.0,
+            "y_min": 98.0,
+            "x_max": 174.0,
+            "y_max": 99.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1,
+          "refined_overlap": 1,
+          "detector_box_overlap": 1,
+          "distance_to_box_center_px": 90.40807665270809
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 11895,
+      "area_ratio": 0.6105635971666153,
+      "area_reduction_ratio": 0.38943640283338465,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 169.0,
+        "y_min": 82.0,
+        "x_max": 255.0,
+        "y_max": 269.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-6e8526d978e9df28",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1200,
+      "box_before": {
+        "x_min": 323.0,
+        "y_min": 223.0,
+        "x_max": 363.0,
+        "y_max": 253.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b067d58fca181c3f",
+      "label": "doorway opening",
+      "region_kind": "part",
+      "discovery_area": 756,
+      "box_before": {
+        "x_min": 261.0,
+        "y_min": 224.0,
+        "x_max": 324.0,
+        "y_max": 236.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45430300701991655,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

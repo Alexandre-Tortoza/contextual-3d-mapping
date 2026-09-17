@@ -1,0 +1,543 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-008",
+  "input_sha256": "2a0db0d9ee1ad0e3d3f05785c028b0c63221194e7589c55c6b0ad1c73601b78b",
+  "latency_s": 210.65090582700213,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 16,
+  "proposal_count": 35,
+  "merged_proposal_count": 25,
+  "regions_with_multiple_proposals": 6,
+  "label_counts": [
+    [
+      "rows of crops",
+      15
+    ],
+    [
+      "tractor",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "agricultural field",
+      15
+    ],
+    [
+      "agricultural machinery",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      16
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 16,
+    "missing": 0,
+    "minimum": 0.8147310018539429,
+    "maximum": 0.9918524622917175,
+    "mean": 0.9077107235789299,
+    "median": 0.9110348224639893,
+    "distinct_values": 16,
+    "stddev": 0.05567320219236233,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 1,
+  "mode_collapse": {
+    "dominant_label": "rows of crops",
+    "dominant_fraction": 0.9375,
+    "distinct_labels": 2,
+    "dominant_category": "agricultural field",
+    "dominant_category_fraction": 0.9375,
+    "distinct_categories": 2
+  },
+  "scene_echo_label_count": 15,
+  "ego": {
+    "proposals_rejected": 0,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 5,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      5
+    ],
+    [
+      "outside_valid_area",
+      5
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "contradicts",
+        36
+      ],
+      [
+        "indistinguishable",
+        8
+      ],
+      [
+        "supports",
+        4
+      ]
+    ],
+    "regions_with_unsupported_primary": 8,
+    "regions_with_ambiguous_identity": 0,
+    "region_kind_contradictions": 0,
+    "reconciled_regions": 15,
+    "distinct_raw_labels": 2,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "covers",
+        1
+      ],
+      [
+        "part_of",
+        1
+      ]
+    ],
+    "geometric_relations": 59,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 15,
+    "competing_assertions": 13
+  },
+  "published_region_count": 16,
+  "structural_context_count": 0,
+  "suppressed_regions": [],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-16dbd63d5b807dd6",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 52789,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 1.0,
+        "x_max": 384.0,
+        "y_max": 211.0
+      },
+      "component_count_before": 12,
+      "geometric_confidence": 0.9907163977622986,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.7608203569834586,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-24f49ae2345f4db1",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 1545,
+      "box_before": {
+        "x_min": 319.0,
+        "y_min": 176.0,
+        "x_max": 375.0,
+        "y_max": 221.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9011659026145935,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2f4874b9db1901f4",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 734,
+      "box_before": {
+        "x_min": 52.0,
+        "y_min": 263.0,
+        "x_max": 89.0,
+        "y_max": 299.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8746045827865601,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-332be38a09d31666",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 1589,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 167.0,
+        "x_max": 34.0,
+        "y_max": 232.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.920903742313385,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-3b7ed97bf46db941",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 1291,
+      "box_before": {
+        "x_min": 229.0,
+        "y_min": 169.0,
+        "x_max": 265.0,
+        "y_max": 220.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8810951113700867,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-49b45a291c06a082",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 843,
+      "box_before": {
+        "x_min": 483.0,
+        "y_min": 194.0,
+        "x_max": 542.0,
+        "y_max": 224.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9225729703903198,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-682fdfb091653836",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 1222,
+      "box_before": {
+        "x_min": 328.0,
+        "y_min": 176.0,
+        "x_max": 374.0,
+        "y_max": 220.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8591830730438232,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-844f5c7318535641",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 793,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 173.0,
+        "x_max": 279.0,
+        "y_max": 220.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8147310018539429,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-a2cb30b561c022e9",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 1852,
+      "box_before": {
+        "x_min": 227.0,
+        "y_min": 169.0,
+        "x_max": 278.0,
+        "y_max": 221.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8163937926292419,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b30f145d1e507ec6",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 7665,
+      "box_before": {
+        "x_min": 43.0,
+        "y_min": 120.0,
+        "x_max": 153.0,
+        "y_max": 228.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9575647115707397,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b715a0147a0cefdf",
+      "label": "tractor",
+      "region_kind": "thing",
+      "discovery_area": 106183,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 226.0,
+        "x_max": 640.0,
+        "y_max": 478.0
+      },
+      "component_count_before": 8,
+      "geometric_confidence": 0.930107593536377,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 3,
+      "latency_s": 3.062064690006082,
+      "model_mask_area": 34882,
+      "clipped_pixel_count": 34882,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-b826457f86452391",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 67747,
+      "box_before": {
+        "x_min": 256.0,
+        "y_min": 1.0,
+        "x_max": 640.0,
+        "y_max": 206.0
+      },
+      "component_count_before": 45,
+      "geometric_confidence": 0.990537703037262,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c1e786b902329949",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 821,
+      "box_before": {
+        "x_min": 155.0,
+        "y_min": 177.0,
+        "x_max": 182.0,
+        "y_max": 223.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.851892352104187,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-cead0c9ff3e59996",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 2145,
+      "box_before": {
+        "x_min": 277.0,
+        "y_min": 192.0,
+        "x_max": 630.0,
+        "y_max": 206.0
+      },
+      "component_count_before": 6,
+      "geometric_confidence": 0.9331274032592773,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e6a09d1a039e9a13",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 814,
+      "box_before": {
+        "x_min": 183.0,
+        "y_min": 174.0,
+        "x_max": 206.0,
+        "y_max": 223.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8869227766990662,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e8c0aefe245d13ca",
+      "label": "rows of crops",
+      "region_kind": "thing",
+      "discovery_area": 96958,
+      "box_before": {
+        "x_min": 0.0,
+        "y_min": 2.0,
+        "x_max": 640.0,
+        "y_max": 426.0
+      },
+      "component_count_before": 25,
+      "geometric_confidence": 0.9918524622917175,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": []
+}

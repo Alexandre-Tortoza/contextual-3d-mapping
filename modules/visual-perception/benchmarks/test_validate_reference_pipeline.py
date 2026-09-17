@@ -222,20 +222,29 @@ def test_the_reasoning_checkpoint_override_changes_only_the_checkpoint() -> None
         assert getattr(candidate, field) == getattr(baseline, field), field
 
 
-# Qwen vs Gemini (#276) só mede o modelo se o resto da config ficar idêntico: o
-# override troca backend e checkpoint e desliga o 4-bit, que é do runtime local.
-def test_the_reasoning_backend_override_changes_only_the_backend_identity() -> None:
-    """Selecionar o Gemini não altera prompts, views, tetos nem outros estágios."""
+# Qwen vs Gemini (#276) só mede o modelo se o resto da config ficar idêntico
+# — exceto o schema do prompt de região, que passou a ser por-backend em
+# 2026-09-17 (ver MultimodalReasoningConfig.prompt_version): a config de
+# referência do Qwen usa o schema reduzido (v10) por causa de um colapso de
+# labels medido só nesse modelo, e generalizar isso para o Gemini quebrou o
+# grounding textual de labels como "wooden pallet" (perdia o campo opcional
+# "material", virava só "pallet", e o Grounding-DINO deixava de achar a box).
+# O override para Gemini sempre repõe o schema de 8 campos (v8).
+def test_the_reasoning_backend_override_changes_only_the_backend_identity_and_prompt_schema() -> None:
+    """Selecionar o Gemini não altera views, tetos nem outros estágios."""
     baseline = resolve_config(ValidationOptions(sequence_masks=None))
     candidate = resolve_config(ValidationOptions(sequence_masks=None, reasoning_backend="gemini_robotics_er"))
 
     assert candidate.multimodal_reasoning.backend == "gemini_robotics_er"
     assert candidate.multimodal_reasoning.checkpoint == "gemini-robotics-er-2-preview"
+    assert baseline.multimodal_reasoning.prompt_version == "v10"
+    assert candidate.multimodal_reasoning.prompt_version == "v8"
     assert dataclasses.replace(
         candidate.multimodal_reasoning,
         backend=baseline.multimodal_reasoning.backend,
         checkpoint=baseline.multimodal_reasoning.checkpoint,
         load_in_4bit=baseline.multimodal_reasoning.load_in_4bit,
+        prompt_version=baseline.multimodal_reasoning.prompt_version,
     ) == baseline.multimodal_reasoning
     for field in ("region_discovery", "feature_extraction", "language_embedding",
                   "multi_context", "hypothesis_support", "refinement",
@@ -254,7 +263,7 @@ def test_region_discovery_override_changes_only_its_backend_identity() -> None:
     )
 
     assert candidate.region_discovery.backend == "florence2"
-    assert candidate.region_discovery.checkpoint == "microsoft/Florence-2-large"
+    assert candidate.region_discovery.checkpoint == "florence-community/Florence-2-large"
     assert dataclasses.replace(
         candidate.region_discovery,
         backend=baseline.region_discovery.backend,
@@ -412,9 +421,9 @@ def test_o_prior_temporal_muda_apenas_o_modo_e_a_versao_do_prompt() -> None:
     )
 
     assert candidate.multimodal_reasoning.temporal_prior_mode == "box_overlap"
-    assert candidate.multimodal_reasoning.prompt_version == "v9"
+    assert candidate.multimodal_reasoning.prompt_version == "v11"
     assert baseline.multimodal_reasoning.temporal_prior_mode == "disabled"
-    assert baseline.multimodal_reasoning.prompt_version == "v8"
+    assert baseline.multimodal_reasoning.prompt_version == "v10"
     assert candidate.fingerprint() != baseline.fingerprint()
     assert dataclasses.replace(
         candidate.multimodal_reasoning,
@@ -455,4 +464,4 @@ def test_sem_a_flag_o_prompt_de_regiao_e_identico_ao_historico() -> None:
         region_id="region-a", region_box=box, image_width=4, image_height=4, views=(view,)
     )
 
-    assert "PREVIOUS view" not in region_prompt(request)
+    assert "PREVIOUS view" not in region_prompt(request, "v8")

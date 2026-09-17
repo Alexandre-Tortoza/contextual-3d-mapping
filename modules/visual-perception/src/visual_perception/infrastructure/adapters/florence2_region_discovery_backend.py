@@ -100,9 +100,11 @@ class Florence2RegionDiscoveryAdapter:
         except Exception as error:
             raise_backend_execution_error(config.backend, "a geração de propostas de região", error)
 
-    # Carrega processor e pesos oficiais somente no primeiro uso. Florence-2
-    # requer ``trust_remote_code=True`` porque o repositório publica sua classe
-    # e seu post-processamento próprios junto do checkpoint.
+    # Carrega processor e pesos oficiais somente no primeiro uso. Desde
+    # transformers>=4.56 o Florence-2 é suportado nativamente (classe
+    # ``Florence2ForConditionalGeneration``); o checkpoint ``microsoft/*``
+    # antigo exigia ``trust_remote_code=True`` com código que não acompanhou
+    # as mudanças de transformers v5 (ver ``florence-community/*`` no Hub).
     def _get_runtime(self, config: RegionDiscoveryConfig) -> tuple[Any, Any, Any, str, str]:
         """Retorna torch, processor, modelo, device e chave residente."""
         checkpoint = require_checkpoint(config.checkpoint, config.backend)
@@ -113,11 +115,13 @@ class Florence2RegionDiscoveryAdapter:
         def factory() -> tuple[Any, Any]:
             try:
                 transformers = require_module("transformers", config.backend)
-                processor = transformers.AutoProcessor.from_pretrained(checkpoint, trust_remote_code=True)
-                model_kwargs: dict[str, Any] = {"trust_remote_code": True}
+                processor = transformers.AutoProcessor.from_pretrained(checkpoint)
+                model_kwargs: dict[str, Any] = {}
                 if device == "cuda":
                     model_kwargs["torch_dtype"] = torch.float16
-                model = transformers.AutoModelForCausalLM.from_pretrained(checkpoint, **model_kwargs)
+                model = transformers.Florence2ForConditionalGeneration.from_pretrained(
+                    checkpoint, **model_kwargs
+                )
                 model = model.to(device).eval()
                 return processor, model
             except BackendUnavailableError:

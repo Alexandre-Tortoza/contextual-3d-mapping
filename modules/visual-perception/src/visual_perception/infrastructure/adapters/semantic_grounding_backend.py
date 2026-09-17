@@ -53,10 +53,22 @@ class RealSemanticGroundingAdapter:
         # modelos. Liberar aqui, antes de carregar detector+segmenter, troca
         # residência permanente (e eviction reativa sob contenção real) por um
         # reload previsível por frame — sem isso, os 6 modelos (4 do canônico
-        # + grounding-dino + SAM2 promptado) não cabem nos 8GB de referência
-        # ao mesmo tempo, e a eviction por LRU thrasheava a cada troca de
-        # estágio em vez de uma vez por frame (visto na prática: ~4 reloads
-        # completos por frame).
+        # + grounding-dino + SAM2 promptado) não cabem nos ~7,65GiB de
+        # referência ao mesmo tempo, e a eviction por LRU thrasheava a cada
+        # troca de estágio em vez de uma vez por frame (visto na prática:
+        # ~4 reloads completos por frame).
+        #
+        # #292 tentou substituir isso por um grupo "protected" (os 4 modelos
+        # canônicos nunca evictados, só o par de grounding competindo por
+        # LRU) para eliminar o reload dos 4 modelos mais caros. Revertido:
+        # validado ao vivo contra o corridor-02, os 4 modelos canônicos
+        # residentes já consomem ~7,34GB dos ~7,65GiB da referência (RTX
+        # 3060), sem folga para o scratch de inferência (ex: mask generation
+        # do SAM3) do frame seguinte — o 2º frame de qualquer sequência
+        # estourava OOM de forma determinística, mesmo sem nenhum modelo de
+        # grounding residente. Manter protegidos só os modelos mais leves
+        # (DINOv2+CLIP) preservaria pouco do ganho (o reload caro é o do VLM),
+        # então não vale a complexidade adicional nesta GPU de referência.
         self._lifecycle.release_all()
         provenance = (
             ModelProvenance("semantic_localization", "grounding_dino", fingerprint_of(config), checkpoint=config.detector_checkpoint),

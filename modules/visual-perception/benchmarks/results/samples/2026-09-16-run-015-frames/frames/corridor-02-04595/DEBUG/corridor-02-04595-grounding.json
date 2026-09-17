@@ -1,0 +1,180 @@
+{
+  "frame_id": "corridor-02-04595",
+  "regions": [
+    {
+      "region_id": "region-00806259a30236be",
+      "label": "ceiling vent",
+      "region_kind": "thing",
+      "discovery_area": 4214,
+      "box_before": {
+        "x_min": 111.0,
+        "y_min": 34.0,
+        "x_max": 474.0,
+        "y_max": 224.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9184257984161377,
+      "visual_support": 0.0,
+      "model_calls": 3,
+      "latency_s": 6.318202768001356,
+      "model_mask_area": 43200,
+      "clipped_pixel_count": 43200,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-67d358f2e51552e6",
+      "label": "ceiling",
+      "region_kind": "thing",
+      "discovery_area": 3705,
+      "box_before": {
+        "x_min": 66.0,
+        "y_min": 29.0,
+        "x_max": 140.0,
+        "y_max": 122.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9442131519317627,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 2,
+      "latency_s": 0.4668881989928195,
+      "model_mask_area": 40985,
+      "clipped_pixel_count": 40985,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-9ba84a4abd7a7299",
+      "label": "ceiling vent",
+      "region_kind": "thing",
+      "discovery_area": 38368,
+      "box_before": {
+        "x_min": 125.0,
+        "y_min": 3.0,
+        "x_max": 536.0,
+        "y_max": 213.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9487937092781067,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "M\u00faltiplas localiza\u00e7\u00f5es distintas; identidade espacial amb\u00edgua."
+    },
+    {
+      "region_id": "region-b2296b6aff56a838",
+      "label": "ceiling light fixture",
+      "region_kind": "thing",
+      "discovery_area": 1829,
+      "box_before": {
+        "x_min": 262.0,
+        "y_min": 102.0,
+        "x_max": 304.0,
+        "y_max": 254.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8893122673034668,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.45552511799905915,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-dcb7944f1fb10430",
+      "label": "ceiling vent",
+      "region_kind": "thing",
+      "discovery_area": 2998,
+      "box_before": {
+        "x_min": 110.0,
+        "y_min": 20.0,
+        "x_max": 384.0,
+        "y_max": 167.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9597837924957275,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 1,
+      "latency_s": 0.013201328998547979,
+      "model_mask_area": 43200,
+      "clipped_pixel_count": 40626,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2065,
+          "box": {
+            "x_min": 112.0,
+            "y_min": 24.0,
+            "x_max": 263.0,
+            "y_max": 110.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2065,
+          "refined_overlap": 2065,
+          "detector_box_overlap": 2065,
+          "distance_to_box_center_px": 69.12004147615006
+        },
+        {
+          "component_id": 2,
+          "area": 507,
+          "box": {
+            "x_min": 306.0,
+            "y_min": 121.0,
+            "x_max": 384.0,
+            "y_max": 165.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 507,
+          "refined_overlap": 507,
+          "detector_box_overlap": 507,
+          "distance_to_box_center_px": 20.999215570912636
+        },
+        {
+          "component_id": 3,
+          "area": 2,
+          "box": {
+            "x_min": 326.0,
+            "y_min": 137.0,
+            "x_max": 328.0,
+            "y_max": 138.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 2,
+          "refined_overlap": 2,
+          "detector_box_overlap": 2,
+          "distance_to_box_center_px": 29.230394439828764
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    }
+  ]
+}

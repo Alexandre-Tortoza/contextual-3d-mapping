@@ -96,6 +96,55 @@ summary:focus-visible {
 .map-selector > span { display: grid; place-items: center; padding: 0 10px; border-right: 2px solid var(--line); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
 .map-selector select { min-width: 0; border: 0; padding: 0 10px; background: var(--ink); color: var(--paper); font: 600 0.7rem "IBM Plex Mono", monospace; cursor: pointer; }
 
+.progress-badge {
+  top: 64px;
+  right: 14px;
+  width: min(365px, calc(100% - 28px));
+  padding: 6px 10px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.semantic-search {
+  top: 68px;
+  right: 14px;
+  width: min(365px, calc(100% - 28px));
+  display: flex;
+  flex-direction: column;
+}
+.semantic-search-form { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; min-height: 46px; align-items: stretch; }
+.semantic-search-form > span { display: grid; place-items: center; padding: 0 10px; border-right: 2px solid var(--line); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; }
+.semantic-search-form input[type="search"] { min-width: 0; border: 0; padding: 0 10px; background: var(--ink); color: var(--paper); font: 600 0.7rem "IBM Plex Mono", monospace; }
+.semantic-search-form button { border: 0; border-left: 2px solid var(--line); padding: 0 12px; background: var(--panel); font-weight: 700; text-transform: uppercase; font-size: 0.65rem; cursor: pointer; }
+.semantic-search-form button:hover:not(:disabled) { background: var(--blue); }
+.semantic-search-form button:disabled { color: #555; cursor: not-allowed; }
+.semantic-search-config-toggle { width: 38px; flex: none; }
+.semantic-search-endpoint { display: grid; grid-template-columns: auto minmax(0, 1fr); border-top: 2px solid var(--line); }
+.semantic-search-endpoint span { display: grid; place-items: center; padding: 0 10px; border-right: 2px solid var(--line); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+.semantic-search-endpoint input { min-width: 0; border: 0; padding: 6px 10px; background: var(--ink); color: var(--paper); font: 600 0.65rem "IBM Plex Mono", monospace; }
+.semantic-search-status { margin: 0; padding: 8px 10px; border-top: 2px solid var(--line); font-size: 0.68rem; }
+.semantic-search-status-error { color: var(--red); font-weight: 700; }
+.semantic-search-results { margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--line); max-height: 40vh; overflow-y: auto; }
+.semantic-search-results li + li { border-top: 1px solid var(--line); }
+.semantic-search-results button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--paper);
+  font: 600 0.7rem "IBM Plex Mono", monospace;
+  text-align: left;
+  cursor: pointer;
+}
+.semantic-search-results button:hover { background: var(--blue); }
+.semantic-search-results button span { opacity: 0.7; }
+
 .overlay-title {
   display: flex;
   min-height: 39px;
@@ -482,6 +531,8 @@ summary:focus-visible {
   .camera-toolbar span { display: none; }
   .camera-toolbar button { width: 43px; justify-content: center; }
   .map-selector { top: 74px; left: 14px; right: auto; width: min(300px, calc(100% - 28px)); }
+  .progress-badge { top: 124px; left: 14px; right: auto; width: min(300px, calc(100% - 28px)); }
+  .semantic-search { top: 168px; left: 14px; right: auto; width: min(300px, calc(100% - 28px)); }
 }
 
 @media (max-width: 760px) {
@@ -490,6 +541,8 @@ summary:focus-visible {
   .inspector-dock { border-top: 3px solid var(--line); border-left: 0; }
   .camera-toolbar { top: 8px; left: 8px; }
   .map-selector { top: 64px; left: 8px; width: min(280px, calc(100% - 16px)); }
+  .progress-badge { top: 114px; left: 8px; width: min(280px, calc(100% - 16px)); }
+  .semantic-search { top: 154px; left: 8px; width: min(280px, calc(100% - 16px)); }
   .context-legend { bottom: 8px; left: 8px; width: min(255px, calc(100% - 16px)); }
   .context-legend:not([open]) { width: 180px; }
   .legend-list { max-height: 22vh; }
@@ -511,22 +564,27 @@ summary:focus-visible {
 /* Página inteira de explicabilidade (main.jsx ?view=debug): cabeçalho fixo,
    painel opcional de composição da run, e um corpo em duas colunas (lista de
    frames + galeria por etapa) que rola por conta própria. */
-.debug-explorer { display: grid; grid-template-rows: auto auto minmax(0, 1fr); overflow: auto; }
-.debug-header { display: grid; gap: 10px; padding: 14px; border-bottom: 3px solid var(--line); background: var(--panel); }
+.debug-explorer { display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.debug-header { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border-bottom: 3px solid var(--line); background: var(--panel); align-items: center; justify-content: space-between; }
 .debug-run-selector { position: static; width: min(365px, 100%); box-shadow: none; }
-.debug-composition { border-bottom: 3px solid var(--line); }
+.debug-composition { border-top: 3px solid var(--line); border-bottom: 3px solid var(--line); }
 .debug-backends { border-bottom: 3px solid var(--line); }
 .debug-backend-group { display: grid; gap: 8px; }
 .debug-backend-group + .debug-backend-group { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .debug-backend-run-label { margin: 0; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; opacity: 0.75; }
-.debug-backend-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 0.75rem; }
-.debug-backend-stage { min-width: 150px; opacity: 0.65; text-transform: uppercase; font-size: 0.63rem; font-weight: 700; }
-.debug-backend-checkpoint { padding: 1px 5px; border: 1px solid var(--line); font-size: 0.65rem; opacity: 0.8; }
+.debug-backend-row { display: grid; gap: 4px 8px; font-size: 0.72rem; }
+.debug-backend-stage { opacity: 0.65; text-transform: uppercase; font-size: 0.63rem; font-weight: 700; }
+.debug-backend-checkpoint { display: inline-block; margin-top: 2px; padding: 1px 5px; border: 1px solid var(--line); font-size: 0.65rem; opacity: 0.8; word-break: break-all; }
 .debug-backend-fallback { opacity: 0.7; font-size: 0.7rem; }
-.debug-body { display: grid; min-height: 0; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); }
+.debug-body { display: grid; min-height: 0; grid-template-columns: minmax(240px, 320px) minmax(0, 1fr); }
 .debug-empty { padding: 24px; }
 
-.debug-frame-list { display: grid; margin: 0; padding: 0; overflow: auto; border-right: 3px solid var(--line); list-style: none; align-content: start; }
+/* Barra esquerda: backends, composição da run e lista de frames, todos
+   rolando juntos — a galeria de imagens fica livre para ocupar o resto da
+   largura da página, sem competir por espaço com esses painéis. */
+.debug-sidebar { display: grid; min-height: 0; grid-template-rows: auto auto minmax(0, 1fr); overflow: auto; border-right: 3px solid var(--line); align-content: start; }
+
+.debug-frame-list { display: grid; margin: 0; padding: 0; overflow: auto; list-style: none; align-content: start; }
 .debug-frame-item {
   display: grid;
   width: 100%;
@@ -548,18 +606,19 @@ summary:focus-visible {
 
 .debug-gallery { display: grid; overflow: auto; align-content: start; gap: 0; }
 .debug-stage-group h3 { margin-bottom: 12px; }
-.debug-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.debug-thumb { display: grid; overflow: hidden; border: 2px solid var(--line); background: var(--ink); color: var(--paper); gap: 4px; text-decoration: none; }
-.debug-thumb img { display: block; width: 100%; height: 110px; object-fit: cover; }
+.debug-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.debug-thumb { display: grid; overflow: hidden; border: 2px solid var(--line); background: var(--ink); color: var(--paper); gap: 4px; padding: 0; cursor: pointer; font: inherit; }
+.debug-thumb img { display: block; width: 100%; height: 180px; object-fit: cover; }
 .debug-thumb span { overflow: hidden; padding: 4px 6px; text-overflow: ellipsis; white-space: nowrap; font-size: 0.63rem; opacity: 0.75; }
+.debug-thumb:hover img { opacity: 0.85; }
 .debug-documents { display: grid; margin-top: 12px; gap: 8px; }
 .debug-json-disclosure { border: 1px solid var(--line); background: var(--ink); }
 .debug-json-disclosure summary { padding: 8px 10px; cursor: pointer; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
 .debug-json-disclosure pre { margin: 0; padding: 10px; overflow-wrap: anywhere; white-space: pre-wrap; border-top: 1px solid var(--line); color: var(--paper); font-size: 0.65rem; opacity: 0.85; }
 
 @media (max-width: 760px) {
-  .debug-body { grid-template-columns: 1fr; grid-template-rows: minmax(120px, 33vh) minmax(0, 1fr); }
-  .debug-frame-list { border-right: 0; border-bottom: 3px solid var(--line); }
+  .debug-body { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 40vh) minmax(0, 1fr); }
+  .debug-sidebar { border-right: 0; border-bottom: 3px solid var(--line); }
 }
 
 /* A comparação ocupa a página inteira para dar a cada overlay espaço suficiente

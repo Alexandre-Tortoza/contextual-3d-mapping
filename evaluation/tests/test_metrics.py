@@ -14,6 +14,7 @@ from visual_perception_evaluation.masks import (
 )
 from visual_perception_evaluation.metrics import (
     MetricValue,
+    PointAssociationOutcome,
     RegionMatch,
     RegionMatching,
     abstention_report,
@@ -24,9 +25,25 @@ from visual_perception_evaluation.metrics import (
     expected_calibration_error,
     match_regions,
     open_vocabulary_scores,
+    point_association_metrics,
     reliability_table,
     set_metrics,
 )
+
+
+# Mantém separadas associação geométrica e qualidade de label por ponto.
+def test_point_association_metrics_report_coverage_abstention_and_label_error() -> None:
+    """Calcula métricas pontuais para um baseline e candidato comparáveis."""
+    metrics = point_association_metrics((
+        PointAssociationOutcome("p1", "wall", "wall", ("wall",), "wall"),
+        PointAssociationOutcome("p2", "door", "wall", ("door",), "wall"),
+        PointAssociationOutcome("p3", "floor", None, ("floor",), None),
+    ))
+    assert metrics["point_association_precision"].value == pytest.approx(0.5)
+    assert metrics["point_association_recall"].value == pytest.approx(1 / 3)
+    assert metrics["point_label_error"].value == pytest.approx(0.5)
+    assert metrics["point_feature_coverage"].value == pytest.approx(2 / 3)
+    assert metrics["point_abstention_rate"].value == pytest.approx(1 / 3)
 
 
 # Constrói uma máscara retangular em uma imagem 8x8, para que os testes

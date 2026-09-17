@@ -1,7 +1,71 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { compositionEntriesOf, debugGalleryFor, pipelineBackendsOf } from "./debug-explorer-data.js";
 import { CONSOLIDATED_ARTIFACT_TYPE, CONTEXT_ARTIFACT_TYPE, debugStagesOf, resolveAssetUrl } from "./map-data.js";
+
+// Mantém a navegação por Tab dentro do lightbox enquanto ele estiver aberto.
+// Mesmo padrão usado pelo modal de imagem do inspector (inspector.jsx), para
+// que o foco não escape para os controles encobertos da galeria.
+function keepDialogFocus(event) {
+  if (event.key !== "Tab") return;
+  const controls = [...event.currentTarget.querySelectorAll("button:not([disabled])")];
+  if (!controls.length) return;
+  const first = controls[0];
+  const last = controls.at(-1);
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+// Amplia uma imagem de debug para tela cheia, igual ao botão "Ampliar" do
+// mapa (inspector.jsx). Existe porque a galeria de debug antes abria as
+// imagens numa aba nova — aqui a inspeção continua na própria página.
+function ImageLightbox({ path, href, onClose }) {
+  const dialog = useRef(null);
+  useEffect(() => {
+    dialog.current?.focus();
+  }, []);
+  return createPortal(
+    <div
+      className="image-dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="image-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="debug-lightbox-title"
+        tabIndex={-1}
+        ref={dialog}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          } else keepDialogFocus(event);
+        }}
+      >
+        <header className="image-dialog-heading">
+          <strong id="debug-lightbox-title">{path}</strong>
+          <div className="block-actions">
+            <button className="dialog-close" type="button" onClick={onClose} aria-label="Fechar imagem ampliada">×</button>
+          </div>
+        </header>
+        <div className="image-dialog-stage">
+          <img className="observation-image" src={href} alt={path} />
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
 
 // Busca e formata um JSON de debug sob demanda, só quando o <details> é
 // aberto. Uma run pode publicar dezenas de documentos (diagnostics, audits,
@@ -114,6 +178,7 @@ function PipelineBackends({ slice }) {
 export function DebugExplorer({ availableMaps, slice, artifactUrl, artifactPath, onSelectArtifact, requestedObservationId, onBack }) {
   const observations = slice?.observations ?? [];
   const [selectedId, setSelectedId] = useState(observations[0]?.observation_id ?? null);
+  const [lightbox, setLightbox] = useState(null);
 
   // Troca de run: a observação selecionada da run anterior não existe mais,
   // então volta para a primeira observação da run recém-aberta.
@@ -139,37 +204,39 @@ export function DebugExplorer({ availableMaps, slice, artifactUrl, artifactPath,
         <RunSelector availableMaps={availableMaps} artifactPath={artifactPath} onSelectArtifact={onSelectArtifact} />
       </header>
 
-      <PipelineBackends slice={slice} />
-
-      {compositionEntries.length > 0 && (
-        <section className="inspector-block debug-composition">
-          <h3>Composição da run</h3>
-          {compositionEntries.map(([name, uri]) => (
-            <JsonDisclosure key={name} name={name} uri={uri} artifactUrl={artifactUrl} />
-          ))}
-        </section>
-      )}
-
       {!slice ? (
         <p className="empty-copy debug-empty">Carregando run…</p>
       ) : !hasAnyDebug ? (
         <p className="empty-copy debug-empty">Esta run não tem artefatos de debug publicados.</p>
       ) : (
         <div className="debug-body">
-          <ul className="debug-frame-list">
-            {observations.map((observation) => (
-              <li key={observation.observation_id}>
-                <button
-                  type="button"
-                  className={`debug-frame-item ${observation.observation_id === selectedId ? "active" : ""}`}
-                  onClick={() => setSelectedId(observation.observation_id)}
-                >
-                  <strong>{observation.frame_id ?? observation.observation_id}</strong>
-                  <div className="debug-frame-badges"><StageBadges observation={observation} /></div>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="debug-sidebar">
+            <PipelineBackends slice={slice} />
+
+            {compositionEntries.length > 0 && (
+              <section className="inspector-block debug-composition">
+                <h3>Composição da run</h3>
+                {compositionEntries.map(([name, uri]) => (
+                  <JsonDisclosure key={name} name={name} uri={uri} artifactUrl={artifactUrl} />
+                ))}
+              </section>
+            )}
+
+            <ul className="debug-frame-list">
+              {observations.map((observation) => (
+                <li key={observation.observation_id}>
+                  <button
+                    type="button"
+                    className={`debug-frame-item ${observation.observation_id === selectedId ? "active" : ""}`}
+                    onClick={() => setSelectedId(observation.observation_id)}
+                  >
+                    <strong>{observation.frame_id ?? observation.observation_id}</strong>
+                    <div className="debug-frame-badges"><StageBadges observation={observation} /></div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="debug-gallery">
             {gallery.length === 0 && <p className="empty-copy">Este frame não tem artefatos de debug publicados.</p>}
             {gallery.map(({ stage, images, documents }) => (
@@ -178,17 +245,16 @@ export function DebugExplorer({ availableMaps, slice, artifactUrl, artifactPath,
                 {images.length > 0 && (
                   <div className="debug-thumbs">
                     {images.map(([path, uri]) => (
-                      <a
+                      <button
                         key={path}
+                        type="button"
                         className="debug-thumb"
-                        href={resolveAssetUrl(uri, artifactUrl)}
-                        target="_blank"
-                        rel="noreferrer"
                         title={path}
+                        onClick={() => setLightbox({ path, href: resolveAssetUrl(uri, artifactUrl) })}
                       >
                         <img src={resolveAssetUrl(uri, artifactUrl)} alt={path} />
                         <span>{path}</span>
-                      </a>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -203,6 +269,10 @@ export function DebugExplorer({ availableMaps, slice, artifactUrl, artifactPath,
             ))}
           </div>
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox path={lightbox.path} href={lightbox.href} onClose={() => setLightbox(null)} />
       )}
     </main>
   );

@@ -10,6 +10,7 @@ import pytest
 from contextual_mapping_datasets import (
     AnnotationCertainty,
     AnnotationProvenance,
+    GeometricSupportAnnotation,
     MaskAnnotation,
     ReferenceManifest,
     RegionAnnotation,
@@ -77,6 +78,23 @@ def _sample(
         relations=relations,
         review_state=review_state,
     )
+
+
+# Verifica que a referência 2D preserva o vínculo para a geometria revisada.
+def test_region_geometric_support_round_trips_with_uncertainty() -> None:
+    """Mantém artifact, identidades e incerteza no schema de anotação."""
+    region = RegionAnnotation(
+        "wall", _mask(), ("wall",),
+        geometric_support=GeometricSupportAnnotation(
+            "artifacts/corridor-02/context.json", ("point-7", "point-8"), "boundary", "calibration_margin",
+        ),
+    )
+    manifest = ReferenceManifest("reference", "corridor-02", "docs/policy.md", (_sample("sample", regions=(region,)),))
+    restored = reference_manifest_from_mapping(reference_manifest_to_mapping(manifest))
+    support = restored.samples[0].regions[0].geometric_support
+    assert support is not None
+    assert support.geometry_ids == ("point-7", "point-8")
+    assert support.uncertainty == "calibration_margin"
 
 
 # Constrói um manifest com um split de cada, que é o mínimo aceito pela

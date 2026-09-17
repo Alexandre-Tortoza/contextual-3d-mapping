@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import numpy as np
 import pytest
 from geometric_map import GeometryPoint, GeometryReference
 from sensor_association import (
     AssociationStatus,
     CameraLidarCalibration,
     CameraModel,
+    DenseFeatureMap,
     MapAnchoredPoint,
     RgbFrame,
     VisualRegionEvidence,
@@ -95,6 +97,45 @@ def test_associate_points_colors_visible_point_and_marks_occlusion() -> None:
     assert result[0].color_rgb == (12, 0, 0)
     assert result[0].region_id == "region-1"
     assert result[1].status is AssociationStatus.OCCLUDED
+
+
+# Garante que o vetor é lido do pixel realmente aceito após a visibilidade,
+# e não de uma região ou de uma coordenada arredondada em outro estágio.
+def test_associate_points_samples_dense_feature_at_visible_pixel() -> None:
+    """Anexa feature, espaço e proveniência ao ponto visível."""
+    rgb = RgbFrame(_reference("rgb-1", "rgb", "camera"), 5, 5, ((0, 0, 0),) * 25,
+                   frozenset((x, y) for y in range(5) for x in range(5)))
+    values = np.zeros((5, 5, 2), dtype=np.float32)
+    values[2, 2] = (0.25, 0.75)
+    result = associate_points((_point("point", (0.0, 0.0, 2.0)),), rgb, _calibration(),
+        dense_feature_map=DenseFeatureMap(values, "dino-v2/test", "feature_extraction:dino", "artifact://features"))
+    assert result[0].dense_feature == (0.25, 0.75)
+    assert result[0].embedding_space == "dino-v2/test"
+    assert result[0].feature_dimension == 2
+
+
+# Cobertura ausente é diferente de vetor zero e precisa sobreviver como None.
+def test_associate_points_keeps_missing_dense_coverage_explicit() -> None:
+    """Não fabrica feature para um pixel fora do suporte do artifact."""
+    rgb = RgbFrame(_reference("rgb-1", "rgb", "camera"), 5, 5, ((0, 0, 0),) * 25,
+                   frozenset((x, y) for y in range(5) for x in range(5)))
+    result = associate_points((_point("point", (0.0, 0.0, 2.0)),), rgb, _calibration(),
+        dense_feature_map=DenseFeatureMap(np.ones((5, 5, 2), dtype=np.float32), "space", "producer", "artifact://features",
+                                          np.zeros((5, 5), dtype=np.bool_)))
+    assert result[0].dense_feature is None
+
+
+# Confirma que o contract conserva o transform do artifact, não supondo que a
+# grade de features sempre tenha a resolução RGB nativa.
+def test_associate_points_samples_dense_feature_using_declared_coordinate_transform() -> None:
+    """Amostra a célula da grade que corresponde ao pixel projetado."""
+    rgb = RgbFrame(_reference("rgb-1", "rgb", "camera"), 5, 5, ((0, 0, 0),) * 25,
+                   frozenset((x, y) for y in range(5) for x in range(5)))
+    values = np.zeros((3, 3, 1), dtype=np.float32)
+    values[1, 1] = 7.0
+    result = associate_points((_point("point", (0.0, 0.0, 2.0)),), rgb, _calibration(),
+        dense_feature_map=DenseFeatureMap(values, "space", "producer", "artifact://features", stride_x=2.0, stride_y=2.0))
+    assert result[0].dense_feature == (7.0,)
 
 
 # Protege a tolerância temporal explícita da associação multimodal.

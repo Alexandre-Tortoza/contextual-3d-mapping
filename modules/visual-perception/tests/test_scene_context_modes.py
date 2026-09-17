@@ -131,8 +131,8 @@ def _prompt_request(scene_claims: tuple[SemanticClaim, ...]) -> RegionReasoningR
 # medindo duas variáveis ao mesmo tempo e não valeria nada.
 def test_the_two_modes_differ_only_by_the_appended_scene_block() -> None:
     """O prompt de local-first é prefixo exato do de context-assisted."""
-    local = region_prompt(_prompt_request(()))
-    assisted = region_prompt(_prompt_request(_scene().claims))
+    local = region_prompt(_prompt_request(()), "v8")
+    assisted = region_prompt(_prompt_request(_scene().claims), "v8")
 
     assert assisted.startswith(local)
     assert len(assisted) > len(local)

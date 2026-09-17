@@ -143,6 +143,44 @@ def test_repeat_is_idempotent_and_changed_content_cannot_overwrite(tmp_path: Pat
     assert save_run(public, artifact) != first
 
 
+# Uma run em andamento republica sob a mesma identidade a cada lote; sem
+# `overwrite`, seria a mesma rejeição do teste acima.
+def test_overwrite_replaces_in_progress_run_content(tmp_path: Path) -> None:
+    """`overwrite=True` substitui o conteúdo publicado sob o mesmo run_id."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    first = save_run(public, artifact, run_id="corridor-02-full", in_progress=True, frame_count_expected=1778)
+    manifest = json.loads((first / "manifest.json").read_text())
+    assert manifest["in_progress"] is True
+    assert manifest["frame_count_expected"] == 1778
+
+    (artifact.parent / "source-assets/raw.png").write_bytes(b"more-frames")
+    second = save_run(
+        public, artifact, run_id="corridor-02-full", overwrite=True, in_progress=True, frame_count_expected=1778,
+    )
+
+    assert second == first
+    assert (second / "source-assets/raw.png").read_bytes() == b"more-frames"
+    manifest = json.loads((second / "manifest.json").read_text())
+    assert manifest["in_progress"] is True
+
+
+# A publicação final fecha a run: sem `in_progress`, o manifest não carrega
+# mais os campos de progresso, e ela volta a ser imutável como as demais.
+def test_final_publish_closes_an_in_progress_run(tmp_path: Path) -> None:
+    """A run deixa de ser `in_progress` quando republicada sem a flag."""
+    artifact = context_artifact(tmp_path / "input")
+    public = tmp_path / "public"
+    save_run(public, artifact, run_id="corridor-02-full", in_progress=True, frame_count_expected=1778)
+
+    (artifact.parent / "source-assets/raw.png").write_bytes(b"final-frame")
+    closed = save_run(public, artifact, run_id="corridor-02-full", overwrite=True)
+
+    manifest = json.loads((closed / "manifest.json").read_text())
+    assert "in_progress" not in manifest
+    assert "frame_count_expected" not in manifest
+
+
 # A geração automática de run-id passa a seguir o mesmo esquema sequencial
 # usado pelo restante do repositório, em vez do timestamp+fingerprint antigo.
 def test_auto_generated_run_id_follows_the_shared_scheme(tmp_path: Path) -> None:

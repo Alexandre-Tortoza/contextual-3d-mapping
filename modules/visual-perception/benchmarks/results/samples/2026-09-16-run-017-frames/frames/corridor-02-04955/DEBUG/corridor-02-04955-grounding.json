@@ -1,0 +1,72 @@
+{
+  "frame_id": "corridor-02-04955",
+  "regions": [
+    {
+      "region_id": "region-42c8685d5ef2a8b1",
+      "label": "floor tiles",
+      "region_kind": "thing",
+      "discovery_area": 1226,
+      "box_before": {
+        "x_min": 17.0,
+        "y_min": 323.0,
+        "x_max": 87.0,
+        "y_max": 349.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8437872529029846,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.177530254994053,
+      "model_mask_area": 68240,
+      "clipped_pixel_count": 67014,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 1226,
+          "box": {
+            "x_min": 17.0,
+            "y_min": 323.0,
+            "x_max": 87.0,
+            "y_max": 349.0
+          },
+          "contains_support": false,
+          "discovery_overlap": 1226,
+          "refined_overlap": 1226,
+          "detector_box_overlap": 1226,
+          "distance_to_box_center_px": 235.4473857153743
+        }
+      ],
+      "semantic_grounding_status": "mask_fragmented",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-cc93018013743c6c",
+      "label": "green line",
+      "region_kind": "thing",
+      "discovery_area": 1891,
+      "box_before": {
+        "x_min": 314.0,
+        "y_min": 3.0,
+        "x_max": 460.0,
+        "y_max": 214.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.8772940039634705,
+      "visual_support": null,
+      "model_calls": 1,
+      "latency_s": 0.4539343789947452,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ]
+}

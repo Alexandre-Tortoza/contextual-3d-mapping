@@ -128,7 +128,7 @@ def test_region_request_sends_every_view_in_order(monkeypatch: pytest.MonkeyPatc
 
     *images, prompt = models.requests[0]["contents"]
     assert len(images) == 3
-    assert prompt == region_prompt(request)
+    assert prompt == region_prompt(request, "v8")
     widths = [int.from_bytes(image.inline_data.data[16:20], "big") for image in images]
     assert widths == [4, 5, 6]
 

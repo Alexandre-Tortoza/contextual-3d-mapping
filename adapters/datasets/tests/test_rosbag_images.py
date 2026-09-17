@@ -14,6 +14,7 @@ from contextual_mapping_adapters import (
     RosbagImageTopic,
     RosbagRecording,
     decode_image_message,
+    extract_strided_rosbag_frames,
     frame_provenance_path,
     read_frame_provenance,
     select_rgb_topic,
@@ -121,3 +122,57 @@ def test_header_frame_id_is_read_from_the_message() -> None:
     assert _header_frame_id(SimpleNamespace(header=SimpleNamespace(frame_id="camera"))) == "camera"
     assert _header_frame_id(SimpleNamespace(header=SimpleNamespace(frame_id=""))) is None
     assert _header_frame_id(SimpleNamespace()) is None
+
+
+# Reader fake de um stream com 10 mensagens de 1 pixel, suficiente para
+# exercitar seleção de faixa e passo sem abrir uma rosbag real.
+class _FakeAnyReader:
+    def __init__(self, paths: object) -> None:
+        self.connections = [SimpleNamespace(topic="/camera/rgb", msgtype="sensor_msgs/msg/Image")]
+        self.topics = {"/camera/rgb": SimpleNamespace(msgcount=10)}
+        self.start_time = 0
+        self.end_time = 10_000_000_000
+
+    def __enter__(self) -> "_FakeAnyReader":
+        return self
+
+    def __exit__(self, *exception_info: object) -> bool:
+        return False
+
+    def messages(self, connections: list[object]) -> list[tuple[object, int, bytes]]:
+        return [(connections[0], index * 1_000_000, b"raw") for index in range(10)]
+
+    def deserialize(self, rawdata: bytes, msgtype: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            height=1, width=1, encoding="rgb8", data=bytes((1, 2, 3)), header=SimpleNamespace(frame_id=""),
+        )
+
+
+# O nome do arquivo precisa carregar o índice real no stream, não a ordem de
+# escrita: é isso que permite a duas extrações em lotes diferentes do mesmo
+# bag produzirem os mesmos nomes para os mesmos frames (pré-condição do
+# resume no harness de percepção).
+def test_extract_strided_rosbag_frames_names_by_stream_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Confere passo, faixa e nomeação por índice real do stream."""
+    monkeypatch.setattr("rosbags.highlevel.AnyReader", _FakeAnyReader)
+    bag_path = tmp_path / "corridor-02.bag"
+    bag_path.touch()
+    output_dir = tmp_path / "frames"
+    written = extract_strided_rosbag_frames(
+        bag_path, output_dir, stride=3, start_index=2, end_index=9, frame_id_prefix="corridor-02",
+    )
+    # O passo é absoluto (índice % stride == 0), não relativo a start_index:
+    # é isso que garante que lotes diferentes (faixas diferentes) do mesmo
+    # bag selecionem exatamente os mesmos índices globais.
+    assert [path.name for path in written] == ["corridor-02-00003.png", "corridor-02-00006.png"]
+    for path in written:
+        assert path.is_file()
+        assert read_frame_provenance(path).sequence_index == int(path.stem.rsplit("-", 1)[1])
+
+
+def test_extract_strided_rosbag_frames_rejects_invalid_stride_or_range(tmp_path: Path) -> None:
+    """Confere a rejeição de ``stride`` não positivo e de faixa invertida."""
+    with pytest.raises(ValueError, match="stride"):
+        extract_strided_rosbag_frames(Path("run.bag"), tmp_path, stride=0)
+    with pytest.raises(ValueError, match="faixa de índices"):
+        extract_strided_rosbag_frames(Path("run.bag"), tmp_path, stride=1, start_index=5, end_index=5)

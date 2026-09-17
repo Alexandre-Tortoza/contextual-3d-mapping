@@ -1,0 +1,1243 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-003",
+  "input_sha256": "3714a41ad795d5c609f2f2629291bea1d022905c606e87b5b0f2cf4745f6e4ca",
+  "latency_s": 432.99746677899384,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 67,
+  "proposal_count": 157,
+  "merged_proposal_count": 125,
+  "regions_with_multiple_proposals": 35,
+  "label_counts": [
+    [
+      "door",
+      38
+    ],
+    [
+      "floor",
+      24
+    ],
+    [
+      "ceiling",
+      3
+    ],
+    [
+      "ceiling tiles",
+      2
+    ]
+  ],
+  "category_counts": [
+    [
+      "building element",
+      36
+    ],
+    [
+      "flooring",
+      24
+    ],
+    [
+      "building interior",
+      4
+    ],
+    [
+      "building component",
+      2
+    ],
+    [
+      "ceilings",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      67
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 67,
+    "missing": 0,
+    "minimum": 0.9,
+    "maximum": 0.9,
+    "mean": 0.9,
+    "median": 0.9,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "geometric_confidence": {
+    "count": 67,
+    "missing": 0,
+    "minimum": 0.8028717637062073,
+    "maximum": 0.9902690649032593,
+    "mean": 0.93410068483495,
+    "median": 0.9514220952987671,
+    "distinct_values": 67,
+    "stddev": 0.04881960067754793,
+    "degenerate": false
+  },
+  "duplicate_label_hypotheses": 18,
+  "mode_collapse": {
+    "dominant_label": "door",
+    "dominant_fraction": 0.5671641791044776,
+    "distinct_labels": 4,
+    "dominant_category": "building element",
+    "dominant_category_fraction": 0.5373134328358209,
+    "distinct_categories": 5
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 2,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 6,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "below_min_relative_area",
+      24
+    ],
+    [
+      "outside_valid_area",
+      6
+    ],
+    [
+      "ego_vehicle_overlap",
+      2
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        103
+      ],
+      [
+        "indistinguishable",
+        80
+      ],
+      [
+        "contradicts",
+        18
+      ]
+    ],
+    "regions_with_unsupported_primary": 0,
+    "regions_with_ambiguous_identity": 6,
+    "region_kind_contradictions": 29,
+    "reconciled_regions": 29,
+    "distinct_raw_labels": 4,
+    "distinct_canonical_concepts": 5,
+    "entity_groups": 4,
+    "regions_in_entity_groups": 22,
+    "supported_entity_groups": 2,
+    "semantic_relations": [
+      [
+        "part_of",
+        2
+      ],
+      [
+        "covers",
+        1
+      ]
+    ],
+    "geometric_relations": 495,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 24
+  },
+  "published_region_count": 38,
+  "structural_context_count": 29,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      29
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-0dded33747ce644d",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 2196,
+      "box_before": {
+        "x_min": 349.0,
+        "y_min": 192.0,
+        "x_max": 384.0,
+        "y_max": 258.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8040187358856201,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 3.6802532720030285,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-188934a5030a3f78",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 4008,
+      "box_before": {
+        "x_min": 187.0,
+        "y_min": 170.0,
+        "x_max": 234.0,
+        "y_max": 279.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.960482120513916,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-1a7fdafde595732a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 4043,
+      "box_before": {
+        "x_min": 33.0,
+        "y_min": 61.0,
+        "x_max": 259.0,
+        "y_max": 264.0
+      },
+      "component_count_before": 17,
+      "geometric_confidence": 0.9661031365394592,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-1e8c2537d29dc4ae",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 19122,
+      "box_before": {
+        "x_min": 445.0,
+        "y_min": 115.0,
+        "x_max": 590.0,
+        "y_max": 288.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9805728793144226,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2a037357c8ee9d55",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 3647,
+      "box_before": {
+        "x_min": 478.0,
+        "y_min": 3.0,
+        "x_max": 547.0,
+        "y_max": 163.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9741577506065369,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-2fa5063083e578ce",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 16644,
+      "box_before": {
+        "x_min": 452.0,
+        "y_min": 192.0,
+        "x_max": 592.0,
+        "y_max": 324.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9888482093811035,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-3b2416544593092a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1911,
+      "box_before": {
+        "x_min": 266.0,
+        "y_min": 162.0,
+        "x_max": 290.0,
+        "y_max": 259.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8836414217948914,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-442ea80290195c31",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 717,
+      "box_before": {
+        "x_min": 273.0,
+        "y_min": 89.0,
+        "x_max": 315.0,
+        "y_max": 108.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9436293244361877,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-45bbdcfa7efe314c",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 2793,
+      "box_before": {
+        "x_min": 257.0,
+        "y_min": 157.0,
+        "x_max": 290.0,
+        "y_max": 259.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9603778719902039,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-46534987d24b368b",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 3337,
+      "box_before": {
+        "x_min": 95.0,
+        "y_min": 3.0,
+        "x_max": 162.0,
+        "y_max": 166.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9718285202980042,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-48211adca2b0e474",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1514,
+      "box_before": {
+        "x_min": 420.0,
+        "y_min": 29.0,
+        "x_max": 454.0,
+        "y_max": 288.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8288697600364685,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-4ad3dac7a8e98a88",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 746,
+      "box_before": {
+        "x_min": 232.0,
+        "y_min": 3.0,
+        "x_max": 281.0,
+        "y_max": 22.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9252187013626099,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-515568a90b5a31ab",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 2675,
+      "box_before": {
+        "x_min": 370.0,
+        "y_min": 192.0,
+        "x_max": 412.0,
+        "y_max": 261.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9578053951263428,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-5d61ad6fe134814a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1596,
+      "box_before": {
+        "x_min": 289.0,
+        "y_min": 196.0,
+        "x_max": 349.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9644954800605774,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-681c4d36d3e69d55",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 766,
+      "box_before": {
+        "x_min": 268.0,
+        "y_min": 3.0,
+        "x_max": 399.0,
+        "y_max": 20.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9443109631538391,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-69f864fccb82c56c",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 17364,
+      "box_before": {
+        "x_min": 48.0,
+        "y_min": 192.0,
+        "x_max": 186.0,
+        "y_max": 342.0
+      },
+      "component_count_before": 12,
+      "geometric_confidence": 0.9902690649032593,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-817bb8bbccca7348",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 2989,
+      "box_before": {
+        "x_min": 419.0,
+        "y_min": 117.0,
+        "x_max": 447.0,
+        "y_max": 274.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8964396715164185,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8ad6a1de77326536",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 2070,
+      "box_before": {
+        "x_min": 257.0,
+        "y_min": 192.0,
+        "x_max": 345.0,
+        "y_max": 259.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.8028717637062073,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8d0b0b336085cc9c",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 949,
+      "box_before": {
+        "x_min": 225.0,
+        "y_min": 153.0,
+        "x_max": 239.0,
+        "y_max": 268.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.9394670128822327,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-8efba5a3d44e1f25",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1062,
+      "box_before": {
+        "x_min": 313.0,
+        "y_min": 51.0,
+        "x_max": 337.0,
+        "y_max": 151.0
+      },
+      "component_count_before": 3,
+      "geometric_confidence": 0.9797554016113281,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-9d15cea6d858b520",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1096,
+      "box_before": {
+        "x_min": 266.0,
+        "y_min": 59.0,
+        "x_max": 314.0,
+        "y_max": 103.0
+      },
+      "component_count_before": 8,
+      "geometric_confidence": 0.9546997547149658,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ab9c87fd9300c487",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1746,
+      "box_before": {
+        "x_min": 406.0,
+        "y_min": 132.0,
+        "x_max": 426.0,
+        "y_max": 270.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9319303631782532,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-abaddf5a422c9708",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 961,
+      "box_before": {
+        "x_min": 307.0,
+        "y_min": 211.0,
+        "x_max": 332.0,
+        "y_max": 254.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.862494945526123,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-b690a7e283109169",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 722,
+      "box_before": {
+        "x_min": 231.0,
+        "y_min": 70.0,
+        "x_max": 275.0,
+        "y_max": 121.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9455190300941467,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-bf1a97698bc140cf",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1594,
+      "box_before": {
+        "x_min": 424.0,
+        "y_min": 192.0,
+        "x_max": 447.0,
+        "y_max": 275.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.8908588886260986,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c25b6d8e63659dee",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 6198,
+      "box_before": {
+        "x_min": 368.0,
+        "y_min": 65.0,
+        "x_max": 432.0,
+        "y_max": 260.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9120742678642273,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-c2b0e26053be222b",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 843,
+      "box_before": {
+        "x_min": 337.0,
+        "y_min": 108.0,
+        "x_max": 384.0,
+        "y_max": 137.0
+      },
+      "component_count_before": 2,
+      "geometric_confidence": 0.8668044805526733,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ce794d138b92549d",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 861,
+      "box_before": {
+        "x_min": 358.0,
+        "y_min": 70.0,
+        "x_max": 407.0,
+        "y_max": 114.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9438790678977966,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-d49956fa57ed6af8",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1471,
+      "box_before": {
+        "x_min": 258.0,
+        "y_min": 192.0,
+        "x_max": 290.0,
+        "y_max": 257.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9607893824577332,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-d6b4b32ee39cbab2",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 824,
+      "box_before": {
+        "x_min": 17.0,
+        "y_min": 327.0,
+        "x_max": 65.0,
+        "y_max": 357.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9025148153305054,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-dd2cca86985d50e4",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1277,
+      "box_before": {
+        "x_min": 600.0,
+        "y_min": 292.0,
+        "x_max": 640.0,
+        "y_max": 332.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9758029580116272,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e418845e1d2aa4cc",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1125,
+      "box_before": {
+        "x_min": 363.0,
+        "y_min": 53.0,
+        "x_max": 419.0,
+        "y_max": 91.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9444804191589355,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e4a52a7dd56c6bb9",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 41795,
+      "box_before": {
+        "x_min": 45.0,
+        "y_min": 3.0,
+        "x_max": 212.0,
+        "y_max": 343.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9515446424484253,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e5fa3429a9f12ad9",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 695,
+      "box_before": {
+        "x_min": 334.0,
+        "y_min": 54.0,
+        "x_max": 366.0,
+        "y_max": 99.0
+      },
+      "component_count_before": 4,
+      "geometric_confidence": 0.9297347664833069,
+      "visual_support": 0.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-e79fd9341980496c",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1113,
+      "box_before": {
+        "x_min": 245.0,
+        "y_min": 167.0,
+        "x_max": 258.0,
+        "y_max": 266.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9537976980209351,
+      "visual_support": 0.6666666666666666,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-ecf76957975dea1a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 757,
+      "box_before": {
+        "x_min": 332.0,
+        "y_min": 208.0,
+        "x_max": 349.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9640786051750183,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-f1196900c80b877d",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 1030,
+      "box_before": {
+        "x_min": 218.0,
+        "y_min": 67.0,
+        "x_max": 270.0,
+        "y_max": 93.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9490054249763489,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-f25a08ada9c1599a",
+      "label": "door",
+      "region_kind": "thing",
+      "discovery_area": 45613,
+      "box_before": {
+        "x_min": 420.0,
+        "y_min": 3.0,
+        "x_max": 603.0,
+        "y_max": 326.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 0.9773606061935425,
+      "visual_support": 1.0,
+      "model_calls": 0,
+      "latency_s": 0.0,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": false,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-134e6314ad808694",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-1964c80d56f4fc6f",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-2aac392d82a33f56",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-2fc655b9e5d57b72",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-4085317d7db9bd7c",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-4cb9291c1d5ed43d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-4f00380180800a41",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-522e82e9c8952819",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-53afea64c5c4ae63",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-57538e7a8bd4bf41",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-5e5ec8bb9c0fa41a",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-60f2f8a61f4b29d4",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-7e6a315492139d4e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-801f61d09946a608",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-9a0a913f19dcb36d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling"
+    },
+    {
+      "region_id": "region-9b2789af5d64554d",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-9cc9c442730f4e0b",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-a0813f2bf8a6ed33",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-abd25badba3ebc79",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling tiles"
+    },
+    {
+      "region_id": "region-abf9e985427cc845",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-ad75e15cae1cd35e",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-afecece11f0b7550",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-b582b8c135aa64e1",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-b6977991dce97d69",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "ceiling tiles"
+    },
+    {
+      "region_id": "region-cc1bfb4a2c1ebf73",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-ce88ca5c722dbdc4",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-d67b76e477dc5a44",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-dfe86ba9fb47f2b2",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    },
+    {
+      "region_id": "region-eafb8265a3e83fd8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    }
+  ]
+}

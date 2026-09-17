@@ -112,6 +112,28 @@ test("mapEntriesFromIndex expõe metadata de comparação validada", () => {
   assert.equal(comparisonMetadata({ group_id: "", axes: {} }), null);
 });
 
+// Uma run publicada em lotes (corridor-02) expõe progresso no catálogo; runs
+// fechadas não carregam esses campos, então o consumidor não precisa checar
+// `undefined` versus `false` para decidir se mostra o indicador.
+test("mapEntriesFromIndex expõe progresso apenas para runs em andamento", () => {
+  const [inProgress, closed] = mapEntriesFromIndex([
+    {
+      url: "/runs/corridor-02-full/context.json", label: "corridor-02-full",
+      artifact_type: "contextual_rgb_lidar_slice", run_id: "corridor-02-full",
+      in_progress: true, frame_count: 350, frame_count_expected: 1778,
+    },
+    {
+      url: "/runs/first/context.json", label: "first",
+      artifact_type: "contextual_rgb_lidar_slice", run_id: "first",
+    },
+  ]);
+  assert.deepEqual(
+    { inProgress: inProgress.inProgress, frameCount: inProgress.frameCount, frameCountExpected: inProgress.frameCountExpected },
+    { inProgress: true, frameCount: 350, frameCountExpected: 1778 },
+  );
+  assert.equal(closed.inProgress, undefined);
+});
+
 // Um mapa consolidado grande substitui points por um geometry_manifest; a
 // fronteira precisa aceitar esse formato e ainda recusar chunks malformados.
 test("validateSlice aceita geometry_manifest no lugar de points e recusa chunk malformado", () => {

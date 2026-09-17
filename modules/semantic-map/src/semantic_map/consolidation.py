@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 from hashlib import sha256
-import json
 from typing import Any
 
-from semantic_fusion import SemanticContribution, fuse_point_contributions, measure_spatial_support, LabelledPoint
+from semantic_fusion import (
+    LabelledPoint,
+    SemanticContribution,
+    fuse_point_contributions,
+    measure_spatial_support,
+)
 
 from contextual_mapping_contracts import FrameId, MapId
 

@@ -1,0 +1,446 @@
+{
+  "layout_version": "frames/4",
+  "frame_id": "corridor-02-04595",
+  "input_sha256": "1faa7b8fe447782d3ea7faa6bfec868ed5d26f866a93aa577ab38dede66f3425",
+  "latency_s": 404.4143707570038,
+  "scene_context_mode": "context_assisted",
+  "temporal_prior_mode": "disabled",
+  "prompt_version": "v8",
+  "region_views": [
+    "masked_subject",
+    "tight_crop",
+    "contextual_crop",
+    "scene_conditioned"
+  ],
+  "pipeline_input_identical_to_raw": true,
+  "ego_vehicle_mask_applied": true,
+  "valid_fisheye_mask": "applied",
+  "region_count": 8,
+  "proposal_count": 18,
+  "merged_proposal_count": 10,
+  "regions_with_multiple_proposals": 2,
+  "label_counts": [
+    [
+      "fluorescent light fixture",
+      2
+    ],
+    [
+      "convex mirror",
+      1
+    ],
+    [
+      "floor",
+      1
+    ],
+    [
+      "light fixture",
+      1
+    ],
+    [
+      "metal trim",
+      1
+    ],
+    [
+      "reflection",
+      1
+    ],
+    [
+      "window",
+      1
+    ]
+  ],
+  "category_counts": [
+    [
+      "lighting",
+      3
+    ],
+    [
+      "architectural element",
+      1
+    ],
+    [
+      "building component",
+      1
+    ],
+    [
+      "ground",
+      1
+    ],
+    [
+      "safety equipment",
+      1
+    ],
+    [
+      "visual effect",
+      1
+    ]
+  ],
+  "region_kinds": [
+    [
+      "thing",
+      4
+    ],
+    [
+      "part",
+      2
+    ],
+    [
+      "stuff",
+      2
+    ]
+  ],
+  "semantic_confidence": {
+    "count": 8,
+    "missing": 0,
+    "minimum": 0.85,
+    "maximum": 0.95,
+    "mean": 0.9125,
+    "median": 0.925,
+    "distinct_values": 3,
+    "stddev": 0.04145780987944248,
+    "degenerate": false
+  },
+  "geometric_confidence": {
+    "count": 8,
+    "missing": 0,
+    "minimum": 1.0,
+    "maximum": 1.0,
+    "mean": 1.0,
+    "median": 1.0,
+    "distinct_values": 1,
+    "stddev": 0.0,
+    "degenerate": true
+  },
+  "duplicate_label_hypotheses": 2,
+  "mode_collapse": {
+    "dominant_label": "fluorescent light fixture",
+    "dominant_fraction": 0.25,
+    "distinct_labels": 7,
+    "dominant_category": "lighting",
+    "dominant_category_fraction": 0.375,
+    "distinct_categories": 6
+  },
+  "scene_echo_label_count": 0,
+  "ego": {
+    "proposals_rejected": 8,
+    "proposals_overlapping_ego": 0,
+    "regions_overlapping_ego": 0,
+    "applied": true
+  },
+  "fisheye": {
+    "proposals_rejected": 0,
+    "proposals_outside_valid_area": 0,
+    "regions_outside_valid_area": 0,
+    "applied": true
+  },
+  "rejected_proposals": [
+    [
+      "ego_vehicle_overlap",
+      8
+    ]
+  ],
+  "contextual": {
+    "signal_statuses": [
+      [
+        "supports",
+        10
+      ],
+      [
+        "contradicts",
+        9
+      ],
+      [
+        "indistinguishable",
+        5
+      ]
+    ],
+    "regions_with_unsupported_primary": 3,
+    "regions_with_ambiguous_identity": 1,
+    "region_kind_contradictions": 0,
+    "reconciled_regions": 1,
+    "distinct_raw_labels": 7,
+    "distinct_canonical_concepts": 7,
+    "entity_groups": 0,
+    "regions_in_entity_groups": 0,
+    "supported_entity_groups": 0,
+    "semantic_relations": [
+      [
+        "covers",
+        1
+      ]
+    ],
+    "geometric_relations": 7,
+    "abstained_claims": 0,
+    "unscored_claims": 0,
+    "scene_echo_any_assertion": 0,
+    "competing_assertions": 4
+  },
+  "published_region_count": 7,
+  "structural_context_count": 1,
+  "suppressed_regions": [
+    [
+      "generic_structural_surface",
+      1
+    ]
+  ],
+  "prior": {
+    "regions_with_prior": 0,
+    "echoed": 0,
+    "contradicted": 0,
+    "mean_overlap": null,
+    "applied": false
+  },
+  "semantic_grounding": [
+    {
+      "region_id": "region-032d2af2f9c47dde",
+      "label": "fluorescent light fixture",
+      "region_kind": "thing",
+      "discovery_area": 660,
+      "box_before": {
+        "x_min": 394.0,
+        "y_min": 141.0,
+        "x_max": 454.0,
+        "y_max": 152.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.3333333333333333,
+      "model_calls": 3,
+      "latency_s": 6.229732025996782,
+      "model_mask_area": 597,
+      "clipped_pixel_count": 164,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 433,
+          "box": {
+            "x_min": 394.0,
+            "y_min": 141.0,
+            "x_max": 454.0,
+            "y_max": 151.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 433,
+          "refined_overlap": 433,
+          "detector_box_overlap": 433,
+          "distance_to_box_center_px": 0.5246189120137489
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 433,
+      "area_ratio": 0.656060606060606,
+      "area_reduction_ratio": 0.343939393939394,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 394.0,
+        "y_min": 141.0,
+        "x_max": 454.0,
+        "y_max": 151.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-172c22c90ba7abb6",
+      "label": "metal trim",
+      "region_kind": "part",
+      "discovery_area": 1210,
+      "box_before": {
+        "x_min": 294.0,
+        "y_min": 134.0,
+        "x_max": 304.0,
+        "y_max": 255.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4561352890159469,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-61fcaf38e5898686",
+      "label": "window",
+      "region_kind": "part",
+      "discovery_area": 735,
+      "box_before": {
+        "x_min": 342.0,
+        "y_min": 192.0,
+        "x_max": 363.0,
+        "y_max": 227.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 2,
+      "latency_s": 0.46601973500219174,
+      "model_mask_area": 544,
+      "clipped_pixel_count": 7,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 537,
+          "box": {
+            "x_min": 344.0,
+            "y_min": 192.0,
+            "x_max": 362.0,
+            "y_max": 227.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 537,
+          "refined_overlap": 537,
+          "detector_box_overlap": 537,
+          "distance_to_box_center_px": 0.42098837033299225
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 537,
+      "area_ratio": 0.7306122448979592,
+      "area_reduction_ratio": 0.2693877551020408,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 344.0,
+        "y_min": 192.0,
+        "x_max": 362.0,
+        "y_max": 227.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-6efb23903fab2fe6",
+      "label": "fluorescent light fixture",
+      "region_kind": "thing",
+      "discovery_area": 3930,
+      "box_before": {
+        "x_min": 244.0,
+        "y_min": 38.0,
+        "x_max": 375.0,
+        "y_max": 68.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.012954138015629724,
+      "model_mask_area": 2859,
+      "clipped_pixel_count": 3,
+      "components": [
+        {
+          "component_id": 1,
+          "area": 2856,
+          "box": {
+            "x_min": 245.0,
+            "y_min": 38.0,
+            "x_max": 375.0,
+            "y_max": 68.0
+          },
+          "contains_support": true,
+          "discovery_overlap": 2856,
+          "refined_overlap": 2856,
+          "detector_box_overlap": 2856,
+          "distance_to_box_center_px": 0.47514370698338093
+        }
+      ],
+      "semantic_grounding_status": "refined",
+      "semantic_area": 2856,
+      "area_ratio": 0.7267175572519083,
+      "area_reduction_ratio": 0.27328244274809166,
+      "component_count_after": 1,
+      "box_after": {
+        "x_min": 245.0,
+        "y_min": 38.0,
+        "x_max": 375.0,
+        "y_max": 68.0
+      },
+      "reason": null
+    },
+    {
+      "region_id": "region-b785df8ffc19b5f8",
+      "label": "reflection",
+      "region_kind": "stuff",
+      "discovery_area": 2800,
+      "box_before": {
+        "x_min": 222.0,
+        "y_min": 166.0,
+        "x_max": 272.0,
+        "y_max": 222.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 1,
+      "latency_s": 0.4516448199865408,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    },
+    {
+      "region_id": "region-dd88344b41e405b5",
+      "label": "convex mirror",
+      "region_kind": "thing",
+      "discovery_area": 1804,
+      "box_before": {
+        "x_min": 260.0,
+        "y_min": 101.0,
+        "x_max": 304.0,
+        "y_max": 142.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 0.0,
+      "model_calls": 2,
+      "latency_s": 0.4673630739853252,
+      "model_mask_area": 30239,
+      "clipped_pixel_count": 30239,
+      "components": [],
+      "semantic_grounding_status": "semantic_mask_inconsistent",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": null
+    },
+    {
+      "region_id": "region-fba2208db78be029",
+      "label": "light fixture",
+      "region_kind": "thing",
+      "discovery_area": 1040,
+      "box_before": {
+        "x_min": 390.0,
+        "y_min": 136.0,
+        "x_max": 455.0,
+        "y_max": 152.0
+      },
+      "component_count_before": 1,
+      "geometric_confidence": 1.0,
+      "visual_support": 1.0,
+      "model_calls": 1,
+      "latency_s": 0.45598536101169884,
+      "semantic_grounding_status": "grounding_failed",
+      "semantic_area": 0,
+      "area_ratio": 0.0,
+      "area_reduction_ratio": 1.0,
+      "component_count_after": 0,
+      "box_after": null,
+      "reason": "Nenhuma box localizada sobrep\u00f5e discovery."
+    }
+  ],
+  "semantic_overlay_written": true,
+  "suppressed_region_records": [
+    {
+      "region_id": "region-0198109a5dad80a8",
+      "suppressed_reason": "generic_structural_surface",
+      "concept": "floor"
+    }
+  ]
+}

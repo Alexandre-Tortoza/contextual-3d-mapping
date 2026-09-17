@@ -55,7 +55,8 @@ e [SAM no Transformers](https://huggingface.co/docs/transformers/model_doc/sam).
 O primeiro localiza texto; o segundo segmenta prompts espaciais. Isso constitui
 evidência de grounding, não garantia de acurácia nem confiança calibrada.
 
-O lifecycle compartilhado libera o detector antes de carregar SAM. Localização
+O lifecycle compartilhado libera o detector antes de carregar SAM (ver
+`docs/model-backends.md`, "Orçamento de VRAM e lifecycle"). Localização
 é compartilhada entre regiões com o mesmo conceito no frame, e o embedding SAM
 da imagem é reutilizado entre boxes. Não há tracking ou aumento de frames.
 

@@ -18,12 +18,16 @@ Também implementados: rastreamento de lineage de índice composto entre transfo
 encadeados (`PointLineage`/`compose_lineage`) e colagem de nuvens de tamanho variável em
 lote (`collate_point_clouds`).
 
-Também implementado: o port `PointEncoder` (contract framework-agnóstico de encoder,
-com um fake determinístico para testes) e a colagem de entradas de encoder por amostra
-em lote (`collate_encoder_inputs`).
+Também implementados: o port `PointEncoder` (contract framework-agnóstico de encoder,
+com um fake determinístico para testes), a colagem de entradas de encoder por amostra
+em lote (`collate_encoder_inputs`) e o baseline concreto
+`RidgeDistilledPointEncoder`. Este último aprende uma regressão ridge reproduzível das
+coordenadas e canais selecionados para as `teacher_features` por ponto, permitindo
+validar a destilação 2D→3D sem introduzir um runtime de GPU.
 
-Ainda não implementados: qualquer backbone concreto, o pipeline de treino, e a API
-pública de inferência (`encode`). Ver o roadmap de contexto, Fase 1.
+Ainda não implementados: um backbone não linear ou pré-treinado e um pipeline de treino
+de maior capacidade. `fit_ridge_distilled_encoder` e `encode_point_clouds` são a API
+pública inicial de treino e inferência do baseline.
 
 ## Contracts principais
 
@@ -55,7 +59,13 @@ pública de inferência (`encode`). Ver o roadmap de contexto, Fase 1.
 - `PointEncoder` (`ports/point_encoder.py`): Protocol framework-agnóstico de encoder 3D,
   com `embedding_dimension` e `required_channels` (vazio declara suporte
   somente-coordenadas) expostos antes de qualquer chamada a `encode`.
+- `RidgeDistilledPointEncoder`: baseline concreto treinado por
+  `fit_ridge_distilled_encoder`; preserva um embedding por ponto e rejeita canais fora
+  da ordem usada no treino.
+- `encode_point_clouds`: API de inferência que devolve `BatchedPointEmbeddings` na ordem
+  dos pontos de entrada; um encoder que mesclar pontos resulta em embeddings inválidos
+  explícitos para os pontos sem vetor individual.
 
-Nenhum destes tipos importa um framework de tensor específico ou acopla a um backbone
-concreto — isso fica atrás de adapters que implementam `PointEncoder` (o primeiro
-backbone concreto ainda não foi implementado).
+Os contracts públicos continuam sem framework de tensor. O adapter ridge usa somente
+NumPy e fica atrás de `PointEncoder`; um backbone de maior capacidade poderá substituir
+ou ser comparado a ele sem alterar consumidores.

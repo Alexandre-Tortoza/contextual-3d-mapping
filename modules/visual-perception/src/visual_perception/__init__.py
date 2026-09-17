@@ -12,7 +12,12 @@ from contextual_mapping_contracts import ObservationReference, SourceArtifactRef
 from visual_perception.application.pipeline import PerceptionPorts, PipelineResult, run_canonical_pipeline
 from visual_perception.application.semantic_grounding import build_spatial_footprints, ground_regions
 from visual_perception.application.temporal_prior import prior_from
-from visual_perception.config import ModuleConfig, QualityProfile, SemanticGroundingConfig
+from visual_perception.config import (
+    LanguageEmbeddingConfig,
+    ModuleConfig,
+    QualityProfile,
+    SemanticGroundingConfig,
+)
 from visual_perception.debug_artifacts import FrameInputs, StageDebugImages, write_stage_debug_images
 from visual_perception.domain.audit import AuditResult
 from visual_perception.domain.geometry import BoundingBox, Mask
@@ -47,6 +52,7 @@ __all__ = [
     "ImageAreaMasks",
     "ImageObservation",
     "ImagePayload",
+    "LanguageEmbeddingConfig",
     "ModelProvenance",
     "ModuleConfig",
     "ObservationReference",

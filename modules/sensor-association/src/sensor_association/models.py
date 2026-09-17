@@ -148,6 +148,7 @@ class VisualRegionEvidence:
     pixels: frozenset[tuple[int, int]]
     label: str | None = None
     feature_reference: str | None = None
+    language_embedding_reference: str | None = None
     grounding_status: str = "grounding_unavailable"
     grounding_reference: str | None = None
 
@@ -275,6 +276,12 @@ class PointVisualAssociation:
     region_id: str | None = None
     label: str | None = None
     feature_reference: str | None = None
+    dense_feature: tuple[float, ...] | None = None
+    embedding_space: str | None = None
+    feature_dimension: int | None = None
+    feature_producer: str | None = None
+    dense_feature_reference: str | None = None
+    language_embedding_reference: str | None = None
     semantic_status: SemanticAssociationStatus = SemanticAssociationStatus.OUTSIDE
     tentative_label: str | None = None
     distance_to_boundary_px: float | None = None
@@ -296,6 +303,7 @@ class PointVisualAssociation:
                 self.region_id,
                 self.label,
                 self.feature_reference,
+                self.language_embedding_reference,
                 self.tentative_label,
                 self.distance_to_boundary_px,
                 self.boundary_margin_px,
@@ -311,6 +319,22 @@ class PointVisualAssociation:
             raise ValueError("Semantic interior labels require a grounding reference.")
         if self.label is not None and self.surface_evidence is not None and self.surface_evidence.surface_support != "supported":
             raise ValueError("Measured surface labels require explicit surface support.")
+        feature_fields = (
+            self.dense_feature,
+            self.embedding_space,
+            self.feature_dimension,
+            self.feature_producer,
+            self.dense_feature_reference,
+        )
+        if any(value is not None for value in feature_fields) and any(value is None for value in feature_fields):
+            raise ValueError("Dense features require vector, space, dimension and producer.")
+        if self.dense_feature is not None:
+            if self.status is not AssociationStatus.ASSOCIATED or self.pixel is None:
+                raise ValueError("Dense features require an associated visible pixel.")
+            if self.feature_dimension != len(self.dense_feature) or self.feature_dimension < 1:
+                raise ValueError("Dense feature dimension must match the sampled vector.")
+            if not all(isfinite(float(value)) for value in self.dense_feature):
+                raise ValueError("Dense feature values must be finite.")
         for value in (self.distance_to_boundary_px, self.boundary_margin_px):
             if value is not None and (not isfinite(value) or value < 0):
                 raise ValueError("Boundary measurements must be finite and non-negative.")

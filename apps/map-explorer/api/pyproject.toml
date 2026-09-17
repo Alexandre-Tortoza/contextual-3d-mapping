@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "map-explorer-api"
+version = "0.1.0"
+description = "Local HTTP service for textual queries over a published contextual map."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+map-explorer-api = "map_explorer_api.app:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/map_explorer_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "src",
+    "../../../modules/query-engine/src",
+    "../../../modules/semantic-memory/src",
+    "../../../modules/semantic-map/src",
+    "../../../modules/semantic-fusion/src",
+    "../../../modules/visual-perception/src",
+    "../../../contracts",
+]

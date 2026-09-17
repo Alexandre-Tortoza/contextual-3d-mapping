@@ -473,6 +473,9 @@ export function mapEntriesFromIndex(payload) {
       ...(typeof entry.run_id === "string" ? { runId: entry.run_id } : {}),
       ...(typeof entry.map_id === "string" ? { mapId: entry.map_id } : {}),
       ...(comparison ? { comparison } : {}),
+      ...(entry.in_progress === true
+        ? { inProgress: true, frameCount: entry.frame_count, frameCountExpected: entry.frame_count_expected }
+        : {}),
     };
   });
 }

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from fixtures import payload_with_blobs
-from visual_perception.config import LanguageEmbeddingConfig, RegionDiscoveryConfig
+from visual_perception.config import LanguageEmbeddingConfig, MultimodalReasoningConfig, RegionDiscoveryConfig
 from visual_perception.domain.errors import BackendExecutionError, BackendUnavailableError
 from visual_perception.domain.geometry import BoundingBox, CoordinateTransform
 from visual_perception.domain.references import ModelProvenance
@@ -115,7 +115,7 @@ def test_florence2_region_proposals_become_clipped_rectangular_masks() -> None:
         },
         image,
         RegionDiscoveryConfig(
-            backend="florence2", checkpoint="microsoft/Florence-2-large", min_mask_area=1
+            backend="florence2", checkpoint="florence-community/Florence-2-large", min_mask_area=1
         ),
     )
 
@@ -123,7 +123,7 @@ def test_florence2_region_proposals_become_clipped_rectangular_masks() -> None:
     assert proposals[0].box == BoundingBox(1.0, 2.0, 5.0, 6.0)
     assert proposals[0].mask.area() == 16
     assert proposals[1].box == BoundingBox(0.0, 0.0, 2.0, 3.0)
-    assert all(proposal.source == "florence2:microsoft/Florence-2-large" for proposal in proposals)
+    assert all(proposal.source == "florence2:florence-community/Florence-2-large" for proposal in proposals)
 
 
 # Protege o contract contra respostas incompletas ou com tipos inesperados do
@@ -135,7 +135,7 @@ def test_florence2_region_proposal_rejects_invalid_top_level_output() -> None:
         _proposals_from_florence_output(
             [],
             image,
-            RegionDiscoveryConfig(backend="florence2", checkpoint="microsoft/Florence-2-large"),
+            RegionDiscoveryConfig(backend="florence2", checkpoint="florence-community/Florence-2-large"),
         )
 
 
@@ -236,6 +236,59 @@ def test_port_factory_keeps_fake_defaults_gpu_free() -> None:
     assert isinstance(ports.multimodal_reasoner, FakeMultimodalReasoner)
 
 
+# Confirma que um `fallback_backend` declarado envolve o reasoner primário
+# num FallbackMultimodalReasoningAdapter, sem exigir GPU nem rede para
+# compor os ports (#292) — ambos os adapters concretos são preguiçosos.
+def test_port_factory_wraps_multimodal_reasoner_with_fallback_when_declared() -> None:
+    """Compõe o reasoner primário com fallback quando a config declara um."""
+    from visual_perception.config import ModuleConfig
+    from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (
+        GeminiRoboticsReasoningAdapter,
+    )
+    from visual_perception.infrastructure.adapters.multimodal_reasoning_backend import (
+        RealMultimodalReasoningAdapter,
+    )
+    from visual_perception.infrastructure.adapters.multimodal_reasoning_fallback import (
+        FallbackMultimodalReasoningAdapter,
+    )
+
+    ports = create_perception_ports(
+        ModuleConfig(
+            multimodal_reasoning=MultimodalReasoningConfig(
+                backend="gemini_robotics_er",
+                checkpoint="gemini-robotics-er-2-preview",
+                fallback_backend="qwen_vl",
+                fallback_checkpoint="Qwen/Qwen2.5-VL-3B-Instruct",
+            )
+        )
+    )
+
+    reasoner = ports.multimodal_reasoner
+    assert isinstance(reasoner, FallbackMultimodalReasoningAdapter)
+    assert isinstance(reasoner._primary, GeminiRoboticsReasoningAdapter)  # noqa: SLF001
+    assert isinstance(reasoner._fallback, RealMultimodalReasoningAdapter)  # noqa: SLF001
+
+
+# Sem `fallback_backend`, a composição continua devolvendo o reasoner
+# primário puro — o wrapper de fallback não deve aparecer sem ser pedido.
+def test_port_factory_skips_fallback_wrapper_without_fallback_backend() -> None:
+    """Sem `fallback_backend`, o reasoner primário é devolvido sem wrapper."""
+    from visual_perception.config import ModuleConfig
+    from visual_perception.infrastructure.adapters.gemini_reasoning_backend import (
+        GeminiRoboticsReasoningAdapter,
+    )
+
+    ports = create_perception_ports(
+        ModuleConfig(
+            multimodal_reasoning=MultimodalReasoningConfig(
+                backend="gemini_robotics_er", checkpoint="gemini-robotics-er-2-preview",
+            )
+        )
+    )
+
+    assert isinstance(ports.multimodal_reasoner, GeminiRoboticsReasoningAdapter)
+
+
 # Confirma que SAM3 é selecionável sem importar o runtime opcional durante a
 # composição; os pesos continuam sendo carregados apenas no primeiro discovery.
 def test_port_factory_selects_sam3_region_discoverer_lazily() -> None:
@@ -262,7 +315,7 @@ def test_port_factory_selects_florence2_region_discoverer_lazily() -> None:
     ports = create_perception_ports(
         ModuleConfig(
             region_discovery=RegionDiscoveryConfig(
-                backend="florence2", checkpoint="microsoft/Florence-2-large"
+                backend="florence2", checkpoint="florence-community/Florence-2-large"
             )
         )
     )
@@ -355,14 +408,33 @@ def test_absent_scene_context_adds_nothing_to_the_prompt() -> None:
 # um frame; um placeholder mantém a forma inequívoca e torna o eco detectável
 # pelo parser em vez de plausível.
 def test_the_region_prompt_example_uses_placeholders_not_answerable_values() -> None:
-    """O exemplo de formato do prompt não oferece um label copiável."""
-    prompt = region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)))
+    """O exemplo de formato do prompt (schema de 8 campos, v8/v9) não oferece um label copiável."""
+    prompt = region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)), "v8")
 
     assert '"label": "<one noun naming the subject>"' in prompt
     assert '"label": "door"' not in prompt
     assert '"material": "wood"' not in prompt
     assert '"label": "panel"' not in prompt
     assert "never copy a placeholder" in prompt
+
+
+# Mesma garantia acima, para o schema reduzido de 2 campos (v10/v11) que só o
+# backend Qwen seleciona — ver reasoning_prompts._MINIMAL_SCHEMA_BODY.
+def test_the_minimal_region_prompt_example_uses_placeholders_not_answerable_values() -> None:
+    """O exemplo de formato do schema reduzido também não oferece um label copiável."""
+    prompt = region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)), "v10")
+
+    assert '"label": "<one noun>"' in prompt
+    assert '"label": "door"' not in prompt
+    assert "never copy them" in prompt
+
+
+# Os dois schemas de prompt de região vivem sob versões distintas: nada deve
+# aceitar uma versão fora do vocabulário fechado (v8/v9/v10/v11).
+def test_region_prompt_rejects_an_unknown_prompt_version() -> None:
+    """Uma ``prompt_version`` desconhecida é rejeitada em vez de cair num default silencioso."""
+    with pytest.raises(ValueError, match="prompt_version"):
+        region_prompt(_reasoning_request((EvidenceSlot.FOREGROUND_DENSE,)), "v42")
 
 
 # O exemplo de formato de um prompt é copiado de volta pelo modelo quando o
