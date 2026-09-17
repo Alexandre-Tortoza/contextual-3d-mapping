@@ -1,7 +1,7 @@
 {
   "run_id": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
   "region_views_override": null,
-  "git_revision": "ae442730",
+  "git_revision": "24d3e5d8",
   "gpu_memory_budget_gb": 8.0,
   "config": {
     "quality_profile": "research_quality",
@@ -255,9 +255,10 @@
     }
   },
   "config_fingerprint": "ebc5c0711891c84060ca0efa35af8df36da661bbb43f0ac9a5d983c0db6b4ba0",
-  "frame_count": 1,
+  "frame_count": 2,
   "ordered_frame_ids": [
-    "corridor-02-04235"
+    "corridor-02-04235",
+    "corridor-02-04247"
   ],
   "frames_dir": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames-176s-step12",
   "selection": {
@@ -317,38 +318,83 @@
       "stage_name": "semantic_localization:IDEA-Research/grounding-dino-base:cuda",
       "load_time_s": 4.203606598981423,
       "inference_time_s": 0.0,
-      "peak_memory_bytes": 1011202560,
+      "peak_memory_bytes": 4833086976,
       "memory_kind": "cuda_allocated",
-      "peak_vram_bytes": 1011202560,
-      "peak_cpu_rss_bytes": 4196765696
+      "peak_vram_bytes": 4833086976,
+      "peak_cpu_rss_bytes": 4713033728
     },
     {
       "stage_name": "semantic_segmentation:facebook/sam2.1-hiera-large:cuda",
       "load_time_s": 2.9002839580061845,
       "inference_time_s": 0.0,
+      "peak_memory_bytes": 4833086976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4833086976,
+      "peak_cpu_rss_bytes": 4713033728
+    },
+    {
+      "stage_name": "region_discovery:sam:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 3.10041995201027,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4833086976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4833086976,
+      "peak_cpu_rss_bytes": 4713033728
+    },
+    {
+      "stage_name": "feature_extraction:facebook/dinov2-base:cuda",
+      "load_time_s": 1.287808594002854,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4833086976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4833086976,
+      "peak_cpu_rss_bytes": 4713033728
+    },
+    {
+      "stage_name": "language_embedding:openai/clip-vit-large-patch14:cuda",
+      "load_time_s": 4.700762047985336,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 4833086976,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 4833086976,
+      "peak_cpu_rss_bytes": 4713033728
+    },
+    {
+      "stage_name": "semantic_localization:IDEA-Research/grounding-dino-base:cuda",
+      "load_time_s": 3.258288626995636,
+      "inference_time_s": 0.0,
+      "peak_memory_bytes": 1011202560,
+      "memory_kind": "cuda_allocated",
+      "peak_vram_bytes": 1011202560,
+      "peak_cpu_rss_bytes": 4713033728
+    },
+    {
+      "stage_name": "semantic_segmentation:facebook/sam2.1-hiera-large:cuda",
+      "load_time_s": 2.0917779750016052,
+      "inference_time_s": 0.0,
       "peak_memory_bytes": 1883988992,
       "memory_kind": "cuda_allocated",
       "peak_vram_bytes": 1883988992,
-      "peak_cpu_rss_bytes": 4196765696
+      "peak_cpu_rss_bytes": 4713033728
     }
   ],
   "remote_reasoning": {
     "model": "gemini-robotics-er-2-preview",
-    "calls": 91,
+    "calls": 190,
     "failed_calls": 0,
     "calls_by_operation": {
-      "region": 74,
-      "relation": 16,
-      "scene": 1
+      "region": 156,
+      "relation": 32,
+      "scene": 2
     },
-    "total_latency_s": 1810.9759564021952,
-    "mean_latency_s": 19.90083468573841,
-    "prompt_tokens": 390882,
-    "output_tokens": 6965,
+    "total_latency_s": 3356.8706662111217,
+    "mean_latency_s": 17.667740348479587,
+    "prompt_tokens": 822959,
+    "output_tokens": 14563,
     "thought_tokens": 0,
     "transient_failures": {
-      "timeout": 9,
-      "http_503": 7
+      "timeout": 13,
+      "http_503": 10
     }
   },
   "frames": [
@@ -753,6 +799,412 @@
         "valid_area_mask": "frames/corridor-02-04235/valid-area-mask.png",
         "ego_mask": "frames/corridor-02-04235/ego-mask.png",
         "diagnostics": "frames/corridor-02-04235/diagnostics.json"
+      }
+    },
+    {
+      "frame_id": "corridor-02-04247",
+      "input": {
+        "path": "/home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames-176s-step12/corridor-02-04247.png",
+        "sha256": "edb5e80cd08dc51ac96be21b0aa6683bc568cb271d6fafac10f347cfed911d39",
+        "width": 640,
+        "height": 480,
+        "provenance": {
+          "observation_id": "corridor-02-04247",
+          "dataset_id": "corridor-02",
+          "sequence_id": "corridor-02",
+          "sensor_id": "/camera_1/image_raw",
+          "sequence_index": 4247,
+          "timestamp_ns": 1724621265909863097,
+          "clock_id": "rosbag",
+          "frame_id": "d",
+          "artifact_uri": "file:///home/alexmrtr/Projects/contextual-3d-mapping/modules/visual-perception/benchmarks/.local/corridor-02-frames-176s-step12/corridor-02-04247.png"
+        }
+      },
+      "failed": false,
+      "canonical_region_count": 58,
+      "published_region_count": 36,
+      "structural_context_count": 22,
+      "relation_count": 508,
+      "interpretation_failure_count": 0,
+      "evidence_failure_count": 0,
+      "calibration_failure_count": 0,
+      "feature_fallback_reason": null,
+      "evidence_slots": {
+        "foreground_dense": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "masked_subject": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "tight_crop": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "contextual_crop": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        },
+        "scene_conditioned": {
+          "available": 58,
+          "missing": 0,
+          "failed": 0
+        }
+      },
+      "evidence_slot_metrics": [
+        {
+          "slot": "foreground_dense",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 0,
+          "latency_s": 1.3883252660452854
+        },
+        {
+          "slot": "masked_subject",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.8353963300178293
+        },
+        {
+          "slot": "tight_crop",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.8173564908502158
+        },
+        {
+          "slot": "contextual_crop",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 58,
+          "latency_s": 2.8067989659612067
+        },
+        {
+          "slot": "scene_conditioned",
+          "available": 58,
+          "missing": 0,
+          "failed": 0,
+          "model_calls": 1,
+          "latency_s": 4.752342930005398
+        }
+      ],
+      "model_calls": {
+        "region_discovery": 5,
+        "feature_extraction": 1,
+        "language_aligned_evidence": 175,
+        "scene_reasoning": 1,
+        "region_reasoning": 58,
+        "hypothesis_support_text": 85,
+        "region_refinement": 24,
+        "semantic_relations": 16,
+        "scene_concept_discovery": 0,
+        "concept_grounding": 0,
+        "total": 365
+      },
+      "audit_passed": true,
+      "audit_error_count": 0,
+      "audit_warning_count": 36,
+      "latency_s": 1613.234264884988,
+      "model_lifecycle_events": 5,
+      "peak_vram_bytes": 4833086976,
+      "peak_host_rss_bytes": 4713033728,
+      "proposal_count": 167,
+      "discovery_telemetry": {
+        "raw_proposal_count": 167,
+        "kept_proposal_count": 141,
+        "merged_region_count": 58,
+        "area_fraction_min": 0.002018229166666667,
+        "area_fraction_median": 0.004733072916666667,
+        "area_fraction_max": 0.23904296875,
+        "mean_pairwise_iou": 0.022516493969180203,
+        "fragmentation_ratio": 2.4310344827586206
+      },
+      "concept_discovery": null,
+      "dominant_label": "ceiling light fixture",
+      "dominant_label_fraction": 0.1724137931034483,
+      "distinct_labels": 21,
+      "scene_echo_label_count": 0,
+      "contextual": {
+        "signal_statuses": [
+          [
+            "indistinguishable",
+            72
+          ],
+          [
+            "supports",
+            52
+          ],
+          [
+            "contradicts",
+            29
+          ],
+          [
+            "unavailable",
+            21
+          ]
+        ],
+        "regions_with_unsupported_primary": 2,
+        "regions_with_ambiguous_identity": 10,
+        "region_kind_contradictions": 9,
+        "reconciled_regions": 14,
+        "distinct_raw_labels": 21,
+        "distinct_canonical_concepts": 20,
+        "entity_groups": 6,
+        "regions_in_entity_groups": 30,
+        "supported_entity_groups": 4,
+        "semantic_relations": [
+          [
+            "covers",
+            8
+          ],
+          [
+            "attached_to",
+            7
+          ]
+        ],
+        "geometric_relations": 493,
+        "abstained_claims": 0,
+        "unscored_claims": 0,
+        "scene_echo_any_assertion": 0,
+        "competing_assertions": 24
+      },
+      "prior": {
+        "regions_with_prior": 0,
+        "echoed": 0,
+        "contradicted": 0,
+        "mean_overlap": null,
+        "applied": false
+      },
+      "signal_failure_count": 0,
+      "relation_failure_count": 0,
+      "refinement": [
+        {
+          "previous_evidence": [
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop",
+            "scene_conditioned"
+          ],
+          "new_evidence": [
+            "foreground_dense",
+            "masked_subject",
+            "tight_crop",
+            "contextual_crop"
+          ],
+          "producer": "gemini_robotics_er",
+          "config_fingerprint": "b4ff31a167756220",
+          "targets": [
+            {
+              "region_id": "region-06c1189fa257d617",
+              "reasons": [
+                "unsupported_primary"
+              ]
+            },
+            {
+              "region_id": "region-61785d7d63fa30c2",
+              "reasons": [
+                "unsupported_primary"
+              ]
+            },
+            {
+              "region_id": "region-520aadbc8d208a9c",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-5d0e70935f7d8680",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-61eb89c327f0da27",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-707e3e109af22aef",
+              "reasons": [
+                "region_kind_contradiction"
+              ]
+            },
+            {
+              "region_id": "region-8412dd5f6a029c3f",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-844bc6e0a15f9b91",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-8a8e7aa3e58b7556",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-b18ead10e85374ac",
+              "reasons": [
+                "region_kind_contradiction",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-de4bdf7ba9c62f7f",
+              "reasons": [
+                "region_kind_contradiction",
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-259a6f32401e4f88",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-25cc01cfb796326e",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-2a81531636f53ea0",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-2c49b80bf8138afb",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-3196c211754477a2",
+              "reasons": [
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-3a846296ead502ef",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-504a74a7998d45cc",
+              "reasons": [
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-51a71c4e9dd04630",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-5fcfdfd24d8c9d59",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-97e4b21b8a35587b",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-a8ea92d14c0366b9",
+              "reasons": [
+                "competing_hypotheses",
+                "small_region"
+              ]
+            },
+            {
+              "region_id": "region-c8a6a9caa444631b",
+              "reasons": [
+                "competing_hypotheses"
+              ]
+            },
+            {
+              "region_id": "region-c8d0b356292bdd84",
+              "reasons": [
+                "competing_hypotheses",
+                "small_region"
+              ]
+            }
+          ],
+          "refined_region_ids": [
+            "region-06c1189fa257d617",
+            "region-259a6f32401e4f88",
+            "region-25cc01cfb796326e",
+            "region-2a81531636f53ea0",
+            "region-2c49b80bf8138afb",
+            "region-3196c211754477a2",
+            "region-3a846296ead502ef",
+            "region-504a74a7998d45cc",
+            "region-51a71c4e9dd04630",
+            "region-520aadbc8d208a9c",
+            "region-5d0e70935f7d8680",
+            "region-5fcfdfd24d8c9d59",
+            "region-61785d7d63fa30c2",
+            "region-61eb89c327f0da27",
+            "region-707e3e109af22aef",
+            "region-8412dd5f6a029c3f",
+            "region-844bc6e0a15f9b91",
+            "region-8a8e7aa3e58b7556",
+            "region-97e4b21b8a35587b",
+            "region-a8ea92d14c0366b9",
+            "region-b18ead10e85374ac",
+            "region-c8a6a9caa444631b",
+            "region-c8d0b356292bdd84",
+            "region-de4bdf7ba9c62f7f"
+          ],
+          "failures": []
+        }
+      ],
+      "artifacts": {
+        "observation": "frames/corridor-02-04247/observation.json",
+        "embeddings": "frames/corridor-02-04247/embeddings.npz",
+        "raw": "frames/corridor-02-04247/raw.png",
+        "proposals": "frames/corridor-02-04247/proposals.png",
+        "regions_masks": "frames/corridor-02-04247/regions-masks.png",
+        "regions_boxes": "frames/corridor-02-04247/regions-boxes.png",
+        "regions_labels": "frames/corridor-02-04247/regions-labels.png",
+        "regions_overlay": "frames/corridor-02-04247/regions-overlay.png",
+        "semantic_overlay": "frames/corridor-02-04247/semantic-overlay.png",
+        "structural_context": "frames/corridor-02-04247/structural-context.png",
+        "valid_area_mask": "frames/corridor-02-04247/valid-area-mask.png",
+        "ego_mask": "frames/corridor-02-04247/ego-mask.png",
+        "diagnostics": "frames/corridor-02-04247/diagnostics.json"
       }
     }
   ]

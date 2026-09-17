@@ -1,0 +1,249 @@
+[
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04235",
+    "region_id": "region-54c0ff215525b3db",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      381.0,
+      207.0,
+      406.0,
+      266.0
+    ],
+    "size_px": [
+      25,
+      59
+    ],
+    "grounding": "refined",
+    "description": "A wooden shipping pallet leaning vertically against the hallway wall."
+  },
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04235",
+    "region_id": "region-9d93bd37d07030e4",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      256.0,
+      146.0,
+      264.0,
+      268.0
+    ],
+    "size_px": [
+      8,
+      122
+    ],
+    "grounding": "grounding_failed",
+    "description": "A wooden shipping pallet leaning against the right wall of the corridor."
+  },
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04235",
+    "region_id": "region-a6828ce8c69f1c78",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      326.0,
+      155.0,
+      355.0,
+      190.0
+    ],
+    "size_px": [
+      29,
+      35
+    ],
+    "grounding": "grounding_failed",
+    "description": "A wooden shipping pallet leaning against the right wall of the corridor."
+  },
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04247",
+    "region_id": "region-3196c211754477a2",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      362.0,
+      28.0,
+      384.0,
+      92.0
+    ],
+    "size_px": [
+      22,
+      64
+    ],
+    "grounding": "grounding_failed",
+    "description": "A wooden shipping pallet leaning against the hallway wall."
+  },
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04247",
+    "region_id": "region-7a7943f49970bf85",
+    "label": "wooden pallet",
+    "confidence": 0.98,
+    "box": [
+      359.0,
+      66.0,
+      384.0,
+      94.0
+    ],
+    "size_px": [
+      25,
+      28
+    ],
+    "grounding": "grounding_failed",
+    "description": "A wooden shipping pallet leaning against the right wall of the corridor."
+  },
+  {
+    "run": "2026-09-17-run-039-step12-176s-gemini-sam-v8",
+    "frame": "corridor-02-04247",
+    "region_id": "region-d9645a1845cfb8fe",
+    "label": "wooden pallet",
+    "confidence": 0.98,
+    "box": [
+      380.0,
+      200.0,
+      412.0,
+      272.0
+    ],
+    "size_px": [
+      32,
+      72
+    ],
+    "grounding": "refined",
+    "description": "A wooden shipping pallet leaning vertically against a hallway wall."
+  },
+  {
+    "run": "2026-09-16-run-016-frames",
+    "frame": "corridor-02-04234",
+    "region_id": "region-745b11aef57f06ca",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      327.0,
+      157.0,
+      355.0,
+      189.0
+    ],
+    "size_px": [
+      28,
+      32
+    ],
+    "grounding": "grounding_failed",
+    "description": "A wooden shipping pallet leaning against the right wall of the corridor."
+  },
+  {
+    "run": "2026-09-16-run-016-frames",
+    "frame": "corridor-02-04234",
+    "region_id": "region-b0c441927bf936b8",
+    "label": "wooden pallet",
+    "confidence": 0.95,
+    "box": [
+      380.0,
+      208.0,
+      406.0,
+      266.0
+    ],
+    "size_px": [
+      26,
+      58
+    ],
+    "grounding": "refined",
+    "description": "A wooden shipping pallet leaning vertically against the corridor wall."
+  },
+  {
+    "run": "2026-09-17-run-038-step12-176s-gemini-sam",
+    "frame": "corridor-02-04247",
+    "region_id": "region-3196c211754477a2",
+    "label": "pallet",
+    "confidence": null,
+    "box": [
+      362.0,
+      28.0,
+      384.0,
+      92.0
+    ],
+    "size_px": [
+      22,
+      64
+    ],
+    "grounding": "grounding_failed",
+    "description": ""
+  },
+  {
+    "run": "2026-09-17-run-038-step12-176s-gemini-sam",
+    "frame": "corridor-02-04247",
+    "region_id": "region-70a471b632457852",
+    "label": "pallet",
+    "confidence": null,
+    "box": [
+      2.0,
+      295.0,
+      39.0,
+      329.0
+    ],
+    "size_px": [
+      37,
+      34
+    ],
+    "grounding": "grounding_failed",
+    "description": ""
+  },
+  {
+    "run": "2026-09-17-run-038-step12-176s-gemini-sam",
+    "frame": "corridor-02-04247",
+    "region_id": "region-7a7943f49970bf85",
+    "label": "pallet",
+    "confidence": null,
+    "box": [
+      359.0,
+      66.0,
+      384.0,
+      94.0
+    ],
+    "size_px": [
+      25,
+      28
+    ],
+    "grounding": "grounding_failed",
+    "description": ""
+  },
+  {
+    "run": "2026-09-17-run-038-step12-176s-gemini-sam",
+    "frame": "corridor-02-04247",
+    "region_id": "region-844bc6e0a15f9b91",
+    "label": "pallet",
+    "confidence": null,
+    "box": [
+      256.0,
+      3.0,
+      290.0,
+      29.0
+    ],
+    "size_px": [
+      34,
+      26
+    ],
+    "grounding": "grounding_failed",
+    "description": ""
+  },
+  {
+    "run": "2026-09-17-run-038-step12-176s-gemini-sam",
+    "frame": "corridor-02-04247",
+    "region_id": "region-d9645a1845cfb8fe",
+    "label": "pallet",
+    "confidence": null,
+    "box": [
+      380.0,
+      200.0,
+      412.0,
+      272.0
+    ],
+    "size_px": [
+      32,
+      72
+    ],
+    "grounding": "grounding_failed",
+    "description": ""
+  }
+]
